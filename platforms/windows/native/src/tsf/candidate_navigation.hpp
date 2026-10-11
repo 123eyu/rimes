@@ -1,0 +1,139 @@
+#pragma once
+
+#include <algorithm>
+#include <cstddef>
+#include <optional>
+#include <vector>
+
+#include "BrokerClient.h"
+
+namespace rimes::windows::tsf {
+
+// Candidate selection is presentation state. The engine remains on the active
+// row; previewing adjacent pages always restores that row before returning.
+class CandidateNavigation {
+ public:
+  void Reset(const BrokerInputState& state) {
+    pages_.clear();
+    row_ = base_ = column_ = 0;
+    expanded_ = false;
+    if (state.candidates_visible && !state.candidates.empty()) {
+      pages_.push_back(state);
+      column_ = state.highlighted_candidate < state.candidates.size()
+          ? state.highlighted_candidate : 0;
+    }
+  }
+
+  bool empty() const { return pages_.empty(); }
+  bool expanded() const { return expanded_; }
+  std::size_t column() const { return column_; }
+  std::size_t row() const { return row_; }
+  std::size_t base() const { return expanded_ ? base_ : row_; }
+  std::size_t end() const {
+    return (std::min)(pages_.size(), base() + (expanded_ ? 3U : 1U));
+  }
+  const BrokerInputState& page(std::size_t row) const { return pages_[row]; }
+
+  void MoveColumn(int delta) {
+    if (empty()) return;
+    column_ = static_cast<std::size_t>((std::clamp)(
+        static_cast<int>(column_) + delta, 0,
+        static_cast<int>(pages_[row_].candidates.size()) - 1));
+  }
+
+  void Collapse() {
+    if (empty()) return;
+    auto current = pages_[row_];
+    const auto column = column_;
+    Reset(current);
+    column_ = column;
+  }
+
+  // step(delta) returns the authoritative page after one complete PageUp/Down
+  // tap, or nullopt on transport/context failure. An unchanged page is the end
+  // of the candidate list, not permission to wrap around or invent candidates.
+  template <typename Step>
+  bool MoveRow(int delta, Step&& step) {
+    if (empty()) return false;
+    if (!expanded_) {
+      if (delta < 0) {
+        const auto previous = step(-1);
+        if (!previous) return false;
+        Reset(*previous);
+        return true;
+      }
+      if (!PreviewFollowing(step)) return false;
+      expanded_ = pages_.size() > 1;
+      return true;
+    }
+    if (delta < 0 && row_ == 0) {
+      Collapse();
+      return true;
+    }
+    if (delta > 0 && row_ + 1 == pages_.size()) {
+      if (!PreviewFollowing(step)) return false;
+      if (row_ + 1 == pages_.size()) return true;
+    }
+    const auto target = delta < 0 ? row_ - 1 : row_ + 1;
+    const auto next = step(delta);
+    if (!next || next->candidates.empty() ||
+        next->page_start != pages_[target].page_start) return false;
+    row_ = target;
+    pages_[row_] = *next;
+    column_ = (std::min)(column_, next->candidates.size() - 1);
+    if (row_ < base_) base_ = row_;
+    if (row_ >= base_ + 3) base_ = row_ - 2;
+    return true;
+  }
+
+  struct Selection { std::uint16_t page_start; std::size_t index; };
+  std::optional<Selection> AtVisibleIndex(std::size_t index) const {
+    for (auto row = base(); row < end(); ++row) {
+      if (index < pages_[row].candidates.size())
+        return Selection{pages_[row].page_start, index};
+      index -= pages_[row].candidates.size();
+    }
+    return std::nullopt;
+  }
+  std::optional<Selection> Selected(std::optional<std::size_t> digit = {}) const {
+    if (empty()) return std::nullopt;
+    const auto index = digit.value_or(column_);
+    if (index >= pages_[row_].candidates.size()) return std::nullopt;
+    return Selection{pages_[row_].page_start, index};
+  }
+
+ private:
+  template <typename Step>
+  bool PreviewFollowing(Step& step) {
+    const auto anchor = pages_[row_].page_start;
+    auto last = anchor;
+    std::size_t moved = 0;
+    bool valid = true;
+    for (int i = 0; i < 2; ++i) {
+      auto next = step(1);
+      if (!next) { valid = false; break; }
+      if (next->page_start == last) break;
+      ++moved;
+      if (next->page_start <= last || next->candidates.empty()) {
+        valid = false;
+        break;
+      }
+      pages_.push_back(*next);
+      last = next->page_start;
+    }
+    while (moved > 0) {
+      const auto previous = step(-1);
+      if (!previous) return false;
+      --moved;
+      if (moved == 0 && previous->page_start != anchor) return false;
+      if (moved == 0) pages_[row_] = *previous;
+    }
+    return valid;
+  }
+
+  std::vector<BrokerInputState> pages_;
+  std::size_t row_ = 0, column_ = 0, base_ = 0;
+  bool expanded_ = false;
+};
+
+}  // namespace rimes::windows::tsf

@@ -654,46 +654,131 @@ TextService::TextService(std::unique_ptr<BrokerClient> broker_client) noexcept
 }
 
 void TextService::SelectCandidate(std::size_t index) noexcept {
-  if (!active_context_ || !broker_client_ ||
-      index >= last_state_.candidates.size()) return;
-  const auto key = CandidateSelectionKey(last_state_.candidates[index].label, index);
-  if (!key) return;
+  if (!active_context_ || !broker_client_) return;
+  const auto selection = candidate_navigation_.AtVisibleIndex(index);
+  if (!selection) return;
   auto* context = active_context_;
   const auto valid = edit_valid_;
   const auto revision = last_state_.revision;
+  const auto epoch = candidate_epoch_;
   try {
     auto* edit = new (std::nothrow) CandidateSelectionEdit(
         context, static_cast<ITfTextInputProcessorEx*>(this),
-        [this, context, valid, revision, index, key](TfEditCookie cookie) {
+        [this, context, valid, revision, epoch, selection](TfEditCookie cookie) {
           RefreshBrokerConnection();
           DWORD process = 0;
           GetWindowThreadProcessId(GetForegroundWindow(), &process);
           if (!valid || !valid->load() || context != active_context_ ||
               last_state_.revision != revision ||
+              candidate_epoch_ != epoch ||
               process != GetCurrentProcessId() || !AllowedContext(context, cookie))
             return TF_E_DISCONNECTED;
-          if (!broker_client_->Control({{"op", "candidate_guard"},
-                                         {"revision", revision}, {"index", index}}))
-            return TF_E_DISCONNECTED;
-          BrokerInputState state;
-          auto result = broker_client_->HandleKey(
-              {BrokerKeyPhase::kKeyDown, static_cast<WPARAM>(key), 1}, &state);
-          if (result != BrokerKeyResult::kConsumed) return E_FAIL;
-          auto applied = state.has_snapshot ? ApplyDocumentState(context, state, cookie)
-                                             : S_OK;
-          BrokerInputState released;
-          result = broker_client_->HandleKey(
-              {BrokerKeyPhase::kKeyUp, static_cast<WPARAM>(key),
-               static_cast<LPARAM>(1ULL << 31)}, &released);
-          if (SUCCEEDED(applied) && result == BrokerKeyResult::kConsumed &&
-              released.has_snapshot)
-            applied = ApplyDocumentState(context, released, cookie);
+          const auto applied = CommitCandidate(context, *selection, cookie);
+          if (FAILED(applied)) {
+            candidate_navigation_.Reset(last_state_);
+            ++candidate_epoch_;
+            UpdateCandidateWindow(context, last_state_, cookie);
+          }
           return applied;
         });
     if (!edit) return;
     RequestEdit(context, client_id_, edit);
     edit->Release();
   } catch (...) {}
+}
+
+std::optional<BrokerInputState> TextService::StepCandidatePage(int delta) noexcept {
+  try {
+    if (!broker_client_->Control({{"op", "candidate_guard"},
+          {"revision", last_state_.revision}, {"index", 0}})) return std::nullopt;
+    const WPARAM key = delta < 0 ? VK_PRIOR : VK_NEXT;
+    BrokerInputState state, released;
+    const auto result = broker_client_->HandleKey(
+        {BrokerKeyPhase::kKeyDown, key, 1}, &state);
+    const auto release = broker_client_->HandleKey(
+        {BrokerKeyPhase::kKeyUp, key, static_cast<LPARAM>(1ULL << 31)}, &released);
+    if (result == BrokerKeyResult::kUnavailable || release == BrokerKeyResult::kUnavailable)
+      return std::nullopt;
+    if (released.has_snapshot) state = std::move(released);
+    if (!state.has_snapshot) return last_state_;
+    if (!state.commit_text.empty() || state.composition != last_state_.composition ||
+        state.candidates.empty() || !state.candidates_visible) {
+      // A custom schema can bind PageUp/Down to a non-navigation action. Apply
+      // its authoritative result and retire the preview instead of replaying it.
+      ApplyDocumentState(active_context_, state);
+      return std::nullopt;
+    }
+    last_state_ = state;
+    return state;
+  } catch (...) { return std::nullopt; }
+}
+
+HRESULT TextService::CommitCandidate(ITfContext* context,
+    CandidateNavigation::Selection selection, TfEditCookie cookie) noexcept {
+  try {
+    // A clicked matrix row is at most two pages from the active row.
+    for (int i = 0; i < 3 && last_state_.page_start != selection.page_start; ++i) {
+      const auto before = last_state_.page_start;
+      const auto state = StepCandidatePage(selection.page_start < before ? -1 : 1);
+      if (!state || state->page_start == before) return E_FAIL;
+    }
+    if (last_state_.page_start != selection.page_start ||
+        selection.index >= last_state_.candidates.size()) return E_FAIL;
+    const auto key = CandidateSelectionKey(
+        last_state_.candidates[selection.index].label, selection.index);
+    if (!key || !broker_client_->Control({{"op", "candidate_guard"},
+        {"revision", last_state_.revision}, {"index", selection.index}}))
+      return TF_E_DISCONNECTED;
+    BrokerInputState state, released;
+    const auto result = broker_client_->HandleKey(
+        {BrokerKeyPhase::kKeyDown, static_cast<WPARAM>(key), 1}, &state);
+    const auto release = broker_client_->HandleKey(
+        {BrokerKeyPhase::kKeyUp, static_cast<WPARAM>(key),
+         static_cast<LPARAM>(1ULL << 31)}, &released);
+    if (result != BrokerKeyResult::kConsumed) return E_FAIL;
+    auto applied = state.has_snapshot ? ApplyDocumentState(context, state, cookie) : S_OK;
+    if (SUCCEEDED(applied) && release == BrokerKeyResult::kConsumed && released.has_snapshot)
+      applied = ApplyDocumentState(context, released, cookie);
+    return applied;
+  } catch (...) { return E_FAIL; }
+}
+
+bool TextService::HandleCandidateKey(BrokerKeyPhase phase, ITfContext* context,
+                                     WPARAM key) noexcept {
+  if (phase != BrokerKeyPhase::kTestKeyDown && phase != BrokerKeyPhase::kKeyDown)
+    return false;
+  if (candidate_navigation_.empty() || !candidate_window_.snapshot().visible)
+    return false;
+  for (int modifier : {VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN})
+    if (GetKeyState(modifier) & 0x8000) return false;
+  const bool arrow = key == VK_LEFT || key == VK_RIGHT || key == VK_UP || key == VK_DOWN;
+  const bool digit = candidate_navigation_.expanded() && key >= '1' && key <= '9';
+  const bool collapse = candidate_navigation_.expanded() && key == VK_ESCAPE;
+  if (!arrow && !digit && !collapse && key != VK_SPACE) return false;
+  if (phase == BrokerKeyPhase::kTestKeyDown) return true;
+  candidate_owned_keys_.set(static_cast<std::size_t>(key));
+  ++candidate_epoch_;
+  try {
+    if (key == VK_LEFT || key == VK_RIGHT) {
+      candidate_navigation_.MoveColumn(key == VK_LEFT ? -1 : 1);
+    } else if (key == VK_UP || key == VK_DOWN) {
+      if (!candidate_navigation_.MoveRow(key == VK_UP ? -1 : 1,
+          [this](int delta) { return StepCandidatePage(delta); }))
+        candidate_navigation_.Reset(last_state_);
+    } else if (collapse) {
+      candidate_navigation_.Collapse();
+    } else {
+      const auto selection = candidate_navigation_.Selected(
+          digit ? std::optional<std::size_t>(key - '1') : std::nullopt);
+      if (selection && FAILED(CommitCandidate(context, *selection)))
+        candidate_navigation_.Reset(last_state_);
+    }
+    UpdateCandidateWindow(context, last_state_);
+  } catch (...) {
+    candidate_navigation_.Reset({});
+    candidate_window_.Hide();
+  }
+  return true;
 }
 
 TextService::~TextService() {
@@ -970,6 +1055,12 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
 
   const bool test_up = phase == BrokerKeyPhase::kTestKeyUp;
   const bool up = phase == BrokerKeyPhase::kKeyUp;
+  if (virtual_key < candidate_owned_keys_.size() && (test_up || up) &&
+      candidate_owned_keys_.test(static_cast<std::size_t>(virtual_key))) {
+    *eaten = TRUE;
+    if (up) candidate_owned_keys_.reset(static_cast<std::size_t>(virtual_key));
+    return S_OK;
+  }
   const bool repeat =
       (static_cast<std::uint64_t>(key_data) & (1ULL << 30)) != 0;
   if (virtual_key == VK_RETURN && return_owned_ && (test_up || up || repeat)) {
@@ -999,6 +1090,10 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
     return S_OK;
   }
   if (!broker_client_->SetContext(context_generation_)) return S_OK;
+  if (HandleCandidateKey(phase, context, virtual_key)) {
+    *eaten = TRUE;
+    return S_OK;
+  }
   BrokerInputState state;
   const bool is_real_event =
       phase == BrokerKeyPhase::kKeyDown || phase == BrokerKeyPhase::kKeyUp;
@@ -1027,6 +1122,8 @@ HRESULT TextService::ApplyDocumentState(
     return E_INVALIDARG;
   }
   SetCapture(state.buffer_capture);
+  candidate_navigation_.Reset(state);
+  ++candidate_epoch_;
   if (state.buffer_capture) {
     last_state_ = state;
     UpdateCandidateWindow(context, state, cookie);
@@ -1140,16 +1237,26 @@ void TextService::UpdateCandidateWindow(
     }
     snapshot.caret_rect = {resolved.left, resolved.top, resolved.right,
                            resolved.bottom};
-    snapshot.items.reserve(state.candidates.size());
-    for (std::size_t index = 0; index < state.candidates.size(); ++index) {
-      CandidateItem item;
-      item.text = state.candidates[index].text;
-      item.comment = state.candidates[index].comment;
-      item.label = state.candidates[index].label;
-      if (item.label.empty()) {
-        item.label = std::to_wstring(index + 1);
+    auto append = [&](const BrokerInputState& page) {
+      for (std::size_t index = 0; index < page.candidates.size(); ++index) {
+        const auto& candidate = page.candidates[index];
+        snapshot.items.push_back({candidate.label.empty() ? std::to_wstring(index + 1)
+                                                         : candidate.label,
+                                  candidate.text, candidate.comment});
       }
-      snapshot.items.push_back(std::move(item));
+    };
+    if (candidate_navigation_.empty()) {
+      append(state);
+    } else {
+      for (auto row = candidate_navigation_.base(); row < candidate_navigation_.end(); ++row) {
+        const auto& page = candidate_navigation_.page(row);
+        if (row == candidate_navigation_.row())
+          snapshot.highlighted = static_cast<std::uint16_t>(
+              snapshot.items.size() + candidate_navigation_.column());
+        if (candidate_navigation_.expanded())
+          snapshot.matrix_rows.push_back(page.candidates.size());
+        append(page);
+      }
     }
     candidate_window_.Update(snapshot);
   } catch (...) {
@@ -1279,6 +1386,9 @@ void TextService::RevokeContext() noexcept {
   capture_active_ = false;
   candidate_window_.Hide();
   last_state_ = {};
+  candidate_navigation_.Reset({});
+  candidate_owned_keys_.reset();
+  ++candidate_epoch_;
   if (active_context_ && composition_) {
     auto* cleanup = new (std::nothrow) CancelCompositionEdit(composition_);
     auto* old = composition_;
@@ -1435,6 +1545,8 @@ void TextService::SetCapture(bool enabled) {
   }
   candidate_window_.Hide();
   last_state_ = {};
+  candidate_navigation_.Reset({});
+  ++candidate_epoch_;
 }
 void TextService::RefreshBrokerConnection() noexcept {
   const auto generation = broker_client_->ConnectionGeneration();

@@ -163,6 +163,7 @@ struct Window {
   void PopupMoreMenu();
   void PopupTrayMenu();
   void AddTrayIcon();
+  void RefreshTrayIcon();
   HMENU BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items);
   void UpdateTooltip(int hit);
   ui::BufferPaintState MakePaintState(const core::Json& state) const;
@@ -251,13 +252,7 @@ void Window::EnsureSettings() {
     if (result == HotkeyUpdate::kSaveFailed) return false;
     wcscpy_s(tray.szTip, L"RIMES 输入法与 Buffer");
     Shell_NotifyIconW(NIM_MODIFY, &tray);
-    if (product_icon) {
-      DestroyIcon(product_icon);
-      product_icon = ui::CreateProductIcon(16);
-      tray.hIcon =
-          product_icon ? product_icon : LoadIconW(nullptr, IDI_APPLICATION);
-      Shell_NotifyIconW(NIM_MODIFY, &tray);
-    }
+    RefreshTrayIcon();
     InvalidateRect(window, nullptr, FALSE);
     return true;
   };
@@ -313,6 +308,16 @@ void Window::UpdateBufferZOrder() {
 void Window::AddTrayIcon() {
   if (!Shell_NotifyIconW(NIM_ADD, &tray))
     Shell_NotifyIconW(NIM_MODIFY, &tray);
+}
+
+void Window::RefreshTrayIcon() {
+  auto icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
+  if (!icon) return;
+  const auto previous = product_icon;
+  product_icon = icon;
+  tray.hIcon = icon;
+  Shell_NotifyIconW(NIM_MODIFY, &tray);
+  if (previous) DestroyIcon(previous);
 }
 
 HMENU Window::BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items) {
@@ -722,10 +727,15 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
   if (!self) return DefWindowProcW(hwnd, message, wparam, lparam);
   try {
     if (self->taskbar_created && message == self->taskbar_created) {
+      self->RefreshTrayIcon();
       self->AddTrayIcon();
       return 0;
     }
     switch (message) {
+      case WM_SETTINGCHANGE:
+      case WM_THEMECHANGED:
+        self->RefreshTrayIcon();
+        return 0;
       case WM_NCCALCSIZE:
         // Keep resize semantics without a native frame subtracting pixels
         // from the 73/105-DIP workbench client area.
@@ -1129,7 +1139,7 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   ui.theme = ui::ThemeIdOrDefault(config.theme);
   ui.buffer_hotkey = std::make_unique<BufferHotkeyRegistration>(window);
   ui.buffer_hotkey->RegisterInitial(config.hotkey_modifiers, config.hotkey_key);
-  ui.product_icon = ui::CreateProductIcon(16);
+  ui.product_icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
   ui.tray.cbSize = sizeof(ui.tray);
   ui.tray.hWnd = window;
   ui.tray.uID = 1;

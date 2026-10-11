@@ -155,14 +155,14 @@ int CandidateWindow::HitIndex(int x_px, int y_px) const noexcept {
 }
 
 void CandidateWindow::Update(const CandidateSnapshot& snapshot) noexcept {
-  if (!snapshot.visible ||
-      (snapshot.items.empty() && snapshot.composition.empty())) {
+  if (!snapshot.visible || snapshot.items.empty()) {
     Hide();
     return;
   }
   try {
     if (snapshot_.composition != snapshot.composition ||
         snapshot_.items != snapshot.items ||
+        snapshot_.matrix_rows != snapshot.matrix_rows ||
         snapshot_.page_start != snapshot.page_start) {
       pressed_index_ = -1;
       hover_index_ = -1;
@@ -188,11 +188,9 @@ void CandidateWindow::LayoutAndShow(
   const int cand_px = ui::ScaleDip(metrics.candidate_font_dip, dpi);
   const int label_px = ui::ScaleDip(metrics.label_font_dip, dpi);
   const int ann_px = ui::ScaleDip(metrics.annotation_font_dip, dpi);
-  const int pre_px = ui::ScaleDip(metrics.preedit_font_dip, dpi);
   HFONT cand_bold = MakeFont(cand_px, FW_SEMIBOLD, false);
   HFONT label_font = MakeFont(label_px, FW_SEMIBOLD, false);
   HFONT ann_font = MakeFont(ann_px, FW_NORMAL, false);
-  HFONT pre_font = MakeFont(pre_px, FW_NORMAL, true);
 
   std::vector<ui::CandidateStripItem> items;
   items.reserve(snapshot.items.size());
@@ -229,28 +227,19 @@ void CandidateWindow::LayoutAndShow(
     items.push_back(std::move(out));
   }
 
-  float preedit_w_dip = 0;
-  const bool show_preedit = !snapshot.composition.empty();
-  if (show_preedit && device) {
-    const int w = MeasureText(device, pre_font, snapshot.composition);
-    preedit_w_dip =
-        static_cast<float>(w) * 96.0f / static_cast<float>(dpi);
-  }
-
   if (device) ReleaseDC(window_, device);
   if (cand_bold) DeleteObject(cand_bold);
   if (label_font) DeleteObject(label_font);
   if (ann_font) DeleteObject(ann_font);
-  if (pre_font) DeleteObject(pre_font);
 
-  const auto layout = ui::LayoutCandidateStripMeasured(
-      items, preedit_w_dip, show_preedit, metrics, available_dip, vertical_,
+  const auto layout = !snapshot.matrix_rows.empty()
+      ? ui::LayoutCandidateMatrixMeasured(items, snapshot.matrix_rows, metrics, available_dip)
+      : ui::LayoutCandidateStripMeasured(
+      items, metrics, available_dip, vertical_,
       static_cast<float>(work.height()) * 96.f / static_cast<float>(dpi));
   hit_pills_ = layout.pills;
   layout_width_dip_ = layout.width_dip;
   layout_height_dip_ = layout.height_dip;
-  preedit_dip_ = layout.preedit;
-  show_preedit_ = layout.show_preedit;
 
   const long width = (std::max)(
       1L, static_cast<long>(ui::ScaleDipF(layout.width_dip, dpi) + 0.5f));
@@ -263,8 +252,8 @@ void CandidateWindow::LayoutAndShow(
   snapshot_.window_rect = ToRect(origin, width, height);
   PublishSnapshot(snapshot_);
 
-  // A union of the two rounded surfaces leaves the gap and outer corners
-  // transparent. GDI on a layered HWND otherwise fills the entire rectangle.
+  // Keep the outer corners transparent; GDI on a layered HWND otherwise fills
+  // the entire rectangle.
   auto rounded_region = [dpi](const ui::DipRect& r, int radius) {
     const float scale = static_cast<float>(dpi) / 96.f;
     return CreateRoundRectRgn(static_cast<int>(std::lround(r.left * scale)),
@@ -273,17 +262,7 @@ void CandidateWindow::LayoutAndShow(
         static_cast<int>(std::lround(r.bottom * scale)) + 1,
         ui::ScaleDip(radius * 2, dpi), ui::ScaleDip(radius * 2, dpi));
   };
-  HRGN region = nullptr;
-  if (!snapshot.items.empty()) region = rounded_region(layout.strip, metrics.strip_radius_dip);
-  if (layout.show_preedit) {
-    HRGN preedit = rounded_region(layout.preedit, metrics.preedit_radius_dip);
-    if (region && preedit) {
-      CombineRgn(region, region, preedit, RGN_OR);
-      DeleteObject(preedit);
-    } else if (preedit) {
-      region = preedit;
-    }
-  }
+  HRGN region = rounded_region(layout.strip, metrics.strip_radius_dip);
   if (region && !SetWindowRgn(window_, region, FALSE)) DeleteObject(region);
   SetWindowPos(window_, HWND_TOPMOST, origin.x, origin.y, width, height,
                SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -313,34 +292,9 @@ void CandidateWindow::Paint(HDC device) const {
     return out;
   };
 
-  if (show_preedit_) {
-    RECT pre = to_px(preedit_dip_);
-    ui::FillRoundRect(mem, pre, ui::ScaleDip(metrics.preedit_radius_dip, dpi),
-                      ui::ToColorRef(palette.candidate));
-    ui::StrokeRoundRect(mem, pre, ui::ScaleDip(metrics.preedit_radius_dip, dpi),
-                        ui::ToColorRef(palette.border_strong));
-    HFONT pre_font =
-        MakeFont(ui::ScaleDip(metrics.preedit_font_dip, dpi), FW_NORMAL, true);
-    HFONT prev = static_cast<HFONT>(SelectObject(mem, pre_font));
-    SetBkMode(mem, TRANSPARENT);
-    SetTextColor(mem, ui::ToColorRef(palette.text_primary));
-    RECT text = pre;
-    text.left += ui::ScaleDip(metrics.preedit_inset_dip, dpi);
-    text.right -= ui::ScaleDip(metrics.preedit_inset_dip, dpi);
-    DrawTextW(mem, snapshot_.composition.c_str(),
-              static_cast<int>(snapshot_.composition.size()), &text,
-              DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
-    SelectObject(mem, prev);
-    DeleteObject(pre_font);
-  }
-
   // Strip background covering all rows.
   if (!snapshot_.items.empty()) {
-    ui::DipRect strip{0,
-                      show_preedit_ ? preedit_dip_.bottom +
-                                          static_cast<float>(metrics.preedit_gap_dip)
-                                    : 0.0f,
-                      layout_width_dip_, layout_height_dip_};
+    ui::DipRect strip{0, 0, layout_width_dip_, layout_height_dip_};
     RECT strip_px = to_px(strip);
     ui::FillRoundRect(mem, strip_px, ui::ScaleDip(metrics.strip_radius_dip, dpi),
                       ui::ToColorRef(palette.candidate));
@@ -384,7 +338,7 @@ void CandidateWindow::Paint(HDC device) const {
     cursor.left += ui::ScaleDip(metrics.pill_padding_dip, dpi);
     cursor.right -= ui::ScaleDip(metrics.pill_padding_dip, dpi);
     SetBkMode(mem, TRANSPARENT);
-    if (!label.empty()) {
+    if (!label.empty() && cursor.left < cursor.right) {
       SetTextColor(mem, ui::ToColorRef(selected ? palette.selection_text
                                                 : palette.text_secondary));
       HFONT prev = static_cast<HFONT>(SelectObject(mem, label_font));
@@ -396,7 +350,7 @@ void CandidateWindow::Paint(HDC device) const {
       SelectObject(mem, prev);
       cursor.left += size.cx + ui::ScaleDip(4, dpi);
     }
-    {
+    if (cursor.left < cursor.right) {
       HFONT use = selected ? cand_bold : cand_font;
       HFONT prev = static_cast<HFONT>(SelectObject(mem, use));
       SetTextColor(mem, ui::ToColorRef(selected ? palette.selection_text
@@ -411,7 +365,8 @@ void CandidateWindow::Paint(HDC device) const {
       SelectObject(mem, prev);
       cursor.left += size.cx;
     }
-    if (!snapshot_.items[i].comment.empty()) {
+    if (!snapshot_.items[i].comment.empty() &&
+        cursor.left + ui::ScaleDip(6, dpi) < cursor.right) {
       cursor.left += ui::ScaleDip(6, dpi);
       HFONT prev = static_cast<HFONT>(SelectObject(mem, ann_font));
       SetTextColor(mem, ui::ToColorRef(selected ? palette.selection_text

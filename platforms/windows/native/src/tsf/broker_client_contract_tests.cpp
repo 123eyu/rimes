@@ -80,6 +80,12 @@ int RunContractTests() {
   }
   Expect(RoutePrintableKey('N', 0, false, false, false),
          "Chinese letters still start a composition");
+  for (const bool ascii : {false, true}) {
+    Expect(!RoutePrintableKey(VK_SPACE, 0, false, false, ascii),
+           "idle space stays with the editor in both Chinese and ASCII modes");
+    Expect(RoutePrintableKey(VK_SPACE, 0, true, false, ascii),
+           "composition space still confirms a candidate");
+  }
   auto client = CreateBrokerClient();
   Expect(client != nullptr, "CreateBrokerClient returns a client");
   if (!client) {
