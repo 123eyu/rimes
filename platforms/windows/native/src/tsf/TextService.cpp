@@ -717,12 +717,12 @@ HRESULT TextService::CommitCandidate(ITfContext* context,
     CandidateNavigation::Selection selection, TfEditCookie cookie) noexcept {
   try {
     // A clicked matrix row is at most two pages from the active row.
-    for (int i = 0; i < 3 && last_state_.page_start != selection.page_start; ++i) {
-      const auto before = last_state_.page_start;
-      const auto state = StepCandidatePage(selection.page_start < before ? -1 : 1);
-      if (!state || state->page_start == before) return E_FAIL;
+    for (int i = 0; i < 3 && CandidateNavigation::PageId(last_state_) != selection.page_id; ++i) {
+      const auto before = CandidateNavigation::PageId(last_state_);
+      const auto state = StepCandidatePage(selection.page_id < before ? -1 : 1);
+      if (!state || CandidateNavigation::PageId(*state) == before) return E_FAIL;
     }
-    if (last_state_.page_start != selection.page_start ||
+    if (CandidateNavigation::PageId(last_state_) != selection.page_id ||
         selection.index >= last_state_.candidates.size()) return E_FAIL;
     const auto key = CandidateSelectionKey(
         last_state_.candidates[selection.index].label, selection.index);

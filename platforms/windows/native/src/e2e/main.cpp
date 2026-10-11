@@ -41,20 +41,16 @@ void DumpDocument(std::string_view label,
             << " visible=" << snapshot.visible << '\n';
 }
 
-void ClearCapsLockIfLatched() {
-  if ((GetKeyState(VK_CAPITAL) & 1) == 0) {
-    return;
-  }
-  keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
-  keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-}
-
 // Change only this test thread's logical state. Never synthesize desktop input
 // or change the user's hardware modifiers when exercising TSF callbacks.
 class LogicalKeyboardState {
  public:
   LogicalKeyboardState() { GetKeyboardState(saved_); }
   ~LogicalKeyboardState() { SetKeyboardState(saved_); }
+  void Clear() {
+    BYTE state[256]{};
+    SetKeyboardState(state);
+  }
   void Shift(bool down) {
     BYTE state[256]{};
     GetKeyboardState(state);
@@ -387,8 +383,9 @@ int RunTypingScenarios(bool legacy_broker) {
     return EXIT_FAILURE;
   }
 
-  ClearCapsLockIfLatched();
   CheckFocusRestoration();
+  LogicalKeyboardState scenario_keyboard;
+  scenario_keyboard.Clear();
   std::cerr << "caps_lock=" << ((GetKeyState(VK_CAPITAL) & 1) != 0)
             << " shift=" << ((GetKeyState(VK_SHIFT) & 0x8000) != 0) << '\n';
 

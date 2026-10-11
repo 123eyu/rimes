@@ -34,6 +34,12 @@ class CandidateNavigation {
   }
   const BrokerInputState& page(std::size_t row) const { return pages_[row]; }
 
+  // The wire page_start is local to the transmitted candidate vector (zero).
+  // Candidate IDs retain the absolute librime offset across pages.
+  static std::uint32_t PageId(const BrokerInputState& state) {
+    return state.candidates.empty() ? 0 : state.candidates.front().id;
+  }
+
   void MoveColumn(int delta) {
     if (empty()) return;
     column_ = static_cast<std::size_t>((std::clamp)(
@@ -77,7 +83,7 @@ class CandidateNavigation {
     const auto target = delta < 0 ? row_ - 1 : row_ + 1;
     const auto next = step(delta);
     if (!next || next->candidates.empty() ||
-        next->page_start != pages_[target].page_start) return false;
+        PageId(*next) != PageId(pages_[target])) return false;
     row_ = target;
     pages_[row_] = *next;
     column_ = (std::min)(column_, next->candidates.size() - 1);
@@ -86,11 +92,11 @@ class CandidateNavigation {
     return true;
   }
 
-  struct Selection { std::uint16_t page_start; std::size_t index; };
+  struct Selection { std::uint32_t page_id; std::size_t index; };
   std::optional<Selection> AtVisibleIndex(std::size_t index) const {
     for (auto row = base(); row < end(); ++row) {
       if (index < pages_[row].candidates.size())
-        return Selection{pages_[row].page_start, index};
+        return Selection{PageId(pages_[row]), index};
       index -= pages_[row].candidates.size();
     }
     return std::nullopt;
@@ -99,33 +105,33 @@ class CandidateNavigation {
     if (empty()) return std::nullopt;
     const auto index = digit.value_or(column_);
     if (index >= pages_[row_].candidates.size()) return std::nullopt;
-    return Selection{pages_[row_].page_start, index};
+    return Selection{PageId(pages_[row_]), index};
   }
 
  private:
   template <typename Step>
   bool PreviewFollowing(Step& step) {
-    const auto anchor = pages_[row_].page_start;
+    const auto anchor = PageId(pages_[row_]);
     auto last = anchor;
     std::size_t moved = 0;
     bool valid = true;
     for (int i = 0; i < 2; ++i) {
       auto next = step(1);
       if (!next) { valid = false; break; }
-      if (next->page_start == last) break;
+      if (PageId(*next) == last) break;
       ++moved;
-      if (next->page_start <= last || next->candidates.empty()) {
+      if (PageId(*next) <= last || next->candidates.empty()) {
         valid = false;
         break;
       }
       pages_.push_back(*next);
-      last = next->page_start;
+      last = PageId(*next);
     }
     while (moved > 0) {
       const auto previous = step(-1);
       if (!previous) return false;
       --moved;
-      if (moved == 0 && previous->page_start != anchor) return false;
+      if (moved == 0 && PageId(*previous) != anchor) return false;
       if (moved == 0) pages_[row_] = *previous;
     }
     return valid;

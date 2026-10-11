@@ -271,9 +271,11 @@ void TestCandidateMatrixNavigation() {
     auto& page = pages[row];
     page.candidates_visible = page.composing = true;
     page.composition = L"ni";
-    page.page_start = static_cast<std::uint16_t>(row * 9);
-    page.page_size = 9;
+    page.page_start = 0;
+    page.page_size = row == 5 ? 2 : 9;
     page.candidates.resize(row == 5 ? 2 : 9);
+    for (std::size_t index = 0; index < page.candidates.size(); ++index)
+      page.candidates[index].id = static_cast<std::uint32_t>(row * 9 + index);
   }
   std::size_t engine_row = 0;
   auto step = [&](int delta) -> std::optional<BrokerInputState> {
@@ -299,11 +301,11 @@ void TestCandidateMatrixNavigation() {
           "matrix viewport shows at most three rows");
   }
   navigation.MoveColumn(8);
-  Check(navigation.column() == 1 && navigation.Selected()->page_start == 45,
+  Check(navigation.column() == 1 && navigation.Selected()->page_id == 45,
         "short final page clamps selection to an existing candidate");
   Check(!navigation.Selected(8), "unavailable matrix number never selects a hidden word");
-  Check(navigation.AtVisibleIndex(0)->page_start == 27 &&
-            navigation.AtVisibleIndex(18)->page_start == 45,
+  Check(navigation.AtVisibleIndex(0)->page_id == 27 &&
+            navigation.AtVisibleIndex(18)->page_id == 45,
         "mouse hit index maps to the visible page and its local index");
   Check(navigation.MoveRow(1, step) && engine_row == 5 && navigation.row() == 5,
         "end of candidate list never wraps or duplicates rows");

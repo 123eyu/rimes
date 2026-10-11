@@ -15,7 +15,7 @@
 
 从 [Windows 1.1.1 发布页](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1) 下载 `RIMES-Windows-1.1.1-Setup.exe`，核对 `SHA256SUMS` 后运行。EXE 未签名，Windows 可能显示未知发布者或 SmartScreen 提示；安装器不修改系统安全设置。
 
-升级前保存 Buffer 内容，从 RIMES 托盘退出，并使用安装时的同一 Windows 用户授权管理员权限。运行新 EXE 覆盖升级，无需先卸载；词库和设置保留。若安装器提示注销或重启，保存其他工作后按提示执行，以卸载宿主已加载的旧输入法 DLL；安装器不会自动注销或重启。
+使用安装时的同一 Windows 用户授权管理员权限。运行新 EXE 覆盖升级，无需先卸载；词库和设置保留。若安装器提示注销或重启，保存其他工作后按提示执行，以卸载宿主已加载的旧输入法 DLL；安装器不会自动注销或重启。
 
 安装后用 Win+Space 选择 RIMES，在开始菜单搜索 **RIMES Settings**。托盘右键也可打开设置。旧版的临时入口是输入框按 Ctrl+Alt+B，再在 Buffer **… → 设置** 中进入。
 
