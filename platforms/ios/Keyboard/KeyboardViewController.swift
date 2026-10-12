@@ -233,6 +233,20 @@ final class KeyboardViewController: UIInputViewController {
     private var showingAssociations: Bool { snapshot.candidates.isEmpty && !associations.isEmpty }
     private var height: NSLayoutConstraint!
     private var hostEdges = [NSLayoutConstraint]()
+    /// Fills any part of the host container that sits above the content, so a
+    /// container height the host never corrects does not stay blank.
+    private let gapPlaceholder = HeightGapPlaceholder()
+    private var gapRecoveryAttempts = 0
+    private var gapRecovery: DispatchWorkItem?
+    /// Delays before each bounded height re-request while the gap persists.
+    private static let gapRecoveryDelays: [TimeInterval] = [0.12, 0.3, 0.7, 1.5]
+    /// True from viewDidLoad until the host's provisional height has been answered.
+    private var awaitingProvisionalHeight = false
+    /// Extra height requested while the host settles its first frame.
+    private var heightNudge: CGFloat = 0
+    private static let heightNudgeDuration: TimeInterval = 0.25
+    /// When viewDidLoad prepared the first presentation; nil once it was used.
+    private var preparedAt: TimeInterval?
     private var preparingPresentation = false
     private struct MenuState: Equatable {
         var scheme: InputScheme
@@ -302,6 +316,17 @@ final class KeyboardViewController: UIInputViewController {
         preferences = preferencesStore.load(); surface.feedback.enabled = preferences.haptics; surface.feedback.strength = preferences.hapticStrength
         surface.feedback.soundEnabled = preferences.keySounds
         view.backgroundColor = .systemGroupedBackground
+        gapPlaceholder.backgroundColor = view.backgroundColor
+        gapPlaceholder.onGapChange = { [weak self] in self?.heightGapDidChange($0) }
+        view.addSubview(gapPlaceholder)
+        // Sits directly above the content; its top follows the host container
+        // (see hostEdges), so its height is exactly the uncovered gap.
+        NSLayoutConstraint.activate([
+            gapPlaceholder.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            gapPlaceholder.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+            gapPlaceholder.bottomAnchor.constraint(equalTo: view.topAnchor),
+            gapPlaceholder.heightAnchor.constraint(greaterThanOrEqualToConstant: 0)
+        ])
         // A provisional host frame must not become a competing height constraint.
         view.translatesAutoresizingMaskIntoConstraints = false
         inputView?.allowsSelfSizing = true
@@ -520,6 +545,8 @@ final class KeyboardViewController: UIInputViewController {
         // Load the selected scheme/layout before publishing any height. Startup
         // must not advertise a default layout and correct it after presentation.
         preparePresentation()
+        preparedAt = ProcessInfo.processInfo.systemUptime
+        awaitingProvisionalHeight = true
         height.isActive = true
     }
     private func preparePresentation() {
@@ -530,8 +557,16 @@ final class KeyboardViewController: UIInputViewController {
     }
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated); onscreen = true
+        gapRecoveryAttempts = 0
         if currentDocument != DocumentIdentity.read(textDocumentProxy) { delivery.abandonMarkedText(); cancelRequest(); buffer = .init() }
-        currentDocument = DocumentIdentity.read(textDocumentProxy); preparePresentation()
+        currentDocument = DocumentIdentity.read(textDocumentProxy)
+        // viewDidLoad has just loaded the preferences and scheme for this first
+        // presentation; loading them again only keeps the host on its provisional
+        // height for longer. Later presentations reload as before.
+        if let preparedAt, ProcessInfo.processInfo.systemUptime - preparedAt < 1 { render() } else { preparePresentation() }
+        preparedAt = nil
+        // Register the height with the host now, not only once fully presented.
+        reassertHeight()
     }
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
@@ -541,13 +576,59 @@ final class KeyboardViewController: UIInputViewController {
         // Keep the native remote-host sizing registration. This preserves height
         // changes for Buffer and candidates; it does not eliminate iOS cold-start
         // presentation flicker on its own.
+        // The provisional height arrives before this point; a later gap (Buffer or
+        // candidates closing while the container lags) is an ordinary resize.
+        awaitingProvisionalHeight = false
+        reassertHeight()
+        releaseEdgeTouchDelay(); surface.feedback.prepare(); metrics.presented(since: initializationStart)
+    }
+    /// Registers the content height with the host again, as on first display,
+    /// without waiting for a new presentation.
+    private func reassertHeight() {
+        guard height != nil else { return }
         height.isActive = false
         updateHeight()
         height.isActive = true
         view.invalidateIntrinsicContentSize()
         view.setNeedsLayout()
         view.superview?.setNeedsLayout()
-        releaseEdgeTouchDelay(); surface.feedback.prepare(); metrics.presented(since: initializationStart)
+    }
+    private func heightGapDidChange(_ gap: CGFloat) {
+        gapRecovery?.cancel(); gapRecovery = nil
+        answerProvisionalHeight(gap: gap)
+        guard gap > 0.5 else { gapRecoveryAttempts = 0; return }
+        scheduleGapRecovery()
+    }
+    /// On a cold start the host first gives the keyboard a provisional height of its
+    /// own (it varies by host app and by what was on screen before) and would draw
+    /// that for a few frames: a tall empty panel above the keys. Changing the request
+    /// at the instant that height arrives makes the host draw its first frame at the
+    /// requested size instead. One extra point is enough; it is given back shortly after.
+    /// See validation/keyboard-height-20261012.md.
+    private func answerProvisionalHeight(gap: CGFloat) {
+        guard awaitingProvisionalHeight, onscreen, gap > 0.5, let container = view.superview?.bounds.height,
+              container < (view.window?.windowScene?.screen.bounds.height ?? UIScreen.main.bounds.height) - 1 else { return }
+        awaitingProvisionalHeight = false
+        heightNudge = 1
+        updateHeight(); view.setNeedsLayout(); view.superview?.setNeedsLayout()
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.heightNudgeDuration) { [weak self] in
+            guard let self, self.heightNudge != 0 else { return }
+            self.heightNudge = 0
+            self.updateHeight(); self.view.setNeedsLayout(); self.view.superview?.setNeedsLayout()
+        }
+    }
+    /// The container stays taller than the content: the placeholder covers it, and
+    /// the height is asked for again a bounded number of times.
+    private func scheduleGapRecovery() {
+        guard gapRecoveryAttempts < Self.gapRecoveryDelays.count else { return }
+        let work = DispatchWorkItem { [weak self] in
+            guard let self, self.gapPlaceholder.gap > 0.5 else { return }
+            self.gapRecoveryAttempts += 1
+            self.reassertHeight()
+            self.scheduleGapRecovery()
+        }
+        gapRecovery = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.gapRecoveryDelays[gapRecoveryAttempts], execute: work)
     }
     /// iOS edge-swipe recognizers above the keyboard hold back touches that start
     /// near the screen edges until a swipe is ruled out, so quick taps on the outer
@@ -560,7 +641,11 @@ final class KeyboardViewController: UIInputViewController {
             node = current.superview
         }
     }
-    override func viewWillDisappear(_ animated: Bool) { protect(); super.viewWillDisappear(animated) }
+    override func viewWillDisappear(_ animated: Bool) {
+        gapRecovery?.cancel(); gapRecovery = nil
+        awaitingProvisionalHeight = false; heightNudge = 0
+        protect(); super.viewWillDisappear(animated)
+    }
     @objc private func resume() {
         guard isViewLoaded, view.window != nil else { return }
         onscreen = true; currentDocument = DocumentIdentity.read(textDocumentProxy)
@@ -1039,6 +1124,7 @@ final class KeyboardViewController: UIInputViewController {
             skinState = appearance
             surface.theme = theme
             view.backgroundColor = theme.palette.background; view.tintColor = theme.palette.accent
+            gapPlaceholder.backgroundColor = theme.palette.background; gapPlaceholder.ink = theme.palette.ink
             panel.backgroundColor = theme.palette.background
             handPreview.theme = theme
             for (action, view) in standardFunctions {
@@ -1177,8 +1263,10 @@ final class KeyboardViewController: UIInputViewController {
         for constraint in bottomKeyWidths { constraint.constant = -5 * bottom.spacing / 7.5 }
         candidateStrip.expanded = expanded; candidateStrip.landscape = landscape
         status.isHidden = status.text?.isEmpty != false
+        // The height must not depend on presentation state: `onscreen` only turns
+        // true in viewWillAppear, after the first height was already requested.
         globe.isHidden = !onscreen || !needsInputModeSwitchKey
-        bottom.isHidden = surface.usesManagedLayout && globe.isHidden
+        bottom.isHidden = surface.usesManagedLayout && !needsInputModeSwitchKey
         let bufferHeight: CGFloat = landscape ? 60 : 76
         let customHeight = surface.usesCustomLayout ? surface.customLayout.map { CGFloat($0.geometry(width: Double(max(1, width - 10)), landscape: landscape).height) } : nil
         let standardHeight = surface.usesStandardLayout ? StandardKeyboardGeometry.height(landscape: landscape) : nil
@@ -1202,7 +1290,7 @@ final class KeyboardViewController: UIInputViewController {
         let width = [view.bounds.width, view.superview?.bounds.width ?? 0,
                      view.window?.windowScene?.screen.bounds.width ?? UIScreen.main.bounds.width]
             .first { $0.isFinite && $0 > 0 } ?? 320
-        let desired = contentHeight(width: width)
+        let desired = contentHeight(width: width) + heightNudge
         if height.constant != desired {
             height.constant = desired
             view.invalidateIntrinsicContentSize()
@@ -1225,11 +1313,15 @@ final class KeyboardViewController: UIInputViewController {
         if let parent = view.superview {
             if hostEdges.first?.secondItem as? UIView !== parent {
                 NSLayoutConstraint.deactivate(hostEdges)
+                let gapTop = gapPlaceholder.topAnchor.constraint(equalTo: parent.topAnchor)
                 hostEdges = [view.widthAnchor.constraint(equalTo: parent.widthAnchor),
                              view.leadingAnchor.constraint(equalTo: parent.leadingAnchor),
-                             view.bottomAnchor.constraint(equalTo: parent.bottomAnchor)]
+                             view.bottomAnchor.constraint(equalTo: parent.bottomAnchor), gapTop]
                 // Below required: these must never contend with the content height.
                 for edge in hostEdges { edge.priority = .defaultHigh }
+                // Below the bottom edge: when the container is shorter than the
+                // content the keys keep the bottom edge and the placeholder collapses.
+                gapTop.priority = UILayoutPriority(500)
             }
             NSLayoutConstraint.activate(hostEdges)
         } else {
@@ -2194,6 +2286,11 @@ final class KeyboardViewController: UIInputViewController {
     var layoutViews: (buffer: UIView, candidates: CandidateStrip, keys: KeySurface, settings: KeycapButton, bottom: UIStackView, source: SingleLineTextView, insert: InsertKeycapButton, globe: KeycapButton, result: SingleLineTextView, stop: KeycapButton) {
         (bufferPanel, candidateStrip, surface, moreButton, bottom, source, insertButton, globe, result, stopButton)
     }
+    var developmentHeightGap: (height: CGFloat, wordmark: String, wordmarkVisible: Bool, recoveryAttempts: Int) {
+        (gapPlaceholder.bounds.height, HeightGapPlaceholder.wordmark, gapPlaceholder.wordmarkVisible, gapRecoveryAttempts)
+    }
+    /// For fixtures that check other sizing behaviour against exact heights.
+    func developmentSkipProvisionalHeightAnswer() { awaitingProvisionalHeight = false }
     func developmentType(_ text: String) { type(text) }
     func developmentResetPreferences(bundledData: @escaping (OfficialPluginCatalog.Entry) throws -> Data = OfficialPluginCatalog.bundledData) {
         developmentPreferencesAreIsolated = true
@@ -2433,5 +2530,60 @@ final class KeyboardViewController: UIInputViewController {
         let tail = current.trimmingCharacters(in: .whitespaces)
         if let last = sentences.last, tail.count < 24 { return String(last.suffix(80)) }
         return tail.count >= 10 ? String(tail.suffix(80)) : ""
+    }
+}
+
+/// Branded fill for the part of the host's keyboard container that sits above the
+/// content when the container stays taller than the height the keyboard asked for.
+/// Its height is exactly that gap, so it is invisible once the heights agree, and it
+/// stays invisible for gaps that close within a few frames.
+final class HeightGapPlaceholder: UIView {
+    /// The product's public name; the architecture name (RIMES) is not shown to users.
+    static let wordmark = "Lingxi IME"
+    /// Provisional and lagging host frames last well under this; a gap that outlives it is real.
+    static let revealDelay: TimeInterval = 0.15
+    private(set) var gap: CGFloat = 0
+    private(set) var revealed = false
+    private var reveal: DispatchWorkItem?
+    var onGapChange: ((CGFloat) -> Void)?
+    var ink: UIColor = .label { didSet { label.textColor = ink.withAlphaComponent(0.3) } }
+    var wordmarkVisible: Bool { revealed && bounds.height > 0 && !label.isHidden }
+    private let label = UILabel()
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        translatesAutoresizingMaskIntoConstraints = false
+        clipsToBounds = true; isUserInteractionEnabled = false; alpha = 0
+        isAccessibilityElement = false; accessibilityElementsHidden = true
+        label.attributedText = NSAttributedString(string: L("灵犀输入法", Self.wordmark), attributes: [.kern: 1.5])
+        let base = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        label.font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 17) } ?? base
+        label.textColor = ink.withAlphaComponent(0.3)
+        addSubview(label)
+    }
+    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        label.sizeToFit()
+        label.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        // A sliver of gap shows only the fill, never a clipped word.
+        label.isHidden = bounds.height < label.bounds.height + 8
+        guard abs(bounds.height - gap) > 0.5 else { return }
+        let appeared = gap <= 0.5 && bounds.height > 0.5
+        gap = bounds.height
+        if gap <= 0.5 {
+            reveal?.cancel(); reveal = nil
+            revealed = false; layer.removeAllAnimations(); alpha = 0
+        } else if appeared {
+            // Invisible at first: a gap that closes within a few frames is never seen.
+            revealed = false; alpha = 0
+            let work = DispatchWorkItem { [weak self] in
+                guard let self, self.gap > 0.5 else { return }
+                self.revealed = true
+                UIView.animate(withDuration: 0.12) { self.alpha = 1 }
+            }
+            reveal = work
+            DispatchQueue.main.asyncAfter(deadline: .now() + Self.revealDelay, execute: work)
+        }
+        onGapChange?(gap)
     }
 }
