@@ -712,6 +712,7 @@ final class RimeEngine {
         model.pageNo = Int(ctx.pageNo)
         model.isLastPage = ctx.isLastPage
         model.highlightedIndex = Int(ctx.highlightedIndex)
+        model.usesNumericSelectionKeys = ctx.usesNumericSelectionKeys
 
         let count = Int(ctx.numCandidates)
         if count > 0 {

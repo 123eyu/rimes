@@ -4736,7 +4736,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         actions.alignment = .centerY
         actions.spacing = 8
 
-        let stack = NSStackView(views: rows + [actions])
+        let stack = NSStackView(views: rows + [secondaryLabel("放不下的候选自动进入下一页。"), actions])
         stack.orientation = .vertical
         stack.alignment = .leading
         stack.spacing = 7
@@ -5138,7 +5138,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             compactCandidateHeight: get(.compactCandidateHeight),
             preeditHeight: get(.preeditHeight),
             candidateFontSize: get(.candidateFontSize),
-            labelFontSize: get(.labelFontSize)
+            labelFontSize: get(.labelFontSize),
+            candidatesPerPage: Int(get(.candidatesPerPage))
         )
     }
 

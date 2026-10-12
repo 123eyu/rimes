@@ -588,6 +588,11 @@ bool BBRimeGetContext(uint64_t session, BBRimeContext* out) {
     out->isLastPage = context.menu.is_last_page != 0;
     out->highlightedIndex = context.menu.highlighted_candidate_index;
 
+    const char* selectKeys = context.menu.select_keys;
+    const size_t selectKeyCount = selectKeys ? std::strlen(selectKeys) : 0;
+    out->usesNumericSelectionKeys = selectKeyCount == 0 ||
+        (selectKeyCount <= 10 && std::strncmp(selectKeys, "1234567890", selectKeyCount) == 0);
+
     int count = context.menu.num_candidates;
     if (count > BB_MAX_CANDIDATES) count = BB_MAX_CANDIDATES;
     out->numCandidates = count;
@@ -595,8 +600,8 @@ bool BBRimeGetContext(uint64_t session, BBRimeContext* out) {
         std::string label;
         if (context.select_labels && context.select_labels[i]) {
             label = context.select_labels[i];
-        } else if (context.menu.select_keys && context.menu.select_keys[i]) {
-            label.assign(1, context.menu.select_keys[i]);
+        } else if (static_cast<size_t>(i) < selectKeyCount) {
+            label.assign(1, selectKeys[i]);
         } else {
             label = std::to_string(i + 1);
         }
