@@ -127,7 +127,12 @@ python (Join-Path $windowsRoot '../../scripts/input-schemes/fetch_fixture.py') $
 if ($LASTEXITCODE -ne 0) { throw 'Pinned original scheme fixture could not be verified.' }
 $expected = ([string][char]0x4f60) + [char]0x597d
 & $brokerPath --scheme-import-smoke (Join-Path $workRoot 'wanxiang-import') $fixture wanxiang nihao $expected
-if ($LASTEXITCODE -ne 0) { throw 'Original Wanxiang import and native typing failed.' }
+if ($LASTEXITCODE -ne 0) {
+    # Only this isolated fixture's compiler logs; no installed profile or text.
+    Get-ChildItem -LiteralPath (Join-Path $workRoot 'wanxiang-import/library/logs') -Filter '*.log' |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 12 }
+    throw 'Original Wanxiang import and native typing failed.'
+}
 & $brokerPath --scheme-import-smoke (Join-Path $workRoot 'wanxiang-t9-import') $fixture wanxiang_t9 64426 $expected
 if ($LASTEXITCODE -ne 0) { throw 'Original Wanxiang nine-key typing failed.' }
 

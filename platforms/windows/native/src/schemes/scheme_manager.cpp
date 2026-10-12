@@ -119,7 +119,7 @@ int Compile(const fs::path &root, const std::vector<std::string> &ids) {
     for (const auto *sample : {"a", "nihao", "1234567890"}) {
       for (const char *key = sample; *key; ++key)
         if (!engine.ProcessKey(session, *key, 0, &snapshot, &error))
-          throw std::runtime_error(error);
+          throw std::runtime_error("Input probe failed for " + id + " (" + sample + "): " + error);
       if (!engine.ProcessKey(session, 0xff1b, 0, &snapshot, &error))
         throw std::runtime_error(error);
     }

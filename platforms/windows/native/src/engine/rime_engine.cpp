@@ -178,7 +178,8 @@ bool NormalizeDllPath(const std::filesystem::path& path, std::wstring* output,
 }
 
 bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
-                        std::string* output, std::string* error) noexcept {
+                        std::string* output, std::string* error,
+                        const char* field) noexcept {
   try {
     if (value == nullptr) {
       output->clear();
@@ -193,7 +194,7 @@ bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
         static_cast<std::size_t>(static_cast<const char*>(terminator) - value);
     output->assign(value, length);
     if (!detail::IsValidUtf8(*output)) {
-      SetError(error, "librime returned invalid UTF-8");
+      SetError(error, std::string("librime returned invalid UTF-8 in ") + field);
       return false;
     }
     return true;
@@ -619,7 +620,7 @@ class RimeEngine::Impl final {
     abi::InitializeVersionedStruct(&commit);
     if (api_->get_commit(session, &commit) != 0) {
       const bool copied = CopyBoundedCString(
-          commit.text, core::kMaxCommitTextBytes, &commit_text, error);
+          commit.text, core::kMaxCommitTextBytes, &commit_text, error, "commit");
       api_->free_commit(&commit);
       if (!copied) {
         return false;
@@ -662,7 +663,7 @@ class RimeEngine::Impl final {
       if (copied) {
         copied =
             CopyBoundedCString(context.composition.preedit,
-                               core::kMaxCompositionBytes, &composition, error);
+                               core::kMaxCompositionBytes, &composition, error, "preedit");
       }
       if (copied && static_cast<std::size_t>(context.composition.length) >
                         composition.size()) {
@@ -696,7 +697,7 @@ class RimeEngine::Impl final {
       if (copied && count > 0 && context.menu.select_keys != nullptr) {
         copied =
             CopyBoundedCString(context.menu.select_keys,
-                               kMaximumSelectKeysBytes, &select_keys, error);
+                               kMaximumSelectKeysBytes, &select_keys, error, "candidate keys");
       }
       const std::vector<std::string_view> scalar_labels =
           copied ? SplitUtf8Scalars(select_keys)
@@ -706,10 +707,10 @@ class RimeEngine::Impl final {
         OwnedCandidate& candidate = candidates[static_cast<std::size_t>(index)];
         copied = CopyBoundedCString(context.menu.candidates[index].text,
                                     core::kMaxCandidateTextBytes,
-                                    &candidate.text, error) &&
+                                    &candidate.text, error, "candidate text") &&
                  CopyBoundedCString(context.menu.candidates[index].comment,
                                     core::kMaxCandidateCommentBytes,
-                                    &candidate.comment, error);
+                                    &candidate.comment, error, "candidate comment");
         if (!copied) {
           break;
         }
@@ -718,7 +719,7 @@ class RimeEngine::Impl final {
             context.select_labels[index] != nullptr) {
           copied = CopyBoundedCString(context.select_labels[index],
                                       core::kMaxCandidateLabelBytes,
-                                      &candidate.label, error);
+                                      &candidate.label, error, "candidate label");
         } else if (static_cast<std::size_t>(index) < scalar_labels.size()) {
           candidate.label.assign(
               scalar_labels[static_cast<std::size_t>(index)]);
