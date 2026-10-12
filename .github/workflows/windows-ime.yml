@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - 'platforms/windows/**'
+      - 'Shared/SchemeImport/**'
+      - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
       - 'scripts/prepare-official-plugins.py'
@@ -23,6 +25,8 @@ on:
     branches: [main]
     paths:
       - 'platforms/windows/**'
+      - 'Shared/SchemeImport/**'
+      - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
       - 'scripts/prepare-official-plugins.py'

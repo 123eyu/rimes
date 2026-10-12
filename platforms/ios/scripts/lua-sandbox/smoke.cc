@@ -30,6 +30,10 @@ int main(int argc, char **argv) {
     std::filesystem::create_symlink(root / "outside.txt", root / "shared/escape.txt");
     std::filesystem::create_symlink(root / "outside.txt", root / "shared/fallback-escape.txt");
     std::filesystem::create_symlink(root / "outside-created.txt", root / "user/dangling.txt");
+    std::filesystem::create_directory_symlink(root, root / "user/outside-link");
+    std::filesystem::create_symlink(root / "absent-db", root / "user/dangling.userdb");
+    std::filesystem::create_symlink(root / "outside.txt", root / "user/escaped-text.userdb.txt");
+    std::filesystem::create_symlink(root / "absent-text", root / "user/dangling-text.userdb.txt");
     const auto user = (root / "user").string(), shared = (root / "shared").string();
     RIME_STRUCT(RimeTraits, traits);
     traits.user_data_dir = user.c_str(); traits.shared_data_dir = shared.c_str();
@@ -107,6 +111,21 @@ int main(int argc, char **argv) {
         assert(not ReverseLookup('../../outside'))
         assert(not ReverseDb('../../outside'))
         assert(not Schema('../../outside'))
+    )");
+    check("namespaced user databases preserve upstream paths inside user data", R"(
+        local db = assert(UserDb('lua/sequence', 'userdb'))
+        assert(db:open()); assert(db:update('test-key', 'test-value'))
+        assert(db:fetch('test-key') == 'test-value'); db:close()
+        local text = assert(UserDb('nested/phrases', 'plain_userdb'))
+        assert(text:open()); assert(text:update('word', 'value')); text:close()
+        assert(not UserDb('/absolute', 'userdb'))
+        assert(not UserDb('lua/../outside', 'userdb'))
+        assert(not UserDb('lua//empty', 'userdb'))
+        assert(not UserDb('lua/./dot', 'userdb'))
+        assert(not UserDb('outside-link/escaped', 'userdb'))
+        assert(not UserDb('dangling', 'userdb'))
+        assert(not TableDb('escaped-text')); assert(not TableDb('dangling-text'))
+        assert(not UserDb('lua/sequence', '../../escape'))
     )");
     check("plain infinite loop bounded", "while true do end", "budget exceeded");
     check("pcall cannot swallow execution budget", "while true do pcall(function() while true do end end) end", "budget exceeded");

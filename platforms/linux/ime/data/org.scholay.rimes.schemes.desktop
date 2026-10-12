@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Lingxi IME Settings
+Name[zh_CN]=灵犀输入法设置
+Name[zh_TW]=靈犀輸入法設定
+Comment=Import and manage Rime input schemes
+Exec=rimes-schemes
+Icon=rimes
+Terminal=false
+Categories=Settings;Utility;

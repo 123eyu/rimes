@@ -48,6 +48,7 @@ RimesIme::RimesIme(Instance* instance)
     options.user_data_dir = paths.user_data_dir;
     options.log_dir = paths.log_dir;
     options.wait_for_maintenance = false;
+    imported_schema_ = paths.imported_schema;
 
     std::string error;
     if (!engine_.Start(options, &error)) {

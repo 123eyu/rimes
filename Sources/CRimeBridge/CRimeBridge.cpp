@@ -737,6 +737,13 @@ bool BBRimeDeploy(void) {
     return gApi->deploy();
 }
 
+bool BBRimeDeploySchemaFile(const char* path) {
+    std::lock_guard<std::mutex> lock(gMutex);
+    if (!gStarted || !gApi || !gApi->deploy_schema || !path) return false;
+    try { return gApi->deploy_schema(path) != 0; }
+    catch (...) { gLastError = "schema deployment failed"; return false; }
+}
+
 bool BBRimeConfigGetDouble(const char* configId, const char* key, double* out) {
     std::lock_guard<std::mutex> lock(gMutex);
     if (!gStarted || !gApi || !gApi->config_open || !gApi->config_get_double ||

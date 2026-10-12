@@ -26,6 +26,7 @@ void rimes_lua_record_error(const char *message);
 }
 std::string rimes_lua_path(const std::string &name, bool write = false, bool sharedFallback = true);
 bool rimes_lua_resource_name(const std::string &name);
+bool rimes_lua_userdb_name(const std::string &name, const std::string &dbClass);
 class RimesLuaBudgetScope {
 public:
     explicit RimesLuaBudgetScope(lua_State *L) { rimes_lua_begin(L); }

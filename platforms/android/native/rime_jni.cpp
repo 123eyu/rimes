@@ -3,6 +3,8 @@
 #include <algorithm>
 #include <codecvt>
 #include <locale>
+#include <filesystem>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -27,21 +29,81 @@ static jstring string(JNIEnv* env, const std::string& s) {
 static RimeApi* api() { return rime_get_api(); }
 static bool initialized = false;
 static std::string shared_path, user_path, build_path;
-#define JNI(name) Java_org_scholay_rimes_android_NativeRimeEngine_##name
-extern "C" JNIEXPORT void JNICALL JNI(initializeNative)(JNIEnv* env, jclass, jstring shared, jstring user) {
-    if (initialized) return;
-    shared_path = utf8(env, shared); user_path = utf8(env, user); build_path = shared_path + "/build";
+extern "C" const char* rimes_lua_last_error();
+extern "C" void rimes_lua_clear_error();
+static const char* modules[] = {"default", "lua", "deployer", nullptr};
+static void initialize(const std::string& shared, const std::string& user) {
+    if (initialized && shared_path == shared && user_path == user) return;
+    if (initialized) { api()->finalize(); initialized = false; }
+    shared_path = shared; user_path = user; build_path = shared_path + "/build";
     RIME_STRUCT(RimeTraits, traits);
     traits.shared_data_dir = shared_path.c_str(); traits.user_data_dir = user_path.c_str();
     traits.prebuilt_data_dir = build_path.c_str(); traits.staging_dir = build_path.c_str();
-    traits.app_name = "rime.rimes_android";
+    traits.app_name = "rime.rimes_android"; traits.modules = modules;
     api()->setup(&traits); api()->initialize(&traits); initialized = true;
-    // No maintenance/deployment here: all schemas/dictionaries were compiled on the host.
+}
+#define JNI(name) Java_org_scholay_rimes_android_NativeRimeEngine_##name
+extern "C" JNIEXPORT void JNICALL JNI(initializeNative)(JNIEnv* env, jclass, jstring shared, jstring user) {
+    try { initialize(utf8(env, shared), utf8(env, user)); }
+    catch (...) {
+        if (initialized) { api()->finalize(); initialized = false; }
+        if (auto type = env->FindClass("java/lang/IllegalStateException"))
+            env->ThrowNew(type, "The Rime environment could not be initialized");
+    }
+    // Runtime never deploys on first key. Import compilation runs in the separate
+    // settings import process; built-in dictionaries remain precompiled assets.
 }
 extern "C" JNIEXPORT jlong JNICALL JNI(createNative)(JNIEnv*, jclass) { return api()->create_session(); }
 extern "C" JNIEXPORT void JNICALL JNI(destroyNative)(JNIEnv*, jclass, jlong session) { api()->destroy_session(session); }
 extern "C" JNIEXPORT jboolean JNICALL JNI(schemaNative)(JNIEnv* env, jclass, jlong session, jstring schema) {
-    return api()->select_schema(session, utf8(env, schema).c_str());
+    rimes_lua_clear_error();
+    const bool selected = api()->select_schema(session, utf8(env, schema).c_str());
+    return selected && (!rimes_lua_last_error() || !rimes_lua_last_error()[0]);
+}
+extern "C" JNIEXPORT jstring JNICALL JNI(deployNative)(JNIEnv* env, jclass, jstring root, jobjectArray schemas) {
+    std::string failure;
+    std::string resources;
+    try {
+        resources = utf8(env, root);
+        initialize(resources, resources);
+        if (!api()->deploy_config_file("default.yaml", "config_version")) throw std::runtime_error("default.yaml deployment failed");
+        std::vector<std::string> identifiers;
+        const auto count = env->GetArrayLength(schemas);
+        if (count < 1 || count > 32) throw std::runtime_error("Invalid schema selection");
+        for (jsize i = 0; i < count; ++i) {
+            auto value = static_cast<jstring>(env->GetObjectArrayElement(schemas, i));
+            auto id = utf8(env, value); env->DeleteLocalRef(value);
+            if (id.empty() || id.find("..") != std::string::npos ||
+                id.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_.-") != std::string::npos)
+                throw std::runtime_error("Invalid schema identifier");
+            identifiers.push_back(id);
+            if (!api()->deploy_schema((resources + "/" + id + ".schema.yaml").c_str()))
+                throw std::runtime_error("Cannot deploy " + id);
+        }
+        const auto validation = resources + "/.validation-user";
+        std::filesystem::create_directories(validation);
+        initialize(resources, validation);
+        for (const auto& id : identifiers) {
+            rimes_lua_clear_error();
+            auto session = api()->create_session();
+            bool valid = session && api()->select_schema(session, id.c_str());
+            if (valid) {
+                api()->set_option(session, "ascii_mode", false);
+                for (const auto* sample : {"a", "nihao", "1234567890"}) {
+                    for (const char* key = sample; *key; ++key) api()->process_key(session, *key, 0);
+                    api()->clear_composition(session);
+                }
+            }
+            if (session) api()->destroy_session(session);
+            const std::string error = rimes_lua_last_error() ? rimes_lua_last_error() : "";
+            if (!valid || !error.empty()) throw std::runtime_error(id + ": " + (error.empty() ? "Cannot load schema" : error));
+        }
+    } catch (const std::exception& error) { failure = error.what(); }
+      catch (...) { failure = "Rime deployment failed"; }
+    if (initialized) { api()->finalize(); initialized = false; }
+    std::error_code ignored;
+    if (!resources.empty()) std::filesystem::remove_all(resources + "/.validation-user", ignored);
+    return failure.empty() ? nullptr : string(env, failure);
 }
 extern "C" JNIEXPORT jboolean JNICALL JNI(keyNative)(JNIEnv*, jclass, jlong session, jint key) { return api()->process_key(session,key,0); }
 extern "C" JNIEXPORT jboolean JNICALL JNI(selectNative)(JNIEnv*, jclass, jlong session, jint index) {

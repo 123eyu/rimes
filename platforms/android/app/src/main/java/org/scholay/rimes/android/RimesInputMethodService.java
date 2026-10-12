@@ -117,6 +117,9 @@ public final class RimesInputMethodService extends InputMethodService {
     private RimeEngine.Snapshot snapshot=RimeEngine.Snapshot.EMPTY;
     // Worker-owned state. Access only inside EngineWorker.QUEUE.
     private RimeEngine engine;
+    private java.io.File builtinResources,builtinUser,privateImportedUser;
+    private boolean importedEngineActive; // EngineWorker only
+    private RimeSchemeStore.Selection importedScheme;
     private long session;
     private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi"};
     private static final String[] NAMES={"拼音","自然码","五笔"};
@@ -145,7 +148,8 @@ public final class RimesInputMethodService extends InputMethodService {
                 for(int i=0;i<syllables.length();i++) syllableList.add(syllables.getString(i));
                 NineKeyPinyin spelling=new NineKeyPinyin(syllableList);
                 if(engine==null) engine=new NativeRimeEngine();
-                engine.initialize(resources.getAbsolutePath(),EngineResources.userDirectory(getApplicationContext()).getAbsolutePath());
+                builtinResources=resources;builtinUser=EngineResources.userDirectory(getApplicationContext());
+                engine.initialize(resources.getAbsolutePath(),builtinUser.getAbsolutePath());
                 main.post(() -> { if(!destroyed) { spellings=spelling; ready=true; resetEngine(); render(); } });
             } catch(Exception | LinkageError error) {
                 android.util.Log.e("RIMES","Engine initialization failed",error);
@@ -175,16 +179,43 @@ public final class RimesInputMethodService extends InputMethodService {
         if(target==null) { target=getCurrentInputConnection(); configure(info); }
         render();
     }
-    private String effectiveSchema() { return (chordLayout()?"rimes_ziranma":nineKeyEngine()?"rimes_pinyin9":schema)+(privateField || !learningEnabled ? "_private" : ""); }
+    private String effectiveSchema() {
+        if(importedScheme!=null) return importedScheme.schemaID;
+        return (chordLayout()?"rimes_ziranma":nineKeyEngine()?"rimes_pinyin9":schema)+(privateField || !learningEnabled ? "_private" : "");
+    }
     private void resetEngine() {
         if(!ready) return;
         final String selected=effectiveSchema();
         final boolean active=target!=null;
+        final RimeSchemeStore.Selection imported=importedScheme;
+        final boolean ephemeral=privateField || !learningEnabled;
         final InputEpoch.Ticket ticket=epoch.issue();
         EngineWorker.QUEUE.execute(() -> {
-            if(session!=0) engine.destroySession(session);
-            session=active ? engine.createSession() : 0;
-            if(active && (session==0 || !engine.selectSchema(session,selected))) main.post(() -> { if(epoch.current(ticket)) engineFailure(); });
+            try {
+                if(session!=0) engine.destroySession(session);
+                session=0;
+                java.io.File resources=builtinResources,user=builtinUser,nextPrivate=null;
+                if(active && imported!=null) {
+                    resources=imported.resources;
+                    user=ephemeral?new java.io.File(getCacheDir(),"rime-private/"+java.util.UUID.randomUUID()):
+                        new java.io.File(getNoBackupFilesDir(),"rime-imported-user/"+imported.packageID);
+                    java.nio.file.Files.createDirectories(user.toPath());
+                    if(ephemeral) nextPrivate=user;
+                }
+                // Built-in sessions keep the environment initialized by initialize().
+                // Only crossing an imported-package boundary changes engine paths.
+                if((active && imported!=null) || importedEngineActive)
+                    engine.initialize(resources.getAbsolutePath(),user.getAbsolutePath());
+                importedEngineActive=active && imported!=null;
+                // Finalizing the previous environment closes its database handles first.
+                if(privateImportedUser!=null) org.scholay.rimes.core.RimeSchemeArchive.remove(privateImportedUser);
+                privateImportedUser=nextPrivate;
+                session=active ? engine.createSession() : 0;
+                if(active && (session==0 || !engine.selectSchema(session,selected))) throw new IllegalStateException("Cannot load selected scheme");
+            } catch(Exception | LinkageError failure) {
+                android.util.Log.e("RIMES","Cannot activate input scheme",failure);
+                main.post(() -> { if(epoch.current(ticket)) engineFailure(); });
+            }
         });
     }
     private void engineFailure() { if(!destroyed) { failed=true; ready=false; render(); } }
@@ -198,6 +229,7 @@ public final class RimesInputMethodService extends InputMethodService {
         endTarget(); destroyed=true; pluginExecutor.close(); super.onDestroy();
     }
     private void restoreSettings() {
+        importedScheme=new RimeSchemeStore(this).active();
         KeyboardSettings.Snapshot saved=settings.snapshot();
         cometProfile=cometSettings.snapshot();
         schema=saved.schema; layout=saved.layout; theme=KeyboardTheme.named(saved.theme);
@@ -220,16 +252,21 @@ public final class RimesInputMethodService extends InputMethodService {
         };
         if(ownsTarget()) settleAndSwitch(change); else { cancelChord(); change.run(); render(); }
     }
-    private boolean chordLayout() { return officialPlugins!=null && officialPlugins.enabled("chord") && (layout.equals("orthogonal") || layout.equals("splitOrthogonal")); }
+    private boolean chordLayout() { return importedScheme==null && officialPlugins!=null && officialPlugins.enabled("chord") && (layout.equals("orthogonal") || layout.equals("splitOrthogonal")); }
     private boolean chordVisible() { return ready && chordLayout() && !directOnly && !numeric && !emoji; }
     private void cancelChord() {
         if(keyboard!=null) keyboard.cancelPendingInputEvents();
         heldPreview=null; chordPreview=""; if(chords!=null) chords.cancel();
     }
     private void chooseSchema(String selected) {
+        if(importedScheme!=null) {
+            try {new RimeSchemeStore(this).activate(null,null);}catch(Exception failure){return;}
+            dispatch(() -> literal(""));importedScheme=null;
+            changeSettingsPair(() -> settings.setSchema(selected));resetEngine();rebuildKeys();render();return;
+        }
         settleAndSwitch(() -> { changeSettingsPair(() -> settings.setSchema(selected)); spellingOpen=false; });
     }
-    private boolean nineKeyEngine() { return layout.equals("nineKey") && schema.equals("rimes_pinyin"); }
+    private boolean nineKeyEngine() { return importedScheme==null && layout.equals("nineKey") && schema.equals("rimes_pinyin"); }
     private boolean nineKeyVisible() { return ready && nineKeyEngine() && !directOnly && !english && !numeric && !emoji && !uppercase; }
     /** Chinese input shows Chinese marks on the number and symbol pages. */
     private boolean chinesePages() { return !english && !directOnly; }
@@ -264,6 +301,7 @@ public final class RimesInputMethodService extends InputMethodService {
         if(!KeyboardSettings.KEY_LEARNING.equals(key) || saved.learning==learningEnabled) return;
         learningEnabled=saved.learning;
         if(!ready || !ownsTarget() || privateField) return;
+        if(importedScheme!=null) {dispatch(() -> literal(""));resetEngine();return;}
         final String selected=effectiveSchema();
         // Serialize policy changes before subsequent keys. Existing confirmed blocks stay intact;
         // unfinished code settles exactly like a schema switch, without selecting/learning a word.

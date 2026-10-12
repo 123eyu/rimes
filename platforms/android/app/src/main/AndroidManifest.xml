@@ -11,6 +11,8 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+        <activity android:name=".RimeSchemesActivity" android:exported="false" android:process=":scheme_import"
+            android:configChanges="orientation|screenSize" />
         <service android:name=".RimesInputMethodService" android:label="@string/app_name"
             android:permission="android.permission.BIND_INPUT_METHOD" android:exported="true">
             <intent-filter><action android:name="android.view.InputMethod" /></intent-filter>

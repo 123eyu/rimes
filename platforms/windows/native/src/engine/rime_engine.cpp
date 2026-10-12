@@ -302,8 +302,9 @@ class RimeEngine::Impl final {
       traits.distribution_code_name = "rimes";
       traits.distribution_version = "0.1.0";
       traits.app_name = "rime.rimes.windows";
-      traits.modules = nullptr;
-      traits.min_log_level = 3;
+      static const char* import_modules[] = {"default", "lua", "deployer", nullptr};
+      traits.modules = options.skip_maintenance ? import_modules : nullptr;
+      traits.min_log_level = options.skip_maintenance ? 2 : 3;
       traits.log_dir = log_dir_.empty() ? nullptr : log_dir_.c_str();
       traits.prebuilt_data_dir = nullptr;
       traits.staging_dir = nullptr;
@@ -312,7 +313,7 @@ class RimeEngine::Impl final {
       api_->initialize(&traits);
       initialized_ = true;
 
-      if (!RunMaintenanceLocked(options.full_maintenance_check, error)) {
+      if (!options.skip_maintenance && !RunMaintenanceLocked(options.full_maintenance_check, error)) {
         StopLocked();
         return false;
       }
@@ -499,6 +500,18 @@ class RimeEngine::Impl final {
       SetError(error, "exception while processing a Shift tap");
       return false;
     }
+  }
+
+  bool DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      const auto encoded = path.u8string();
+      const std::string filename(encoded.begin(), encoded.end());
+      if (!healthy_ || !api_ || !api_->deploy_schema || !api_->deploy_schema(filename.c_str())) {
+        SetError(error, "librime could not compile the schema"); return false;
+      }
+      return true;
+    } catch (...) { SetError(error, "exception while compiling a schema"); return false; }
   }
 
   bool Configure(SessionId session, const std::string& schema, bool ascii,
@@ -782,6 +795,10 @@ class RimeEngine::Impl final {
 RimeEngine::RimeEngine() : impl_(std::make_unique<Impl>()) {}
 
 RimeEngine::~RimeEngine() { Stop(); }
+
+bool RimeEngine::DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
+  return impl_->DeploySchema(path, error);
+}
 
 bool RimeEngine::Start(const RimeEngineOptions& options,
                        std::string* error) noexcept {

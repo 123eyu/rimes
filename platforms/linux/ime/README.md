@@ -42,6 +42,14 @@ Buffer plugins (AI / translation / stream / music), cross-batch chord pairing,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
 
+## Importing source schemes
+
+Open the RIMES configuration entry in Fcitx5, or launch `rimes-schemes` from the
+application menu. Review a ZIP or coded UTF-8 TXT/TSV, compile, then explicitly enable
+a scheme and restart Fcitx5. Restore built-ins before removing an active package.
+Learning data stays in `$XDG_DATA_HOME/rimes/schemes/learning` when a package is removed.
+See [the shared format and verification guide](../../../docs/portable-scheme-import.md).
+
 ## Maintenance limits
 
 Stopping Fcitx5 during a librime rebuild can still wait for that rebuild to
@@ -69,8 +77,21 @@ lists. On Ubuntu 24.04:
 platforms/linux/ime/scripts/deps.sh --install
 ```
 
-`librime-plugin-lua` and a distro OpenCC `opencc/s2t.json` are required. The
-addon will not bundle those.
+The distro runtime still supports the built-in data. Original modern schemes may
+require newer Lua bindings than Ubuntu 24.04 supplies. Build a private pinned runtime
+(the script does not replace system libraries):
+
+```bash
+python3 platforms/linux/ime/scripts/build-engine.py
+export RIMES_IME_RIME_PREFIX="$PWD/platforms/linux/ime/.engine/install"
+platforms/linux/ime/scripts/build.sh
+```
+
+Keep that prefix when installing/running this build; installed targets retain its library
+search path. Building against a distro runtime remains possible by leaving the variable
+unset. An import with unavailable components/Lua APIs fails without replacing the active
+scheme. OpenCC tables required by an imported scheme must be in its own ZIP.
+The private prefix is not automatically added to the existing `.deb` packaging workflow.
 
 ## Build and install
 

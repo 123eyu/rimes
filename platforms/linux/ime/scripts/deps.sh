@@ -11,7 +11,7 @@ Debian / Ubuntu (Noble and later):
     libfcitx5core-dev libfcitx5utils-dev libfcitx5config-dev fcitx5-modules-dev \
     fcitx5 fcitx5-modules fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
     librime-dev librime-plugin-lua librime-bin \
-    libopencc-dev libopencc-data \
+    libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
     xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
     libgtk-layer-shell-dev \
     qtbase5-dev fonts-noto-cjk weston wtype sway
@@ -39,7 +39,7 @@ if [[ "${1:-}" == "--install" ]]; then
             libfcitx5core-dev libfcitx5utils-dev libfcitx5config-dev fcitx5-modules-dev \
             fcitx5 fcitx5-modules fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
             librime-dev librime-plugin-lua librime-bin \
-            libopencc-dev libopencc-data \
+            libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
             xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev \
             qtbase5-dev fonts-noto-cjk weston wtype sway

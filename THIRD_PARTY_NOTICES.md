@@ -183,3 +183,9 @@ License: https://creativecommons.org/licenses/by-sa/3.0/
 The x42 LV2 player/FluidSynth code is not included. AudioKit's AppleSampler
 loads the licensed sample library. RIMES drum patterns are original; no
 BeatBuddy recordings, MIDI content, or firmware are redistributed.
+
+## Portable Rime scheme import
+
+- macOS and iOS: [Yams 5.1.3](https://github.com/jpsim/Yams/tree/5.1.3) and [ZIPFoundation 0.9.19](https://github.com/weichsel/ZIPFoundation/tree/0.9.19), MIT. Full notices are in `LICENSES/Yams-MIT.txt` and `LICENSES/ZIPFoundation-MIT.txt`; iOS also embeds them in its third-party notices.
+- Windows and Linux: [yaml-cpp 0.8.0](https://github.com/jbeder/yaml-cpp/tree/0.8.0), [miniz 3.1.2](https://github.com/richgel999/miniz/tree/3.1.2), and [PicoSHA2](https://github.com/okdshin/PicoSHA2/tree/161cb3fc4170fa7a3eca9e582cebd27cc4d1fe29), MIT. Exact source hashes are pinned in `Shared/SchemeImport/CMakeLists.txt`; full notices are in `LICENSES/`.
+- Android: [SnakeYAML 2.4](https://bitbucket.org/snakeyaml/snakeyaml), Apache-2.0. Its upstream license is bundled under `assets/licenses/`.

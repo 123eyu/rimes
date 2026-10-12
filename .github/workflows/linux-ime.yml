@@ -9,6 +9,11 @@ on:
       - main
     paths:
       - "platforms/linux/**"
+      - "Shared/SchemeImport/**"
+      - "scripts/input-schemes/fetch_fixture.py"
+      - "platforms/ios/scripts/prepare-lua.py"
+      - "platforms/ios/scripts/lua-sandbox/**"
+      - "platforms/ios/dependencies.lock.json"
       - "rime-data/**"
       - "scripts/platform-preview/**"
       - ".github/workflows/linux-ime.yml"
@@ -17,6 +22,11 @@ on:
       - main
     paths:
       - "platforms/linux/**"
+      - "Shared/SchemeImport/**"
+      - "scripts/input-schemes/fetch_fixture.py"
+      - "platforms/ios/scripts/prepare-lua.py"
+      - "platforms/ios/scripts/lua-sandbox/**"
+      - "platforms/ios/dependencies.lock.json"
       - "rime-data/**"
       - "scripts/platform-preview/**"
       - ".github/workflows/linux-ime.yml"
@@ -50,17 +60,31 @@ jobs:
             fcitx5-modules-dev fcitx5 fcitx5-modules \
             fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
             librime-dev librime-plugin-lua librime-bin \
-            libopencc-dev libopencc-data \
+            libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev \
             xvfb xdotool dbus-x11 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev \
             qtbase5-dev fonts-noto-cjk weston wtype sway
+
+      - name: Build pinned Rime and Lua runtime
+        run: |
+          python3 platforms/linux/ime/scripts/build-engine.py
+          echo "RIMES_IME_RIME_PREFIX=$PWD/platforms/linux/ime/.engine/install" >> "$GITHUB_ENV"
+          echo "LD_LIBRARY_PATH=$PWD/platforms/linux/ime/.engine/install/lib" >> "$GITHUB_ENV"
 
       - name: Build
         run: platforms/linux/ime/scripts/build.sh
 
       - name: Unit tests
         run: ctest --test-dir platforms/linux/ime/build --output-on-failure
+
+      - name: Original source import and native typing
+        run: |
+          python3 scripts/input-schemes/fetch_fixture.py "$RUNNER_TEMP/wanxiang-original.zip"
+          platforms/linux/ime/build/rimes-schemes --import "$RUNNER_TEMP/wanxiang-import" "$RUNNER_TEMP/wanxiang-original.zip" wanxiang
+          platforms/linux/ime/build/rimes-schemes --verify "$RUNNER_TEMP/wanxiang-import" nihao 你好
+          platforms/linux/ime/build/rimes-schemes --import "$RUNNER_TEMP/wanxiang-t9-import" "$RUNNER_TEMP/wanxiang-original.zip" wanxiang_t9
+          platforms/linux/ime/build/rimes-schemes --verify "$RUNNER_TEMP/wanxiang-t9-import" 64426 你好
 
       - name: Headless typing E2E
         run: platforms/linux/ime/tests/e2e/e2e.sh --build-dir platforms/linux/ime/build
@@ -80,6 +104,8 @@ jobs:
             platforms/linux/ime/build/rimes-buffer-ctl
             platforms/linux/ime/build/rimes-capsule
             platforms/linux/ime/build/rimes-capsule-ctl
+            platforms/linux/ime/build/rimes-schemes
+            platforms/linux/ime/.engine/install/lib/librime.so*
           if-no-files-found: error
           retention-days: 14
           compression-level: 6

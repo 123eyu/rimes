@@ -8,6 +8,7 @@
 #include "model.hpp"
 namespace rimes::windows::workbench {
 struct Settings {
+  bool imported_scheme = false;  // Runtime-only; never persisted to settings.json.
   std::uint64_t revision = 1;
   std::string schema = "rime_ice", base_url, model, target_language = "English";
   std::string ai_connector = "openai-compatible", codex_path, codex_model;

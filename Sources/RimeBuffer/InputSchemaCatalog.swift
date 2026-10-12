@@ -194,6 +194,7 @@ final class InputConfigurationStore {
     }
 
     var selectedSchemaID: String {
+        if defaults === UserDefaults.standard, let selection = MacRimeSchemeLibrary.shared.runtimeSelection { return selection.schemaID }
         migrateSchemaSelectionIfNeeded()
         return defaults.string(forKey: Key.selectedSchemaID)
             ?? InputConfigurationResolver.profile(for: .defaultValue)!.schemaID
@@ -212,6 +213,9 @@ final class InputConfigurationStore {
 
     var runtimeProfile: RuntimeInputProfile {
         let schemaID = selectedSchemaID
+        if defaults === UserDefaults.standard, MacRimeSchemeLibrary.shared.runtimePackage != nil {
+            return RuntimeInputProfile(configuration: .defaultValue, schemaID: schemaID, lexiconFamily: .chinese)
+        }
         return resolveProfile(schemaID)
             ?? InputConfigurationResolver.profile(for: .defaultValue)!
     }
@@ -285,6 +289,11 @@ final class InputConfigurationStore {
 
     private func select(schemaID: String,
                         source: ChordExtensionChangeSource) -> Bool {
+        if defaults === UserDefaults.standard, MacRimeSchemeLibrary.shared.runtimePackage != nil {
+            guard MacRimeSchemeLibrary.shared.selectWithinRuntime(schemaID) else { return false }
+            NotificationCenter.default.post(name: .inputConfigurationDidChange, object: self)
+            return true
+        }
         guard let profile = resolveProfile(schemaID) else { return false }
 
         if schemaID == ChordExtensionStore.schemaID {
@@ -468,6 +477,9 @@ enum InputSchemaCatalog {
     private static var deployedMetadata: [(id: String, name: String)] = []
 
     static var options: [InputSchemaOption] {
+        if let package = MacRimeSchemeLibrary.shared.runtimePackage {
+            return package.schemas.map { InputSchemaOption(id: $0.id, name: $0.name, detail: "导入方案 · \(package.name)") }
+        }
         metadataLock.lock()
         let metadata = deployedMetadata
         metadataLock.unlock()

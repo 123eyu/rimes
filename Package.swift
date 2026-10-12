@@ -12,6 +12,8 @@ let package = Package(
     platforms: [.macOS("13.0")],
     dependencies: [
         .package(path: "Shared"),
+        .package(url: "https://github.com/jpsim/Yams.git", exact: "5.1.3"),
+        .package(url: "https://github.com/weichsel/ZIPFoundation.git", exact: "0.9.19"),
         .package(
             url: "https://github.com/AudioKit/AudioKit.git",
             exact: "5.7.2"
@@ -38,6 +40,8 @@ let package = Package(
             name: "RimeBuffer",
             dependencies: [
                 "CRimeBridge",
+                .product(name: "Yams", package: "Yams"),
+                .product(name: "ZIPFoundation", package: "ZIPFoundation"),
                 .product(name: "RimesCore", package: "Shared"),
                 .product(name: "AudioKit", package: "AudioKit"),
                 .product(name: "GRDB", package: "GRDB.swift"),
