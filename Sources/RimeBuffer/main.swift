@@ -451,6 +451,7 @@ if StandaloneRimeCommandRules.requiresIsolatedUserDir(
         exit(1)
     }
     if (CommandLine.arguments.contains("smoke")
+        || CommandLine.arguments.contains("candidate-pagination-smoke")
         || CommandLine.arguments.contains("user-lexicon-bridge-smoke")
         || CommandLine.arguments.contains("external-schema-engine-smoke")
         || CommandLine.arguments.contains("chord-keymap-engine-smoke")
@@ -1149,6 +1150,9 @@ if CommandLine.arguments.contains("inbound-smoke") {
 if CommandLine.arguments.contains("candidate-metrics-smoke") {
     exit(runCandidateMetricsSmokeTest() ? 0 : 1)
 }
+if CommandLine.arguments.contains("candidate-pagination-smoke") {
+    exit(runCandidatePaginationSmokeTest() ? 0 : 1)
+}
 if CommandLine.arguments.contains("candidate-commit-smoke") {
     _ = NSApplication.shared
     exit(runCandidateCommitSmokeTest() ? 0 : 1)
@@ -1507,6 +1511,10 @@ if ChordExtensionStore.shared.isEnabled,
 candidateWindow.onSelect = { owner, selection in
     InputFocusCoordinator.shared.controller(for: owner)?
         .selectCandidate(selection, owner: owner)
+}
+candidateWindow.onPage = { owner, delta in
+    InputFocusCoordinator.shared.controller(for: owner)?
+        .pageCandidates(delta: delta, owner: owner)
 }
 // Buffer presentation is independent from the caret-owned candidate panel.
 var lastBufferControlsActive = BufferModel.shared.active
