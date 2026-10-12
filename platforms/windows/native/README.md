@@ -39,21 +39,28 @@ Where the TSF host cooperates, typing matches the macOS RIMES controller:
 
 - Latin keys while composing stay inside the engine.
 - Space commits the highlighted candidate.
-- `1`–`9` select by label.
+- Left / Right select a candidate without moving the inline preedit caret.
+- Down expands consecutive candidate pages into a matrix showing up to three
+  rows. Up / Down then move between rows; more pages load as needed. Up on the
+  first row or Escape collapses the matrix.
+- `1`–`9` select by label from the active row.
 - PageDown / PageUp page the menu.
-- Escape cancels and commits nothing.
+- Escape outside the matrix cancels and commits nothing.
 - A short independent Shift tap uses the scheme's Chinese/English switch.
   Its raw-code commit is collected immediately while Shift remains a host
   modifier. Other key combinations, long holds and focus changes cancel the
   tap; unavailable or older Brokers do not receive deferred input.
 
 The candidate panel is a `WS_EX_NOACTIVATE` topmost tool window so it cannot
-steal focus from the host.
+steal focus from the host. Horizontal pages stay on one line and grow to the
+monitor's available width; oversized entries are ellipsized while keeping all
+selection targets. Preedit is displayed only in the host editor or Buffer.
 
 For the six product schemas, idle unshifted number-row keys and numeric-keypad
 digits, decimal and operators (also with Shift) pass directly to the host;
-composing candidate selection and Buffer
-capture still go through the engine. Idle ASCII-mode keys also pass through.
+composing candidate selection and Buffer capture still go through the engine.
+Idle spaces in both modes and all idle
+ASCII-mode keys also pass through, including at the TSF test callback.
 The initial mode and subsequent mode flags are exchanged only when both TSF
 and Broker negotiate the key-routing capability, preserving the legacy wire
 format. A modifier-only state update with no composition or committed text
@@ -67,6 +74,10 @@ Vertical candidates use additional columns when the current monitor is too
 short to fit the page. If the host temporarily cannot resolve its caret, the
 panel keeps the last position within the current focus context; with no valid
 position it stays hidden until a caret is available.
+
+The tray uses the shared macOS horn from `Logo/rhino-horn.svg`, with black and
+white variants following the Windows taskbar theme. Regenerate the ICO sizes
+with `python platforms/windows/scripts/Export-RimesTrayIcons.py` (Pillow required).
 
 New Buffer shortcut settings default to **Ctrl+Shift+B**, corresponding to
 macOS Cmd+Shift+B. Saved Ctrl+Alt shortcuts are retained; Settings can select
