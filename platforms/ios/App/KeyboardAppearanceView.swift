@@ -22,7 +22,7 @@ struct KeyboardAppearanceView: View {
                 KeyboardAppearancePreview(layout: value.layout, theme: theme)
                     .padding(.vertical, 8).accessibilityIdentifier("keyboardAppearance.preview")
                 Text(value.layout == .nineKey
-                    ? "9 键用于全拼：输入字母组、选拼音、分隔音节、选择候选。双拼、五笔和导入方案使用 26 键。"
+                    ? "9 键用于全拼：输入字母组、选拼音、分隔音节、选择候选。导入方案须在包内提供配套九键编码，例如万象的 wanxiang_t9；双拼和五笔保持原布局。"
                     : "QWERTY 错行排列，Shift 和删除键位于第三行两侧，空格键更宽。")
                     .font(.caption).foregroundStyle(.secondary)
                 if let customName {

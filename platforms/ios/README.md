@@ -33,6 +33,14 @@ See `CI_RELEASE.md` for the upload workflow.
 - Imported Rime packages can be deleted from the package list with confirmation.
   Deleting the selected package restores the previous built-in scheme when the
   keyboard reopens and preserves learned dictionaries.
+- Imported full-Pinyin packages can switch between 26 and 9 keys when they
+  include a deployed `*_t9` sibling using the standard T9 alphabet conversion
+  and the same dictionary. The sibling may be a deployment dependency, so only
+  the main scheme needs selecting during import. Layout changes keep the
+  package's own candidates, Lua and user dictionary; the keyboard does not
+  compile resources or replace them with built-in Pinyin. Packages without a
+  matching encoder retain their original layout and show an explanation in
+  the layout menu.
 - Extension-private last-scheme memory, independent of Full Access. An explicit
   app selection overrides it once; ordinary app configuration saves do not.
 - Uppercase mechanical keycaps, depressed states and 30% opacity for unreachable

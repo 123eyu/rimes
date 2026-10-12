@@ -123,6 +123,65 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
     [[NSFileManager defaultManager] removeItemAtPath:user error:nil];
     return @{@"success": @(failures.count == 0), @"failures": failures};
 }
++ (NSDictionary *)keyboardSchemaInfoAtPath:(NSString *)path {
+    std::lock_guard<std::recursive_mutex> lock(engineMutex);
+    // Parse only the deployed, resolved YAML. Looking at the archive's source
+    // would miss custom patches and includes; opening an engine would retire
+    // an existing composition just to refresh a layout menu.
+    NSDictionary *attributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+    if (![attributes[NSFileType] isEqual:NSFileTypeRegular] ||
+        [attributes[NSFileSize] unsignedLongLongValue] > 1024 * 1024) return @{};
+    NSString *yaml = [NSString stringWithContentsOfFile:path encoding:NSUTF8StringEncoding error:nil];
+    if (!yaml) return @{};
+    RimeConfig config = {0};
+    auto api = rime_get_api();
+    @try {
+        try {
+            if (!api->config_load_string(&config, yaml.UTF8String)) {
+                if (config.ptr) api->config_close(&config);
+                return @{};
+            }
+            auto string = [&](const char *key) -> NSString * {
+                const char *value = api->config_get_cstring(&config, key);
+                return value ? ([NSString stringWithUTF8String:value] ?: @"") : @"";
+            };
+            auto list = [&](const char *key) -> NSArray<NSString *> * {
+                NSMutableArray *values = [NSMutableArray array];
+                size_t count = api->config_list_size(&config, key);
+                for (size_t i = 0; i < count && i < 4096; ++i) {
+                    std::string item = std::string(key) + "/@" + std::to_string(i);
+                    [values addObject:string(item.c_str())];
+                }
+                return values;
+            };
+            NSString *alphabet = string("speller/alphabet"), *initials = string("speller/initials");
+            BOOL script = [list("engine/translators") containsObject:@"script_translator"];
+            BOOL t9 = NO;
+            // Require the standard letter-to-digit conversion to be the final
+            // algebra rule: a later rule could erase or reinterpret the digits.
+            for (NSString *rule in list("speller/algebra")) {
+                NSArray<NSString *> *parts = [rule componentsSeparatedByString:@"/"];
+                t9 = parts.count == 4 && [parts[0] isEqual:@"xlit"] &&
+                    ([parts[1] isEqual:@"ABCDEFGHIJKLMNOPQRSTUVWXYZ"] ||
+                     [parts[1] isEqual:@"abcdefghijklmnopqrstuvwxyz"]) &&
+                    [parts[2] isEqual:@"22233344455566677778889999"];
+            }
+            for (unichar c : std::string("abcdefghijklmnopqrstuvwxyz23456789")) {
+                if ([alphabet rangeOfString:[NSString stringWithFormat:@"%C", c]].location == NSNotFound) t9 = NO;
+            }
+            for (unichar c : std::string("23456789")) {
+                if (initials.length && [initials rangeOfString:[NSString stringWithFormat:@"%C", c]].location == NSNotFound) t9 = NO;
+            }
+            t9 = t9 && script && [string("speller/delimiter") containsString:@"'"];
+            NSDictionary *result = @{@"schemaID":string("schema/schema_id"),
+                @"dictionary":string("translator/dictionary"), @"script":@(script), @"nineKey":@(t9)};
+            api->config_close(&config);
+            return result;
+        } catch (...) {}
+    } @catch (NSException *exception) {}
+    if (config.ptr) api->config_close(&config);
+    return @{};
+}
 - (NSString *)lastError {
     std::lock_guard<std::recursive_mutex> lock(engineMutex);
     return [NSString stringWithUTF8String:rimes_lua_last_error() ?: ""] ?: @"";

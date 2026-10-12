@@ -39,7 +39,7 @@ final class MobileEngine: InputEngine {
         if !available { lastError = bridge?.lastError ?? "输入引擎不可用" }
         return available
     }
-    func selectImported(_ selection: RimeSchemeSelection, store: RimeSchemeStore = .init()) -> Bool {
+    func selectImported(_ selection: RimeSchemeSelection, store: RimeSchemeStore = .init(), schemaID: String? = nil) -> Bool {
         rawSnapshot = .init(); candidateReadings = []; provenance.reset(); lastError = ""
         guard let resolved = store.resolve(selection) else { bridge = nil; resourceIdentity = nil; available = false; return false }
         if resourceIdentity != resolved.resources.path || bridge == nil {
@@ -51,7 +51,16 @@ final class MobileEngine: InputEngine {
                 resourceIdentity = resolved.resources.path
             } catch { bridge = nil; resourceIdentity = nil }
         }
-        available = bridge?.selectSchema(selection.schemaID) ?? false
+        let selectedSchema = schemaID ?? selection.schemaID
+        // Layout variants are restricted to deployed, dictionary-matched
+        // siblings from this package, including its compiled dependencies.
+        if selectedSchema != selection.schemaID {
+            let layouts = store.keyboardLayouts(for: selection)
+            guard selectedSchema == layouts?.qwertySchemaID || selectedSchema == layouts?.nineKeySchemaID else {
+                available = false; lastError = "方案包未提供此键位布局"; return false
+            }
+        }
+        available = bridge?.selectSchema(selectedSchema) ?? false
         if !available { lastError = bridge?.lastError ?? "导入方案无法加载" }
         return available
     }
