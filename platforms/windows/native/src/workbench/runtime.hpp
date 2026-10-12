@@ -9,6 +9,7 @@
 #include "../core/control.hpp"
 #include "../engine/rime_snapshot.hpp"
 #include "model.hpp"
+#include "buffer_placement.hpp"
 #include "provider.hpp"
 #include "official_plugins.hpp"
 namespace rimes::windows::workbench {
@@ -23,11 +24,15 @@ class Runtime {
   void Remove(Target target);
   void Focus(Target target);
   bool Capturing(Target target);
+  bool IsSendChord(const core::KeyEvent& key);
   bool BeforeKey(Target target, const core::KeyEvent& key, bool composing);
-  void Capture(Target target, engine::EngineSnapshot* snapshot);
+  void Capture(Target target, engine::EngineSnapshot* snapshot,
+               bool direct_input = false);
   core::Json Control(const core::Json& message, std::uint32_t process);
   core::Json Snapshot();
   Target PlacementTarget();
+  std::optional<BufferRect> PlacementCaret(Target target);
+  void CancelOpeningPlacement();
   Settings Configuration();
   bool Configure(Settings value, const std::wstring& key, bool replace_key,
                  std::string* error);
@@ -43,6 +48,7 @@ class Runtime {
   void Send(bool all);
   void Generate(bool translation);
   void SelectAIMode();
+  void SelectTranslationMode();
   // Stop queued/in-flight automatic translation when changing the displayed
   // mode. Source, completed results and an issued delivery/ack are retained;
   // selecting a mode does not dispatch a new request or deliver content.
@@ -79,7 +85,10 @@ class Runtime {
   std::uint64_t pressed_at_ = 0, pending_since_ = 0, edited_at_ = 0;
   Target return_target_;
   std::uint64_t opening_revision_ = 0;
+  std::uint64_t placement_revision_ = 0, opening_at_ = 0, opening_source_revision_ = 0;
+  std::optional<BufferRect> opening_caret_;
   bool return_held_ = false, return_sent_ = false;
+  unsigned return_key_ = 0;
   bool ai_mode_ = false;
   void Changed();
   void DiscardBufferLocked();

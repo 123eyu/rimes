@@ -12,5 +12,6 @@ struct BufferInputAnchor {
   std::optional<BufferRect> caret;
   std::optional<BufferRect> box;
 };
-BufferInputAnchor ProbeBufferInputAnchor(DWORD expected_process);
+BufferInputAnchor ProbeBufferInputAnchor(DWORD expected_process,
+                                         std::optional<BufferRect> tsf_caret = {});
 }  // namespace rimes::windows::workbench

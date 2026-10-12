@@ -42,6 +42,7 @@ std::vector<std::string> Sentences(const std::string& text) {
 }
 void Model::Focus(Target target) {
   if (live == target) return;
+  direct_blocks_.clear();
   live = target;
   if (capture && bound != live) {
     capture = false;
@@ -64,6 +65,7 @@ void Model::Open() {
   status = capture ? "Buffer" : "Copy only - no input target";
 }
 void Model::Close() {
+  direct_blocks_.clear();
   visible = false;
   capture = false;
   preedit.clear();
@@ -89,7 +91,7 @@ void Model::Discard() {
 }
 std::string Model::SourceText() const { return Join(source); }
 std::string Model::ResultText() const { return Join(result); }
-bool Model::Append(std::string text) {
+bool Model::Append(std::string text, InputKind kind) {
   if (text.empty()) return true;
   if (SourceText().size() + text.size() > kLimit ||
       (pending_ && pending_->result))
@@ -102,19 +104,36 @@ bool Model::Append(std::string text) {
     source_links_.clear();
     translated_source_.clear();
   }
-  // Adjacent raw keystrokes form sentence blocks; never mutate an in-flight
-  // prefix.
-  if (!source.empty() &&
-      (!pending_ || pending_->block.id != source.back().id)) {
-    const auto& tail = source.back().text;
-    const bool complete = EndsSentence(tail);
-    if (!complete) {
-      text = std::move(source.back().text) + text;
-      source.pop_back();
+  if (kind != InputKind::kDirect) {
+    direct_blocks_.clear();
+    if (kind == InputKind::kCommit) {
+      source.push_back({next_id_++, std::move(text)});
+    } else {
+      for (auto& part : Sentences(text))
+        source.push_back({next_id_++, std::move(part)});
+    }
+  } else {
+    const bool extend = !source.empty() && !direct_blocks_.empty() &&
+        direct_blocks_.back() == source.back().id &&
+        (!pending_ || pending_->block.id != source.back().id) &&
+        !EndsSentence(source.back().text) &&
+        SourceText().size() - source.back().text.size() >= translated_source_.size();
+    if (extend) {
+      // Keep the tail identity while typing. Never edit a delivery snapshot or
+      // an already translated prefix, even if it has no sentence terminator.
+      auto parts = Sentences(source.back().text + text);
+      source.back().text = std::move(parts.front());
+      for (std::size_t i = 1; i < parts.size(); ++i) {
+        source.push_back({next_id_++, std::move(parts[i])});
+        direct_blocks_.push_back(source.back().id);
+      }
+    } else {
+      for (auto& part : Sentences(text)) {
+        source.push_back({next_id_++, std::move(part)});
+        direct_blocks_.push_back(source.back().id);
+      }
     }
   }
-  for (auto& part : Sentences(text))
-    source.push_back({next_id_++, std::move(part)});
   ++revision;
   return true;
 }
@@ -124,12 +143,20 @@ bool Model::Backspace() {
   result.clear();
   source_links_.clear();
   translated_source_.clear();
-  auto& text = source.back().text;
-  auto last = text.size() - 1;
-  while (last > 0 && (static_cast<unsigned char>(text[last]) & 0xc0) == 0x80)
-    --last;
-  text.erase(last);
-  if (text.empty()) source.pop_back();
+  if (!direct_blocks_.empty() && direct_blocks_.back() == source.back().id) {
+    auto& text = source.back().text;
+    auto last = text.size() - 1;
+    while (last > 0 && (static_cast<unsigned char>(text[last]) & 0xc0) == 0x80)
+      --last;
+    text.erase(last);
+    if (text.empty()) {
+      source.pop_back();
+      direct_blocks_.pop_back();
+    }
+  } else {
+    direct_blocks_.clear();
+    source.pop_back();
+  }
   ++revision;
   return true;
 }
@@ -216,6 +243,7 @@ std::optional<Delivery> Model::Send(bool all) {
   if (!send_all_) send_until_ = blocks.back().id;
   send_all_ = all;
   pending_ = Delivery{next_request_++, bound, blocks.front(), output};
+  direct_blocks_.clear();
   status = "Sending...";
   return pending_;
 }

@@ -1,5 +1,6 @@
 #include "runtime.hpp"
 #include "official_features.hpp"
+#include "../core/buffer_keys.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -53,7 +54,15 @@ bool Runtime::Capturing(Target target) {
   std::lock_guard lock(mutex_);
   return model_.capture && model_.bound == target && model_.live == target;
 }
+bool Runtime::IsSendChord(const core::KeyEvent& key) {
+  std::lock_guard lock(mutex_);
+  return core::IsBufferSendChord(key.virtual_key, key.modifiers,
+                                  settings_.send_key, settings_.send_modifiers);
+}
 void Runtime::CaptureChanged() {
+  // A focus/configuration/visibility transition cancels delivery, including
+  // leaving and returning to the same target before the held key is released.
+  return_sent_ = true;
   for (auto& [id, entry] : sessions_) {
     (void)id;
     // Replace obsolete capture notifications but never replace a delivery.
@@ -63,9 +72,12 @@ void Runtime::CaptureChanged() {
     entry.events.push_back(
         {{"kind", "capture"},
          {"context", entry.target.context},
+         {"openingRevision", opening_revision_},
          {"font", settings_.font_size},
          {"verticalCandidates", settings_.vertical_candidates},
          {"theme", settings_.theme},
+         {"sendKey", settings_.send_key},
+         {"sendModifiers", settings_.send_modifiers},
          {"enabled", model_.capture && model_.bound == entry.target &&
                          model_.live == entry.target}});
   }
@@ -91,7 +103,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
   std::lock_guard lock(mutex_);
   const bool down = (key.event_flags &
                      static_cast<unsigned>(core::KeyEventFlags::kKeyDown)) != 0;
-  if (return_held_ && key.virtual_key == VK_RETURN &&
+  if (return_held_ && key.virtual_key == return_key_ &&
       return_target_ == target) {
     if (!down) {
       if (!return_sent_ && model_.capture && model_.bound == target)
@@ -100,17 +112,12 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  // A Return already owned above keeps its repeat/release lifecycle even if
-  // modifiers change. New host shortcuts must not become Buffer commands.
-  constexpr auto command_modifiers =
-      static_cast<unsigned>(core::KeyModifiers::kControl) |
-      static_cast<unsigned>(core::KeyModifiers::kAlt) |
-      static_cast<unsigned>(core::KeyModifiers::kWindows) |
-      static_cast<unsigned>(core::KeyModifiers::kAltGr);
-  if ((key.modifiers & command_modifiers) != 0) return false;
+  const bool send = core::IsBufferSendChord(key.virtual_key, key.modifiers,
+                                            settings_.send_key, settings_.send_modifiers);
+  if (core::HasHostCommandModifier(key.modifiers) && !send) return false;
   if (!model_.capture || model_.bound != target || model_.live != target)
     return false;
-  if (key.virtual_key != VK_ESCAPE && key.virtual_key != VK_RETURN &&
+  if (!send && key.virtual_key != VK_ESCAPE && key.virtual_key != VK_RETURN &&
       key.virtual_key != VK_BACK &&
       (model_.SourceText().size() > Model::kLimit - core::kMaxCommitTextBytes ||
        (model_.Pending() && !model_.result.empty()))) {
@@ -119,7 +126,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     Changed();
     return true;
   }
-  if (key.virtual_key == VK_ESCAPE) {
+  if (!send && key.virtual_key == VK_ESCAPE) {
     if (down) {
       model_.Close();
       CaptureChanged();
@@ -127,7 +134,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  if (key.virtual_key == VK_BACK && !composing) {
+  if (!send && key.virtual_key == VK_BACK && !composing) {
     if (down) {
       model_.Backspace();
       edited_at_ = GetTickCount64();
@@ -135,13 +142,17 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  if (key.virtual_key == VK_RETURN && !composing) {
+  if (send) {
     if (down && !(key.event_flags &
                   static_cast<unsigned>(core::KeyEventFlags::kRepeat))) {
       return_held_ = true;
-      return_sent_ = false;
+      return_key_ = key.virtual_key;
+      return_sent_ = composing;
       pressed_at_ = GetTickCount64();
       return_target_ = target;
+      // Settle composition through Rime, then suppress repeats/release for
+      // this physical press even when the configured key is not Enter.
+      if (composing) return false;
       if (ai_mode_ && (model_.busy || model_.result.empty())) {
         // Generation owns this entire press. Never send the retained source
         // on key-up/hold, even if the connector finishes during that press.
@@ -151,15 +162,20 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
+  // Ordinary Return only settles composition. It cannot send or submit the
+  // host field while Buffer owns input; sending uses the configured chord.
+  if (key.virtual_key == VK_RETURN && !composing) return true;
   return false;
 }
-void Runtime::Capture(Target target, engine::EngineSnapshot* snapshot) {
+void Runtime::Capture(Target target, engine::EngineSnapshot* snapshot,
+                      bool direct_input) {
   std::lock_guard lock(mutex_);
   if (!model_.capture || model_.bound != target || model_.live != target)
     return;
   model_.preedit = snapshot->composition;
   if (!snapshot->commit_text.empty()) {
-    if (!model_.Append(snapshot->commit_text))
+    if (!model_.Append(snapshot->commit_text,
+                       direct_input ? InputKind::kDirect : InputKind::kCommit))
       throw std::runtime_error("Buffer capacity invariant");
     snapshot->commit_text.clear();
     edited_at_ = GetTickCount64();
@@ -174,6 +190,28 @@ Json Runtime::Control(const Json& message, std::uint32_t process) {
     return {{"kind", "disconnected"}};
   const auto target = found->second.target;
   const auto op = message.value("op", "");
+  if (op == "geometry") {
+    // Geometry is presentation only, and only an answer to this explicit
+    // opening from its authenticated exact session can reposition the panel.
+    const auto rect = message.find("caret");
+    if (!opening_at_ || GetTickCount64() - opening_at_ > 1000 || opening_caret_ ||
+        !model_.visible || !model_.capture || model_.bound != target || model_.live != target ||
+        model_.revision != opening_source_revision_ || !model_.preedit.empty() ||
+        message.value("context", 0ULL) != target.context ||
+        message.value("openingRevision", 0ULL) != opening_revision_ ||
+        rect == message.end() || !rect->is_array() || rect->size() != 4 ||
+        !std::all_of(rect->begin(), rect->end(), [](const Json& n) { return n.is_number(); }))
+      return {{"kind", "stale"}};
+    BufferRect caret{(*rect)[0].get<double>(), (*rect)[1].get<double>(),
+                     (*rect)[2].get<double>(), (*rect)[3].get<double>()};
+    if (!FiniteBufferRect(caret) || std::abs(caret.x) > 1000000 ||
+        std::abs(caret.y) > 1000000 || caret.width < 0 || caret.width > 2000 ||
+        caret.height <= 2 || caret.height >= 600) return {{"kind", "error"}};
+    opening_caret_ = caret;
+    ++placement_revision_;
+    Changed();
+    return {{"kind", "ok"}};
+  }
   if (op == "focus") {
     model_.Focus(target.process == GetCurrentProcessId() ? Target{} : target);
     CaptureChanged();
@@ -223,6 +261,7 @@ Json Runtime::Snapshot() {
           {"status", model_.status},
           {"translate", model_.translate},
           {"opening_revision", opening_revision_},
+          {"placement_revision", placement_revision_},
           {"target_pid", model_.capture && model_.bound == model_.live
                              ? model_.bound.process : 0}};
 }
@@ -232,6 +271,18 @@ Target Runtime::PlacementTarget() {
   if (!model_.visible || !model_.capture || model_.bound != model_.live ||
       found == sessions_.end() || found->second.target != model_.bound) return {};
   return model_.bound;
+}
+std::optional<BufferRect> Runtime::PlacementCaret(Target target) {
+  std::lock_guard lock(mutex_);
+  if (!target || !model_.capture || !model_.visible || model_.bound != target ||
+      model_.live != target || model_.revision != opening_source_revision_ ||
+      !model_.preedit.empty()) return {};
+  return opening_caret_;
+}
+void Runtime::CancelOpeningPlacement() {
+  std::lock_guard lock(mutex_);
+  opening_at_ = 0;
+  opening_caret_.reset();
 }
 Settings Runtime::Configuration() {
   std::lock_guard lock(mutex_);
@@ -276,6 +327,9 @@ void Runtime::BindLocked(std::uint32_t foreground_process) {
     model_.Focus({});
   model_.Open();
   ++opening_revision_;
+  opening_caret_.reset();
+  opening_at_ = GetTickCount64();
+  opening_source_revision_ = model_.revision;
 }
 void Runtime::Bind(std::uint32_t foreground_process) {
   std::lock_guard lock(mutex_);
@@ -330,7 +384,7 @@ void Runtime::DiscardBuffer() {
 void Runtime::Paste(std::string text) {
   std::lock_guard lock(mutex_);
   if (model_.visible) {
-    if (!model_.Append(std::move(text)))
+    if (!model_.Append(std::move(text), InputKind::kExternal))
       model_.status = "Paste exceeds Buffer capacity or delivery is pending.";
     edited_at_ = GetTickCount64();
     Changed();
@@ -379,6 +433,15 @@ void Runtime::SelectAIMode() {
   std::lock_guard lock(mutex_);
   ai_mode_ = true;
 }
+void Runtime::SelectTranslationMode() {
+  std::lock_guard lock(mutex_);
+  ai_mode_ = false;
+  model_.translate = true;
+  // Selection arms the debounced sentence pipeline, including an empty
+  // workspace. It does not require a first click on the Translate button.
+  edited_at_ = GetTickCount64();
+  Changed();
+}
 void Runtime::ReturnToInput() {
   std::lock_guard lock(mutex_);
   ai_mode_ = false;
@@ -412,7 +475,8 @@ void Runtime::Tick() {
     CaptureChanged();
     Changed();
   }
-  if (model_.visible && model_.translate && !model_.busy &&
+  if (model_.visible && model_.capture && model_.bound == model_.live &&
+      model_.translate && !model_.busy &&
       !model_.source.empty() && model_.preedit.empty() &&
       now - edited_at_ >= 800)
     StartGeneration(true, true);

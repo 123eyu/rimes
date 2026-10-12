@@ -16,12 +16,14 @@ struct Settings {
   bool ascii = false, traditional = false, ascii_punctuation = false;
   unsigned candidate_count = 9;
   bool vertical_candidates = false;
-  unsigned font_size = 16, hotkey_modifiers = MOD_CONTROL | MOD_SHIFT,
+  unsigned font_size = 16, hotkey_modifiers = MOD_ALT | MOD_SHIFT,
            hotkey_key = 'B';
+  unsigned send_modifiers = MOD_ALT | MOD_SHIFT, send_key = VK_RETURN;
 };
 std::wstring Wide(const std::string& text);
 std::string Utf8(const std::wstring& text);
 bool LoadSettings(Settings* value, std::string* error);
+bool ValidSettings(const Settings& value);
 bool SaveSettings(const Settings& value, std::string* error);
 bool SaveSecret(const std::wstring& key, const std::string& endpoint,
                 std::string* error);

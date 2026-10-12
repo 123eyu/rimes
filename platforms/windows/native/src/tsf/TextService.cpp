@@ -1063,10 +1063,10 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
   }
   const bool repeat =
       (static_cast<std::uint64_t>(key_data) & (1ULL << 30)) != 0;
-  if (virtual_key == VK_RETURN && return_owned_ && (test_up || up || repeat)) {
+  if (virtual_key != 0 && virtual_key == buffer_owned_key_ && (test_up || up || repeat)) {
     *eaten = TRUE;
     if (up) {
-      return_owned_ = false;
+      buffer_owned_key_ = 0;
       if (context == active_context_) {
         BrokerInputState ignored;
         broker_client_->HandleKey({phase, virtual_key, key_data}, &ignored);
@@ -1104,9 +1104,10 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
     // the key even if the host refuses an edit lock; passing it through would
     // duplicate raw input while leaving the engine one event ahead.
     *eaten = TRUE;
-    if (virtual_key == VK_RETURN && phase == BrokerKeyPhase::kKeyDown &&
+    if ((virtual_key == VK_RETURN || broker_client_->IsBufferSendKey(virtual_key)) &&
+        phase == BrokerKeyPhase::kKeyDown &&
         broker_client_->Capturing())
-      return_owned_ = true;
+      buffer_owned_key_ = virtual_key;
   }
   // A Shift modifier can commit existing code while remaining a host key.
   // Snapshot application and keyboard ownership are independent.
@@ -1568,7 +1569,51 @@ void TextService::OnBrokerNotification() {
       candidate_window_.SetVertical(message->value("verticalCandidates", false));
       candidate_window_.SetTheme(ui::ThemeIdOrDefault(
           message->value("theme", std::string("night"))));
-      SetCapture(message->value("enabled", false));
+      const bool enabled = message->value("enabled", false);
+      const auto opening_context = context_generation_;
+      const auto opening_valid = edit_valid_;
+      auto same_focus = [this, opening_context, opening_valid] {
+        if (!opening_valid || !opening_valid->load() ||
+            opening_context != context_generation_ || !thread_manager_) return false;
+        ITfDocumentMgr* manager = nullptr;
+        ITfContext* focused = nullptr;
+        IUnknown* identity = nullptr;
+        if (SUCCEEDED(thread_manager_->GetFocus(&manager)) && manager &&
+            SUCCEEDED(manager->GetTop(&focused)) && focused)
+          focused->QueryInterface(IID_IUnknown, reinterpret_cast<void**>(&identity));
+        const bool matches = identity && identity == context_identity_;
+        if (identity) identity->Release();
+        if (focused) focused->Release();
+        if (manager) manager->Release();
+        return matches;
+      };
+      // Query TSF's real caret while the host still owns its composition.
+      // This also works in Chromium controls with no Win32 caret/TextPattern2.
+      // Never use a saved rectangle as a new opening's focus authority.
+      if (enabled && active_context_ && same_focus()) {
+        DWORD process = 0;
+        GetWindowThreadProcessId(GetForegroundWindow(), &process);
+        if (process == GetCurrentProcessId()) {
+          auto* scope = new (std::nothrow) ScopeRead(active_context_);
+          if (scope) {
+            HRESULT result = E_FAIL;
+            const auto hr = active_context_->RequestEditSession(
+                client_id_, scope, TF_ES_SYNC | TF_ES_READ, &result);
+            if (SUCCEEDED(hr) && SUCCEEDED(result) && scope->allowed &&
+                scope->caret.bottom > scope->caret.top && same_focus()) {
+              const auto caret = scope->caret;
+              broker_client_->Control({{"op", "geometry"},
+                  {"context", context_generation_},
+                  {"openingRevision", message->value("openingRevision", 0ULL)},
+                  {"caret", {caret.left, caret.top, caret.right - caret.left,
+                             caret.bottom - caret.top}}});
+            }
+            scope->Release();
+          }
+        }
+      }
+      if (opening_context != context_generation_) continue;
+      SetCapture(enabled);
       continue;
     }
     if (kind != "deliver") continue;

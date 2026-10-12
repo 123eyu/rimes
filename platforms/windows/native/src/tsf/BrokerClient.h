@@ -81,6 +81,7 @@ class BrokerClient {
   virtual std::optional<core::Json> TakeNotification() = 0;
   virtual bool Control(core::Json message) noexcept = 0;
   virtual bool Capturing() const noexcept = 0;
+  virtual bool IsBufferSendKey(WPARAM) const noexcept { return false; }
   virtual std::uint64_t ConnectionGeneration() const noexcept = 0;
   [[nodiscard]] virtual bool IsConnected() const noexcept = 0;
   virtual BrokerKeyResult HandleKey(const BrokerKeyEvent& event,

@@ -20,7 +20,8 @@ bool SameSettings(const Settings& a, const Settings& b) {
          a.ascii_punctuation == b.ascii_punctuation &&
          a.font_size == b.font_size && a.candidate_count == b.candidate_count &&
          a.vertical_candidates == b.vertical_candidates &&
-         a.hotkey_modifiers == b.hotkey_modifiers && a.hotkey_key == b.hotkey_key;
+         a.hotkey_modifiers == b.hotkey_modifiers && a.hotkey_key == b.hotkey_key &&
+         a.send_key == b.send_key && a.send_modifiers == b.send_modifiers;
 }
 
 // Exercise the production load/save functions without reading real settings,
@@ -60,9 +61,10 @@ int main() {
     IsolatedSettings test;
     Settings settings;
     Check(LoadSettings(&settings, nullptr) && settings.theme == "night" &&
-              settings.hotkey_modifiers == (MOD_CONTROL | MOD_SHIFT) &&
-              settings.hotkey_key == 'B',
-          "absent file uses night and Ctrl+Shift+B");
+              settings.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
+              settings.hotkey_key == 'B' && settings.send_key == VK_RETURN &&
+              settings.send_modifiers == (MOD_ALT | MOD_SHIFT),
+          "absent file uses Alt+Shift+B and Alt+Shift+Enter");
     for (const auto* theme : {"night", "day", "quiet", "rasta"}) {
       settings.theme = theme;
       settings.model = "fixture-model";
@@ -101,7 +103,7 @@ int main() {
       std::ofstream(test.path(), std::ios::trunc) << json;
       Settings legacy;
       Check(LoadSettings(&legacy, nullptr) && legacy.theme == "night" && legacy.candidate_count == 9 && !legacy.vertical_candidates &&
-                legacy.hotkey_modifiers == (MOD_CONTROL | MOD_SHIFT) &&
+                legacy.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
                 legacy.hotkey_key == 'B',
             "legacy and unknown themes fall back safely");
     }
@@ -151,8 +153,7 @@ int main() {
               migrated.hotkey_key == 'J',
           "explicit migration preserves the custom letter");
     const unsigned invalid_modifiers[] = {
-        0U, MOD_CONTROL, MOD_ALT, MOD_SHIFT,
-        MOD_CONTROL | MOD_ALT | MOD_SHIFT};
+        0U, MOD_SHIFT, MOD_NOREPEAT, 16U, 0xffffffffU};
     for (unsigned modifiers : invalid_modifiers) {
       migrated.hotkey_modifiers = modifiers;
       Check(!SaveSettings(migrated, nullptr), "unsupported modifier sets are rejected");
@@ -163,6 +164,25 @@ int main() {
               after_rejection.hotkey_key == 'J',
           "rejected modifier changes preserve the saved shortcut");
     Settings trusted;
+    Settings custom;
+    custom.hotkey_key = VK_F8; custom.hotkey_modifiers = MOD_CONTROL | MOD_SHIFT;
+    custom.send_key = 'J'; custom.send_modifiers = MOD_ALT | MOD_SHIFT;
+    Check(SaveSettings(custom, nullptr), "save independently configurable non-letter toggle and non-Enter send");
+    Settings custom_loaded;
+    Check(LoadSettings(&custom_loaded, nullptr) && SameSettings(custom, custom_loaded), "custom shortcuts survive restart");
+    custom.send_key = custom.hotkey_key; custom.send_modifiers = custom.hotkey_modifiers;
+    Check(!SaveSettings(custom, nullptr), "duplicate actions cannot share a chord");
+    for (unsigned key : {'A', 'V', 'C', 'X'}) {
+      custom.send_key = key; custom.send_modifiers = MOD_CONTROL;
+      Check(!SaveSettings(custom, nullptr), "editing shortcuts cannot become send actions");
+    }
+    custom.send_key = VK_F6; custom.send_modifiers = 0;
+    Check(SaveSettings(custom, nullptr), "safe bare function key can be a local send key");
+    custom.send_key = 'J';
+    Check(!SaveSettings(custom, nullptr), "bare typing key cannot send");
+    std::ofstream(test.path(), std::ios::trunc) << "{\"version\":3,\"hotkey_key\":74}";
+    Check(LoadSettings(&custom, nullptr) && custom.hotkey_modifiers == (MOD_ALT | MOD_SHIFT),
+          "v3 key-only settings use the requested Windows default");
     trusted.revision = 77;
     trusted.schema = "english";
     trusted.base_url = "https://example.invalid/v1";

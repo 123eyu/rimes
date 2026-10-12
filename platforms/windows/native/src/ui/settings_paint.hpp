@@ -319,14 +319,17 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
     SetTextColor(dc, ToColorRef(p.text_secondary));
     RECT help = px(layout.body);
     help.bottom = help.top + MulDiv(48, static_cast<int>(dpi), 96);
-    DrawTextW(dc, L"选择快捷键组合与字母。默认 Ctrl+Shift+B；旧自定义组合会保留。", -1, &help,
+    DrawTextW(dc, L"唤出 / 收起 Buffer（全局，默认 Alt+Shift+B）", -1, &help,
+              DT_LEFT | DT_WORDBREAK);
+    help = px({layout.body.left, layout.body.top + 88, layout.body.right, layout.body.top + 116});
+    DrawTextW(dc, L"发送内容（仅 Buffer 捕获时，默认 Alt+Shift+Enter）", -1, &help,
               DT_LEFT | DT_WORDBREAK);
   } else if (draft.page == SettingsPage::kBuffer) {
     SelectObject(dc, fonts.body);
     SetTextColor(dc, ToColorRef(p.text_secondary));
     RECT help = px(layout.body);
     DrawTextW(dc, L"输入先进入缓冲区，再由你发送到已绑定的输入框。\n\n"
-                 L"Return 轻按发送下一块，长按 1.2 秒发送全部。\n"
+                 L"配置的发送键：轻按发送下一块，长按 1.2 秒发送全部。\n"
                  L"切换输入框后暂停输入和发送。先点宿主输入框，再点 Buffer 原文区重新绑定；也可按快捷键。\n"
                  L"切换处理模式会停止旧自动翻译；已完成待发结果保留，仍可显式发送。\n"
                  L"关闭窗口保留本次内容，退出后不恢复正文。", -1, &help,
@@ -377,7 +380,7 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
     DrawTextW(dc, text.c_str(), -1, &about, DT_LEFT | DT_WORDBREAK);
   }
 
-  const DipRect* fields[] = {&layout.font_edit, &layout.candidate_count_edit, &layout.hotkey_edit,
+  const DipRect* fields[] = {&layout.font_edit, &layout.candidate_count_edit, &layout.hotkey_edit, &layout.send_edit,
       &layout.base_edit, &layout.model_edit, &layout.key_edit, &layout.lang_edit,
       &layout.codex_path_edit, &layout.codex_model_edit};
   for (const auto* field : fields) {

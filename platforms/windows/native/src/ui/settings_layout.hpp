@@ -85,8 +85,9 @@ struct SettingsDraft {
   unsigned font_size = 16;
   unsigned candidate_count = 9;
   bool vertical_candidates = false;
-  unsigned hotkey_modifiers = MOD_CONTROL | MOD_SHIFT;
+  unsigned hotkey_modifiers = MOD_ALT | MOD_SHIFT;
   wchar_t hotkey = L'B';
+  unsigned send_modifiers = MOD_ALT | MOD_SHIFT, send_key = VK_RETURN;
   std::wstring base_url;
   std::wstring model;
   int ai_connector_index = 0;
@@ -119,6 +120,7 @@ struct SettingsLayout {
   DipRect check_vertical{};
   DipRect hotkey_modifiers{};
   DipRect hotkey_edit{};
+  DipRect send_modifiers{}, send_edit{}, hotkey_record{}, send_record{}, shortcut_reset{}, shortcut_feedback{};
   DipRect base_edit{};
   DipRect connector_combo{}, codex_path_edit{}, codex_model_edit{};
   DipRect model_edit{};
@@ -239,8 +241,21 @@ struct SettingsLayout {
   } else if (draft.page == SettingsPage::kBuffer) {
     layout.hotkey_modifiers = {layout.body.left, layout.body.top + 48.0f,
                               layout.body.left + 130.0f, layout.body.top + 74.0f};
-    layout.hotkey_edit = {layout.body.left + 142.0f, layout.body.top + 48.0f,
-                          layout.body.left + 190.0f, layout.body.top + 74.0f};
+    layout.hotkey_edit = {layout.body.left + 172.0f, layout.body.top + 48.0f,
+                          layout.body.left + 280.0f, layout.body.top + 74.0f};
+    layout.hotkey_modifiers.right = layout.body.left + 160.0f;
+    layout.send_modifiers = {layout.hotkey_modifiers.left, layout.body.top + 122.0f,
+                             layout.hotkey_modifiers.right, layout.body.top + 148.0f};
+    layout.send_edit = {layout.hotkey_edit.left, layout.send_modifiers.top,
+                        layout.hotkey_edit.right, layout.send_modifiers.bottom};
+    layout.hotkey_record = {layout.body.left + 296, layout.hotkey_edit.top,
+                            layout.body.left + 414, layout.hotkey_edit.bottom};
+    layout.send_record = {layout.hotkey_record.left, layout.send_edit.top,
+                          layout.hotkey_record.right, layout.send_edit.bottom};
+    layout.shortcut_reset = {layout.body.left, layout.body.top + 174,
+                             layout.body.left + 170, layout.body.top + 202};
+    layout.shortcut_feedback = {layout.body.left, layout.body.top + 220,
+                                layout.body.right, layout.body.top + 310};
   } else if (draft.page == SettingsPage::kApi) {
     float y = layout.body.top;
     auto place = [&](DipRect& edit) {

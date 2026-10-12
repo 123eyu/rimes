@@ -11,6 +11,34 @@ void Check(bool ok, const char* message) {
 }
 int main() {
   Target a{10, 1, 1}, b{10, 2, 2};
+  Model blocks;
+  blocks.Focus(a); blocks.Open();
+  blocks.Append("你好"); blocks.Append("世界");
+  Check(blocks.source.size() == 2 && blocks.source[0].text == "你好" &&
+        blocks.source[1].text == "世界", "each Rime commit is a hard block boundary");
+  Check(blocks.Backspace() && blocks.SourceText() == "你好",
+        "Backspace removes a finalized commit block, not one character");
+  blocks.Append("h", InputKind::kDirect);
+  const auto tail_id = blocks.source.back().id;
+  blocks.Append("i", InputKind::kDirect);
+  Check(blocks.source.size() == 2 && blocks.source.back().text == "hi" &&
+        blocks.source.back().id == tail_id,
+        "direct keystrokes share a stable tail without merging into a Rime block");
+  Check(blocks.Backspace() && blocks.source.back().text == "h",
+        "only the live direct-input tail is character editable");
+  blocks.Append("。新的提交");
+  Check(blocks.source.size() == 3 && blocks.source.back().text == "。新的提交",
+        "even punctuation inside a Rime commit does not split its hard boundary");
+  blocks.Backspace(); blocks.Backspace();
+  Check(blocks.SourceText() == "你好", "new commit terminates direct editing");
+  auto frozen = blocks.Send(false);
+  blocks.Append("新", InputKind::kDirect);
+  Check(frozen && blocks.source.front().text == "你好",
+        "typing never changes an in-flight block");
+  blocks.Acknowledge(frozen->request, a, true);
+  Check(blocks.SourceText() == "新", "ack consumes only the frozen head");
+  blocks.Focus(b); blocks.Open(); blocks.Append("目标", InputKind::kDirect);
+  Check(blocks.source.size() == 2, "direct-input runs cannot cross focus targets");
   Model m;
   m.Focus(a);
   m.Open();

@@ -538,6 +538,7 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesBrokerClientContract
              COMMAND RimesBrokerClientContractTests)
     add_test(NAME RimesRegistrarMetadata COMMAND RimesRegistrar metadata)
+    add_test(NAME RimesRegistrarDiagnostics COMMAND RimesRegistrar diagnose)
     add_test(NAME RimesBrokerEndpoint COMMAND RimesBroker --print-endpoint)
     add_test(NAME RimesBrokerPrintPaths COMMAND RimesBroker --print-paths)
 
@@ -552,6 +553,7 @@ if(RIMES_BUILD_TESTS)
         RimesBufferLayout
         RimesBrokerClientContract
         RimesRegistrarMetadata
+        RimesRegistrarDiagnostics
         RimesBrokerEndpoint
         RimesBrokerPrintPaths
         PROPERTIES TIMEOUT 10

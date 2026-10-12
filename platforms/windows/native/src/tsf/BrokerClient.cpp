@@ -1,4 +1,5 @@
 #include "BrokerClient.h"
+#include "../core/buffer_keys.hpp"
 
 #include <Windows.h>
 
@@ -711,6 +712,11 @@ class NamedPipeBrokerClient final : public BrokerClient {
     notification_window_.store(window);
   }
   bool Capturing() const noexcept override { return capturing_.load(); }
+  bool IsBufferSendKey(WPARAM key) const noexcept override {
+    const auto chord = send_chord_.load();
+    return core::IsBufferSendChord(static_cast<unsigned>(key), ReadModifiers(),
+                                    chord & 0xffU, chord >> 8U);
+  }
   std::uint64_t ConnectionGeneration() const noexcept override {
     return connection_generation_.load();
   }
@@ -895,9 +901,13 @@ class NamedPipeBrokerClient final : public BrokerClient {
     const bool composing = composing_.load(std::memory_order_acquire);
     const bool observe_shift = shift && modifier_capable_.load() &&
                                !HasCommandModifiers(modifiers);
-    const bool capture_key = capturing_.load() && !HasCommandModifiers(modifiers) &&
-        (event.virtual_key == VK_RETURN || event.virtual_key == VK_BACK ||
-         event.virtual_key == VK_ESCAPE);
+    const auto send_chord = send_chord_.load();
+    const bool capture_key = capturing_.load() &&
+        (core::IsBufferSendChord(static_cast<std::uint32_t>(event.virtual_key), modifiers,
+                                send_chord & 0xffU, send_chord >> 8U) ||
+         (!HasCommandModifiers(modifiers) &&
+          (event.virtual_key == VK_RETURN || event.virtual_key == VK_BACK ||
+           event.virtual_key == VK_ESCAPE)));
     if (event.phase == BrokerKeyPhase::kTestKeyDown) {
       // A filtered host shortcut may never receive OnKeyDown. This is local
       // gesture bookkeeping only: test callbacks never send input to Rime.
@@ -1467,8 +1477,18 @@ class NamedPipeBrokerClient final : public BrokerClient {
           std::lock_guard state_lock(io_mutex_);
           if (input_session_id_ != session ||
               connection_generation_.load() != generation) continue;
-          if (kind == "capture")
+          if (kind == "capture") {
+            const auto key = message->value("sendKey", unsigned(VK_RETURN));
+            const auto modifiers = message->value("sendModifiers", unsigned(MOD_ALT | MOD_SHIFT));
+            if (!core::ValidShortcut(key, modifiers, true)) {
+              capturing_.store(false);
+              continue;
+            }
+            // A single atomic snapshot avoids torn key/modifier reads on the
+            // host input thread while settings are being changed.
+            send_chord_.store(key | (modifiers << 8U));
             capturing_.store(message->value("enabled", false));
+          }
           if (kind == "capture" || kind == "deliver") {
             (*message)["connectionGeneration"] = generation;
             std::lock_guard lock(notification_mutex_);
@@ -1572,6 +1592,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
 
   std::atomic<HWND> notification_window_{nullptr};
   std::atomic_bool capturing_{false}, control_capable_{false};
+  std::atomic_uint32_t send_chord_{VK_RETURN | ((MOD_ALT | MOD_SHIFT) << 8U)};
   std::atomic_bool modifier_capable_{false};
   std::atomic_bool key_routing_capable_{false}, ascii_mode_{false};
   std::atomic<std::uint64_t> connection_generation_{0};

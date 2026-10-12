@@ -6,6 +6,8 @@ class FocusProbeBroker final : public rimes::windows::tsf::BrokerClient {
  public:
   std::uint64_t context = 0, connection = 1;
   bool connected = true, capturing = false;
+  bool consume = false, send_chord = false;
+  unsigned key_calls = 0;
   HWND notification_window = nullptr;
   void BeginConnect() noexcept override {}
   void Disconnect() noexcept override { context = 0; }
@@ -23,6 +25,7 @@ class FocusProbeBroker final : public rimes::windows::tsf::BrokerClient {
   }
   bool Control(rimes::windows::core::Json) noexcept override { return true; }
   bool Capturing() const noexcept override { return capturing; }
+  bool IsBufferSendKey(WPARAM key) const noexcept override { return key == 'J' && send_chord; }
   std::uint64_t ConnectionGeneration() const noexcept override {
     return connection;
   }
@@ -30,7 +33,9 @@ class FocusProbeBroker final : public rimes::windows::tsf::BrokerClient {
   rimes::windows::tsf::BrokerKeyResult HandleKey(
       const rimes::windows::tsf::BrokerKeyEvent&,
       rimes::windows::tsf::BrokerInputState*) noexcept override {
-    return rimes::windows::tsf::BrokerKeyResult::kPassThrough;
+    ++key_calls;
+    return consume ? rimes::windows::tsf::BrokerKeyResult::kConsumed
+                   : rimes::windows::tsf::BrokerKeyResult::kPassThrough;
   }
 };
 
@@ -94,6 +99,26 @@ void CheckFocusRestoration() {
   service->OnSetFocus(TRUE);
   Expect(probe->context > resumed,
          "connection-ready focus refresh binds without replaying a key");
+
+  probe->capturing = probe->consume = probe->send_chord = true;
+  BOOL eaten = FALSE;
+  service->OnKeyDown(context, 'J', 1, &eaten);
+  Expect(eaten, "custom send key is owned on its first physical press");
+  const auto pressed_calls = probe->key_calls;
+  probe->send_chord = false;  // Modifiers released or binding edited mid-press.
+  service->OnTestKeyDown(context, 'J', LPARAM(1ULL << 30), &eaten);
+  Expect(eaten && probe->key_calls == pressed_calls, "owned custom repeat stays local after modifier change");
+  service->OnKeyDown(context, 'J', LPARAM(1ULL << 30), &eaten);
+  Expect(eaten && probe->key_calls == pressed_calls, "repeat cannot settle composition or deliver twice");
+  service->OnTestKeyUp(context, 'J', 0, &eaten);
+  Expect(eaten && probe->key_calls == pressed_calls, "custom send test-up has no Broker mutation");
+  service->OnKeyUp(context, 'J', 0, &eaten);
+  Expect(eaten && probe->key_calls == pressed_calls + 1, "matching physical release reaches the Broker once");
+  service->OnKeyDown(context, 'J', 1, &eaten);
+  const auto typing_calls = probe->key_calls;
+  service->OnKeyDown(context, 'J', LPARAM(1ULL << 30), &eaten);
+  Expect(eaten && probe->key_calls == typing_calls + 1, "ordinary repeated J remains typing, not a send gesture");
+  probe->capturing = probe->consume = false;
 
   SelectionEditRecord record;
   const auto before_selection = probe->context;

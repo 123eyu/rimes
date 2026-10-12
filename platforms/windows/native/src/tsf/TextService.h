@@ -116,7 +116,7 @@ class TextService final : public ITfTextInputProcessorEx,
   HWND notification_window_ = nullptr;
   std::uint64_t last_delivery_ = 0;
   std::uint64_t broker_generation_ = 0;
-  bool return_owned_ = false;
+  WPARAM buffer_owned_key_ = 0;
   void RevokeContext() noexcept;
   ITfContext* active_context_ = nullptr;
   IUnknown* context_identity_ = nullptr;
