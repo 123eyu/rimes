@@ -1,0 +1,41 @@
+{
+  "date": "2026-10-12",
+  "baseline": "6b90e48",
+  "branch": "codex/windows-buffer-parity-20261012",
+  "configuration": "MSVC Release; clean build",
+  "ctest": {
+    "x64": "27/27",
+    "x86": "27/27"
+  },
+  "isolatedLibrimeE2E": {
+    "desktopProbe": false,
+    "x64": "passed",
+    "x86": "passed"
+  },
+  "localTranslation": "real Chinese/English native provider passed; verified cache install in isolated profile",
+  "providerTransport": "7 passed",
+  "nativeData": "11 passed",
+  "desktopHostAcceptance": "pending: browser, Codex, other Electron",
+  "binaries": [
+    {
+      "architecture": "x64",
+      "file": "RimesBroker.exe",
+      "sha256": "a9bc85fb8ed85d4fb2b2c0b426870b40052cedef1f39d1036b7a495a6c18fc79"
+    },
+    {
+      "architecture": "x64",
+      "file": "RimesTsf.dll",
+      "sha256": "c4af36bb645af247a1399a73430cec1156c558ed630e9d4812bc80af03a5cbf0"
+    },
+    {
+      "architecture": "x86",
+      "file": "RimesBroker.exe",
+      "sha256": "3abcce00a9f82c43601b3e7ce4237ba9168bfada420559e2079bef2e4fca1684"
+    },
+    {
+      "architecture": "x86",
+      "file": "RimesTsf.dll",
+      "sha256": "38006a210396e867ce4a052fa47af43c19ad6c6351c612a98c259982c6bcf8d0"
+    }
+  ]
+}

@@ -23,6 +23,7 @@ if($SigningCertificateThumbprint -and $SigningCertificateThumbprint -notmatch '^
 }
 $signingMode=if($SigningCertificateThumbprint){'authenticode'}else{'unsigned'}
 $packagingFiles=@(Get-ChildItem -LiteralPath "$windowsRoot\installer","$windowsRoot\setup" -File)
+$packagingFiles+=@(Get-ChildItem -LiteralPath "$windowsRoot\translation" -File)
 $packagingFiles+=Get-Item -LiteralPath $PSCommandPath,"$PSScriptRoot\New-RimesSetupExe.ps1"
 $packagingSource=@($packagingFiles | Sort-Object FullName | ForEach-Object {
     [ordered]@{path=$_.FullName.Substring($windowsRoot.Length+1).Replace('\','/');sha256=(Get-FileHash -LiteralPath $_.FullName -Algorithm SHA256).Hash.ToLowerInvariant()}
@@ -62,6 +63,7 @@ foreach($arch in @('x64','x86')){
     foreach($name in @('RimesTsf.dll','RimesRegistrar.exe','RimesTsfTestHost.exe','rimes-windows-registration.json','build-identity.json')){Copy-Item -LiteralPath (Join-Path $bin $name) -Destination $target}
     if($arch -eq 'x64'){Copy-Item -LiteralPath "$bin\RimesBroker.exe" -Destination $target}
 }
+Copy-Item -LiteralPath "$windowsRoot\translation" -Destination "$stage\x64\translation" -Recurse
 Copy-Item -LiteralPath $RimeDll -Destination "$stage\x64\rime.dll"
 Copy-Item -LiteralPath $SharedData -Destination "$stage\x64\shared" -Recurse
 Get-ChildItem -LiteralPath "$windowsRoot\installer" -File | Copy-Item -Destination $stage

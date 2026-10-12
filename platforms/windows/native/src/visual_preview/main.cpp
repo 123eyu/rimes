@@ -12,6 +12,7 @@
 #include "../ui/buffer_paint.hpp"
 #include "../ui/theme.hpp"
 #include "../workbench/settings_ui.hpp"
+#include "export.hpp"
 
 namespace {
 
@@ -316,7 +317,13 @@ LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
 
 }  // namespace
 
-int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int show) {
+int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR command, int show) {
+  const std::wstring arguments(command ? command : L"");
+  if (arguments.starts_with(L"--export=")) {
+    auto directory = arguments.substr(9);
+    if (directory.size() > 1 && directory.front() == L'"' && directory.back() == L'"') directory = directory.substr(1, directory.size() - 2);
+    return parity_render::Export(directory);
+  }
   // Developer visual fixture: production Buffer painter + SettingsUiHost +
   // production CandidateWindow. No IME registration, Broker, clipboard,
   // secrets, network, or real user settings.json writes.

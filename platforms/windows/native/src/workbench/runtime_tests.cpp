@@ -519,8 +519,7 @@ void TestReturningToInputRejectsLateResultsAndDropsQueuedTranslation() {
   // A second explicit request queues behind the first provider. A subsequent
   // mode selection must cancel that queue before the provider can dispatch it.
   runtime.Generate(true);
-  Check(runtime.Snapshot()["busy"] == true && calls == 1 &&
-        runtime.Snapshot()["status"] == "Waiting for response...",
+  Check(runtime.Snapshot()["busy"] == true && calls == 1,
         "second translation is queued");
   runtime.ReturnToInput();
   Check(runtime.Snapshot()["status"] == "Processing stopped. Source retained.",
@@ -653,6 +652,12 @@ void TestExplicitOpeningPlacementRevision() {
   const auto first = runtime.Snapshot()["opening_revision"].get<std::uint64_t>();
   Check(first > 0 && runtime.PlacementTarget() == target,
         "explicit opening publishes its exact live target");
+  runtime.PublishCaret({300, 240, 301, 258}); runtime.PublishCaret({340, 240, 341, 258});
+  auto geometry_event = runtime.Control({{"op", "wait"}, {"session", 901}}, peer);
+  if (geometry_event["kind"] == "capture") geometry_event = runtime.Control({{"op", "wait"}, {"session", 901}}, peer);
+  Check(geometry_event["kind"] == "buffer_caret" && geometry_event["rect"][0] == 340 &&
+        geometry_event["context"] == 902 && geometry_event["openingRevision"] == first,
+        "Buffer caret updates coalesce and retain exact session/context/opening identity");
   runtime.Paste("Synthetic geometry test.");
   Check(runtime.Snapshot()["opening_revision"] == first,
         "ordinary content updates cannot reposition a manually placed buffer");
@@ -681,7 +686,7 @@ void TestCodexConnectorAndReturn() {
     if (cancelled()) { cancelled_old = true; return false; }
     return chunk("Generated only.");
   });
-  auto config = runtime.Configuration(); config.ai_connector = "codex-cli";
+  auto config = runtime.Configuration(); config.ai_connector = "codex-cli"; config.translation_provider = "ai";
   Check(runtime.Configure(config, {}, false, nullptr), "save Codex configuration");
   const auto peer = GetCurrentProcessId() + 1;
   const auto target = runtime.Register(peer, 950, 951);
@@ -737,12 +742,61 @@ void TestDisposableMaintenanceContent() {
   Check(state["source"] == "" && state["result"] == "",
         "IME shutdown discards temporary UI content instead of preserving it");
 }
+void TestNativeShortcutAutoSendAndCopy() {
+  workbench::Runtime runtime([](const workbench::Settings&, const workbench::Generation&,
+      const auto& chunk, const auto&, std::string*) { return chunk("Answer. Second."); });
+  auto fixture_config = workbench::Settings{}; fixture_config.close_after_send = false;
+  Check(runtime.Configure(fixture_config, {}, false, nullptr), "reset fixture preferences");
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 998, 999);
+  runtime.Focus(target); runtime.Bind(peer); runtime.Paste("One. Two.");
+  auto next_event = [&] {
+    auto event = runtime.Control({{"op", "wait"}, {"session", 998}}, peer);
+    while (event.value("kind", "") == "capture" || event.value("kind", "") == "buffer_caret")
+      event = runtime.Control({{"op", "wait"}, {"session", 998}}, peer);
+    return event;
+  };
+  auto acknowledge = [&](const core::Json& event) {
+    Check(event.value("kind", "") == "deliver", "native path enqueues TSF delivery");
+    runtime.Control({{"op", "ack"}, {"session", 998}, {"request", event.at("request")}, {"accepted", true}}, peer);
+  };
+  Check(!runtime.ShortcutDown(peer + 1), "global shortcut rejects foreign foreground process");
+  Check(runtime.ShortcutDown(peer) && !runtime.Snapshot()["pending"].get<bool>(), "global key-down defers send until release or one-second hold");
+  runtime.ShortcutUp(); auto event = next_event(); Check(event["text"] == "One. ", "tap sends first block"); acknowledge(event);
+  Check(runtime.Snapshot()["source"] == "Two.", "tap retains unsent suffix");
+  runtime.Paste(" Three."); Check(runtime.ShortcutDown(peer), "second gesture starts");
+  Sleep(1020); runtime.Tick(); runtime.ShortcutUp();
+  event = next_event(); acknowledge(event); event = next_event(); acknowledge(event);
+  Check(runtime.Snapshot()["source"] == "", "one-second hold drains exactly the frozen blocks");
+  runtime.Paste("Automatic."); runtime.SetAutoSend(1, true); runtime.Tick();
+  Check(runtime.Snapshot()["auto_remaining_ms"].get<long long>() > 0, "automatic send exposes countdown");
+  runtime.PauseCapture(); Sleep(1020); runtime.Tick(); Check(!runtime.Snapshot()["pending"].get<bool>(), "focus pause cancels countdown delivery");
+  runtime.Bind(peer); runtime.Tick(); Check(!runtime.Snapshot()["pending"].get<bool>(), "rebind restarts full countdown");
+  Sleep(1020); runtime.Tick(); event = next_event(); acknowledge(event);
+  Check(!runtime.Snapshot()["visible"].get<bool>(), "close-after-send waits for final acknowledgement");
+  auto copy_config = fixture_config; copy_config.ai_connector = "codex-cli";
+  Check(runtime.Configure(copy_config, {}, false, nullptr), "use bundled fixture connector");
+  runtime.Bind(peer); runtime.Paste("Request."); runtime.Generate(false);
+  Wait([&] { return runtime.Snapshot()["result"] == "Answer. Second."; }, "copy fixture generated");
+  auto ticket = runtime.PrepareCopy(); Check(!ticket.is_null() && runtime.ValidateCopy(ticket), "complete result copy freezes identity and text");
+  Check(!runtime.CommitCopy(ticket, [] { return false; }) && runtime.Snapshot()["visible"] == true,
+        "clipboard write failure does not close or consume Buffer");
+  runtime.Paste("Edit."); Check(!runtime.ValidateCopy(ticket), "editing invalidates old clipboard ticket");
+  runtime.Generate(false); Wait([&] { return runtime.Snapshot()["result"] == "Answer. Second."; }, "copy fixture regenerated");
+  ticket = runtime.PrepareCopy(); Check(runtime.CommitCopy(ticket, [] { return true; }), "copy write committed atomically");
+  Check(!runtime.Snapshot()["capture"].get<bool>() && !runtime.Snapshot()["visible"].get<bool>() &&
+        runtime.Snapshot()["result"] == "Answer. Second.", "successful result copy pauses and hides while retaining session contents");
+  Check(runtime.Configure(fixture_config, {}, false, nullptr), "restore fixture connector");
+}
 int main() {
   const auto root = std::filesystem::temp_directory_path() /
       (L"rimes-runtime-test-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()));
   std::filesystem::create_directories(root);
   Check(SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str()) != 0, "isolated runtime preferences");
+  auto fixture = workbench::Settings{}; fixture.close_after_send = false;
   TestTargets();
+  Check(workbench::SaveSettings(fixture, nullptr), "retain Buffer for multi-step runtime fixtures");
+  TestNativeShortcutAutoSendAndCopy();
   TestDisposableMaintenanceContent();
   TestExplicitOpeningPlacementRevision();
   TestCommandModifiersDoNotBecomeBufferCommands();

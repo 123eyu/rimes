@@ -21,7 +21,9 @@ bool SameSettings(const Settings& a, const Settings& b) {
          a.font_size == b.font_size && a.candidate_count == b.candidate_count &&
          a.vertical_candidates == b.vertical_candidates &&
          a.hotkey_modifiers == b.hotkey_modifiers && a.hotkey_key == b.hotkey_key &&
-         a.send_key == b.send_key && a.send_modifiers == b.send_modifiers;
+         a.send_key == b.send_key && a.send_modifiers == b.send_modifiers &&
+         a.auto_send_seconds == b.auto_send_seconds && a.close_after_send == b.close_after_send &&
+         a.translation_provider == b.translation_provider;
 }
 
 // Exercise the production load/save functions without reading real settings,
@@ -75,6 +77,7 @@ int main() {
             "round trip retains theme and unrelated settings");
     }
     settings.candidate_count = 5;
+    settings.auto_send_seconds = 3; settings.close_after_send = true; settings.translation_provider = "ai";
     settings.ai_connector = "codex-cli";
     settings.codex_path = "C:/Program Files/Codex/codex.exe";
     settings.codex_model = "fixture-model";

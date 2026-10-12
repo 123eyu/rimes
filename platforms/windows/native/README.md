@@ -35,6 +35,22 @@ The [1.0.0 preparation checklist](RELEASE-1.0.0.md) remains historical context.
 
 ## Interaction (macOS-aligned)
 
+The current development branch also repairs the Buffer workbench: the default
+Alt+Shift+Enter chord sends one ready block on release or drains the frozen queue
+after a one-second hold, including in hosts that intercept modified Enter.
+Alt+Shift+S opens Settings. Candidate geometry follows the Buffer insertion caret;
+source editing supports block navigation, select-all and paste. AI generation
+uses one exchange rail, with return-to-edit and complete-result copy-and-close.
+Buffer behavior settings expose optional 1/2/3/5-second delivery and default-on
+close after the final acknowledged block. Focus changes pause delivery.
+
+Translation defaults to a private CPU runtime with Chinese ↔ English models,
+downloaded and SHA-256 verified on first use (about 182 MiB). Subsequent translation
+is offline and requires no API key; this does not call a Windows system translation
+API. Other target languages can use the configured AI connector. See the
+[resource licenses](../translation/NOTICE.md) and
+[implementation/acceptance record](../../../validation/windows-buffer-parity-20261012/implementation.md).
+
 Where the TSF host cooperates, typing matches the macOS RIMES controller:
 
 - Latin keys while composing stay inside the engine.

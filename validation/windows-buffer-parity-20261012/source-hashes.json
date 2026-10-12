@@ -1,0 +1,14 @@
+[
+  {
+    "path": "platforms/windows/native/src/workbench/model.cpp",
+    "sha256": "4BF9E3A05DE27E78C217DEA571A9E4D3DC04348F21CE1750B869F1A38EC0099A"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/buffer_layout.hpp",
+    "sha256": "1008CFD5B7676D26F5C145BC007ECAC1B0722680DAFEBAFF08D91929A9A66201"
+  },
+  {
+    "path": "validation/windows-buffer-parity-20261012/probe.cpp",
+    "sha256": "27818D1B28D12A0D2FB0D3E20E045F0FB485B44EA830150E400F32E6E8667E84"
+  }
+]

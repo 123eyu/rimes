@@ -85,6 +85,9 @@ struct SettingsDraft {
   unsigned font_size = 16;
   unsigned candidate_count = 9;
   bool vertical_candidates = false;
+  bool close_after_send = false;
+  unsigned auto_send_seconds = 0;
+  int translation_provider_index = 0;
   unsigned hotkey_modifiers = MOD_ALT | MOD_SHIFT;
   wchar_t hotkey = L'B';
   unsigned send_modifiers = MOD_ALT | MOD_SHIFT, send_key = VK_RETURN;
@@ -129,6 +132,7 @@ struct SettingsLayout {
   DipRect check_ascii{};
   DipRect check_trad{};
   DipRect check_punct{};
+  DipRect auto_send_combo{}, close_after_check{}, translation_combo{}, buffer_language{};
 };
 
 [[nodiscard]] inline float SettingsBodyWidth(float client_width_dip,
@@ -176,11 +180,11 @@ struct SettingsLayout {
 
   float tab_x = layout.content.left + 24.0f;
   for (int i = 0; i < 2; ++i) {
-    const float tab_width = 16.0f + 12.0f * static_cast<float>(
+    const float tab_width = (std::max)(76.0f, 28.0f + 13.0f * static_cast<float>(
         std::char_traits<wchar_t>::length(
-            kSettingsSubpageLabels[static_cast<int>(draft.page)][i]));
+            kSettingsSubpageLabels[static_cast<int>(draft.page)][i])));
     layout.subpage_tabs[static_cast<std::size_t>(i)] = {
-        tab_x, 13, tab_x + tab_width, 33};
+        tab_x, 8, tab_x + tab_width, 38};
     tab_x += tab_width;
   }
   layout.status_bar = {layout.content.left, height_dip - 30,
@@ -238,6 +242,12 @@ struct SettingsLayout {
                         fy + 26.0f};
     layout.candidate_count_edit = {layout.font_edit.left, fy + 44.f, layout.font_edit.right, fy + 70.f};
     layout.check_vertical = {layout.body.left, fy + 88.f, layout.body.right, fy + 118.f};
+  } else if (draft.page == SettingsPage::kBuffer && draft.subpage == 1) {
+    const float x = layout.body.left + 200, y = layout.body.top;
+    layout.auto_send_combo = {x, y + 22, layout.body.right - 18, y + 52};
+    layout.close_after_check = {layout.body.left + 18, y + 78, layout.body.right - 18, y + 108};
+    layout.translation_combo = {x, y + 172, layout.body.right - 18, y + 202};
+    layout.buffer_language = {x, y + 224, layout.body.right - 18, y + 254};
   } else if (draft.page == SettingsPage::kBuffer) {
     layout.hotkey_modifiers = {layout.body.left, layout.body.top + 48.0f,
                               layout.body.left + 130.0f, layout.body.top + 74.0f};

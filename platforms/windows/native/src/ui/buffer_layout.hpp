@@ -53,6 +53,11 @@ struct BufferPaintState {
   bool paste_enabled = true;
   bool copy_enabled = true;
   bool send_enabled = true;
+  bool selected = false;
+  std::size_t insertion = 0;
+  unsigned preedit_caret = 0, auto_send_seconds = 0;
+  bool close_after_send = false;
+  float spinner_phase = 0;
   std::wstring status;
   std::wstring preedit;
   std::wstring preview;
@@ -75,6 +80,7 @@ enum class BufferHitKind {
   kCopy,
   kSend,
   kBind,
+  kConfigure, kEdit, kAutoSend, kCloseAfter,
 };
 
 struct BufferLayout {
@@ -97,6 +103,8 @@ struct BufferLayout {
   DipRect copy{};
   DipRect send{};
   DipRect waiting{};
+  DipRect configure{}, edit{}, auto_send{}, close_after{}, association{};
+  bool show_source = true, show_edit = false;
   bool show_result = false;
   bool show_paste = false;
   bool show_copy = false;
@@ -106,8 +114,7 @@ struct BufferLayout {
 
 [[nodiscard]] inline bool BufferNeedsResultRail(
     const BufferPaintState& state) noexcept {
-  return state.mode == BufferMode::kGenerate ||
-         state.mode == BufferMode::kTranslate || state.busy ||
+  return (state.mode == BufferMode::kTranslate && !state.source_blocks.empty()) || state.busy ||
          state.translate || !state.result_blocks.empty() ||
          !state.preview.empty();
 }
@@ -151,11 +158,15 @@ struct BufferLayout {
 
   const bool show_result = BufferNeedsResultRail(state);
   layout.show_result = show_result;
+  layout.show_source = !(show_result && (state.mode == BufferMode::kGenerate ||
+                                        state.source_blocks.empty()));
+  layout.show_edit = state.mode == BufferMode::kGenerate && !state.result_blocks.empty();
+  const bool two_rails = show_result && layout.show_source;
   layout.toolbar_only = state.folded;
 
   if (state.folded) {
     layout.height_dip = static_cast<float>(metrics.toolbar_only_height_dip);
-  } else if (show_result) {
+  } else if (two_rails) {
     // Generation, waiting, translation, and any result preview need two rails.
     layout.height_dip = static_cast<float>(metrics.two_rail_height_dip);
   } else {
@@ -183,7 +194,19 @@ struct BufferLayout {
   layout.mode_chip = {layout.mode_button.right + 6.0f, layout.toolbar.top + 6.0f,
                       layout.mode_button.right + 78.0f,
                       layout.toolbar.bottom - 6.0f};
-  layout.bind_label = {layout.mode_chip.right + 8.0f, layout.toolbar.top + 8.0f,
+  layout.configure = {layout.mode_chip.right + gap, layout.mode_button.top,
+                       layout.mode_chip.right + gap + icon, layout.mode_button.bottom};
+  layout.edit = {layout.configure.right + gap, layout.mode_button.top,
+                  layout.configure.right + gap + icon, layout.mode_button.bottom};
+  layout.auto_send = {layout.edit.right + gap, layout.mode_button.top,
+                       layout.edit.right + gap + 46, layout.mode_button.bottom};
+  layout.close_after = {layout.auto_send.right + gap, layout.mode_button.top,
+                         layout.auto_send.right + gap + icon, layout.mode_button.bottom};
+  layout.association = {layout.close_button.left - gap - icon, layout.mode_button.top,
+                         layout.close_button.left - gap, layout.mode_button.bottom};
+  layout.more_button = {layout.association.left - gap - icon, layout.mode_button.top,
+                         layout.association.left - gap, layout.mode_button.bottom};
+  layout.bind_label = {layout.close_after.right + 8.0f, layout.toolbar.top + 8.0f,
                        layout.more_button.left - 8.0f,
                        layout.toolbar.bottom - 8.0f};
   layout.status_label = layout.bind_label;
@@ -200,15 +223,16 @@ struct BufferLayout {
   // Both rows must clear the inner chrome, including its bottom stroke.
   const float available = layout.chrome.bottom - 1.0f - rail_top;
   const float rail_h = (std::min)(preferred_rail_h,
-      show_result ? (available - rail_gap) * 0.5f : available);
-  layout.source_rail = {rail_left, rail_top, rail_right, rail_top + rail_h};
+      two_rails ? (available - rail_gap) * 0.5f : available);
+  if (layout.show_source)
+    layout.source_rail = {rail_left, rail_top, rail_right, rail_top + rail_h};
   if (show_result) {
-    const float top = layout.source_rail.bottom + rail_gap;
+    const float top = two_rails ? layout.source_rail.bottom + rail_gap : rail_top;
     layout.result_rail = {rail_left, top, rail_right, top + rail_h};
   }
 
   layout.show_paste = true;
-  layout.show_copy = show_result || state.mode != BufferMode::kInput;
+  layout.show_copy = show_result || state.selected || !state.bound;
   layout.show_send = true;
   // Mac's paste/copy/send cluster overlays the primary (result when present)
   // rail. Hidden copy has no empty slot; neither row's outer width changes.
@@ -222,13 +246,9 @@ struct BufferLayout {
     next_right = layout.copy.left - gap;
   }
   layout.paste = {next_right - icon, action_y, next_right, action_y + icon};
-  if (show_result && state.busy) {
-    layout.waiting = {layout.paste.left - gap - icon, action_y,
-                      layout.paste.left - gap, action_y + icon};
-  }
-  const float text_right = (show_result && state.busy
-      ? layout.waiting.left : layout.paste.left) - clearance;
-  layout.source_text = {layout.source_rail.left + rail_inset,
+  if (state.busy) layout.waiting = layout.send;
+  const float text_right = layout.paste.left - clearance;
+  if (layout.show_source) layout.source_text = {layout.source_rail.left + rail_inset,
                         layout.source_rail.top,
                         show_result ? layout.source_rail.right - rail_inset
                                     : text_right,
@@ -284,6 +304,10 @@ struct BufferLayout {
   if (layout.mode_button.contains(x, y) || layout.mode_chip.contains(x, y))
     return BufferHitKind::kMode;
   if (layout.more_button.contains(x, y)) return BufferHitKind::kMore;
+  if (layout.configure.contains(x, y)) return BufferHitKind::kConfigure;
+  if (layout.show_edit && layout.edit.contains(x, y)) return BufferHitKind::kEdit;
+  if (layout.auto_send.contains(x, y)) return BufferHitKind::kAutoSend;
+  if (layout.close_after.contains(x, y)) return BufferHitKind::kCloseAfter;
   if (layout.close_button.contains(x, y)) return BufferHitKind::kClose;
   if (layout.show_paste && layout.paste.contains(x, y))
     return BufferHitKind::kPaste;
@@ -293,7 +317,7 @@ struct BufferLayout {
     return BufferHitKind::kSend;
   // Only the source rail establishes capture. Result/status surfaces are
   // passive, and the action overlay keeps priority over the rail below it.
-  if (!layout.toolbar_only && layout.source_rail.contains(x, y))
+  if (!layout.toolbar_only && layout.show_source && layout.source_rail.contains(x, y))
     return BufferHitKind::kBind;
   return BufferHitKind::kNone;
 }

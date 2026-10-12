@@ -46,6 +46,16 @@ class Runtime {
   void DiscardBuffer();
   void Paste(std::string text);
   void Send(bool all);
+  bool ShortcutDown(std::uint32_t foreground_process);
+  void ShortcutUp();
+  void SetInsertion(std::size_t index);
+  void ReturnToEdit();
+  void SetAutoSend(unsigned seconds, bool close_after);
+  unsigned TakeClipboardAction();
+  core::Json PrepareCopy();
+  bool ValidateCopy(const core::Json& ticket);
+  bool CommitCopy(const core::Json& ticket, const std::function<bool()>& write);
+  void PublishCaret(const RECT& caret);
   void Generate(bool translation);
   void SelectAIMode();
   void SelectTranslationMode();
@@ -90,6 +100,13 @@ class Runtime {
   bool return_held_ = false, return_sent_ = false;
   unsigned return_key_ = 0;
   bool ai_mode_ = false;
+  unsigned clipboard_action_ = 0;
+  Target clipboard_target_;
+  std::uint32_t preedit_caret_ = 0;
+  std::uint64_t auto_head_ = 0, auto_since_ = 0;
+  std::string auto_text_;
+  std::uint64_t failed_translation_revision_ = 0;
+  RECT buffer_caret_{};
   void Changed();
   void DiscardBufferLocked();
   void CheckPluginAuthorization();
@@ -99,5 +116,6 @@ class Runtime {
   void BindLocked(std::uint32_t foreground_process);
   void StartGeneration(bool translation, bool complete_sentence_only = false);
   void RunAPI();
+  core::Json CopyTicketLocked();
 };
 }  // namespace rimes::windows::workbench

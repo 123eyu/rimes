@@ -35,4 +35,9 @@ bool RunCodexTextProcess(const std::filesystem::path& executable,
                          const std::function<bool(const std::string&)>& chunk,
                          const std::function<bool()>& cancelled,
                          std::string* error, unsigned timeout_ms = 120000);
+// Fixed local helpers share the bounded, cancellable job and pipe transport.
+bool RunLocalTextProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const std::function<bool(const std::string&)>& output,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms = 120000);
 }

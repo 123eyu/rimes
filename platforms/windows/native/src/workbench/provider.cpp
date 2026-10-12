@@ -11,6 +11,7 @@
 #include "../core/control.hpp"
 #include "buffer_hotkey_config.hpp"
 #include "codex_cli.hpp"
+#include "local_translation.hpp"
 #include "sse.hpp"
 
 namespace rimes::windows::workbench {
@@ -85,6 +86,9 @@ bool ValidSettings(const Settings& value) {
                       value.schema == "double_pinyin_flypy" ||
                       value.schema == "wubi86" || value.schema == "english" || value.schema == "my_combo";
   return schema && value.candidate_count >= 1 && value.candidate_count <= 9 && ValidTheme(value.theme) && value.font_size >= 10 &&
+         (value.auto_send_seconds == 0 || value.auto_send_seconds == 1 || value.auto_send_seconds == 2 ||
+          value.auto_send_seconds == 3 || value.auto_send_seconds == 5) &&
+         (value.translation_provider == "local" || value.translation_provider == "ai") &&
          value.font_size <= 40 &&
          core::ValidShortcut(value.hotkey_key, value.hotkey_modifiers) &&
          core::ValidShortcut(value.send_key, value.send_modifiers, true) &&
@@ -115,6 +119,9 @@ bool LoadSettings(Settings* value, std::string* error) {
     candidate.codex_path = j.value("codex_path", "");
     candidate.codex_model = j.value("codex_model", "");
     candidate.target_language = j.value("target_language", "English");
+    candidate.translation_provider = j.value("translation_provider", "local");
+    candidate.auto_send_seconds = j.value("auto_send_seconds", 0U);
+    candidate.close_after_send = j.value("close_after_send", true);
     candidate.ascii = j.value("ascii", false);
     candidate.traditional = j.value("traditional", false);
     candidate.ascii_punctuation = j.value("ascii_punctuation", false);
@@ -155,7 +162,7 @@ bool SaveSettings(const Settings& value, std::string* error) {
     if (!ValidSettings(value)) throw std::runtime_error("invalid settings");
     auto path = ConfigPath();
     std::filesystem::create_directories(path.parent_path());
-    Json j = {{"version", 3},
+    Json j = {{"version", 4},
               {"revision", value.revision},
               {"schema", value.schema},
               {"ascii", value.ascii},
@@ -175,6 +182,9 @@ bool SaveSettings(const Settings& value, std::string* error) {
               {"codex_path", value.codex_path},
               {"codex_model", value.codex_model},
               {"target_language", value.target_language}};
+    j["translation_provider"] = value.translation_provider;
+    j["auto_send_seconds"] = value.auto_send_seconds;
+    j["close_after_send"] = value.close_after_send;
     auto temporary = path;
     temporary += L".tmp";
     std::ofstream file(temporary, std::ios::binary | std::ios::trunc);
@@ -233,6 +243,8 @@ bool GenerateAPI(const Settings& config, const Generation& job,
 bool GenerateText(const Settings& config, const Generation& job,
                   const std::function<bool(const std::string&)>& chunk,
                   const std::function<bool()>& cancelled, std::string* error) {
+  if (job.translation && config.translation_provider == "local")
+    return GenerateLocalTranslation(config, job, chunk, cancelled, error);
   if (config.ai_connector == "codex-cli")
     return GenerateCodex(config, job, chunk, cancelled, error);
   if (config.ai_connector == "openai-compatible")

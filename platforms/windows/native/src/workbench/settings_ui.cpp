@@ -1,6 +1,7 @@
 #include "settings_ui.hpp"
 
 #include <dwmapi.h>
+#include <commctrl.h>
 
 #include <algorithm>
 #include <cmath>
@@ -73,6 +74,9 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   draft_.font_size = config.font_size;
   draft_.candidate_count = config.candidate_count;
   draft_.vertical_candidates = config.vertical_candidates;
+  draft_.auto_send_seconds = config.auto_send_seconds;
+  draft_.close_after_send = config.close_after_send;
+  draft_.translation_provider_index = config.translation_provider == "ai" ? 1 : 0;
   draft_.hotkey_modifiers = config.hotkey_modifiers;
   draft_.hotkey = static_cast<wchar_t>(config.hotkey_key);
   draft_.send_key = config.send_key;
@@ -91,11 +95,13 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   if (!callbacks_.about_text.empty()) draft_.about_text = callbacks_.about_text;
 }
 
-void SettingsUiHost::Open(HWND owner) {
+void SettingsUiHost::OpenPage(HWND owner, ui::SettingsPage page, int subpage, bool visible) {
+  Open(owner, visible); draft_.page = page; draft_.subpage = subpage; Relayout();
+}
+void SettingsUiHost::Open(HWND owner, bool visible) {
   owner_ = owner;
   if (hwnd_) {
-    ShowWindow(hwnd_, SW_SHOWNORMAL);
-    SetForegroundWindow(hwnd_);
+    if (visible) { ShowWindow(hwnd_, SW_SHOWNORMAL); SetForegroundWindow(hwnd_); }
     return;
   }
   if (callbacks_.load) SyncDraftFromConfig(callbacks_.load());
@@ -136,10 +142,9 @@ void SettingsUiHost::Open(HWND owner) {
   CreateOrUpdateChildren();
   SetTimer(hwnd_, 11, 500, nullptr);
   Relayout();
-  ShowWindow(hwnd_, SW_SHOWNORMAL);
-  SetForegroundWindow(hwnd_);
+  if (visible) { ShowWindow(hwnd_, SW_SHOWNORMAL); SetForegroundWindow(hwnd_); }
   draft_.focus = static_cast<int>(draft_.page);
-  SetFocus(hwnd_);
+  if (visible) SetFocus(hwnd_);
 }
 
 void SettingsUiHost::Close(bool persist) {
@@ -163,6 +168,10 @@ void SettingsUiHost::RecordShortcut(unsigned key, unsigned modifiers) {
   }
   if (!core::ValidShortcut(key, modifiers, send)) {
     SetWindowTextW(shortcut_feedback_, L"该组合不安全或是系统编辑快捷键，请换一个组合。无修饰键仅允许发送键使用 Enter 或 F6–F12。");
+    return;
+  }
+  if (key == 'S' && modifiers == (MOD_ALT | MOD_SHIFT)) {
+    SetWindowTextW(shortcut_feedback_, L"Alt+Shift+S 用于打开设置，请使用另一个组合。");
     return;
   }
   const HWND other_combo = send ? combo_hotkey_modifiers_ : combo_send_modifiers_;
@@ -211,7 +220,8 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
   if (message->message == WM_KEYDOWN) {
     draft_.keyboard_focus = true;
     const auto key = message->wParam;
-    if ((message->hwnd == combo_hotkey_modifiers_ || message->hwnd == combo_send_modifiers_ || message->hwnd == combo_connector_) &&
+    if ((message->hwnd == combo_hotkey_modifiers_ || message->hwnd == combo_send_modifiers_ || message->hwnd == combo_connector_ ||
+         message->hwnd == combo_auto_send_ || message->hwnd == combo_translation_) &&
         (key == VK_RETURN || key == VK_ESCAPE) &&
         SendMessageW(message->hwnd, CB_GETDROPPEDSTATE, 0, 0))
       return false;  // Confirm/cancel the native popup before Save/Close.
@@ -240,7 +250,8 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
       for (const auto control : {check_ascii_, check_trad_, check_punct_,
                                 edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_, record_hotkey_,
                                 combo_send_modifiers_, edit_send_, record_send_, reset_shortcuts_, edit_base_,
-                                edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_})
+                                edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
+                                combo_auto_send_, check_close_after_, combo_translation_})
         if (control && IsWindowVisible(control)) controls.push_back(control);
       const bool back = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
       const int sidebar = static_cast<int>(draft_.page);
@@ -308,7 +319,7 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   SetWindowLongPtrW(edit_send_, GWLP_ID, 407);
   if (!combo_hotkey_modifiers_) {
     combo_hotkey_modifiers_ = CreateWindowExW(
-        0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+        0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
         0, 0, 130, 130, hwnd_, reinterpret_cast<HMENU>(405),
         GetModuleHandleW(nullptr), nullptr);
     for (const auto& choice : kBufferHotkeyChoices)
@@ -316,27 +327,27 @@ void SettingsUiHost::CreateOrUpdateChildren() {
                    reinterpret_cast<LPARAM>(choice.label));
   }
   if (!combo_send_modifiers_) {
-    combo_send_modifiers_ = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+    combo_send_modifiers_ = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
         0, 0, 160, 130, hwnd_, reinterpret_cast<HMENU>(408), GetModuleHandleW(nullptr), nullptr);
     for (const auto& choice : kBufferHotkeyChoices)
       SendMessageW(combo_send_modifiers_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(choice.label));
     SendMessageW(combo_send_modifiers_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"无修饰键"));
   }
   auto make_button = [&](HWND& control, const wchar_t* title, int id) {
-    if (!control) control = CreateWindowExW(0, L"BUTTON", title, WS_CHILD | WS_TABSTOP | BS_PUSHBUTTON,
+    if (!control) control = CreateWindowExW(0, L"BUTTON", title, WS_CHILD | WS_TABSTOP | BS_OWNERDRAW,
         0, 0, 1, 1, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
   };
   make_button(record_hotkey_, L"录入快捷键", 409);
   make_button(record_send_, L"录入快捷键", 410);
   make_button(reset_shortcuts_, L"恢复全部默认快捷键", 411);
   if (!shortcut_feedback_) shortcut_feedback_ = CreateWindowExW(0, L"STATIC",
-      L"可选择组合并填写 A–Z、0–9、Enter、F1–F24 或方向键名，也可点击录入。\n录入时 Esc 取消，Delete 恢复该项默认；保存后生效。\n发送键轻按逐块发送，长按 1.2 秒全部发送。旧自定义设置不会被覆盖。",
+      L"可选择组合并填写 A–Z、0–9、Enter、F1–F24 或方向键名，也可点击录入。\n录入时 Esc 取消，Delete 恢复该项默认；保存后生效。\n发送键轻按逐块发送，长按 1 秒全部发送。Alt+Shift+S 打开设置。",
       WS_CHILD | SS_LEFT, 0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
   make_edit(&edit_base_, false);
   make_edit(&edit_codex_path_, false);
   make_edit(&edit_codex_model_, false);
   if (!combo_connector_) {
-    combo_connector_ = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST,
+    combo_connector_ = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
         0, 0, 200, 130, hwnd_, reinterpret_cast<HMENU>(406), GetModuleHandleW(nullptr), nullptr);
     SendMessageW(combo_connector_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"通用 OpenAI API"));
     SendMessageW(combo_connector_, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(L"Codex CLI（本机登录）"));
@@ -348,6 +359,19 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   make_check(&check_trad_, L"繁体转换", 402);
   make_check(&check_punct_, L"英文标点", 403);
   make_check(&check_vertical_, L"竖向排列候选", 404);
+  make_check(&check_close_after_, L"全部发送完成后关闭 Buffer", 412);
+  auto make_combo = [&](HWND& slot, int id, std::initializer_list<const wchar_t*> labels) {
+    if (slot) return;
+    slot = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
+        0, 0, 200, 160, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
+    for (const auto* label : labels) SendMessageW(slot, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(label));
+  };
+  make_combo(combo_auto_send_, 413, {L"手动发送", L"每 1 秒发送下一块", L"每 2 秒发送下一块", L"每 3 秒发送下一块", L"每 5 秒发送下一块"});
+  make_combo(combo_translation_, 414, {L"本地离线翻译 · 中文 / English", L"AI 翻译 · 使用连接器"});
+  SendMessageW(combo_auto_send_, CB_SETCURSEL, draft_.auto_send_seconds == 5 ? 4 : draft_.auto_send_seconds, 0);
+  SendMessageW(combo_translation_, CB_SETCURSEL, draft_.translation_provider_index, 0);
+  for (const HWND combo : {combo_hotkey_modifiers_, combo_send_modifiers_, combo_connector_, combo_auto_send_, combo_translation_})
+    SetWindowSubclass(combo, ComboProcedure, 1, reinterpret_cast<DWORD_PTR>(this));
   SetWindowTextW(edit_font_, std::to_wstring(draft_.font_size).c_str());
   SetWindowTextW(edit_candidate_count_, std::to_wstring(draft_.candidate_count).c_str());
   SetWindowTextW(edit_hotkey_, ShortcutKeyTitle(draft_.hotkey).c_str());
@@ -369,9 +393,9 @@ void SettingsUiHost::CreateOrUpdateChildren() {
           reinterpret_cast<HMENU>(static_cast<INT_PTR>(action < 0 ? 0 : 5100 + static_cast<int>(i) * 3 + action)), GetModuleHandleW(nullptr), nullptr);
     };
     make(plugin_labels_[i], L"STATIC", L"", SS_LEFT, -1);
-    make(plugin_install_[i], L"BUTTON", L"安装", WS_TABSTOP | BS_PUSHBUTTON, 0);
-    make(plugin_enable_[i], L"BUTTON", L"启用", WS_TABSTOP | BS_PUSHBUTTON, 1);
-    make(plugin_remove_[i], L"BUTTON", L"卸载", WS_TABSTOP | BS_PUSHBUTTON, 2);
+    make(plugin_install_[i], L"BUTTON", L"安装", WS_TABSTOP | BS_OWNERDRAW, 0);
+    make(plugin_enable_[i], L"BUTTON", L"启用", WS_TABSTOP | BS_OWNERDRAW, 1);
+    make(plugin_remove_[i], L"BUTTON", L"卸载", WS_TABSTOP | BS_OWNERDRAW, 2);
   }
   plugin_status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
   UpdatePlugins(); ThemeEdits();
@@ -407,7 +431,8 @@ void SettingsUiHost::ThemeEdits() {
   edit_brush_ = CreateSolidBrush(ui::ToColorRef(p.surface));
   HWND edits[] = {edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_,
                   combo_send_modifiers_, edit_send_, record_hotkey_, record_send_, reset_shortcuts_, shortcut_feedback_, edit_base_,
-                  edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_};
+                  edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
+                  combo_auto_send_, check_close_after_, combo_translation_};
   for (HWND edit : edits) {
     if (!edit) continue;
     SendMessageW(edit, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.control),
@@ -444,6 +469,7 @@ void SettingsUiHost::Relayout() {
   const bool input = draft_.page == ui::SettingsPage::kInput && draft_.subpage == 1;
   const bool appearance = draft_.page == ui::SettingsPage::kAppearance && draft_.subpage == 1;
   const bool buffer = draft_.page == ui::SettingsPage::kBuffer && draft_.subpage == 0;
+  const bool behavior = draft_.page == ui::SettingsPage::kBuffer && draft_.subpage == 1;
   if (!buffer) StopRecording();
   const bool api = draft_.page == ui::SettingsPage::kApi && draft_.subpage == 0;
   auto place_edit = [&](HWND edit, ui::DipRect box, bool show) {
@@ -479,7 +505,12 @@ void SettingsUiHost::Relayout() {
   place_edit(edit_model_, layout_.model_edit, api);
   place_edit(edit_key_, layout_.key_edit,
              draft_.page == ui::SettingsPage::kApi && draft_.subpage == 1);
-  place_edit(edit_lang_, layout_.lang_edit, api);
+  place_edit(edit_lang_, behavior ? layout_.buffer_language : layout_.lang_edit, api || behavior);
+  auto auto_dropdown = layout_.auto_send_combo; auto_dropdown.bottom += 180;
+  auto translation_dropdown = layout_.translation_combo; translation_dropdown.bottom += 100;
+  Place(combo_auto_send_, auto_dropdown, dpi_, behavior);
+  Place(combo_translation_, translation_dropdown, dpi_, behavior);
+  Place(check_close_after_, layout_.close_after_check, dpi_, behavior);
   Place(check_ascii_, layout_.check_ascii, dpi_, input);
   Place(check_trad_, layout_.check_trad, dpi_, input);
   Place(check_punct_, layout_.check_punct, dpi_, input);
@@ -498,6 +529,40 @@ void SettingsUiHost::Relayout() {
   InvalidateRect(hwnd_, nullptr, FALSE);
 }
 
+LRESULT CALLBACK SettingsUiHost::ComboProcedure(HWND hwnd, UINT message, WPARAM wparam,
+    LPARAM lparam, UINT_PTR id, DWORD_PTR data) {
+  auto* self = reinterpret_cast<SettingsUiHost*>(data);
+  if (message == WM_NCDESTROY) { RemoveWindowSubclass(hwnd, ComboProcedure, id); return DefSubclassProc(hwnd, message, wparam, lparam); }
+  if (message != WM_PAINT && message != WM_PRINTCLIENT) {
+    const auto result = DefSubclassProc(hwnd, message, wparam, lparam);
+    if (message == CB_SETCURSEL || message == WM_SETFOCUS || message == WM_KILLFOCUS || message == CB_SHOWDROPDOWN)
+      InvalidateRect(hwnd, nullptr, FALSE);
+    return result;
+  }
+  PAINTSTRUCT ps{};
+  HDC dc = message == WM_PAINT ? BeginPaint(hwnd, &ps) : reinterpret_cast<HDC>(wparam);
+  if (dc) {
+    const auto& p = ui::Palette(self->draft_.preview_theme);
+    RECT client{}; GetClientRect(hwnd, &client);
+    ui::FillRectColor(dc, client, ui::ToColorRef(p.settings_background));
+    ui::FillRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(p.surface));
+    ui::StrokeRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(GetFocus() == hwnd ? p.accent : p.border));
+    RECT arrow = client; arrow.left = arrow.right - MulDiv(26, static_cast<int>(self->dpi_), 96);
+    const auto pen = CreatePen(PS_SOLID, (std::max)(1, MulDiv(1, static_cast<int>(self->dpi_), 96)), ui::ToColorRef(p.text_secondary));
+    const auto old_pen = SelectObject(dc, pen);
+    const int cx = (arrow.left + arrow.right) / 2, cy = (arrow.top + arrow.bottom) / 2;
+    const int step = MulDiv(4, static_cast<int>(self->dpi_), 96);
+    MoveToEx(dc, cx - step, cy - 2, nullptr); LineTo(dc, cx, cy + 2); LineTo(dc, cx + step, cy - 2);
+    SelectObject(dc, old_pen); DeleteObject(pen);
+    RECT label = client; label.left += MulDiv(8, static_cast<int>(self->dpi_), 96); label.right = arrow.left;
+    const auto text = GetText(hwnd); const auto old = SelectObject(dc, self->fonts_.control);
+    SetBkMode(dc, TRANSPARENT); SetTextColor(dc, ui::ToColorRef(p.text_primary));
+    DrawTextW(dc, text.c_str(), -1, &label, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+    SelectObject(dc, old);
+  }
+  if (message == WM_PAINT) EndPaint(hwnd, &ps);
+  return 0;
+}
 void SettingsUiHost::ApplyControlTheme() { ThemeEdits(); }
 
 bool SettingsUiHost::CommitSave() {
@@ -515,6 +580,12 @@ bool SettingsUiHost::CommitSave() {
     config.codex_path = Utf8(GetText(edit_codex_path_));
     config.codex_model = Utf8(GetText(edit_codex_model_));
     config.target_language = Utf8(GetText(edit_lang_));
+    const auto automatic = SendMessageW(combo_auto_send_, CB_GETCURSEL, 0, 0);
+    const auto translation = SendMessageW(combo_translation_, CB_GETCURSEL, 0, 0);
+    if (automatic < 0 || automatic > 4 || translation < 0 || translation > 1) throw std::runtime_error("Buffer behavior choice");
+    config.auto_send_seconds = automatic == 4 ? 5U : static_cast<unsigned>(automatic);
+    config.close_after_send = draft_.close_after_send;
+    config.translation_provider = translation == 0 ? "local" : "ai";
     const auto font_text = GetText(edit_font_);
     std::size_t parsed = 0;
     config.font_size = static_cast<unsigned>(std::stoul(font_text, &parsed));
@@ -717,6 +788,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
           case 402: self->draft_.traditional = !self->draft_.traditional; break;
           case 403: self->draft_.ascii_punctuation = !self->draft_.ascii_punctuation; break;
           case 404: self->draft_.vertical_candidates = !self->draft_.vertical_candidates; break;
+          case 412: self->draft_.close_after_send = !self->draft_.close_after_send; break;
           default: return 0;
         }
         InvalidateRect(reinterpret_cast<HWND>(lparam), nullptr, FALSE);
@@ -725,14 +797,34 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       break;
     case WM_DRAWITEM: {
       const auto* draw = reinterpret_cast<DRAWITEMSTRUCT*>(lparam);
-      if (draw->CtlType != ODT_BUTTON) break;
+      if (draw->CtlType != ODT_BUTTON && draw->CtlType != ODT_COMBOBOX) break;
       const auto& p = ui::Palette(self->draft_.preview_theme);
+      if (draw->CtlType == ODT_COMBOBOX || !(draw->CtlID >= 401 && draw->CtlID <= 404 || draw->CtlID == 412)) {
+        const bool selected = (draw->itemState & ODS_SELECTED) != 0;
+        const bool disabled = (draw->itemState & ODS_DISABLED) != 0;
+        ui::FillRoundRect(draw->hDC, draw->rcItem, MulDiv(6, static_cast<int>(self->dpi_), 96),
+            ui::ToColorRef(selected ? p.surface_tertiary : p.surface));
+        if (draw->CtlType == ODT_BUTTON)
+          ui::StrokeRoundRect(draw->hDC, draw->rcItem, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(p.border));
+        std::wstring text;
+        if (draw->CtlType == ODT_COMBOBOX && draw->itemID != static_cast<UINT>(-1)) {
+          const auto length = SendMessageW(draw->hwndItem, CB_GETLBTEXTLEN, draw->itemID, 0);
+          if (length >= 0 && length < 1024) { text.resize(length + 1); SendMessageW(draw->hwndItem, CB_GETLBTEXT, draw->itemID, reinterpret_cast<LPARAM>(text.data())); text.resize(length); }
+        } else text = GetText(draw->hwndItem);
+        const auto old = SelectObject(draw->hDC, self->fonts_.control);
+        SetBkMode(draw->hDC, TRANSPARENT); SetTextColor(draw->hDC, ui::ToColorRef(disabled ? p.text_muted : p.text_primary));
+        RECT label = draw->rcItem; InflateRect(&label, -8, 0);
+        DrawTextW(draw->hDC, text.c_str(), -1, &label, (draw->CtlType == ODT_BUTTON ? DT_CENTER : DT_LEFT) | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+        SelectObject(draw->hDC, old);
+        if (draw->itemState & ODS_FOCUS) DrawFocusRect(draw->hDC, &label);
+        return TRUE;
+      }
       ui::FillRectColor(draw->hDC, draw->rcItem,
-                       ui::ToColorRef(p.settings_background));
+                       ui::ToColorRef(draw->CtlID == 412 ? p.surface_secondary : p.settings_background));
       const bool checked = draw->CtlID == 401 ? self->draft_.ascii
           : draw->CtlID == 402 ? self->draft_.traditional
                                : draw->CtlID == 403 ? self->draft_.ascii_punctuation
-                                : self->draft_.vertical_candidates;
+                                : draw->CtlID == 412 ? self->draft_.close_after_send : self->draft_.vertical_candidates;
       RECT box = draw->rcItem;
       const int size = MulDiv(14, static_cast<int>(self->dpi_), 96);
       box.right = box.left + size;
@@ -778,12 +870,18 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       self->Relayout();
       return 0;
     }
+    case WM_MEASUREITEM: {
+      auto* measure = reinterpret_cast<MEASUREITEMSTRUCT*>(lparam);
+      if (measure->CtlType == ODT_COMBOBOX) { measure->itemHeight = MulDiv(24, static_cast<int>(self->dpi_), 96); return TRUE; }
+      break;
+    }
     case WM_CTLCOLOREDIT:
     case WM_CTLCOLORSTATIC: {
       const auto& p = ui::Palette(self->draft_.preview_theme);
       HDC dc = reinterpret_cast<HDC>(wparam);
       SetBkColor(dc, ui::ToColorRef(p.surface));
       SetTextColor(dc, ui::ToColorRef(p.text_primary));
+      if (message == WM_CTLCOLORSTATIC) { SetBkMode(dc, TRANSPARENT); return reinterpret_cast<LRESULT>(GetStockObject(HOLLOW_BRUSH)); }
       if (!self->edit_brush_)
         self->edit_brush_ = CreateSolidBrush(ui::ToColorRef(p.surface));
       return reinterpret_cast<LRESULT>(self->edit_brush_);
@@ -930,6 +1028,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       self->edit_font_ = self->edit_candidate_count_ = self->edit_hotkey_ = self->edit_base_ = nullptr;
       self->combo_hotkey_modifiers_ = nullptr;
       self->edit_model_ = self->edit_key_ = self->edit_lang_ = nullptr;
+      self->combo_auto_send_ = self->check_close_after_ = self->combo_translation_ = nullptr;
       self->combo_connector_ = self->edit_codex_path_ = self->edit_codex_model_ = nullptr;
       self->check_vertical_ = self->check_ascii_ = self->check_trad_ = self->check_punct_ = nullptr;
       if (!self->saved_ && self->callbacks_.on_theme_preview)

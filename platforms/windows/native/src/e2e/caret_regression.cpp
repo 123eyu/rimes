@@ -8,6 +8,9 @@
 
 namespace rimes::windows::tsf {
 struct CaretRegressionProbe {
+  static void BufferAnchor(TextService& service, bool enabled, RECT caret) {
+    service.capture_active_ = enabled; service.buffer_caret_ = caret;
+  }
   static bool Bind(TextService& service, ITfContext* context) {
     service.client_id_ = 1;
     return service.BindContext(context);
@@ -64,6 +67,18 @@ int main() {
   const auto initial = tsf::CaretRegressionProbe::Present(*service, context);
   expect(initial.visible && EqualRect(&initial.caret_rect, &known),
          "verified TSF geometry anchors the candidate window");
+  RECT buffer_caret{360, 240, 361, 258};
+  tsf::CaretRegressionProbe::BufferAnchor(*service, true, buffer_caret);
+  const auto anchored = tsf::CaretRegressionProbe::Present(*service, context);
+  expect(anchored.visible && EqualRect(&anchored.caret_rect, &buffer_caret),
+         "captured candidates use the logical Buffer caret instead of the host caret");
+  tsf::CaretRegressionProbe::BufferAnchor(*service, true, {});
+  expect(!tsf::CaretRegressionProbe::Present(*service, context).visible,
+         "missing Buffer geometry cannot reuse a host or previous session caret");
+  tsf::CaretRegressionProbe::BufferAnchor(*service, false, {});
+  const auto restored = tsf::CaretRegressionProbe::Present(*service, context);
+  expect(restored.visible && EqualRect(&restored.caret_rect, &known),
+         "leaving Buffer restores verified host caret geometry");
   HWND frame = CreateWindowExW(0, L"STATIC", L"", WS_POPUP, 700, 420,
                                600, 400, nullptr, nullptr,
                                GetModuleHandleW(nullptr), nullptr);

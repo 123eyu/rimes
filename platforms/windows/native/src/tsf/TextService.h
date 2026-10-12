@@ -110,6 +110,8 @@ class TextService final : public ITfTextInputProcessorEx,
   bool BindContext(ITfContext*) noexcept;
   void SetCapture(bool enabled);
   bool capture_active_ = false;
+  RECT buffer_caret_{};
+  std::uint64_t buffer_opening_ = 0;
   void OnBrokerNotification();
   void RefreshBrokerConnection() noexcept;
   static LRESULT CALLBACK NotificationProcedure(HWND, UINT, WPARAM, LPARAM);
