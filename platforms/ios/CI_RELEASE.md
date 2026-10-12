@@ -1,6 +1,6 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.2**, local build **53**, combining native nine-key support for compatible imported full-Pinyin packages with provisional-height gap handling and bounded height recovery. The current publishing record is [build 53 validation](../../validation/ios-release-20261012/README.md); earlier [build 51](../../validation/ios-testflight-wanxiang-20261009/README.md) was TestFlight-only. Build, upload, external testing, App Review and public availability are separate states. The public [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q) is separate from an App Store release.
+Current iOS target: **1.1.2**, local build **54**, combining native nine-key support for compatible imported full-Pinyin packages with provisional-height gap handling and bounded height recovery. The current publishing record is [build 54 validation](../../validation/ios-release-20261012/README.md); earlier [build 51](../../validation/ios-testflight-wanxiang-20261009/README.md) was TestFlight-only. Build, upload, external testing, App Review and public availability are separate states. The public [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q) is separate from an App Store release.
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs

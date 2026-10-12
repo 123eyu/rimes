@@ -638,6 +638,10 @@ final class KeyboardViewController: UIInputViewController {
         bufferEnabled = mode.0; selectedPlugin = mode.1; refreshPluginMenu(); render()
     }
     @objc private func protect() {
+        // The owned host proxy is valid only while this keyboard is active.
+        // Clear its unfinished mark before deactivation, then stop recovery
+        // before cleanup/render can create another height-gap callback.
+        delivery.discardMarkedText()
         // Losing focus can also close Buffer and change the gap during render.
         // Stop recovery centrally and mark the keyboard inactive before cleanup
         // so that neither path can enqueue another offscreen height request.
@@ -652,7 +656,6 @@ final class KeyboardViewController: UIInputViewController {
         returnKey.cancelTracking(with: nil); pressedReturn = nil
         cancelDeletes(); surface.shifted = false; shiftButton.isSelected = false; punctuationOpen = false
         metrics.sampleMemory(); metrics.save()
-        delivery.discardMarkedText()
         consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { candidateStrip.cancelSelection(); cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }

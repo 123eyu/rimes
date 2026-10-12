@@ -318,6 +318,41 @@ import RimesCore
         XCTAssertGreaterThanOrEqual(keyboard.developmentHeightGap.recoveryAttempts, 1)
     }
 
+    func testHidingDuringCompositionClearsOwnedHostMarkBeforeDeactivation() async throws {
+        for resigningHost in [false, true] {
+            let (keyboard, container, _, window) = try gapFixture()
+            defer { window.isHidden = true }
+            keyboard.developmentChoose(.pinyin)
+            let proxy = keyboard.layoutProxy
+            proxy.native.text = "前😀后"
+            proxy.native.selectedRange = NSRange(location: 3, length: 0)
+            keyboard.developmentType("ni")
+            XCTAssertEqual(keyboard.developmentRaw, "ni")
+            let mark = try XCTUnwrap(proxy.native.markedTextRange)
+            XCTAssertEqual(proxy.native.text(in: mark), "ni")
+            XCTAssertEqual(proxy.native.text, "前😀ni后")
+            var cleanupWrites = 0
+            proxy.onProxyWrite = { cleanupWrites += 1 }
+            if resigningHost {
+                NotificationCenter.default.post(name: .NSExtensionHostWillResignActive, object: nil)
+            } else {
+                keyboard.beginAppearanceTransition(false, animated: false); keyboard.endAppearanceTransition()
+            }
+            XCTAssertEqual(cleanupWrites, 2, "Clear the owned mark and unmark through the host proxy before deactivating.")
+            XCTAssertEqual(proxy.markedUpdates.last, "")
+            XCTAssertNil(proxy.native.markedTextRange)
+            XCTAssertEqual(proxy.native.text, "前😀后", "Hiding removes only the unfinished composition.")
+            XCTAssertEqual(proxy.native.selectedRange, NSRange(location: 3, length: 0))
+            XCTAssertTrue(keyboard.developmentRaw.isEmpty)
+            container.frame.size.height += 40
+            container.setNeedsLayout(); container.layoutIfNeeded()
+            XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+            let attempts = keyboard.developmentHeightGap.recoveryAttempts
+            try await Task.sleep(nanoseconds: 200_000_000)
+            XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, attempts)
+        }
+    }
+
     func testHeightFollowsContentAndRotationAfterSystemSizing() throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 900, height: 900))
         let parent = UIViewController()
