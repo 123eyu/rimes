@@ -1,0 +1,115 @@
+{
+  "fixtureKind": "previously generated catalog packages, not original upstream ZIPs",
+  "results": [
+    {
+      "package": "luna-pinyin",
+      "schema": "luna_pinyin",
+      "archive": "rimes-scheme-luna-pinyin-20260712.56b934b.zip",
+      "sha256": "1de1b65e58bbe465306bb1c64deeaa972e59169bf53737e7487012f129388c40",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "nihao",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "double-pinyin",
+      "schema": "double_pinyin",
+      "archive": "rimes-scheme-double-pinyin-20250923.01a1328.zip",
+      "sha256": "401bf93923d8e3d6d018ad519cb9dc78e95e198ebd5f7b260cdb23e8e4fe7227",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "nihk",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "double-pinyin",
+      "schema": "double_pinyin_flypy",
+      "archive": "rimes-scheme-double-pinyin-20250923.01a1328.zip",
+      "sha256": "401bf93923d8e3d6d018ad519cb9dc78e95e198ebd5f7b260cdb23e8e4fe7227",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "nihc",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "wubi",
+      "schema": "wubi86",
+      "archive": "rimes-scheme-wubi-20231025.152a0d3.zip",
+      "sha256": "395ea49a597bd845b12a706202ded7ba82c21cfcf409b9bf62505ba4526ae133",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "wqvb",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "cangjie",
+      "schema": "cangjie5",
+      "archive": "rimes-scheme-cangjie-20260601.52d90a1.zip",
+      "sha256": "e0a6140e8ce5f5fa53390cd574325782077d756e776d13e22c3bd089f7ca5f4b",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "onf",
+      "expected": "你",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "quick",
+      "schema": "quick5",
+      "archive": "rimes-scheme-quick-20260717.5dcdb9e.zip",
+      "sha256": "c622d22fbf082a9f64744cb46f5367a88a3c1f4e13ed3d795c9fb09fe0c74b52",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "of",
+      "expected": "你",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "bopomofo",
+      "schema": "bopomofo",
+      "archive": "rimes-scheme-bopomofo-20260509.6085c9a.zip",
+      "sha256": "59d7ba1d72927fa4aaa00d8092617838509ff27bd45b63a9c722be471b89c648",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "su3cl3",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "jyutping",
+      "schema": "jyutping",
+      "archive": "rimes-scheme-jyutping-20251230.ee5e72b.zip",
+      "sha256": "0a7112e32f42e61a18af0de82d6482083df07e863b20e86ec4ec621ce836d67a",
+      "importPassed": true,
+      "typingPassed": true,
+      "keys": "neihou",
+      "expected": "你好",
+      "selection": "native candidate selection, with explicit composition confirmation when required by the scheme"
+    },
+    {
+      "package": "zhengma",
+      "schema": "zhengma",
+      "archive": "rimes-scheme-zhengma-20171228.9afcf57.zip",
+      "sha256": "72f1bfe732ca814eeb6b296b50d6ed8654cbdb9556a599384c326b5092210ca9",
+      "importPassed": true,
+      "typingPassed": null,
+      "keys": null,
+      "expected": null
+    },
+    {
+      "package": "tiger",
+      "schema": "tiger",
+      "archive": "rimes-scheme-tiger-20240408.421380f.zip",
+      "sha256": "a20dfa8b8b91d754d5d772f85a11ff2d5657d14b957b2125eedaba05a80c8710",
+      "importPassed": true,
+      "typingPassed": null,
+      "keys": null,
+      "expected": null
+    }
+  ],
+  "runtime": "Linux Ubuntu 24.04 arm64 container, pinned librime 1.17.0 and Lua runtime built by platforms/linux/ime/scripts/build-engine.py",
+  "scope": "10 schema import/load probes; 8 candidate and commit probes; Zhengma and Tiger have no typing probe in this record; no physical host acceptance"
+}

@@ -413,11 +413,23 @@ int main(int argc, char **argv) {
       for (const char c : std::string(argv[3]))
         if (!engine.ProcessKey(session, c, 0, &snapshot, &error))
           throw std::runtime_error(error);
-      if (std::none_of(snapshot.candidates.begin(), snapshot.candidates.end(),
-                       [&](const auto &c) { return c.text == argv[4]; }))
+      const auto candidate =
+          std::find_if(snapshot.candidates.begin(), snapshot.candidates.end(),
+                       [&](const auto &c) { return c.text == argv[4]; });
+      if (candidate == snapshot.candidates.end())
         throw std::runtime_error("Expected candidate missing");
-      if (!engine.ProcessKey(session, 32, 0, &snapshot, &error) ||
-          snapshot.commit_text != argv[4])
+      // Schemes own their Space/Return bindings. Select the actual candidate
+      // through the same engine API as a candidate click instead of assuming
+      // Space commits immediately (Bopomofo can open its selection menu).
+      const int index = static_cast<int>(candidate - snapshot.candidates.begin());
+      if (!engine.SelectCandidate(session, index, &snapshot, &error))
+        throw std::runtime_error(error);
+      // Fluency-editor schemes keep the selected phrase in composition until
+      // explicit confirmation; that is a supported scheme behavior too.
+      if (snapshot.commit_text.empty() &&
+          !engine.CommitComposition(session, &snapshot, &error))
+        throw std::runtime_error(error);
+      if (snapshot.commit_text != argv[4])
         throw std::runtime_error("Unexpected commit");
       engine.DestroySession(session);
       engine.Stop();

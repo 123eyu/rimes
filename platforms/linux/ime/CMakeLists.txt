@@ -133,7 +133,9 @@ if(RIMES_BUILD_FCITX5)
     install(DIRECTORY data/icons/hicolor
             DESTINATION "${CMAKE_INSTALL_DATADIR}/icons")
 
-    pkg_check_modules(GTK3 gtk+-3.0)
+    # The Fcitx configuration entry launches the GTK scheme manager. Do not
+    # silently build an addon whose advertised import entry is absent.
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
     if(GTK3_FOUND)
         add_executable(rimes-schemes src/schemes/scheme_manager.cpp)
         target_include_directories(rimes-schemes PRIVATE ${GTK3_INCLUDE_DIRS})
