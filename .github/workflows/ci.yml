@@ -594,8 +594,12 @@ jobs:
       - name: Build (debug)
         run: swift build
 
-      # These smoke harnesses exercise local models/config stores only and
-      # exit before the IMK/librime bootstrap, so they run without Squirrel.
+      # Candidate pagination also verifies real librime page/commit routing.
+      # Stage the checksum-verified product runtime without installing an IME.
+      - name: Fetch runtime for candidate engine smoke
+        run: ./scripts/fetch-rime.sh --force
+
+      # All harnesses use disposable profiles; none reads the runner's live IME data.
       - name: Smoke tests
         run: |
           BIN="$(swift build --show-bin-path)/RimeBuffer"
