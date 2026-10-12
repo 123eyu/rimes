@@ -8,15 +8,18 @@ import java.nio.file.Files;
 import java.util.*;
 import org.json.*;
 import org.scholay.rimes.core.RimeSchemeArchive;
+import org.scholay.rimes.core.ImportedKeyboardLayouts;
 
 /** Published source/compiled packages are immutable. Learning data has a separate lifetime. */
 final class RimeSchemeStore {
     final File root;
+    private final Map<String,ImportedKeyboardLayouts> keyboardLayouts=new HashMap<>();
     RimeSchemeStore(Context context) {this(new File(context.getNoBackupFilesDir(),"rime-schemes"));}
     RimeSchemeStore(File root) {this.root=root;}
     static final class Selection {
         final String packageID,schemaID,name;
         final File resources;
+        ImportedKeyboardLayouts layouts;
         Selection(String packageID,String schemaID,String name,File resources) {
             this.packageID=packageID;this.schemaID=schemaID;this.name=name;this.resources=resources;
         }
@@ -37,8 +40,12 @@ final class RimeSchemeStore {
             File resources=new File(root,"packages/"+id);
             if(Files.isSymbolicLink(resources.toPath())) return null;
             JSONObject metadata=read(new File(resources,"package.json"));JSONArray schemas=metadata.getJSONArray("schemas");
-            for(int i=0;i<schemas.length();i++) if(schema.equals(schemas.getJSONObject(i).getString("id")) && new File(resources,"build/"+schema+".schema.yaml").isFile())
-                return new Selection(id,schema,schemas.getJSONObject(i).getString("name"),resources);
+            for(int i=0;i<schemas.length();i++) if(schema.equals(schemas.getJSONObject(i).getString("id")) && new File(resources,"build/"+schema+".schema.yaml").isFile()) {
+                Selection selection=new Selection(id,schema,schemas.getJSONObject(i).getString("name"),resources);
+                if(keyboardLayouts.size()>64) keyboardLayouts.clear();
+                selection.layouts=keyboardLayouts.computeIfAbsent(id+"/"+schema,key -> ImportedKeyboardLayouts.read(resources,schema));
+                return selection;
+            }
         } catch(Exception ignored) {}
         return null;
     }

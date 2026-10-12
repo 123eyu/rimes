@@ -120,6 +120,7 @@ public final class RimesInputMethodService extends InputMethodService {
     private java.io.File builtinResources,builtinUser,privateImportedUser;
     private boolean importedEngineActive; // EngineWorker only
     private RimeSchemeStore.Selection importedScheme;
+    private RimeSchemeStore schemeStore;
     private long session;
     private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi"};
     private static final String[] NAMES={"拼音","自然码","五笔"};
@@ -180,7 +181,7 @@ public final class RimesInputMethodService extends InputMethodService {
         render();
     }
     private String effectiveSchema() {
-        if(importedScheme!=null) return importedScheme.schemaID;
+        if(importedScheme!=null) return importedScheme.layouts==null?importedScheme.schemaID:importedScheme.layouts.schema(layout);
         return (chordLayout()?"rimes_ziranma":nineKeyEngine()?"rimes_pinyin9":schema)+(privateField || !learningEnabled ? "_private" : "");
     }
     private void resetEngine() {
@@ -194,6 +195,9 @@ public final class RimesInputMethodService extends InputMethodService {
             try {
                 if(session!=0) engine.destroySession(session);
                 session=0;
+                // A field boundary ends the session, not the imported runtime.
+                // Private databases must be closed before their temporary tree is removed.
+                if(!active && privateImportedUser==null) return;
                 java.io.File resources=builtinResources,user=builtinUser,nextPrivate=null;
                 if(active && imported!=null) {
                     resources=imported.resources;
@@ -229,7 +233,8 @@ public final class RimesInputMethodService extends InputMethodService {
         endTarget(); destroyed=true; pluginExecutor.close(); super.onDestroy();
     }
     private void restoreSettings() {
-        importedScheme=new RimeSchemeStore(this).active();
+        if(schemeStore==null) schemeStore=new RimeSchemeStore(this);
+        importedScheme=schemeStore.active();
         KeyboardSettings.Snapshot saved=settings.snapshot();
         cometProfile=cometSettings.snapshot();
         schema=saved.schema; layout=saved.layout; theme=KeyboardTheme.named(saved.theme);
@@ -266,7 +271,9 @@ public final class RimesInputMethodService extends InputMethodService {
         }
         settleAndSwitch(() -> { changeSettingsPair(() -> settings.setSchema(selected)); spellingOpen=false; });
     }
-    private boolean nineKeyEngine() { return importedScheme==null && layout.equals("nineKey") && schema.equals("rimes_pinyin"); }
+    private boolean nineKeyEngine() { return importedScheme!=null
+        ? importedScheme.layouts!=null && importedScheme.layouts.usesNineKey(layout)
+        : layout.equals("nineKey") && schema.equals("rimes_pinyin"); }
     private boolean nineKeyVisible() { return ready && nineKeyEngine() && !directOnly && !english && !numeric && !emoji && !uppercase; }
     /** Chinese input shows Chinese marks on the number and symbol pages. */
     private boolean chinesePages() { return !english && !directOnly; }
@@ -446,7 +453,7 @@ public final class RimesInputMethodService extends InputMethodService {
         }
     }
     private String compositionText() {
-        return nineKeyVisible() ? NineKeyPinyin.displayPreedit(snapshot.raw,snapshot.preedit,
+        return importedScheme==null && nineKeyVisible() ? NineKeyPinyin.displayPreedit(snapshot.raw,snapshot.preedit,
                 snapshot.comments.isEmpty()?null:snapshot.comments.get(0)) : snapshot.preedit;
     }
     private void expect(int end) { if(end>=0) { expectedSelections.add(end); selection=end; selectionStart=end; while(expectedSelections.size()>64) expectedSelections.remove(); } }
@@ -499,7 +506,7 @@ public final class RimesInputMethodService extends InputMethodService {
         // The idle snapshot is authoritative only after all preceding engine operations finish.
         // Plain deletion needs no engine round-trip or transiently disabled plugin shortcuts.
         if(!ready || pending==0 && !snapshot.composing()) { deleteHostOrBuffer(); render(); return; }
-        final boolean nine=nineKeyVisible();
+        final boolean nine=importedScheme==null && nineKeyVisible();
         dispatch(() -> state().composing() ? (nine?replaceNineKey(NineKeyPinyin.backspace(state().raw)):Result.state(engine.processKey(session,0xff08)))
                 : new Result(RimeEngine.Snapshot.EMPTY,"",false,1));
     }
@@ -1055,7 +1062,7 @@ public final class RimesInputMethodService extends InputMethodService {
         String status=failed?getString(R.string.engine_failed):!ready?getString(R.string.engine_loading):"";
         if(!retained.isEmpty()) status=getString(R.string.delivery_pending);
         setText(preedit,status); preedit.setTextColor(palette.accentText); preedit.setVisibility(!directOnly && !status.isEmpty()?View.VISIBLE:View.GONE);
-        spellingChoices=nineKeyVisible()?spellings.choices(snapshot.raw):java.util.Collections.emptyList();
+        spellingChoices=importedScheme==null && nineKeyVisible()?spellings.choices(snapshot.raw):java.util.Collections.emptyList();
         if(spellingChoices.isEmpty()) spellingOpen=false;
         if(spellingPage>=spellingChoices.size()) spellingPage=0;
         candidateRow.setVisibility(View.VISIBLE);
@@ -1139,7 +1146,10 @@ public final class RimesInputMethodService extends InputMethodService {
         insertNext.setSelected(insertNext.isEnabled());
         if(appearanceOpen) appearancePanel.schemes(schema,this::chooseSchema);
         appearancePanel.setVisibility(appearanceOpen?View.VISIBLE:View.GONE);
-        if(appearanceOpen) appearancePanel.render(layout,theme);
+        if(appearanceOpen) {
+            appearancePanel.importedLayouts(importedScheme==null?null:importedScheme.layouts,importedScheme!=null);
+            appearancePanel.render(importedScheme==null?layout:nineKeyEngine()?"nineKey":"qwerty",theme);
+        }
         pluginPanel.setVisibility(pluginSettingsOpen?View.VISIBLE:View.GONE);
         if(pluginSettingsOpen) pluginPanel.render(theme,activePlugin,translationDirection);
         clipboardPanel.setVisibility(clipboardOpen?View.VISIBLE:View.GONE);

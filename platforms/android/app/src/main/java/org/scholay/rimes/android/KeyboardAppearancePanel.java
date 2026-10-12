@@ -46,6 +46,11 @@ final class KeyboardAppearancePanel extends ScrollView {
     }
     /** Each open starts with the pet chooser, rather than an unrelated settings page. */
     void showPets() { page(true); }
+    void importedLayouts(org.scholay.rimes.core.ImportedKeyboardLayouts layouts,boolean imported) {
+        qwerty.setEnabled(!imported || layouts==null || layouts.qwerty!=null);
+        nine.setEnabled(!imported || layouts!=null && layouts.nineKey!=null);
+        chord.setEnabled(!imported); split.setEnabled(!imported);
+    }
     private void page(boolean petsPage) {
         this.petsPage=petsPage;
         pets.setVisibility(petsPage?View.VISIBLE:View.GONE); keys.setVisibility(petsPage?View.GONE:View.VISIBLE);

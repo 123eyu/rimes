@@ -89,12 +89,40 @@ final class ServiceDeliveryContract {
             contract.clearPostedEngineResult(instrumentation);
             contract.clearRunningPlugin(instrumentation);
             contract.pendingDeleteRemainsOrdered(instrumentation);
+            contract.importedSessionBoundary(instrumentation,false);
+            contract.importedSessionBoundary(instrumentation,true);
         } catch(Throwable error) { throw new AssertionError("Service settings contract failed",error); }
         return contract.checks;
     }
 
     private void check(boolean condition,String label) {
         checks++; if(!condition) throw new AssertionError(label);
+    }
+
+    private void importedSessionBoundary(Instrumentation instrumentation,boolean privateMode) throws Exception {
+        AtomicReference<Fixture> reference=new AtomicReference<>();
+        RecordingEngine engine=new RecordingEngine("");engine.allowInitialize=privateMode;
+        java.io.File temporary=java.nio.file.Files.createTempDirectory(context.getCacheDir().toPath(),"import-private-fixture").toFile();
+        try {
+            onMain(instrumentation,() -> {
+                Fixture fixture=new Fixture(false);reference.set(fixture);
+                set(fixture.service,"engine",engine);set(fixture.service,"ready",true);set(fixture.service,"session",1L);
+                set(fixture.service,"importedEngineActive",true);
+                set(fixture.service,"importedScheme",new RimeSchemeStore.Selection("fixture","demo","Demo",temporary));
+                set(fixture.service,"builtinResources",new java.io.File(temporary,"builtin"));
+                set(fixture.service,"builtinUser",new java.io.File(temporary,"builtin-user"));
+                if(privateMode) set(fixture.service,"privateImportedUser",temporary);
+                invoke(fixture.service,"endTarget",new Class<?>[0]);
+            });
+            engineIdle(instrumentation);
+            check(engine.destroyed.get()==1 && engine.creates.get()==0,"field end destroys only its owned session");
+            check(engine.initializations.get()==(privateMode?1:0),"ordinary field end keeps dictionaries loaded; private field closes its environment");
+            check(temporary.exists()!=privateMode,"only private temporary data is removed at the field boundary");
+        } finally {
+            onMain(instrumentation,() -> {if(reference.get()!=null) reference.get().close();});
+            engineIdle(instrumentation);
+            org.scholay.rimes.core.RimeSchemeArchive.remove(temporary);
+        }
     }
 
     private void rejectThenRetry(boolean plugin,boolean all) throws Exception {
@@ -600,6 +628,7 @@ final class ServiceDeliveryContract {
             check(service.getCurrentInputConnection()==connection,"public framework bind installs the exact fake connection");
             set(service,"target",connection); set(service,"selection",7); set(service,"selectionStart",7);
             set(service,"preferences",preferences); set(service,"settings",settings); set(service,"pluginExecutor",executor);
+            set(service,"schemeStore",new RimeSchemeStore(new java.io.File(pluginContext.getFilesDir(),"scheme-library")));
             set(service,"cometSettings",new OpenAiSettings(preferences));
             preferences.registerOnSharedPreferenceChangeListener((SharedPreferences.OnSharedPreferenceChangeListener)get(service,"preferenceListener"));
             invoke(service,"restoreSettings",new Class<?>[0]);
@@ -684,6 +713,8 @@ final class ServiceDeliveryContract {
     private static final class RecordingEngine implements RimeEngine {
         final AtomicInteger snapshots=new AtomicInteger(),clears=new AtomicInteger(),selections=new AtomicInteger();
         final AtomicInteger creates=new AtomicInteger(),destroyed=new AtomicInteger(),keys=new AtomicInteger();
+        final AtomicInteger initializations=new AtomicInteger();
+        boolean allowInitialize;
         final List<Integer> processed=new ArrayList<>();
         final ArrayDeque<Integer> plannedKeys=new ArrayDeque<>();
         final ArrayDeque<Snapshot> plannedResults=new ArrayDeque<>();
@@ -692,7 +723,10 @@ final class ServiceDeliveryContract {
         RecordingEngine(String raw) { current=new Snapshot(true,raw,raw,raw.length(),"",new String[0],new String[0],0,0,true); }
         synchronized void plan(int key,Snapshot result) { plannedKeys.add(key); plannedResults.add(result); }
         private void offMain() { if(Looper.myLooper()==Looper.getMainLooper()) throw new AssertionError("engine policy operation ran on main"); }
-        public void initialize(String system,String user) { throw new AssertionError("fixture cannot initialize a native engine"); }
+        public void initialize(String system,String user) {
+            offMain();initializations.incrementAndGet();
+            if(!allowInitialize) throw new AssertionError("fixture cannot initialize a native engine");
+        }
         // Explicitly synthetic session IDs let the real service reset its worker state; no JNI is loaded.
         public long createSession() { offMain(); current=Snapshot.EMPTY; return 100+creates.incrementAndGet(); }
         public void destroySession(long session) { offMain(); destroyed.incrementAndGet(); }

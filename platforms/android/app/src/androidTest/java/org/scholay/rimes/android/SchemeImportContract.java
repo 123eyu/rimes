@@ -30,7 +30,7 @@ final class SchemeImportContract {
             return EngineWorker.QUEUE.submit(() -> {
                 RimeSchemeArchive.Review review=RimeSchemeArchive.inspect(archive);
                 RimeSchemeStore store=new RimeSchemeStore(new File(root,"library"));
-                JSONObject installed=store.install(review,"Public input fixture",List.of(schema));
+                JSONObject installed=store.install(review,"Public input fixture",upstream==null?List.of(schema):List.of(schema,"wanxiang_t9"));
                 check(store.active()==null,"installation must not activate");
                 String id=installed.getString("id");store.activate(id,schema);
                 RimeSchemeStore.Selection active=new RimeSchemeStore(store.root).active();
@@ -38,6 +38,10 @@ final class SchemeImportContract {
                 File user=new File(root,"learning");Files.createDirectories(user.toPath());
                 NativeRimeEngine engine=new NativeRimeEngine();engine.initialize(active.resources.getAbsolutePath(),user.getAbsolutePath());
                 type(engine,schema,"nihao","你好");
+                if(upstream!=null) {
+                    check(active.layouts!=null && active.layouts.usesNineKey("nineKey"),"paired imported T9 uses digit keys");
+                    type(engine,active.layouts.schema("nineKey"),"64426","你好");
+                }
                 store.activate(null,null);check(store.active()==null,"restore built-in selection");
                 // Restore the actual bundled engine environment before testing deletion.
                 File builtin=EngineResources.prepare(context),builtinUser=new File(root,"builtin-user");Files.createDirectories(builtinUser.toPath());
