@@ -1,4 +1,4 @@
-# Windows 开发接手（2026-10-09）
+# Windows 开发接手（2026-10-12）
 
 产品名为灵犀输入法 / Lingxi IME，技术架构及现有文件名保留 RIMES。
 这是原生 TSF + Broker 的开发入口；日用验收优先保证关闭 Buffer 时正常打字，再验证 Buffer、设置和安装卸载。
@@ -7,8 +7,8 @@
 
 | 内容 | 状态 |
 | --- | --- |
-| `main` | 已合入 PR #107：候选定位、设置窗口遮挡和 TSF 运行库兼容修复，包含原贡献者提交 |
-| `codex/windows-standard-user-install` | 已跟上 `main`，增加 #93 跨账户安装的系统阶段与原用户阶段分离；真实双账号 UAC 验收待完成 |
+| 集成主线 | 汇合 #107、#111、#114、#119、#121 的普通输入、候选、Buffer、设置与安装卸载修复，保留原贡献者提交 |
+| 本地验收 | 维护者于 2026-10-12 确认 #79、#83、#87、#93、#102、#103、#104、#106 已完成本地验收，详见对应 issue 的收口记录 |
 | 公开 Windows 安装包 | [1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1) |
 | Windows 1.1.2 | 草稿发布；源码合并不会自动替换其安装包，也不代表草稿包包含 #107 或 #93 |
 
@@ -36,14 +36,7 @@ git status --short --branch
 
 官方插件由 `OfficialPlugins` 和 `plugins.lock.json` 固定版本。需要修改插件时按 [维护说明](../../MAINTENANCE.md#官方插件依赖) 单独提交，不直接追逐插件仓库的最新提交。
 
-接着做 #93 时，建议保留主线检出，另开工作区：
-
-```powershell
-git fetch origin
-if ($LASTEXITCODE) { throw 'Fetch failed' }
-git worktree add -b codex/windows-standard-user-install ..\rimes-install93 origin/codex/windows-standard-user-install
-if ($LASTEXITCODE) { throw 'Worktree creation failed; inspect existing branches before retrying' }
-```
+后续修复从最新 `origin/main` 新建短分支，已合入的安装分支不再作为开发起点。
 
 ## 构建与回归
 
@@ -69,14 +62,16 @@ $testRoot = Join-Path $env:TEMP ('rimes-installer-' + [guid]::NewGuid().ToString
 生命周期回归使用隔离注册表键和假 TSF/Broker；它不能代替真实安装和宿主打字。
 打包入口是 `scripts/New-RimesNativePackage.ps1`（本目录下）：需要同一提交的两架构产物、校验过的完整 shared-data、固定版本 `rime.dll` 和微软签名的 x64/x86 VC++ 运行库。详见 [安装器说明](installer/README.md)。不要把 CI 的单架构二进制压缩包当成最终 EXE。
 
-## 接下来的验收顺序
+## 后续回归与发布
 
-1. #93：标准用户登录，运行完整 EXE，在 UAC 中使用另一管理员凭据；确认词库、启动项、开始菜单归属于原用户，管理员配置保持原样。覆盖全新安装、保留数据升级、修复重试、取消卸载和完整卸载后重装。
-2. 普通输入：关闭 Buffer，在记事本、浏览器、Codex、QQ 的实际输入框验证中英文、数字选词、轻按 Shift、标点、删除、失焦、候选定位及 32 位宿主。自动化通过不能替代这些结果。
-3. Buffer：默认 Ctrl+Shift+B 及已有快捷键配置，绑定宿主、输入、生成/翻译、取消、投递、打开设置、关闭后保留待发内容。
-4. 从冻结提交构建完整 EXE，安装同一产物并记录 SHA-256、注销/重启是否完成，再更新公开 Release。对应 Issue 在证据满足后关闭。
+维护者已确认八项既有 bug 的本地验收通过；具体收口见 [2026-10-12 整合记录](../../docs/validation/branch-convergence-20261012.md)。这次确认没有附新的包哈希和宿主版本，不回填为原报告者环境或某个公开安装包的验证结果。
 
-已有 #93 证据见 [安装回归记录](../../validation/issue93-cross-account-install-20261007/report.md)，#107 边界见 [原生回归记录](native/validation/2026-10-07-round2.md)。
+1. 后续修改仍先回归关闭 Buffer 的普通输入，再验证候选、Buffer 与设置。
+2. Buffer 默认唤出为 Alt+Shift+B，投递为 Alt+Shift+Enter；已有自定义快捷键保留，可在设置里修改。输入法维护可丢弃临时 Buffer，无需手动保存或退出。
+3. 从确切提交构建完整 EXE，独立完成同包升级、注销/重启提示、SHA-256 和公开下载验证；本轮分支收敛不替换安装包。
+4. #113 的受限内网签名策略继续跟踪；诊断改进不等于已有受信任的签名安装包。
+
+历史自动化见 [安装回归记录](../../validation/issue93-cross-account-install-20261007/report.md) 和 [原生回归记录](native/validation/2026-10-07-round2.md)。
 
 ## 用户数据与其他平台
 
