@@ -134,7 +134,11 @@ if ($LASTEXITCODE -ne 0) {
     throw 'Original Wanxiang import and native typing failed.'
 }
 & $brokerPath --scheme-import-smoke (Join-Path $workRoot 'wanxiang-t9-import') $fixture wanxiang_t9 64426 $expected
-if ($LASTEXITCODE -ne 0) { throw 'Original Wanxiang nine-key typing failed.' }
+if ($LASTEXITCODE -ne 0) {
+    Get-ChildItem -LiteralPath (Join-Path $workRoot 'wanxiang-t9-import/library/logs') -Filter '*.log' |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 12 }
+    throw 'Original Wanxiang nine-key typing failed.'
+}
 
 $sharedDir = Join-Path $workRoot 'shared'
 $userDir = Join-Path $workRoot 'user'

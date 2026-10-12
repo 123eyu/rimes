@@ -6,6 +6,31 @@ import org.junit.Test;
 import static org.junit.Assert.*;
 
 public final class ImportedKeyboardLayoutsTest {
+    @Test public void missingOptionalVariantFallsBackInBothDirections() {
+        for(String original:new String[]{"demo","demo_t9"}) {
+            String preferred=original.equals("demo")?"demo_t9":"demo";
+            java.util.List<String> attempts=new java.util.ArrayList<>();
+            assertEquals(original,ImportedKeyboardLayouts.selectSchema(preferred,original,id -> {
+                attempts.add(id);return original.equals(id);
+            }));
+            assertEquals(java.util.Arrays.asList(preferred,original),attempts);
+        }
+    }
+    @Test public void availableVariantDoesNotLoadOriginalAgain() {
+        java.util.List<String> attempts=new java.util.ArrayList<>();
+        assertEquals("demo_t9",ImportedKeyboardLayouts.selectSchema("demo_t9","demo",id -> {attempts.add(id);return true;}));
+        assertEquals(java.util.List.of("demo_t9"),attempts);
+    }
+    @Test public void unavailableOriginalStillReportsFailureWithoutRetryLoop() {
+        for(String preferred:new String[]{"demo","demo_t9"}) {
+            java.util.List<String> attempts=new java.util.ArrayList<>();
+            try {
+                ImportedKeyboardLayouts.selectSchema(preferred,"demo",id -> {attempts.add(id);return false;});
+                fail("unusable schema must fail");
+            } catch(IllegalStateException expected) {}
+            assertEquals(preferred.equals("demo")?1:2,attempts.size());
+        }
+    }
     private static final String T9="xlit/abcdefghijklmnopqrstuvwxyz/22233344455566677778889999/";
     private void schema(File root,String id,String dictionary,boolean nine,String last) throws Exception {
         File build=new File(root,"build");Files.createDirectories(build.toPath());

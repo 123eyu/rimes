@@ -51,6 +51,7 @@ class RimeEngine final {
   bool RunMaintenance(bool full_check, std::string* error = nullptr) noexcept;
 
   bool DeploySchema(const std::filesystem::path& schema, std::string* error = nullptr) noexcept;
+  bool DeployDefaultConfiguration(std::string* error = nullptr) noexcept;
 
   SessionId CreateSession(std::string* error = nullptr) noexcept;
   bool DestroySession(SessionId session, std::string* error = nullptr) noexcept;

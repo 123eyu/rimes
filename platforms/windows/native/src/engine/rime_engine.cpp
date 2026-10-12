@@ -509,6 +509,17 @@ class RimeEngine::Impl final {
     }
   }
 
+  bool DeployDefaultConfiguration(std::string* error) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      if (!healthy_ || !api_ || !api_->deploy_config_file ||
+          !api_->deploy_config_file("default.yaml", "config_version")) {
+        SetError(error, "librime could not compile default.yaml"); return false;
+      }
+      return true;
+    } catch (...) { SetError(error, "exception while compiling default.yaml"); return false; }
+  }
+
   bool DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
     try {
       std::lock_guard lock(mutex_);
@@ -805,6 +816,10 @@ RimeEngine::~RimeEngine() { Stop(); }
 
 bool RimeEngine::DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
   return impl_->DeploySchema(path, error);
+}
+
+bool RimeEngine::DeployDefaultConfiguration(std::string* error) noexcept {
+  return impl_->DeployDefaultConfiguration(error);
 }
 
 bool RimeEngine::Start(const RimeEngineOptions& options,

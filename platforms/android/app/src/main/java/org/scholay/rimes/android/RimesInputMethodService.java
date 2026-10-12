@@ -29,6 +29,7 @@ import org.scholay.rimes.core.BufferSession;
 import org.scholay.rimes.core.ExplicitClipboardImport;
 import org.scholay.rimes.core.TextClipboardHistory;
 import org.scholay.rimes.core.InputEpoch;
+import org.scholay.rimes.core.ImportedKeyboardLayouts;
 import org.scholay.rimes.core.PluginSession;
 import org.scholay.rimes.core.RimeEngine;
 import org.scholay.rimes.core.KeyboardLayout;
@@ -121,6 +122,15 @@ public final class RimesInputMethodService extends InputMethodService {
     private boolean importedEngineActive; // EngineWorker only
     private RimeSchemeStore.Selection importedScheme;
     private RimeSchemeStore schemeStore;
+    private volatile ImportedRuntimeLayout importedRuntimeLayout;
+    private static final class ImportedRuntimeLayout {
+        final RimeSchemeStore.Selection selection;
+        final String schema;
+        ImportedRuntimeLayout(RimeSchemeStore.Selection selection,String schema) {this.selection=selection;this.schema=schema;}
+        boolean matches(RimeSchemeStore.Selection other) {
+            return other!=null && selection.packageID.equals(other.packageID) && selection.schemaID.equals(other.schemaID);
+        }
+    }
     private long session;
     private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi"};
     private static final String[] NAMES={"拼音","自然码","五笔"};
@@ -184,6 +194,17 @@ public final class RimesInputMethodService extends InputMethodService {
         if(importedScheme!=null) return importedScheme.layouts==null?importedScheme.schemaID:importedScheme.layouts.schema(layout);
         return (chordLayout()?"rimes_ziranma":nineKeyEngine()?"rimes_pinyin9":schema)+(privateField || !learningEnabled ? "_private" : "");
     }
+    // Called on the serial engine worker. Publish the loaded layout before queued keys run.
+    private void selectRuntimeSchema(RimeSchemeStore.Selection imported,String selected,InputEpoch.Ticket ticket) {
+        if(session==0) throw new IllegalStateException("Cannot create input session");
+        String loaded=ImportedKeyboardLayouts.selectSchema(selected,imported==null?selected:imported.schemaID,
+                candidate -> engine.selectSchema(session,candidate));
+        ImportedRuntimeLayout result=imported==null?null:new ImportedRuntimeLayout(imported,loaded);
+        importedRuntimeLayout=result;
+        if(imported!=null) main.post(() -> {
+            if(!destroyed && epoch.current(ticket) && importedRuntimeLayout==result && result.matches(importedScheme)) render();
+        });
+    }
     private void resetEngine() {
         if(!ready) return;
         final String selected=effectiveSchema();
@@ -215,7 +236,7 @@ public final class RimesInputMethodService extends InputMethodService {
                 if(privateImportedUser!=null) org.scholay.rimes.core.RimeSchemeArchive.remove(privateImportedUser);
                 privateImportedUser=nextPrivate;
                 session=active ? engine.createSession() : 0;
-                if(active && (session==0 || !engine.selectSchema(session,selected))) throw new IllegalStateException("Cannot load selected scheme");
+                if(active) selectRuntimeSchema(imported,selected,ticket);
             } catch(Exception | LinkageError failure) {
                 android.util.Log.e("RIMES","Cannot activate input scheme",failure);
                 main.post(() -> { if(epoch.current(ticket)) engineFailure(); });
@@ -271,9 +292,13 @@ public final class RimesInputMethodService extends InputMethodService {
         }
         settleAndSwitch(() -> { changeSettingsPair(() -> settings.setSchema(selected)); spellingOpen=false; });
     }
-    private boolean nineKeyEngine() { return importedScheme!=null
-        ? importedScheme.layouts!=null && importedScheme.layouts.usesNineKey(layout)
-        : layout.equals("nineKey") && schema.equals("rimes_pinyin"); }
+    private boolean nineKeyEngine() {
+        if(importedScheme==null) return layout.equals("nineKey") && schema.equals("rimes_pinyin");
+        if(importedScheme.layouts==null) return false;
+        ImportedRuntimeLayout loaded=importedRuntimeLayout;
+        return loaded!=null && loaded.matches(importedScheme)
+                ? loaded.schema.equals(importedScheme.layouts.nineKey) : importedScheme.layouts.usesNineKey(layout);
+    }
     private boolean nineKeyVisible() { return ready && nineKeyEngine() && !directOnly && !english && !numeric && !emoji && !uppercase; }
     /** Chinese input shows Chinese marks on the number and symbol pages. */
     private boolean chinesePages() { return !english && !directOnly; }
@@ -636,7 +661,16 @@ public final class RimesInputMethodService extends InputMethodService {
         dispatch(() -> literal(""));
         change.run();
         final String selected=effectiveSchema();
-        EngineWorker.QUEUE.execute(() -> { if(session!=0) engine.selectSchema(session,selected); });
+        final RimeSchemeStore.Selection imported=importedScheme;
+        final InputEpoch.Ticket ticket=epoch.issue();
+        EngineWorker.QUEUE.execute(() -> {
+            if(!epoch.current(ticket)) return;
+            try { if(session!=0) selectRuntimeSchema(imported,selected,ticket); }
+            catch(Exception | LinkageError failure) {
+                android.util.Log.e("RIMES","Cannot switch input scheme",failure);
+                main.post(() -> { if(epoch.current(ticket)) engineFailure(); });
+            }
+        });
         render();
     }
     private void select(int index) {

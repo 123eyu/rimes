@@ -107,6 +107,10 @@ int Compile(const fs::path &root, const std::vector<std::string> &ids) {
   std::string error;
   if (!engine.Start(options, &error))
     throw std::runtime_error(error);
+  // Lua modules may read build/default.yaml while initializing a schema.
+  // Compile the isolated workspace configuration before loading any scheme.
+  if (!engine.DeployDefaultConfiguration(&error))
+    throw std::runtime_error(error);
   for (const auto &id : ids)
     if (!common::ValidID(id) ||
         !engine.DeploySchema(root / (id + ".schema.yaml"), &error))
@@ -152,6 +156,8 @@ int ImportSmoke(int argc, wchar_t **argv) {
   }
   common::Library library(root / "library");
   auto package = library.Install(review, {schema}, Deploy);
+  if (!fs::is_regular_file(library.Root() / "packages" / package.id / "build" / "default.yaml"))
+    throw std::runtime_error("Imported workspace is missing deployed default.yaml");
   if (library.Active())
     throw std::runtime_error("Installing must not activate");
   library.Activate(package.id, schema);

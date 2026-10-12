@@ -14,6 +14,12 @@ public final class ImportedKeyboardLayouts {
     private ImportedKeyboardLayouts(String qwerty,String nineKey) {this.qwerty=qwerty;this.nineKey=nineKey;}
     public String schema(String layout) {return nineKey!=null && ("nineKey".equals(layout) || qwerty==null)?nineKey:qwerty;}
     public boolean usesNineKey(String layout) {return nineKey!=null && nineKey.equals(schema(layout));}
+    /** An inferred sibling is optional; the explicitly activated schema stays usable. */
+    public static String selectSchema(String preferred,String original,java.util.function.Predicate<String> load) {
+        if(load.test(preferred)) return preferred;
+        if(!preferred.equals(original) && load.test(original)) return original;
+        throw new IllegalStateException("Cannot load selected scheme");
+    }
     public static ImportedKeyboardLayouts read(File resources,String selected) {
         Map<?,?> current=info(resources,selected);
         boolean currentNine=nine(current);
