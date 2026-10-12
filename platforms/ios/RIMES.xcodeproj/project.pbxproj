@@ -47,6 +47,7 @@
 		651D571E0323CA51BE0712B1 /* BufferImportPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1C8CE08949496F7C666B93BD /* BufferImportPrompt.swift */; };
 		6676C678F69E9C29144B1955 /* KeyboardViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD234B056A3AB0890E5F757B /* KeyboardViewController.swift */; };
 		69B1672DB0DA4A702CD47E8E /* KeyboardTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7F5A93D8EB1084348D7BBF9 /* KeyboardTheme.swift */; };
+		6D6601D526AA7F6A193B2391 /* ImportedNineKeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8723A571E0850BDC41BA9AC2 /* ImportedNineKeyTests.swift */; };
 		71617EA2CC1E7B8590ABFF7C /* TranslationSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33A420AE1C9DDD5196FF7C94 /* TranslationSetupView.swift */; };
 		724328161F1590C5D28D087B /* CandidateStripTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03E192D5EC3B652474E9D051 /* CandidateStripTests.swift */; };
 		72D3C6D0179CC33FE13C8DA4 /* RimesCore in Frameworks */ = {isa = PBXBuildFile; productRef = 62445D535B1D7A6366C0234B /* RimesCore */; };
@@ -189,6 +190,7 @@
 		7E84E937561AC423FC1AB903 /* OfficialPluginRecoveryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OfficialPluginRecoveryTests.swift; sourceTree = "<group>"; };
 		7EE0C7AE3AD47B418D0BB14A /* RepeatKeycapButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepeatKeycapButton.swift; sourceTree = "<group>"; };
 		85A53135F133901661302ADF /* BufferImportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BufferImportTests.swift; sourceTree = "<group>"; };
+		8723A571E0850BDC41BA9AC2 /* ImportedNineKeyTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImportedNineKeyTests.swift; sourceTree = "<group>"; };
 		8803889847E94CEDA0FCA292 /* KeyboardSizingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSizingTests.swift; sourceTree = "<group>"; };
 		8843154BA7094F00E538F6A7 /* DocumentIdentity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentIdentity.swift; sourceTree = "<group>"; };
 		89364C5C5A24F3CA907FAF2E /* DevelopmentSmoke.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevelopmentSmoke.swift; sourceTree = "<group>"; };
@@ -276,6 +278,7 @@
 				279A8AAE2CD23A966D6C3141 /* CustomKeyboardRuntimeTests.swift */,
 				50AFBA8C6E253D3F6332B858 /* CustomLayoutImportTests.swift */,
 				05F694330D783C5822C8798A /* EngineTests.swift */,
+				8723A571E0850BDC41BA9AC2 /* ImportedNineKeyTests.swift */,
 				123F4B42F6E762634480E19C /* ImportedSchemeRuntimeTests.swift */,
 				4DE121F1A33DDDCC5A07EB42 /* KeyboardLayoutTests.swift */,
 				6DBB9768E003B1C3CFFE8C3E /* KeyboardReturnTests.swift */,
@@ -615,6 +618,7 @@
 				4B221BA066E2D63D020A880B /* CustomKeyboardRuntimeTests.swift in Sources */,
 				9C05F8CB2F471FD771F050F1 /* CustomLayoutImportTests.swift in Sources */,
 				272E9A702E215BA565D36909 /* EngineTests.swift in Sources */,
+				6D6601D526AA7F6A193B2391 /* ImportedNineKeyTests.swift in Sources */,
 				3F6D30BE9B93765F7513FFCA /* ImportedSchemeRuntimeTests.swift in Sources */,
 				0FC1EF3D45A3AE16603B9FF1 /* KeySurface.swift in Sources */,
 				7AC32F9E89FE68E4E8C8B859 /* KeyboardFeedback.swift in Sources */,
@@ -777,7 +781,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 50;
+				CURRENT_PROJECT_VERSION = 52;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 585J2TL9U6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -799,7 +803,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../Vendor/ios-build/headers";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -945,7 +949,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 50;
+				CURRENT_PROJECT_VERSION = 52;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 585J2TL9U6;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -961,7 +965,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../Vendor/ios-build/headers";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.1;
+				MARKETING_VERSION = 1.1.2;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_LDFLAGS = (

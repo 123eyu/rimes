@@ -20,6 +20,12 @@ struct RimeSchemeSelection: Codable, Equatable, Sendable {
     var schemaID: String
 }
 
+/// A layout switches between the package's own encoders, never a built-in dictionary.
+struct ImportedRimeKeyboardLayouts: Equatable {
+    var qwertySchemaID: String?
+    var nineKeySchemaID: String?
+}
+
 struct RimeSchemeLibrary: Codable, Sendable {
     var packages: [RimeSchemePackage] = []
     var active: RimeSchemeSelection?
@@ -48,6 +54,8 @@ final class RimeSchemeStore: @unchecked Sendable {
     var stagingRoot: URL { root.appendingPathComponent(".staging", isDirectory: true) }
     private var file: URL { root.appendingPathComponent("library-v1.json") }
     private let writeLibraryData: (Data, URL) throws -> Void
+    private var keyboardSchemaInfo: [String: [String: Any]] = [:]
+    private let keyboardSchemaLock = NSLock()
     init(root: URL? = nil, writeLibraryData: @escaping (Data, URL) throws -> Void = { data, file in
         try data.write(to: file, options: [.atomic, .completeFileProtectionUntilFirstUserAuthentication])
     }) {
@@ -73,6 +81,36 @@ final class RimeSchemeStore: @unchecked Sendable {
         let url = packageURL(id: package.id)
         guard Self.isCompiledFile(url.appendingPathComponent("build/\(schema.id).schema.yaml")) else { return nil }
         return (package, schema, url)
+    }
+    func keyboardLayouts(for selection: RimeSchemeSelection) -> ImportedRimeKeyboardLayouts? {
+        guard let resolved = resolve(selection) else { return nil }
+        let resources = resolved.resources
+        func info(_ id: String) -> [String: Any]? {
+            guard Self.safeSchemaID(id) else { return nil }
+            let file = resources.appendingPathComponent("build/\(id).schema.yaml")
+            guard Self.isCompiledFile(file) else { return nil }
+            keyboardSchemaLock.lock()
+            defer { keyboardSchemaLock.unlock() }
+            if let cached = keyboardSchemaInfo[file.path] { return cached }
+            let value = RimeMobile.keyboardSchemaInfo(atPath: file.path) as? [String: Any] ?? [:]
+            guard value["schemaID"] as? String == id else { return nil }
+            keyboardSchemaInfo[file.path] = value
+            return value
+        }
+        guard let current = info(selection.schemaID) else { return nil }
+        let isNineKey = current["nineKey"] as? Bool == true
+        let baseID = isNineKey && selection.schemaID.hasSuffix("_t9")
+            ? String(selection.schemaID.dropLast(3)) : selection.schemaID
+        let nineID = isNineKey ? selection.schemaID : selection.schemaID + "_t9"
+        let base = info(baseID), nine = info(nineID)
+        // The native T9 sibling can be a compiled dependency rather than a
+        // selectable schema. Both must use the same imported dictionary.
+        let paired = base?["script"] as? Bool == true && base?["nineKey"] as? Bool == false
+            && nine?["nineKey"] as? Bool == true
+            && !(base?["dictionary"] as? String ?? "").isEmpty
+            && base?["dictionary"] as? String == nine?["dictionary"] as? String
+        return .init(qwertySchemaID: isNineKey ? (paired ? baseID : nil) : selection.schemaID,
+                     nineKeySchemaID: isNineKey ? selection.schemaID : (paired ? nineID : nil))
     }
     /// Deployment is complete before this move. A partial directory is never selected.
     func publish(stagedURL: URL, package: RimeSchemePackage) throws {

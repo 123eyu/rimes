@@ -179,6 +179,81 @@ import RimesCore
         check(container: idleHeight, content: idleHeight)
     }
 
+    @MainActor private func gapFixture() throws -> (keyboard: KeyboardViewController, container: UIView, idleHeight: CGFloat, window: UIWindow) {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 900))
+        let parent = UIViewController()
+        window.rootViewController = parent; window.makeKeyAndVisible()
+        let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 874))
+        parent.view.addSubview(container)
+        let keyboard = KeyboardViewController()
+        keyboard.layoutNeedsInputModeSwitchKey = false
+        keyboard.loadViewIfNeeded()
+        keyboard.developmentResetPreferences(); keyboard.developmentChoose(.chord)
+        parent.addChild(keyboard); container.addSubview(keyboard.view)
+        keyboard.didMove(toParent: parent)
+        container.layoutIfNeeded()
+        return (keyboard, container, keyboard.view.bounds.height, window)
+    }
+
+    func testPlaceholderCoversProvisionalHeightThenWithdraws() throws {
+        let (keyboard, container, idleHeight, window) = try gapFixture()
+        defer { window.isHidden = true }
+        func settle(container height: CGFloat) {
+            container.frame.size.height = height
+            container.setNeedsLayout(); container.layoutIfNeeded()
+        }
+        // Cold start: the host's provisional heights are covered, never blank.
+        for height in [874, 444] as [CGFloat] {
+            settle(container: height)
+            let gap = keyboard.developmentHeightGap
+            XCTAssertEqual(gap.height, height - idleHeight, accuracy: 0.5, "container \(height)")
+            XCTAssertEqual(gap.wordmark, "lingx ime")
+            XCTAssertTrue(gap.wordmarkVisible)
+            XCTAssertEqual(keyboard.view.frame.maxY, height, accuracy: 0.5)
+            XCTAssertEqual(keyboard.view.frame.height, idleHeight, accuracy: 0.5)
+        }
+        // Once the heights agree, nothing remains.
+        settle(container: idleHeight)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
+        XCTAssertFalse(keyboard.developmentHeightGap.wordmarkVisible)
+        // A container shorter than the content keeps the keys on the bottom edge.
+        keyboard.developmentBuffer("占位检查")
+        settle(container: idleHeight)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
+        XCTAssertEqual(keyboard.view.frame.maxY, idleHeight, accuracy: 0.5)
+        XCTAssertEqual(keyboard.view.frame.height, idleHeight + 80, accuracy: 0.5)
+        // Buffer closing while the container lags covers the 80-point difference.
+        settle(container: idleHeight + 80)
+        keyboard.developmentBuffer(nil)
+        settle(container: idleHeight + 80)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        settle(container: idleHeight)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
+    }
+
+    func testPersistentGapIsRequestedAgainThenRecovers() async throws {
+        let (keyboard, container, idleHeight, window) = try gapFixture()
+        defer { window.isHidden = true }
+        container.frame.size.height = 444
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
+        // The host never follows: the gap stays covered and the height is re-asked,
+        // a bounded number of times.
+        try await Task.sleep(nanoseconds: 600_000_000)
+        var gap = keyboard.developmentHeightGap
+        XCTAssertGreaterThanOrEqual(gap.recoveryAttempts, 1)
+        XCTAssertLessThanOrEqual(gap.recoveryAttempts, 4)
+        XCTAssertEqual(gap.height, 444 - idleHeight, accuracy: 0.5)
+        XCTAssertTrue(gap.wordmarkVisible)
+        // The host catches up: the placeholder withdraws and the budget resets.
+        container.frame.size.height = idleHeight
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        gap = keyboard.developmentHeightGap
+        XCTAssertEqual(gap.height, 0, accuracy: 0.5)
+        XCTAssertEqual(gap.recoveryAttempts, 0)
+        XCTAssertFalse(keyboard.view.hasAmbiguousLayout)
+    }
+
     func testHeightFollowsContentAndRotationAfterSystemSizing() throws {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 900, height: 900))
         let parent = UIViewController()
