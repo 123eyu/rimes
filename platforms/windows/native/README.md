@@ -39,20 +39,28 @@ Where the TSF host cooperates, typing matches the macOS RIMES controller:
 
 - Latin keys while composing stay inside the engine.
 - Space commits the highlighted candidate.
-- `1`–`9` select by label.
+- Left / Right select a candidate without moving the inline preedit caret.
+- Down expands consecutive candidate pages into a matrix showing up to three
+  rows. Up / Down then move between rows; more pages load as needed. Up on the
+  first row or Escape collapses the matrix.
+- `1`–`9` select by label from the active row.
 - PageDown / PageUp page the menu.
-- Escape cancels and commits nothing.
+- Escape outside the matrix cancels and commits nothing.
 - A short independent Shift tap uses the scheme's Chinese/English switch.
   Its raw-code commit is collected immediately while Shift remains a host
   modifier. Other key combinations, long holds and focus changes cancel the
   tap; unavailable or older Brokers do not receive deferred input.
 
 The candidate panel is a `WS_EX_NOACTIVATE` topmost tool window so it cannot
-steal focus from the host.
+steal focus from the host. Horizontal pages stay on one line and grow to the
+monitor's available width; oversized entries are ellipsized while keeping all
+selection targets. Preedit is displayed only in the host editor or Buffer.
 
-For the six product schemas, idle unshifted number keys (including the numeric
-keypad) pass directly to the host; composing candidate selection and Buffer
-capture still go through the engine. Idle ASCII-mode keys also pass through.
+For the six product schemas, idle unshifted number-row keys and numeric-keypad
+digits, decimal and operators (also with Shift) pass directly to the host;
+composing candidate selection and Buffer capture still go through the engine.
+Idle spaces in both modes and all idle
+ASCII-mode keys also pass through, including at the TSF test callback.
 The initial mode and subsequent mode flags are exchanged only when both TSF
 and Broker negotiate the key-routing capability, preserving the legacy wire
 format. A modifier-only state update with no composition or committed text
@@ -67,11 +75,29 @@ short to fit the page. If the host temporarily cannot resolve its caret, the
 panel keeps the last position within the current focus context; with no valid
 position it stays hidden until a caret is available.
 
-New Buffer shortcut settings default to **Ctrl+Shift+B**, corresponding to
-macOS Cmd+Shift+B. Saved Ctrl+Alt shortcuts are retained; Settings can select
-Ctrl+Shift, Ctrl+Alt or Alt+Shift with another letter. A conflicting shortcut is reported,
-and a failed change keeps the previous shortcut active. Buffer remains
-accessible from the tray when registration fails.
+The tray and the TSF language-bar/input-method indicator use the shared macOS
+horn from `Logo/rhino-horn.svg`. The tray's black and white variants follow the
+Windows taskbar theme. The language profile selects the second icon group in
+`RimesTsf.dll` (the black horn) through `AddLanguageProfile`; keep the resource
+order in `src/product_version.rc.in` stable when adding icons. Regenerate the
+ICO sizes with `python platforms/windows/scripts/Export-RimesTrayIcons.py`
+(Pillow required). Registration refreshes existing profiles after COM/TSF
+verification, so an upgrade also updates the language-bar icon without removing
+the profile or changing the user's enabled/default input-method choice.
+
+Windows product shortcuts default to **Alt+Shift+…**: **Alt+Shift+B** toggles
+Buffer globally; **Alt+Shift+Enter** sends from the captured Buffer. Settings →
+Buffer → Shortcuts supports independent modifier/key editing, click-to-record,
+Escape to cancel recording, Delete to reset that binding, and reset-all.
+Changes take effect on Save; closing without Save discards the draft. Letters,
+digits, function and navigation keys are supported. A global shortcut requires
+Ctrl, Alt or Win; only local send may use bare Enter or F6–F12. Editing shortcuts,
+unsafe system chords and duplicate action bindings are rejected. Global OS
+registration conflicts or failed saves leave the previous binding active; the
+tray remains available. Settings v3 preserves explicit old/custom shortcuts
+(including the indistinguishable legacy defaults) and v1/v2 key-only meanings.
+Missing shortcut fields and explicit Reset use the new defaults. Save/load never
+resets dictionaries, credentials or unrelated preferences.
 
 Buffer's initial geometry follows macOS `BufferWindowGeometry`: align the
 left edge and width to the current input field, clamp width to 520–1100 DIPs
@@ -84,16 +110,49 @@ edges retain an 8-DIP margin. Expansion goes away from the input.
 
 Only an explicit opening/rebinding recalculates this geometry; typing does
 not reset a manually dragged panel. Windows probes only geometry, never
-field text, through native EDIT caret bounds or bounded UI Automation
-TextPattern2 queries. Password, stale-focus and inaccessible providers are
-rejected. Actual coverage of browser/Electron/Office providers still needs
+field text, through native EDIT caret bounds, a fresh TSF edit-session caret,
+and bounded UI Automation queries for the focused field width. TextPattern2
+is optional when TSF supplies the caret. The opening reply is tied to the
+exact session, context and summon, expires after one second, and is rejected
+after typing, focus changes or manual dragging. Password and stale-focus
+providers are rejected. Actual coverage of browser/Electron/Office providers still needs
 the manual host pass; fallback positioning is intentional.
 
-Ctrl/Alt/Win/AltGr combinations with Return, Backspace or Escape are host
-commands, even while Buffer captures ordinary input. Switching the workbench
+Each accepted Rime commit now remains one source block. Only uninterrupted
+ASCII/direct-input keystrokes merge into an editable tail; Backspace deletes
+a finalized commit block, but edits the direct-input tail by character.
+Pasted text is separately segmented without changing its concatenated text.
+
+The configured send chord (default **Alt+Shift+Enter**) sends one block on
+release, or drains the frozen queue after a 1.2-second hold. Plain/Shift Return
+only settles composition and never submits the host field or sends staged text.
+A composing send press only settles Rime, even for a custom non-Enter binding;
+its repeats/release cannot send. The physical key owns its release even if
+modifiers change. Focus, capture, configuration or visibility transitions cancel
+a held send, including a return to the same target. Unassigned modified commands
+remain with the host, and closing/pausing Buffer returns its send chord to the
+host. Capture notifications carry an atomic key/modifier configuration to TSF
+so local OnTest prediction and Broker execution agree.
+
+Selecting Translation now arms automatic sentence translation, including
+when selected before any text is typed. After 800 ms without a commit and
+with no preedit, complete sentences are translated through the enabled
+plugin and configured connector. Incomplete tails wait for punctuation (or
+an explicit Translate action). Paused/unbound workspaces do not start new
+automatic requests. Ordinary AI generation remains explicit. Switching the workbench
 back to Input stops automatic translation and queued processing; source and
 completed results remain available for explicit sending. These changes describe
 the current source, not a replacement of the published 1.1.1 installer.
+
+Host availability is a separate acceptance gate. The current TSF registers
+keyboard and display-attribute categories only: it does **not** yet implement
+the UI-less candidate contract or declare immersive support. A basic registrar
+`verify` success must not be reported as Chrome/Windows Search acceptance.
+Use `RimesRegistrar diagnose` for read-only profile enablement and capability
+categories, and `Debug-RimesWindows.ps1 -Registered` for these checks plus the
+active architecture's DLL signature. Missing capabilities and unsigned DLLs
+are warnings, not something the diagnostic tool silently changes. Do not
+register unimplemented capabilities or weaken Windows security to remove them.
 
 ## Build
 
@@ -117,6 +176,21 @@ CTest covers protocol, engine unit, key translation, broker options, candidate
 layout, registrar metadata, the pipe endpoint, and inferred default paths. It
 does not load `rime.dll`.
 
+## Development diagnostics
+
+The read-only diagnostic helper checks the horn resource order, TSF language-bar
+icon wiring, available build artifacts, and compiled registrar metadata:
+
+```powershell
+..\scripts\Debug-RimesWindows.ps1 -Architecture x64
+..\scripts\Debug-RimesWindows.ps1 -Architecture x86 -Configuration Release
+```
+
+On Windows, add `-Registered` to inspect the current RIMES language-profile
+registration, including its `IconFile` and zero-based `IconIndex`. Add `-Json`
+when another script or CI job needs machine-readable results. The helper is
+read-only and does not register, unregister, restart, or modify user data.
+
 ## Pinned librime and typing tests
 
 ```powershell
@@ -129,6 +203,12 @@ does not load `rime.dll`.
 TSF stack (`ITfThreadMgr` / `ITfContext` / `ITfComposition`). It asserts
 preedit, candidate contents, `nihao`+Space → `你好`, number selection, paging,
 Escape, Shift switching, ordinary editing and host-command pass-through.
+
+The test-only `RimesE2EBroker.exe` and `RimesTsfE2E.exe` use a compile-time
+`RIMES.E2E.Broker` pipe/mutex identity, while daily builds keep `RIMES.Broker`.
+The same user/session and pipe access checks apply to both. E2E tests can run
+alongside the installed input method without stopping its Broker or losing
+Buffer contents; their TSF client never auto-launches a daily Broker.
 
 Hosted GitHub `windows-2022` runners usually have a logon session and can
 launch Notepad, but they are **not** a reliable interactive IME desktop: no

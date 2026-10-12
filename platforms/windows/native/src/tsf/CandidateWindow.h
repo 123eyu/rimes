@@ -28,6 +28,7 @@ struct CandidateSnapshot {
   RECT caret_rect{};
   std::wstring composition;
   std::vector<CandidateItem> items;
+  std::vector<std::size_t> matrix_rows;
 };
 
 class CandidateWindow {
@@ -89,8 +90,6 @@ class CandidateWindow {
   mutable std::vector<ui::DipRect> hit_pills_;
   mutable float layout_width_dip_ = 0;
   mutable float layout_height_dip_ = 0;
-  mutable ui::DipRect preedit_dip_{};
-  mutable bool show_preedit_ = false;
 };
 
 }  // namespace rimes::windows::tsf

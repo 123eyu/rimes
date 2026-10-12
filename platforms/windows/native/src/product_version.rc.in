@@ -1,7 +1,11 @@
 #include <windows.h>
 #include "@CMAKE_CURRENT_SOURCE_DIR@/src/ui/product_icon.h"
 
+// Keep the full mascot first and the black horn second. The TSF registrar
+// selects the second icon group for the language-bar profile icon.
 IDI_RIMES ICON "@CMAKE_CURRENT_SOURCE_DIR@/resources/rimes.ico"
+IDI_RIMES_HORN_BLACK ICON "@CMAKE_CURRENT_SOURCE_DIR@/resources/rhino-horn-black.ico"
+IDI_RIMES_HORN_WHITE ICON "@CMAKE_CURRENT_SOURCE_DIR@/resources/rhino-horn-white.ico"
 
 VS_VERSION_INFO VERSIONINFO
  FILEVERSION @PROJECT_VERSION_MAJOR@,@PROJECT_VERSION_MINOR@,@PROJECT_VERSION_PATCH@,0

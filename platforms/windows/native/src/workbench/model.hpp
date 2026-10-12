@@ -18,6 +18,7 @@ struct Block {
   std::uint64_t id = 0;
   std::string text;
 };
+enum class InputKind { kCommit, kDirect, kExternal };
 struct Delivery {
   std::uint64_t request = 0;
   Target target;
@@ -31,6 +32,7 @@ struct Generation {
   std::size_t source_offset = 0;
   std::string prefix;
   std::string plugin_id, plugin_grant, instruction;
+  std::string connector_id, connector_grant;
 };
 // Pure state machine. Broker serializes calls. Nothing here persists source
 // text.
@@ -48,7 +50,8 @@ class Model {
   void Open();
   void Close();
   void Protect();
-  bool Append(std::string text);
+  void Discard();
+  bool Append(std::string text, InputKind kind = InputKind::kCommit);
   bool Backspace();
   std::string SourceText() const;
   std::string ResultText() const;
@@ -75,6 +78,9 @@ class Model {
   std::map<std::uint64_t, std::string> source_links_;
   std::uint64_t send_until_ = 0;
   std::string translated_source_;
+  // Only an uninterrupted direct-input run is character-editable. Accepted
+  // Rime commits are hard block boundaries, just like the macOS workbench.
+  std::vector<std::uint64_t> direct_blocks_;
   void RemoveSourcePrefix(std::size_t bytes);
 };
 std::vector<std::string> Sentences(const std::string& text);

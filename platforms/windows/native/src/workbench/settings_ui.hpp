@@ -40,6 +40,8 @@ class SettingsUiHost {
   [[nodiscard]] bool IsOpen() const noexcept { return hwnd_ != nullptr; }
   [[nodiscard]] HWND hwnd() const noexcept { return hwnd_; }
   bool HandleDialogMessage(MSG* message);
+  bool RecordingShortcut() const noexcept { return recording_shortcut_ >= 0; }
+  void RecordShortcut(unsigned key, unsigned modifiers);
 
  private:
   void SyncDraftFromConfig(const Settings& config);
@@ -67,14 +69,20 @@ class SettingsUiHost {
   HWND check_vertical_ = nullptr;
   HWND edit_hotkey_ = nullptr;
   HWND combo_hotkey_modifiers_ = nullptr;
+  HWND edit_send_ = nullptr, combo_send_modifiers_ = nullptr;
+  HWND record_hotkey_ = nullptr, record_send_ = nullptr, reset_shortcuts_ = nullptr, shortcut_feedback_ = nullptr;
+  int recording_shortcut_ = -1;
+  unsigned recorded_key_ = 0;
+  void StopRecording();
   HWND edit_base_ = nullptr;
+  HWND combo_connector_ = nullptr, edit_codex_path_ = nullptr, edit_codex_model_ = nullptr;
   HWND edit_model_ = nullptr;
   HWND edit_key_ = nullptr;
   HWND edit_lang_ = nullptr;
   HWND check_ascii_ = nullptr;
   HWND check_trad_ = nullptr;
   HWND check_punct_ = nullptr;
-  std::array<HWND,3> plugin_labels_{}, plugin_install_{}, plugin_enable_{}, plugin_remove_{};
+  std::array<HWND,4> plugin_labels_{}, plugin_install_{}, plugin_enable_{}, plugin_remove_{};
   HWND plugin_status_ = nullptr;
   std::vector<PluginView> plugin_rows_;
   HBRUSH edit_brush_ = nullptr;

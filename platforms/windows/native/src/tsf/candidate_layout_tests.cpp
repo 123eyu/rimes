@@ -2,6 +2,7 @@
 #include "../ui/candidate_strip.hpp"
 #include "../ui/theme.hpp"
 #include "candidate_layout.hpp"
+#include "candidate_navigation.hpp"
 
 #include <cstdlib>
 #include <iostream>
@@ -131,7 +132,7 @@ void TestThemeDefaults() {
   Check(Palette(ThemeId::kDay).selection == 0x0F6A3F, "day selection");
 }
 
-void TestHorizontalWrapAndHits() {
+void TestHorizontalSingleRowAndHits() {
   CandidateStripMetrics metrics;
   std::vector<CandidateStripItem> items;
   for (int i = 0; i < 9; ++i) {
@@ -142,19 +143,29 @@ void TestHorizontalWrapAndHits() {
     items.push_back(item);
   }
   const auto layout =
-      LayoutCandidateStripMeasured(items, 80.0f, true, metrics, 320.0f);
-  Check(layout.row_count >= 2, "narrow monitor must wrap into extra rows");
-  Check(layout.pills.size() == 9, "wrapping must keep every selectable entry");
-  Check(layout.show_preedit, "preedit pill is present");
+      LayoutCandidateStripMeasured(items, metrics, 320.0f);
+  Check(layout.row_count == 1 && layout.height_dip == metrics.strip_height_dip,
+        "horizontal candidates stay on one row on a narrow monitor");
+  Check(layout.pills.size() == 9, "single row keeps every selectable entry");
   Check(layout.width_dip <= 320.0f + 0.01f, "width clamps to available");
   for (std::size_t i = 0; i < layout.pills.size(); ++i) {
     const auto& pill = layout.pills[i];
+    Check(pill.top == layout.pills[0].top && pill.width() > 0,
+          "all candidates share a baseline with a visible hit target");
+    if (i > 0)
+      Check(pill.left > layout.pills[i - 1].right,
+            "single-row hit targets stay in page order without overlap");
     const float cx = (pill.left + pill.right) * 0.5f;
     const float cy = (pill.top + pill.bottom) * 0.5f;
     Check(HitTestCandidateStrip(layout, cx, cy) == static_cast<int>(i),
           "painted pill must map to the same logical index");
   }
   Check(HitTestCandidateStrip(layout, -1, -1) < 0, "miss outside returns -1");
+  const auto wide = LayoutCandidateStripMeasured(items, metrics, 1920.f);
+  Check(wide.row_count == 1 && wide.width_dip > metrics.max_strip_width_dip,
+        "horizontal strip grows past the old wrap threshold when space permits");
+  for (const auto& pill : wide.pills)
+    Check(pill.width() == 102.f, "available space preserves natural candidate widths");
 }
 
 void TestLongTextDoesNotDropIndex() {
@@ -164,9 +175,11 @@ void TestLongTextDoesNotDropIndex() {
   items[1].content_width_dip = 800;
   items[2].content_width_dip = 40;
   const auto layout =
-      LayoutCandidateStripMeasured(items, 0, false, metrics, 460.0f);
+      LayoutCandidateStripMeasured(items, metrics, 460.0f);
   Check(layout.pills.size() == 3, "long text still yields three hit targets");
-  Check(layout.row_count >= 2, "oversized pill forces a new row");
+  Check(layout.row_count == 1, "oversized candidate is clipped on the same row");
+  Check(layout.pills[0].width() == 52.f && layout.pills[2].width() == 52.f,
+        "long candidate leaves short neighbors at their natural width");
   for (const auto& pill : layout.pills)
     Check(pill.left >= 0 && pill.right <= layout.width_dip,
           "long candidates stay inside their actual clickable viewport");
@@ -183,8 +196,10 @@ void TestNarrowViewportAndLargeFont() {
     items[0].content_width_dip = 800;
     items[1].content_width_dip = 32;
     items[2].content_width_dip = 48;
-    const auto layout = LayoutCandidateStripMeasured(items, 200, true, metrics, width);
+    const auto layout = LayoutCandidateStripMeasured(items, metrics, width);
     Check(layout.width_dip <= width, "small work area bounds the popup");
+    Check(layout.row_count == 1 && layout.height_dip == metrics.strip_height_dip,
+          "large font never adds a horizontal row");
     Check(metrics.pill_height_dip >= metrics.candidate_font_dip + 4,
           "large text fits inside the pill");
     for (std::size_t i = 0; i < layout.pills.size(); ++i) {
@@ -203,9 +218,9 @@ void TestNarrowViewportAndLargeFont() {
     Check(HitTestCandidateStrip(layout, layout.width_dip + 1, layout.pills[0].top + 1) < 0,
           "invisible candidate text cannot receive a click");
   }
-  const auto preedit = LayoutCandidateStripMeasured({}, 200, true, {}, 100);
-  Check(preedit.row_count == 0 && preedit.height_dip == preedit.preedit.bottom,
-        "preedit without candidates does not draw an empty strip");
+  const auto empty = LayoutCandidateStripMeasured({}, {}, 100);
+  Check(empty.row_count == 0 && empty.height_dip == 0 && empty.width_dip == 0,
+        "no candidates means no popup surface");
   const auto origin = PlaceCandidateWindow({100, 100, 100, 124}, 200, 100,
                                           {0, 0, 1920, 1080}, ScaleDip(6, 144));
   Check(origin.y == 133, "caret gap scales to nine pixels at 150 percent");
@@ -216,7 +231,7 @@ void TestVerticalCandidatesKeepEveryPageItem() {
     const auto metrics = ui::MakeCandidateMetrics(40);
     std::vector<CandidateStripItem> items(9);
     for (auto& item : items) item.content_width_dip = 250;
-    const auto layout = LayoutCandidateStripMeasured(items, 50, true, metrics, 460.f, true, height);
+    const auto layout = LayoutCandidateStripMeasured(items, metrics, 460.f, true, height);
     Check(layout.pills.size() == 9 && layout.height_dip <= height && layout.width_dip <= 460.f,
           "vertical pages preserve all items within monitor geometry");
     for (std::size_t i = 0; i < layout.pills.size(); ++i) {
@@ -250,6 +265,67 @@ void TestBufferLayoutBounds() {
   Check(layout.height_dip == 35, "toolbar-only height");
 }
 
+void TestCandidateMatrixNavigation() {
+  std::vector<BrokerInputState> pages(6);
+  for (std::size_t row = 0; row < pages.size(); ++row) {
+    auto& page = pages[row];
+    page.candidates_visible = page.composing = true;
+    page.composition = L"ni";
+    page.page_start = 0;
+    page.page_size = row == 5 ? 2 : 9;
+    page.candidates.resize(row == 5 ? 2 : 9);
+    for (std::size_t index = 0; index < page.candidates.size(); ++index)
+      page.candidates[index].id = static_cast<std::uint32_t>(row * 9 + index);
+  }
+  std::size_t engine_row = 0;
+  auto step = [&](int delta) -> std::optional<BrokerInputState> {
+    engine_row = static_cast<std::size_t>((std::clamp)(
+        static_cast<int>(engine_row) + delta, 0, 5));
+    return pages[engine_row];
+  };
+  CandidateNavigation navigation;
+  navigation.Reset(pages[0]);
+  navigation.MoveColumn(1);
+  Check(navigation.column() == 1 && engine_row == 0,
+        "horizontal arrows select a word without editing the engine preedit");
+  Check(navigation.MoveRow(1, step) && navigation.expanded() &&
+            navigation.end() == 3 && engine_row == 0 && navigation.column() == 1,
+        "Down previews three pages and restores the selected engine page");
+  Check(navigation.MoveRow(-1, step) && !navigation.expanded() && engine_row == 0,
+        "Up on the first matrix row collapses without cancelling composition");
+  Check(navigation.MoveRow(1, step), "matrix opens again");
+  for (std::size_t row = 1; row <= 5; ++row) {
+    Check(navigation.MoveRow(1, step) && navigation.row() == row && engine_row == row,
+          "Down continues beyond the first three pages");
+    Check(navigation.end() - navigation.base() <= 3,
+          "matrix viewport shows at most three rows");
+  }
+  navigation.MoveColumn(8);
+  Check(navigation.column() == 1 && navigation.Selected()->page_id == 45,
+        "short final page clamps selection to an existing candidate");
+  Check(!navigation.Selected(8), "unavailable matrix number never selects a hidden word");
+  Check(navigation.AtVisibleIndex(0)->page_id == 27 &&
+            navigation.AtVisibleIndex(18)->page_id == 45,
+        "mouse hit index maps to the visible page and its local index");
+  Check(navigation.MoveRow(1, step) && engine_row == 5 && navigation.row() == 5,
+        "end of candidate list never wraps or duplicates rows");
+  navigation.Reset({});
+  Check(navigation.empty() && !navigation.expanded() && !navigation.Selected(),
+        "commit or context retirement clears matrix selection");
+
+  std::vector<CandidateStripItem> items(20);
+  for (auto& item : items) item.content_width_dip = 90;
+  const auto matrix = ui::LayoutCandidateMatrixMeasured(items, {9, 9, 2}, {}, 320);
+  Check(matrix.row_count == 3 && matrix.width_dip <= 320 && matrix.pills.size() == 20,
+        "matrix keeps explicit page boundaries while fitting monitor width");
+  for (std::size_t i = 0; i < matrix.pills.size(); ++i) {
+    const auto& pill = matrix.pills[i];
+    Check(HitTestCandidateStrip(matrix, (pill.left + pill.right) / 2,
+               (pill.top + pill.bottom) / 2) == static_cast<int>(i),
+          "matrix paint geometry preserves every mouse selection index");
+  }
+}
+
 }  // namespace
 
 int RunCandidateLayoutTests() {
@@ -260,10 +336,11 @@ int RunCandidateLayoutTests() {
   TestCollapsedCaretAndSelectionLabels();
   TestUnknownCaretReusesPreviousPlacement();
   TestThemeDefaults();
-  TestHorizontalWrapAndHits();
+  TestHorizontalSingleRowAndHits();
   TestLongTextDoesNotDropIndex();
   TestNarrowViewportAndLargeFont();
   TestVerticalCandidatesKeepEveryPageItem();
+  TestCandidateMatrixNavigation();
   TestBufferLayoutBounds();
   return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
 }

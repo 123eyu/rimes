@@ -68,7 +68,7 @@ std::optional<BufferRect> RangeBounds(IUIAutomationTextRange* range) {
   if (!FiniteBufferRect(rect) || rect.width < 0 || rect.height <= 2) return {};
   return rect;
 }
-BufferInputAnchor AutomationAnchor(DWORD process) {
+BufferInputAnchor AutomationAnchor(DWORD process, std::optional<BufferRect> tsf_caret) {
   BufferInputAnchor anchor;
   ComPtr<IUIAutomation2> automation;
   if (FAILED(CoCreateInstance(CLSID_CUIAutomation8, nullptr, CLSCTX_INPROC_SERVER,
@@ -92,15 +92,17 @@ BufferInputAnchor AutomationAnchor(DWORD process) {
       FAILED(element->get_CurrentControlType(&control)) ||
       (control != UIA_EditControlTypeId && control != UIA_DocumentControlTypeId))
     return anchor;
-  ComPtr<IUIAutomationTextPattern2> pattern;
-  if (FAILED(element->GetCurrentPatternAs(UIA_TextPattern2Id,
-      IID_PPV_ARGS(pattern.GetAddressOf()))) || !pattern) return anchor;
+  anchor.caret = tsf_caret;
   ComPtr<IUIAutomationTextRange> range;
-  BOOL active = FALSE;
-  if (FAILED(pattern->GetCaretRange(&active, range.GetAddressOf())) ||
-      !active || !range) return anchor;
-  anchor.caret = RangeBounds(range.Get());
-  if (!anchor.caret && SUCCEEDED(range->ExpandToEnclosingUnit(TextUnit_Character))) {
+  ComPtr<IUIAutomationTextPattern2> pattern;
+  if (!anchor.caret && SUCCEEDED(element->GetCurrentPatternAs(UIA_TextPattern2Id,
+      IID_PPV_ARGS(pattern.GetAddressOf()))) && pattern) {
+    BOOL active = FALSE;
+    if (FAILED(pattern->GetCaretRange(&active, range.GetAddressOf())) || !active)
+      range.Reset();
+  }
+  if (range) anchor.caret = RangeBounds(range.Get());
+  if (!anchor.caret && range && SUCCEEDED(range->ExpandToEnclosingUnit(TextUnit_Character))) {
     // A degenerate range may have no rectangle. Expand only this private
     // range to recover the current line; never select text or fetch its value.
     anchor.caret = RangeBounds(range.Get());
@@ -108,16 +110,25 @@ BufferInputAnchor AutomationAnchor(DWORD process) {
   if (!anchor.caret) return anchor;
   RECT box{};
   if (SUCCEEDED(element->get_CurrentBoundingRectangle(&box))) anchor.box = FromRect(box);
+  ComPtr<IUIAutomationElement> current;
+  BOOL same = FALSE;
+  if (FAILED(automation->GetFocusedElement(current.GetAddressOf())) || !current ||
+      FAILED(automation->CompareElements(element.Get(), current.Get(), &same)) || !same)
+    return {};
   return anchor;
 }
 }  // namespace
 
-BufferInputAnchor ProbeBufferInputAnchor(DWORD expected_process) {
+BufferInputAnchor ProbeBufferInputAnchor(DWORD expected_process,
+                                         std::optional<BufferRect> tsf_caret) {
   if (!expected_process || expected_process == GetCurrentProcessId()) return {};
   const HWND foreground = GetForegroundWindow();
   if (!foreground || WindowProcess(foreground) != expected_process) return {};
   auto anchor = NativeAnchor(foreground, expected_process);
-  if (!anchor.caret) anchor = AutomationAnchor(expected_process);
+  if (!anchor.caret) anchor = AutomationAnchor(expected_process, tsf_caret);
+  // UIA may be unavailable altogether. The fresh TSF rectangle still gives
+  // an exact input-line anchor; only the optional field-width enrichment is lost.
+  if (!anchor.caret) anchor.caret = tsf_caret;
   // Do not align to a former field/app if focus changed during a provider call.
   if (foreground != GetForegroundWindow() ||
       WindowProcess(GetForegroundWindow()) != expected_process) return {};

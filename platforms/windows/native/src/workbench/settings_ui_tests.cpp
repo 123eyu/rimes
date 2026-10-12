@@ -468,11 +468,11 @@ void TestBufferHotkeyRegistrationLifecycle() {
         "startup retry owns the requested real chord");
   int saves = 0;
   const Chord invalid[] = {
-      {0, old.key}, {MOD_CONTROL, old.key}, {MOD_WIN, old.key},
-      {MOD_CONTROL | MOD_ALT | MOD_SHIFT, old.key},
+      {0, old.key}, {MOD_SHIFT, old.key}, {MOD_CONTROL, 'V'},
+      {MOD_ALT, VK_F4},
       {MOD_CONTROL | MOD_SHIFT | MOD_NOREPEAT, old.key},
       {MOD_CONTROL | MOD_SHIFT, 0}, {MOD_CONTROL | MOD_SHIFT, 'b'},
-      {MOD_CONTROL | MOD_SHIFT, VK_F1},
+      {MOD_CONTROL | MOD_SHIFT, VK_SHIFT},
       {MOD_CONTROL | MOD_SHIFT, static_cast<unsigned>(-1)}};
   for (const auto chord : invalid) {
     const bool was_free = can_claim(chord);
@@ -545,7 +545,7 @@ void TestBufferHotkeyModifierControl() {
       const HWND choices = GetDlgItem(window, 405);
       Check(IsVisibleWithinFixture(choices, window),
             "native modifier selector is exposed only on the shortcut page");
-      Check(SendMessageW(choices, CB_GETCOUNT, 0, 0) == 3 &&
+      Check(SendMessageW(choices, CB_GETCOUNT, 0, 0) == static_cast<LRESULT>(workbench::kBufferHotkeyChoices.size()) &&
                 SendMessageW(choices, CB_GETCURSEL, 0, 0) ==
                     workbench::BufferHotkeyChoiceIndex(modifiers),
             "selector displays the complete configured chord without migration");
@@ -596,6 +596,63 @@ void TestBufferHotkeyModifierControl() {
               saved.hotkey_key == 'J',
           "explicit modifier migration keeps the user's custom letter");
   }
+}
+
+void TestSendShortcutRecorder() {
+  workbench::Settings current;
+  current.hotkey_modifiers = MOD_CONTROL | MOD_ALT;
+  current.hotkey_key = 'J';
+  int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [&] { return current; };
+  callbacks.save = [&](workbench::Settings value, const std::wstring&, bool, std::string*) {
+    current = value; ++saves; return true;
+  };
+  workbench::SettingsUiHost host(std::move(callbacks));
+  auto open = [&] {
+    host.Open(nullptr);
+    ui::SettingsDraft draft;
+    Click(host.hwnd(), Layout(host.hwnd(), draft).nav[2]);
+  };
+  auto record = [&] { SendMessageW(GetDlgItem(host.hwnd(), 410), BM_CLICK, 0, 0); };
+  open();
+  const HWND send_key = GetDlgItem(host.hwnd(), 407);
+  Check(IsVisibleWithinFixture(send_key, host.hwnd()), "send shortcut has an editable field on the same page");
+  record();
+  host.RecordShortcut('J', MOD_CONTROL | MOD_ALT);
+  Check(host.RecordingShortcut() && saves == 0, "recorder rejects a duplicate without saving");
+  host.RecordShortcut('V', MOD_CONTROL);
+  Check(host.RecordingShortcut(), "recorder preserves host editing shortcuts");
+  BYTE saved_keys[256]{}; GetKeyboardState(saved_keys);
+  BYTE keys[256]{}; keys[VK_CONTROL] = keys[VK_SHIFT] = 0x80;
+  SetKeyboardState(keys);  // Test-thread state only; never sends desktop input.
+  MSG message{}; message.hwnd = GetDlgItem(host.hwnd(), 410);
+  message.message = WM_KEYDOWN; message.wParam = VK_F8;
+  Check(host.HandleDialogMessage(&message) && !host.RecordingShortcut() && saves == 0,
+        "keyboard-first recorder captures modifiers and non-Enter key without invoking Save");
+  message.lParam = 1LL << 30;
+  Check(host.HandleDialogMessage(&message) && saves == 0, "recorded-key repeats cannot activate settings controls");
+  message.message = WM_KEYUP;
+  Check(host.HandleDialogMessage(&message), "recorder consumes the captured release");
+  SetKeyboardState(saved_keys);
+  host.Close(true);
+  Check(saves == 1 && current.hotkey_key == 'J' && current.hotkey_modifiers == (MOD_CONTROL | MOD_ALT) &&
+        current.send_key == VK_F8 && current.send_modifiers == (MOD_CONTROL | MOD_SHIFT),
+        "Save persists the send key independently and preserves the old global shortcut");
+  open(); record();
+  message = {}; message.hwnd = GetDlgItem(host.hwnd(), 410);
+  message.message = WM_KEYDOWN; message.wParam = VK_ESCAPE;
+  Check(host.HandleDialogMessage(&message) && host.IsOpen() && !host.RecordingShortcut(),
+        "Escape cancels recording rather than closing settings");
+  record(); host.RecordShortcut(VK_DELETE, 0);
+  host.Close(false);
+  Check(current.send_key == VK_F8 && saves == 1, "closing without Save discards a reset draft");
+  open();
+  SendMessageW(GetDlgItem(host.hwnd(), 411), BM_CLICK, 0, 0);
+  host.Close(true);
+  Check(saves == 2 && current.hotkey_key == 'B' && current.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
+        current.send_key == VK_RETURN && current.send_modifiers == (MOD_ALT | MOD_SHIFT),
+        "explicit reset restores both requested Alt+Shift defaults");
 }
 
 void TestHoverRepaintScopeAndResources() {
@@ -735,6 +792,39 @@ void TestHoverRepaintScopeAndResources() {
   DeleteObject(bitmap);
   DeleteDC(capture);
   host.Close(false);
+}
+void TestCodexConnectorSelector() {
+  workbench::Settings original, saved;
+  original.ai_connector = "codex-cli";
+  original.codex_path = "C:/Program Files/Codex/codex.exe";
+  original.codex_model = "fixture-model";
+  original.model = "keep-api-model";
+  original.hotkey_modifiers = MOD_ALT | MOD_SHIFT;
+  int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [&] { return original; };
+  callbacks.save = [&](workbench::Settings value, const std::wstring&, bool replace_key, std::string*) {
+    Check(!replace_key, "CLI selection never changes API credentials");
+    saved = value; ++saves; return true;
+  };
+  workbench::SettingsUiHost host(std::move(callbacks));
+  host.Open(nullptr);
+  const auto window = host.hwnd();
+  ui::SettingsDraft draft;
+  Click(window, Layout(window, draft).nav[3]);
+  const HWND selector = GetDlgItem(window, 406);
+  Check(IsVisibleWithinFixture(selector, window) && SendMessageW(selector, CB_GETCOUNT, 0, 0) == 2 &&
+      SendMessageW(selector, CB_GETCURSEL, 0, 0) == 1, "Codex selector reflects saved connector");
+  for (const WPARAM key : {VK_RETURN, VK_ESCAPE}) {
+    SendMessageW(selector, CB_SHOWDROPDOWN, TRUE, 0);
+    MSG message{}; message.hwnd = selector; message.message = WM_KEYDOWN; message.wParam = key;
+    Check(!host.HandleDialogMessage(&message) && saves == 0 && host.IsOpen(), "Codex popup does not accidentally Save or Close");
+    SendMessageW(selector, CB_SHOWDROPDOWN, FALSE, 0);
+  }
+  host.Close(true);
+  Check(saves == 1 && saved.ai_connector == "codex-cli" && saved.codex_path == original.codex_path &&
+      saved.codex_model == original.codex_model && saved.model == original.model &&
+      saved.hotkey_modifiers == original.hotkey_modifiers, "UI save preserves independent CLI/API options and shortcut");
 }
 
 void TestPluginManagementAndChordSelection() {
@@ -1011,6 +1101,8 @@ int main() {
   TestCandidateSettingsControls();
   TestBufferHotkeyRegistrationLifecycle();
   TestBufferHotkeyModifierControl();
+  TestSendShortcutRecorder();
+  TestCodexConnectorSelector();
   TestHoverRepaintScopeAndResources();
   TestPluginManagementAndChordSelection();
   TestSettingsPreserveRuntimeAndStreaming();

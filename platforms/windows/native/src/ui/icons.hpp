@@ -26,6 +26,7 @@ enum class IconId {
   kLanguage,
   kKey,
   kApi,
+  kSparkles,
   kCheck,
   kProduct,
   kRadioOn,
@@ -272,6 +273,24 @@ inline void DrawIconGlyph(HDC dc, IconId id, const RECT& box,
 [[nodiscard]] inline HICON CreateProductIcon(int size_px) noexcept {
   return static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr),
       MAKEINTRESOURCEW(IDI_RIMES), IMAGE_ICON, size_px, size_px, 0));
+}
+
+// The same horn as Logo/rhino-horn.svg, with contrast chosen for the Windows
+// taskbar rather than the independently selected RIMES settings theme.
+[[nodiscard]] inline HICON CreateTrayIcon(int size_px) noexcept {
+  DWORD light = 0, bytes = sizeof(light);
+  RegGetValueW(HKEY_CURRENT_USER,
+      L"Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize",
+      L"SystemUsesLightTheme", RRF_RT_REG_DWORD, nullptr, &light, &bytes);
+  HIGHCONTRASTW contrast{sizeof(contrast)};
+  if (SystemParametersInfoW(SPI_GETHIGHCONTRAST, sizeof(contrast), &contrast, 0) &&
+      (contrast.dwFlags & HCF_HIGHCONTRASTON)) {
+    const auto text = GetSysColor(COLOR_WINDOWTEXT);
+    light = GetRValue(text) + GetGValue(text) + GetBValue(text) < 384;
+  }
+  return static_cast<HICON>(LoadImageW(GetModuleHandleW(nullptr),
+      MAKEINTRESOURCEW(light ? IDI_RIMES_HORN_BLACK : IDI_RIMES_HORN_WHITE),
+      IMAGE_ICON, size_px, size_px, 0));
 }
 
 }  // namespace rimes::windows::ui

@@ -5,6 +5,7 @@
 
 #include "runtime.hpp"
 #include "official_features.hpp"
+#include "../core/buffer_keys.hpp"
 using namespace rimes::windows;
 void Check(bool ok, const char* reason) {
   if (!ok) {
@@ -21,7 +22,9 @@ void TestTargets() {
   Check(runtime.Capturing(target), "explicit binding captures input");
   engine::EngineSnapshot text;
   text.handled = true;
-  text.commit_text = "First. Second.";
+  text.commit_text = "First. ";
+  runtime.Capture(target, &text);
+  text.commit_text = "Second.";
   runtime.Capture(target, &text);
   Check(text.commit_text.empty(), "captured input does not leak into host");
   runtime.Send(false);
@@ -110,6 +113,8 @@ void TestCommandModifiersDoNotBecomeBufferCommands() {
                              core::KeyModifiers::kAltGr}) {
     for (const auto extra : {0U, static_cast<unsigned>(core::KeyModifiers::kShift)}) {
       for (const auto virtual_key : {VK_RETURN, VK_BACK, VK_ESCAPE}) {
+        if (virtual_key == VK_RETURN && modifier == core::KeyModifiers::kAlt && extra)
+          continue;  // This exact chord is deliberately a Buffer send action.
         core::KeyEvent key;
         key.virtual_key = static_cast<std::uint32_t>(virtual_key);
         key.modifiers = static_cast<unsigned>(modifier) | extra;
@@ -240,15 +245,16 @@ void TestPendingResultBlocksShiftAndRetainsOriginalAcknowledgement() {
         "the original result ack still consumes exactly once after blocked Shift");
   runtime.Stop();
 }
-void TestOwnedPlainReturnKeepsItsLifecycleAcrossModifierChanges() {
+void TestOwnedSendKeepsItsLifecycleAcrossModifierChanges() {
   workbench::Runtime runtime;
   const auto peer = GetCurrentProcessId() + 1;
   const auto target = runtime.Register(peer, 21, 21);
   runtime.Focus(target); runtime.Bind(peer); runtime.Paste("First. Second.");
   core::KeyEvent key;
   key.virtual_key = VK_RETURN;
+  key.modifiers = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
   key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
-  Check(runtime.BeforeKey(target, key, false), "plain Return press is owned");
+  Check(runtime.BeforeKey(target, key, false), "send chord press is owned");
   key.modifiers = static_cast<unsigned>(core::KeyModifiers::kControl);
   key.event_flags |= static_cast<unsigned>(core::KeyEventFlags::kRepeat);
   Check(runtime.BeforeKey(target, key, false), "owned Return repeat survives modifier change");
@@ -267,6 +273,184 @@ void TestOwnedPlainReturnKeepsItsLifecycleAcrossModifierChanges() {
   runtime.BeforeKey(target, key, false);
   Check(runtime.Snapshot()["status"] == "Delivered" &&
         runtime.Snapshot()["source"] == "Second.", "late release cannot deliver the remainder");
+  runtime.Stop();
+}
+void TestAltShiftReturnTapHoldAndComposition() {
+  workbench::Runtime runtime;
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 30, 30);
+  runtime.Focus(target); runtime.Bind(peer);
+  auto commit = [&](const char* value) {
+    engine::EngineSnapshot snapshot;
+    snapshot.commit_text = value;
+    runtime.Capture(target, &snapshot);
+  };
+  commit("一"); commit("二"); commit("三");
+  core::KeyEvent key;
+  key.virtual_key = VK_RETURN;
+  key.modifiers = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(core::IsBufferSendChord(VK_RETURN, key.modifiers), "TSF and Broker recognize the same Alt+Shift+Enter chord");
+  Check(runtime.BeforeKey(target, key, false), "Alt+Shift+Enter down owned");
+  key.modifiers = 0; key.event_flags = 0;
+  Check(runtime.BeforeKey(target, key, false), "modifier released first does not lose the owned Return up");
+  auto take = [&] {
+    auto event = runtime.Control({{"op", "wait"}, {"session", 30}}, peer);
+    if (event.value("kind", "") == "capture")
+      event = runtime.Control({{"op", "wait"}, {"session", 30}}, peer);
+    Check(event.value("kind", "") == "deliver", "send gesture emits a delivery");
+    return event;
+  };
+  auto ack = [&](const core::Json& delivery) {
+    runtime.Control({{"op", "ack"}, {"session", 30}, {"request", delivery["request"]},
+                     {"accepted", true}}, peer);
+  };
+  auto first = take();
+  Check(first["text"] == "一", "Alt+Shift+Enter tap sends one commit block");
+  ack(first);
+  Check(runtime.Snapshot()["source"] == "二三", "tap keeps unsent suffix");
+  key.modifiers = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  runtime.BeforeKey(target, key, false);
+  Sleep(1250); runtime.Tick();
+  auto second = take();
+  Check(second["text"] == "二", "held Alt+Shift+Enter starts ordered drain");
+  ack(second); auto third = take();
+  Check(third["text"] == "三", "hold advances only after the previous ack");
+  ack(third);
+  key.event_flags = 0; runtime.BeforeKey(target, key, false);
+  Check(runtime.Snapshot()["source"] == "", "hold key-up cannot send twice");
+  commit("保留");
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(!runtime.BeforeKey(target, key, true), "composing chord is left to Rime settlement");
+  key.event_flags |= static_cast<unsigned>(core::KeyEventFlags::kRepeat);
+  runtime.BeforeKey(target, key, false);
+  key.event_flags = 0; runtime.BeforeKey(target, key, false);
+  Check(runtime.Snapshot()["source"] == "保留" && runtime.Snapshot()["status"] != "Sending...",
+        "settling composition never arms a send on the same physical press");
+  runtime.Close();
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(!runtime.BeforeKey(target, key, false), "closed Buffer leaves Alt+Shift+Enter with the host");
+  runtime.Stop();
+}
+void TestTranslationModeArmsAutomaticSentencePipeline() {
+  std::atomic<unsigned> calls{0};
+  workbench::Runtime runtime([&](const workbench::Settings&, const workbench::Generation& job,
+      const std::function<bool(const std::string&)>& chunk,
+      const std::function<bool()>&, std::string*) {
+    ++calls;
+    Check(job.translation && job.source == "完整句。", "automatic job freezes the complete sentence");
+    return chunk("A sentence.");
+  });
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 31, 31);
+  runtime.Focus(target); runtime.Bind(peer);
+  runtime.SelectTranslationMode();
+  Check(runtime.Snapshot()["translate"] == true && calls == 0,
+        "selecting Translation arms the empty workspace without a Generate click");
+  runtime.Paste("完整句"); Sleep(850); runtime.Tick();
+  Check(calls == 0, "unfinished sentence is not prematurely translated");
+  runtime.Paste("。"); Sleep(850); runtime.Tick();
+  Wait([&] { return runtime.Snapshot()["result"] == "A sentence."; },
+       "completed input automatically produces a translation");
+  runtime.Paste("完整句。"); runtime.PauseCapture();
+  Sleep(850); runtime.Tick();
+  Check(calls == 1, "paused capture cannot start new automatic network work");
+  runtime.ReturnToInput(); runtime.Bind(peer); runtime.Tick();
+  Check(calls == 1 && runtime.Snapshot()["translate"] == false,
+        "returning to input disarms automatic translation");
+  runtime.Stop();
+}
+void TestConfiguredSendAndCancellation() {
+  workbench::Runtime runtime;
+  const auto original = runtime.Configuration();
+  auto config = original;
+  config.send_key = VK_F8; config.send_modifiers = MOD_CONTROL | MOD_SHIFT;
+  Check(runtime.Configure(config, {}, false, nullptr), "save custom send chord");
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 37, 37);
+  runtime.Focus(target); runtime.Bind(peer); runtime.Paste("First. Second.");
+  auto capture = runtime.Control({{"op", "wait"}, {"session", 37}}, peer);
+  Check(capture["sendKey"] == VK_F8 && capture["sendModifiers"] == (MOD_CONTROL | MOD_SHIFT),
+        "the exact saved shortcut travels with capture notifications to TSF prediction");
+  core::KeyEvent key;
+  key.virtual_key = VK_RETURN;
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(runtime.BeforeKey(target, key, false), "ordinary Enter stays in Buffer");
+  key.event_flags = 0; runtime.BeforeKey(target, key, false);
+  Check(runtime.Snapshot()["status"] == "Buffer", "ordinary Enter cannot send staged blocks");
+  key.modifiers = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(!runtime.BeforeKey(target, key, false), "replaced default chord is no longer intercepted");
+  key.virtual_key = VK_F8;
+  key.modifiers = core::ShortcutModifiers(config.send_modifiers);
+  Check(runtime.IsSendChord(key) && runtime.BeforeKey(target, key, false), "custom non-Enter key arms delivery");
+  key.modifiers = 0; key.event_flags = 0;
+  Check(runtime.BeforeKey(target, key, false), "custom physical release is owned after modifiers lift");
+  auto delivery = runtime.Control({{"op", "wait"}, {"session", 37}}, peer);
+  Check(delivery["kind"] == "deliver" && delivery["text"] == "First. ", "custom tap sends one block");
+  runtime.Control({{"op", "ack"}, {"session", 37}, {"request", delivery["request"]}, {"accepted", true}}, peer);
+  for (const bool configure : {false, true}) {
+    key.modifiers = core::ShortcutModifiers(config.send_modifiers);
+    key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+    Check(runtime.BeforeKey(target, key, false), "arm next custom gesture");
+    if (configure) Check(runtime.Configure(config, {}, false, nullptr), "configuration cancels the held gesture");
+    else runtime.Focus({});
+    runtime.Focus(target); runtime.Bind(peer);
+    Sleep(1250); runtime.Tick();
+    key.event_flags = 0;
+    runtime.BeforeKey(target, key, false);
+    Check(runtime.Snapshot()["source"] == "Second." && runtime.Snapshot()["status"] != "Sending...",
+          "returning to the same target never revives a cancelled hold");
+  }
+  key.modifiers = core::ShortcutModifiers(config.send_modifiers);
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(!runtime.BeforeKey(target, key, true), "composing custom chord requests Rime settlement only");
+  key.event_flags |= static_cast<unsigned>(core::KeyEventFlags::kRepeat);
+  Check(runtime.BeforeKey(target, key, false), "composition-settling repeat remains owned");
+  key.event_flags = 0; runtime.BeforeKey(target, key, false);
+  Check(runtime.Snapshot()["source"] == "Second." && runtime.Snapshot()["status"] != "Sending...",
+        "custom settling key cannot deliver on the same release");
+  Check(runtime.Configure(original, {}, false, nullptr), "restore isolated configuration");
+}
+void TestOpeningGeometryIsBoundToOneExactSummon() {
+  workbench::Runtime runtime;
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 32, 32);
+  runtime.Focus(target); runtime.Bind(peer);
+  auto geometry = [&] {
+    return core::Json{{"op", "geometry"}, {"session", 32}, {"context", 32},
+        {"openingRevision", runtime.Snapshot()["opening_revision"]},
+        {"caret", {400, 500, 0, 22}}};
+  };
+  auto request = geometry();
+  Check(runtime.Control(request, peer + 1)["kind"] == "disconnected" &&
+        !runtime.PlacementCaret(target), "foreign process cannot supply opening geometry");
+  request["context"] = 33;
+  Check(runtime.Control(request, peer)["kind"] == "stale", "geometry cannot cross TSF contexts");
+  request = geometry(); request["caret"] = {0, 0, 0, 0};
+  Check(runtime.Control(request, peer)["kind"] == "error", "dummy zero caret does not move Buffer");
+  request = geometry();
+  Check(runtime.Control(request, peer)["kind"] == "ok" &&
+        runtime.PlacementCaret(target) == workbench::BufferRect{400, 500, 0, 22},
+        "fresh zero-width TSF caret is valid");
+  const auto placed = runtime.Snapshot()["placement_revision"];
+  Check(runtime.Control(request, peer)["kind"] == "stale" &&
+        runtime.Snapshot()["placement_revision"] == placed,
+        "each summon accepts geometry once, never follows typing");
+  runtime.Bind(peer);
+  Check(!runtime.PlacementCaret(target) && runtime.Control(request, peer)["kind"] == "stale",
+        "a new summon cannot reuse the last opening's geometry");
+  runtime.CancelOpeningPlacement(); request = geometry();
+  Check(runtime.Control(request, peer)["kind"] == "stale",
+        "manual dragging defeats a late opening reply");
+  runtime.Bind(peer); request = geometry(); runtime.Paste("typed before geometry arrived");
+  Check(runtime.Control(request, peer)["kind"] == "stale", "late geometry cannot jump the panel after typing");
+  runtime.Bind(peer); request = geometry();
+  const auto other = runtime.Register(peer, 33, 33);
+  runtime.Focus(other);
+  Check(runtime.Control(request, peer)["kind"] == "stale" && !runtime.PlacementCaret(target),
+        "same-process focus change revokes old opening geometry");
   runtime.Stop();
 }
 void TestPluginAuthority() {
@@ -354,8 +538,9 @@ void TestReturningToInputRejectsLateResultsAndDropsQueuedTranslation() {
         "returning to input retains the draft and binding without restarting requests");
   runtime.Stop();
   runtime.ReturnToInput();
-  Check(runtime.Snapshot()["status"] == "Protected",
-        "mode selection cannot replace the protected lifecycle status");
+  Check(runtime.Snapshot()["status"] == "Buffer reset" &&
+        runtime.Snapshot()["source"] == "" && runtime.Snapshot()["result"] == "",
+        "mode selection cannot revive content discarded by IME shutdown");
 }
 void TestReturningToInputRetainsCompletedResultsAndAnIssuedDelivery() {
   std::atomic<unsigned> calls{0};
@@ -482,23 +667,99 @@ void TestExplicitOpeningPlacementRevision() {
   runtime.Close();
   Check(!runtime.PlacementTarget(), "closed buffer has no placement target");
 }
+void TestCodexConnectorAndReturn() {
+  std::atomic<unsigned> calls{0};
+  std::atomic<bool> release{false}, cancelled_old{false};
+  workbench::Runtime runtime([&](const workbench::Settings& config, const workbench::Generation& job,
+      const std::function<bool(const std::string&)>& chunk,
+      const std::function<bool()>& cancelled, std::string*) {
+    Check(config.ai_connector == "codex-cli" &&
+        job.plugin_id == (job.translation ? official::kTranslation : official::kCodex) &&
+        !job.plugin_grant.empty() && job.connector_id == official::kCodex && !job.connector_grant.empty(), "Codex selected and granted");
+    ++calls;
+    while (!release && !cancelled()) Sleep(2);
+    if (cancelled()) { cancelled_old = true; return false; }
+    return chunk("Generated only.");
+  });
+  auto config = runtime.Configuration(); config.ai_connector = "codex-cli";
+  Check(runtime.Configure(config, {}, false, nullptr), "save Codex configuration");
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 950, 951);
+  runtime.Focus(target); runtime.Bind(peer); runtime.Paste("Original request."); runtime.SelectAIMode();
+  core::KeyEvent key; key.virtual_key = VK_RETURN;
+  key.modifiers = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown);
+  Check(runtime.BeforeKey(target, key, false), "AI Return requests generation");
+  Wait([&] { return calls == 1; }, "first Codex job issued");
+  release = true;
+  Wait([&] { return runtime.Snapshot()["result"] == "Generated only."; }, "fake CLI result ready");
+  key.event_flags = 0; Check(runtime.BeforeKey(target, key, false), "generation key-up owned");
+  Check(runtime.Snapshot()["status"] == "Ready" && runtime.Snapshot()["source"] == "Original request.", "generation press never sends on release");
+  key.event_flags = static_cast<unsigned>(core::KeyEventFlags::kKeyDown); runtime.BeforeKey(target, key, false);
+  key.event_flags = 0; runtime.BeforeKey(target, key, false);
+  auto event = runtime.Control({{"op", "wait"}, {"session", 950}}, peer);
+  if (event["kind"] == "capture") event = runtime.Control({{"op", "wait"}, {"session", 950}}, peer);
+  Check(event["kind"] == "deliver" && event["text"] == "Generated only.", "second Return sends result, not request");
+  runtime.Control({{"op", "ack"}, {"session", 950}, {"request", event["request"]}, {"accepted", true}}, peer);
+  Check(runtime.Snapshot()["source"] == "" && runtime.Snapshot()["result"] == "", "final accepted result consumes frozen source");
+  release = false; runtime.Paste("Another request."); runtime.Generate(false);
+  Wait([&] { return calls == 2; }, "next Codex job started");
+  runtime.Close(); Wait([&] { return cancelled_old.load(); }, "close cancels producer");
+  Check(runtime.Snapshot()["result"] == "" && runtime.Snapshot()["source"] == "Another request.", "close cannot publish stale result or lose request");
+  runtime.Bind(peer);
+  Check(runtime.ManagePlugin(official::kCodex, "disable", nullptr), "disable connector");
+  runtime.Generate(true);
+  Check(!runtime.Snapshot().value("busy", false) && calls == 2, "translation cannot bypass a disabled connector");
+  Check(runtime.ManagePlugin(official::kCodex, "enable", nullptr), "enable connector");
+  release = true; runtime.Generate(true);
+  Wait([&] { return runtime.Snapshot()["result"] == "Generated only."; }, "translation uses selected Codex connector");
+  Check(runtime.ManagePlugin(official::kCodex, "disable", nullptr), "revoke completed connector result");
+  Check(runtime.Snapshot()["result"] == "" && runtime.Snapshot()["source"] == "Another request.", "connector revocation rejects completed results from another plugin owner");
+  runtime.Stop();
+}
+void TestDisposableMaintenanceContent() {
+  workbench::Runtime runtime;
+  const auto peer = GetCurrentProcessId() + 1;
+  const auto target = runtime.Register(peer, 995, 1);
+  runtime.Focus(target); runtime.Bind(peer); runtime.Paste("Disposable Buffer.");
+  runtime.Send(true);
+  runtime.DiscardBuffer();
+  auto state = runtime.Snapshot();
+  Check(state["source"] == "" && state["result"] == "" &&
+            !runtime.Capturing(target),
+        "explicit redeployment reset discards Buffer without a content gate");
+  auto event = runtime.Control({{"op", "wait"}, {"session", 995}}, peer);
+  Check(event.value("kind", "") == "capture",
+        "reset replaces a queued delivery with revoked capture authority");
+  runtime.Focus(target); runtime.Bind(peer); runtime.Paste("Next session.");
+  runtime.Stop();
+  state = runtime.Snapshot();
+  Check(state["source"] == "" && state["result"] == "",
+        "IME shutdown discards temporary UI content instead of preserving it");
+}
 int main() {
   const auto root = std::filesystem::temp_directory_path() /
       (L"rimes-runtime-test-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()));
   std::filesystem::create_directories(root);
   Check(SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str()) != 0, "isolated runtime preferences");
   TestTargets();
+  TestDisposableMaintenanceContent();
   TestExplicitOpeningPlacementRevision();
   TestCommandModifiersDoNotBecomeBufferCommands();
   TestUnhandledModifierCommitIsCapturedWithoutChangingKeyOwnership();
   TestFullBufferBlocksShiftWithoutChangingDraft();
   TestPendingResultBlocksShiftAndRetainsOriginalAcknowledgement();
-  TestOwnedPlainReturnKeepsItsLifecycleAcrossModifierChanges();
+  TestOwnedSendKeepsItsLifecycleAcrossModifierChanges();
+  TestAltShiftReturnTapHoldAndComposition();
+  TestConfiguredSendAndCancellation();
+  TestTranslationModeArmsAutomaticSentencePipeline();
+  TestOpeningGeometryIsBoundToOneExactSummon();
   TestPluginAuthority();
   TestReturningToInputRejectsLateResultsAndDropsQueuedTranslation();
   TestReturningToInputRetainsCompletedResultsAndAnIssuedDelivery();
   TestReturningToInputInvalidatesReadyResultOnRealEdit();
   TestChordFallback();
+  TestCodexConnectorAndReturn();
   std::filesystem::remove_all(root);
   std::cout << "Runtime plugin authority and chord fallback tests passed\n";
 }

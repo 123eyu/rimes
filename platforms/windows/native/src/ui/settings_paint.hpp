@@ -319,14 +319,17 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
     SetTextColor(dc, ToColorRef(p.text_secondary));
     RECT help = px(layout.body);
     help.bottom = help.top + MulDiv(48, static_cast<int>(dpi), 96);
-    DrawTextW(dc, L"选择快捷键组合与字母。默认 Ctrl+Shift+B；旧自定义组合会保留。", -1, &help,
+    DrawTextW(dc, L"唤出 / 收起 Buffer（全局，默认 Alt+Shift+B）", -1, &help,
+              DT_LEFT | DT_WORDBREAK);
+    help = px({layout.body.left, layout.body.top + 88, layout.body.right, layout.body.top + 116});
+    DrawTextW(dc, L"发送内容（仅 Buffer 捕获时，默认 Alt+Shift+Enter）", -1, &help,
               DT_LEFT | DT_WORDBREAK);
   } else if (draft.page == SettingsPage::kBuffer) {
     SelectObject(dc, fonts.body);
     SetTextColor(dc, ToColorRef(p.text_secondary));
     RECT help = px(layout.body);
     DrawTextW(dc, L"输入先进入缓冲区，再由你发送到已绑定的输入框。\n\n"
-                 L"Return 轻按发送下一块，长按 1.2 秒发送全部。\n"
+                 L"配置的发送键：轻按发送下一块，长按 1.2 秒发送全部。\n"
                  L"切换输入框后暂停输入和发送。先点宿主输入框，再点 Buffer 原文区重新绑定；也可按快捷键。\n"
                  L"切换处理模式会停止旧自动翻译；已完成待发结果保留，仍可显式发送。\n"
                  L"关闭窗口保留本次内容，退出后不恢复正文。", -1, &help,
@@ -344,13 +347,20 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
                     edits[i]->bottom});
       DrawTextW(dc, labels[i], -1, &fl, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
     }
+    const wchar_t* codex_labels[] = {L"AI 连接器", L"Codex .exe（空=自动）", L"Codex 模型（空=默认）"};
+    const DipRect* codex_fields[] = {&layout.connector_combo, &layout.codex_path_edit, &layout.codex_model_edit};
+    for (int i = 0; i < 3; ++i) {
+      if (codex_fields[i]->width() <= 0) continue;
+      RECT label = px({layout.body.left, codex_fields[i]->top, codex_fields[i]->left - 8.0f, codex_fields[i]->bottom});
+      DrawTextW(dc, codex_labels[i], -1, &label, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    }
     const float note_y = draft.subpage == 0 ? layout.lang_edit.bottom
                                             : layout.key_edit.bottom;
     RECT note = px({layout.body.left, note_y + 12.0f,
                     layout.body.right, note_y + 60.0f});
     SelectObject(dc, fonts.family);
     SetTextColor(dc, ToColorRef(p.text_muted));
-    DrawTextW(dc, L"密钥保存在 Windows 凭据管理器。正文只在生成或翻译时发送。",
+    DrawTextW(dc, L"Codex 复用 CLI 登录，忽略用户配置，无本地工具；生成仍发送到云端。\nAPI 密钥保存在 Windows 凭据管理器。正文只在生成或翻译时发送。",
               -1, &note, DT_LEFT | DT_WORDBREAK);
   } else if (draft.page == SettingsPage::kPlugins) {
     SelectObject(dc, fonts.body); SetTextColor(dc, ToColorRef(p.text_secondary));
@@ -370,8 +380,9 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
     DrawTextW(dc, text.c_str(), -1, &about, DT_LEFT | DT_WORDBREAK);
   }
 
-  const DipRect* fields[] = {&layout.font_edit, &layout.candidate_count_edit, &layout.hotkey_edit,
-      &layout.base_edit, &layout.model_edit, &layout.key_edit, &layout.lang_edit};
+  const DipRect* fields[] = {&layout.font_edit, &layout.candidate_count_edit, &layout.hotkey_edit, &layout.send_edit,
+      &layout.base_edit, &layout.model_edit, &layout.key_edit, &layout.lang_edit,
+      &layout.codex_path_edit, &layout.codex_model_edit};
   for (const auto* field : fields) {
     if (field->width() <= 0) continue;
     RECT box = px(*field);

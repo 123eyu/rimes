@@ -1,5 +1,6 @@
 #include "runtime.hpp"
 #include "official_features.hpp"
+#include "../core/buffer_keys.hpp"
 
 #include <algorithm>
 #include <chrono>
@@ -53,7 +54,15 @@ bool Runtime::Capturing(Target target) {
   std::lock_guard lock(mutex_);
   return model_.capture && model_.bound == target && model_.live == target;
 }
+bool Runtime::IsSendChord(const core::KeyEvent& key) {
+  std::lock_guard lock(mutex_);
+  return core::IsBufferSendChord(key.virtual_key, key.modifiers,
+                                  settings_.send_key, settings_.send_modifiers);
+}
 void Runtime::CaptureChanged() {
+  // A focus/configuration/visibility transition cancels delivery, including
+  // leaving and returning to the same target before the held key is released.
+  return_sent_ = true;
   for (auto& [id, entry] : sessions_) {
     (void)id;
     // Replace obsolete capture notifications but never replace a delivery.
@@ -63,9 +72,12 @@ void Runtime::CaptureChanged() {
     entry.events.push_back(
         {{"kind", "capture"},
          {"context", entry.target.context},
+         {"openingRevision", opening_revision_},
          {"font", settings_.font_size},
          {"verticalCandidates", settings_.vertical_candidates},
          {"theme", settings_.theme},
+         {"sendKey", settings_.send_key},
+         {"sendModifiers", settings_.send_modifiers},
          {"enabled", model_.capture && model_.bound == entry.target &&
                          model_.live == entry.target}});
   }
@@ -91,7 +103,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
   std::lock_guard lock(mutex_);
   const bool down = (key.event_flags &
                      static_cast<unsigned>(core::KeyEventFlags::kKeyDown)) != 0;
-  if (return_held_ && key.virtual_key == VK_RETURN &&
+  if (return_held_ && key.virtual_key == return_key_ &&
       return_target_ == target) {
     if (!down) {
       if (!return_sent_ && model_.capture && model_.bound == target)
@@ -100,17 +112,12 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  // A Return already owned above keeps its repeat/release lifecycle even if
-  // modifiers change. New host shortcuts must not become Buffer commands.
-  constexpr auto command_modifiers =
-      static_cast<unsigned>(core::KeyModifiers::kControl) |
-      static_cast<unsigned>(core::KeyModifiers::kAlt) |
-      static_cast<unsigned>(core::KeyModifiers::kWindows) |
-      static_cast<unsigned>(core::KeyModifiers::kAltGr);
-  if ((key.modifiers & command_modifiers) != 0) return false;
+  const bool send = core::IsBufferSendChord(key.virtual_key, key.modifiers,
+                                            settings_.send_key, settings_.send_modifiers);
+  if (core::HasHostCommandModifier(key.modifiers) && !send) return false;
   if (!model_.capture || model_.bound != target || model_.live != target)
     return false;
-  if (key.virtual_key != VK_ESCAPE && key.virtual_key != VK_RETURN &&
+  if (!send && key.virtual_key != VK_ESCAPE && key.virtual_key != VK_RETURN &&
       key.virtual_key != VK_BACK &&
       (model_.SourceText().size() > Model::kLimit - core::kMaxCommitTextBytes ||
        (model_.Pending() && !model_.result.empty()))) {
@@ -119,7 +126,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     Changed();
     return true;
   }
-  if (key.virtual_key == VK_ESCAPE) {
+  if (!send && key.virtual_key == VK_ESCAPE) {
     if (down) {
       model_.Close();
       CaptureChanged();
@@ -127,7 +134,7 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  if (key.virtual_key == VK_BACK && !composing) {
+  if (!send && key.virtual_key == VK_BACK && !composing) {
     if (down) {
       model_.Backspace();
       edited_at_ = GetTickCount64();
@@ -135,25 +142,40 @@ bool Runtime::BeforeKey(Target target, const core::KeyEvent& key,
     }
     return true;
   }
-  if (key.virtual_key == VK_RETURN && !composing) {
+  if (send) {
     if (down && !(key.event_flags &
                   static_cast<unsigned>(core::KeyEventFlags::kRepeat))) {
       return_held_ = true;
-      return_sent_ = false;
+      return_key_ = key.virtual_key;
+      return_sent_ = composing;
       pressed_at_ = GetTickCount64();
       return_target_ = target;
+      // Settle composition through Rime, then suppress repeats/release for
+      // this physical press even when the configured key is not Enter.
+      if (composing) return false;
+      if (ai_mode_ && (model_.busy || model_.result.empty())) {
+        // Generation owns this entire press. Never send the retained source
+        // on key-up/hold, even if the connector finishes during that press.
+        return_sent_ = true;
+        if (!model_.busy) StartGeneration(false);
+      }
     }
     return true;
   }
+  // Ordinary Return only settles composition. It cannot send or submit the
+  // host field while Buffer owns input; sending uses the configured chord.
+  if (key.virtual_key == VK_RETURN && !composing) return true;
   return false;
 }
-void Runtime::Capture(Target target, engine::EngineSnapshot* snapshot) {
+void Runtime::Capture(Target target, engine::EngineSnapshot* snapshot,
+                      bool direct_input) {
   std::lock_guard lock(mutex_);
   if (!model_.capture || model_.bound != target || model_.live != target)
     return;
   model_.preedit = snapshot->composition;
   if (!snapshot->commit_text.empty()) {
-    if (!model_.Append(snapshot->commit_text))
+    if (!model_.Append(snapshot->commit_text,
+                       direct_input ? InputKind::kDirect : InputKind::kCommit))
       throw std::runtime_error("Buffer capacity invariant");
     snapshot->commit_text.clear();
     edited_at_ = GetTickCount64();
@@ -168,6 +190,28 @@ Json Runtime::Control(const Json& message, std::uint32_t process) {
     return {{"kind", "disconnected"}};
   const auto target = found->second.target;
   const auto op = message.value("op", "");
+  if (op == "geometry") {
+    // Geometry is presentation only, and only an answer to this explicit
+    // opening from its authenticated exact session can reposition the panel.
+    const auto rect = message.find("caret");
+    if (!opening_at_ || GetTickCount64() - opening_at_ > 1000 || opening_caret_ ||
+        !model_.visible || !model_.capture || model_.bound != target || model_.live != target ||
+        model_.revision != opening_source_revision_ || !model_.preedit.empty() ||
+        message.value("context", 0ULL) != target.context ||
+        message.value("openingRevision", 0ULL) != opening_revision_ ||
+        rect == message.end() || !rect->is_array() || rect->size() != 4 ||
+        !std::all_of(rect->begin(), rect->end(), [](const Json& n) { return n.is_number(); }))
+      return {{"kind", "stale"}};
+    BufferRect caret{(*rect)[0].get<double>(), (*rect)[1].get<double>(),
+                     (*rect)[2].get<double>(), (*rect)[3].get<double>()};
+    if (!FiniteBufferRect(caret) || std::abs(caret.x) > 1000000 ||
+        std::abs(caret.y) > 1000000 || caret.width < 0 || caret.width > 2000 ||
+        caret.height <= 2 || caret.height >= 600) return {{"kind", "error"}};
+    opening_caret_ = caret;
+    ++placement_revision_;
+    Changed();
+    return {{"kind", "ok"}};
+  }
   if (op == "focus") {
     model_.Focus(target.process == GetCurrentProcessId() ? Target{} : target);
     CaptureChanged();
@@ -217,6 +261,7 @@ Json Runtime::Snapshot() {
           {"status", model_.status},
           {"translate", model_.translate},
           {"opening_revision", opening_revision_},
+          {"placement_revision", placement_revision_},
           {"target_pid", model_.capture && model_.bound == model_.live
                              ? model_.bound.process : 0}};
 }
@@ -226,6 +271,18 @@ Target Runtime::PlacementTarget() {
   if (!model_.visible || !model_.capture || model_.bound != model_.live ||
       found == sessions_.end() || found->second.target != model_.bound) return {};
   return model_.bound;
+}
+std::optional<BufferRect> Runtime::PlacementCaret(Target target) {
+  std::lock_guard lock(mutex_);
+  if (!target || !model_.capture || !model_.visible || model_.bound != target ||
+      model_.live != target || model_.revision != opening_source_revision_ ||
+      !model_.preedit.empty()) return {};
+  return opening_caret_;
+}
+void Runtime::CancelOpeningPlacement() {
+  std::lock_guard lock(mutex_);
+  opening_at_ = 0;
+  opening_caret_.reset();
 }
 Settings Runtime::Configuration() {
   std::lock_guard lock(mutex_);
@@ -254,6 +311,7 @@ bool Runtime::Configure(Settings value, const std::wstring& key,
   settings_ = std::move(value);
   model_.InvalidatePluginResults();
   result_plugin_.clear(); result_grant_.clear();
+  result_connector_.clear(); result_connector_grant_.clear();
   model_.capture = false;
   CaptureChanged();
   Changed();
@@ -269,6 +327,9 @@ void Runtime::BindLocked(std::uint32_t foreground_process) {
     model_.Focus({});
   model_.Open();
   ++opening_revision_;
+  opening_caret_.reset();
+  opening_at_ = GetTickCount64();
+  opening_source_revision_ = model_.revision;
 }
 void Runtime::Bind(std::uint32_t foreground_process) {
   std::lock_guard lock(mutex_);
@@ -305,10 +366,25 @@ void Runtime::Protect() {
   CaptureChanged();
   Changed();
 }
+void Runtime::DiscardBufferLocked() {
+  api_job_.reset();
+  model_.Discard();
+  for (auto& [id, entry] : sessions_) { (void)id; entry.events.clear(); }
+  return_held_ = false; return_sent_ = false; return_target_ = {};
+  pressed_at_ = 0; pending_since_ = 0;
+  result_plugin_.clear(); result_grant_.clear();
+  result_connector_.clear(); result_connector_grant_.clear();
+  CaptureChanged();
+}
+void Runtime::DiscardBuffer() {
+  std::lock_guard lock(mutex_);
+  DiscardBufferLocked();
+  Changed();
+}
 void Runtime::Paste(std::string text) {
   std::lock_guard lock(mutex_);
   if (model_.visible) {
-    if (!model_.Append(std::move(text)))
+    if (!model_.Append(std::move(text), InputKind::kExternal))
       model_.status = "Paste exceeds Buffer capacity or delivery is pending.";
     edited_at_ = GetTickCount64();
     Changed();
@@ -324,9 +400,15 @@ void Runtime::StartGeneration(bool translation, bool complete_sentence_only) {
       (!translation && !model_.result.empty()))
     return;
   CheckPluginAuthorization();
-  const std::string plugin = translation ? official::kTranslation : official::kAI;
+  const std::string plugin = translation ? official::kTranslation
+      : settings_.ai_connector == "codex-cli" ? official::kCodex : official::kAI;
   const auto grant = plugins_.Grant(plugin);
   if (grant.empty()) { model_.translate = false; model_.status = "Install and enable the plugin in Settings > Official plugins."; Changed(); return; }
+  const std::string connector = settings_.ai_connector == "codex-cli" ? official::kCodex : "";
+  const auto connector_grant = connector.empty() ? std::string{} : plugins_.Grant(connector);
+  if (!connector.empty() && connector_grant.empty()) {
+    model_.translate = false; model_.status = "Enable the Codex connector in Settings > Official plugins."; Changed(); return;
+  }
   std::string instruction;
   try { instruction = official::Instruction(plugins_.Package(plugin), settings_.target_language); }
   catch (...) { model_.status = "Plugin package unavailable."; Changed(); return; }
@@ -334,18 +416,35 @@ void Runtime::StartGeneration(bool translation, bool complete_sentence_only) {
                              complete_sentence_only);
   if (!model_.busy) return;
   job.plugin_id = plugin; job.plugin_grant = grant; job.instruction = instruction;
+  job.connector_id = connector; job.connector_grant = connector_grant;
   result_plugin_ = plugin; result_grant_ = grant;
+  result_connector_ = connector; result_connector_grant_ = connector_grant;
   api_job_ = std::make_pair(settings_, std::move(job));
   api_event_.notify_one();
   Changed();
 }
 void Runtime::Generate(bool translation) {
   std::lock_guard lock(mutex_);
+  ai_mode_ = !translation;
   model_.translate = translation;
   StartGeneration(translation);
 }
+void Runtime::SelectAIMode() {
+  std::lock_guard lock(mutex_);
+  ai_mode_ = true;
+}
+void Runtime::SelectTranslationMode() {
+  std::lock_guard lock(mutex_);
+  ai_mode_ = false;
+  model_.translate = true;
+  // Selection arms the debounced sentence pipeline, including an empty
+  // workspace. It does not require a first click on the Translate button.
+  edited_at_ = GetTickCount64();
+  Changed();
+}
 void Runtime::ReturnToInput() {
   std::lock_guard lock(mutex_);
+  ai_mode_ = false;
   api_job_.reset();
   model_.Cancel();
   model_.translate = false;
@@ -376,7 +475,8 @@ void Runtime::Tick() {
     CaptureChanged();
     Changed();
   }
-  if (model_.visible && model_.translate && !model_.busy &&
+  if (model_.visible && model_.capture && model_.bound == model_.live &&
+      model_.translate && !model_.busy &&
       !model_.source.empty() && model_.preedit.empty() &&
       now - edited_at_ >= 800)
     StartGeneration(true, true);
@@ -384,20 +484,22 @@ void Runtime::Tick() {
 void Runtime::Stop() {
   std::lock_guard lock(mutex_);
   stopping_ = true;
-  model_.Protect();
+  DiscardBufferLocked();
   api_event_.notify_all();
   event_.notify_all();
   Changed();
 }
 void Runtime::CheckPluginAuthorization() {
-  if (!result_plugin_.empty() && plugins_.Grant(result_plugin_) != result_grant_) {
+  if ((!result_plugin_.empty() && plugins_.Grant(result_plugin_) != result_grant_) ||
+      (!result_connector_.empty() && plugins_.Grant(result_connector_) != result_connector_grant_)) {
     model_.InvalidatePluginResults();
-    if (!model_.Pending()) { result_plugin_.clear(); result_grant_.clear(); }
+    if (!model_.Pending()) { result_plugin_.clear(); result_grant_.clear(); result_connector_.clear(); result_connector_grant_.clear(); }
     Changed();
   }
 }
 std::optional<Delivery> Runtime::SendAuthorized(bool all) {
-  const bool revoked = !result_plugin_.empty() && plugins_.Grant(result_plugin_) != result_grant_;
+  const bool revoked = (!result_plugin_.empty() && plugins_.Grant(result_plugin_) != result_grant_) ||
+      (!result_connector_.empty() && plugins_.Grant(result_connector_) != result_connector_grant_);
   CheckPluginAuthorization();
   return revoked ? std::nullopt : model_.Send(all);
 }
@@ -439,17 +541,22 @@ void Runtime::RunAPI() {
         config, job,
         [&](const std::string& text) {
           std::lock_guard l(mutex_);
-          const bool accepted = plugins_.Grant(job.plugin_id) == job.plugin_grant && model_.Stream(job, settings_.revision, text);
+          const bool accepted = plugins_.Grant(job.plugin_id) == job.plugin_grant &&
+              (job.connector_id.empty() || plugins_.Grant(job.connector_id) == job.connector_grant) &&
+              model_.Stream(job, settings_.revision, text);
           Changed();
           return accepted;
         },
         [&] {
           std::lock_guard l(mutex_);
-          return stopping_ || plugins_.Grant(job.plugin_id) != job.plugin_grant || !model_.Accepts(job, settings_.revision);
+          return stopping_ || plugins_.Grant(job.plugin_id) != job.plugin_grant ||
+              (!job.connector_id.empty() && plugins_.Grant(job.connector_id) != job.connector_grant) ||
+              !model_.Accepts(job, settings_.revision);
         },
         &error);
     lock.lock();
-    if (plugins_.Grant(job.plugin_id) == job.plugin_grant && model_.Accepts(job, settings_.revision)) {
+    if (plugins_.Grant(job.plugin_id) == job.plugin_grant &&
+        (job.connector_id.empty() || plugins_.Grant(job.connector_id) == job.connector_grant) && model_.Accepts(job, settings_.revision)) {
       const bool finished = model_.Finish(job, settings_.revision, ok);
       if (!finished) model_.translate = false;
       if (!ok) {

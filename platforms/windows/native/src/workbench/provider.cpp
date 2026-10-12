@@ -10,6 +10,7 @@
 
 #include "../core/control.hpp"
 #include "buffer_hotkey_config.hpp"
+#include "codex_cli.hpp"
 #include "sse.hpp"
 
 namespace rimes::windows::workbench {
@@ -84,11 +85,15 @@ bool ValidSettings(const Settings& value) {
                       value.schema == "double_pinyin_flypy" ||
                       value.schema == "wubi86" || value.schema == "english" || value.schema == "my_combo";
   return schema && value.candidate_count >= 1 && value.candidate_count <= 9 && ValidTheme(value.theme) && value.font_size >= 10 &&
-         value.font_size <= 40 && value.hotkey_key >= 'A' &&
-         value.hotkey_key <= 'Z' &&
-         ValidBufferHotkeyModifiers(value.hotkey_modifiers) &&
+         value.font_size <= 40 &&
+         core::ValidShortcut(value.hotkey_key, value.hotkey_modifiers) &&
+         core::ValidShortcut(value.send_key, value.send_modifiers, true) &&
+         (value.hotkey_key != value.send_key || value.hotkey_modifiers != value.send_modifiers) &&
          value.base_url.size() <= 2048 && value.model.size() <= 256 &&
-         value.target_language.size() <= 128;
+         value.target_language.size() <= 128 &&
+         (value.ai_connector == "codex-cli" || value.ai_connector == "openai-compatible") &&
+         value.codex_path.size() <= 8192 && value.codex_path.find('\0') == std::string::npos &&
+         value.codex_model.size() <= 256 && value.codex_model.find('\0') == std::string::npos;
 }
 bool LoadSettings(Settings* value, std::string* error) {
   try {
@@ -106,6 +111,9 @@ bool LoadSettings(Settings* value, std::string* error) {
     candidate.schema = j.value("schema", "rime_ice");
     candidate.base_url = j.value("base_url", "");
     candidate.model = j.value("model", "");
+    candidate.ai_connector = j.value("ai_connector", "openai-compatible");
+    candidate.codex_path = j.value("codex_path", "");
+    candidate.codex_model = j.value("codex_model", "");
     candidate.target_language = j.value("target_language", "English");
     candidate.ascii = j.value("ascii", false);
     candidate.traditional = j.value("traditional", false);
@@ -118,13 +126,21 @@ bool LoadSettings(Settings* value, std::string* error) {
     // Preserve every explicitly saved legacy chord, even Ctrl+Alt+B: an old
     // default and a deliberate user choice cannot be distinguished. Early
     // files with only a letter also used Ctrl+Alt. New/absent shortcut fields
-    // use the macOS-aligned Ctrl+Shift default without rewriting on load.
+    // use Alt+Shift. Key-only v2 files retain their old Ctrl+Shift meaning.
     const unsigned default_modifiers =
         j.contains("hotkey_key") && j.value("version", 1U) < 2U
             ? MOD_CONTROL | MOD_ALT
-            : MOD_CONTROL | MOD_SHIFT;
+            : j.contains("hotkey_key") && j.value("version", 1U) == 2U
+                ? MOD_CONTROL | MOD_SHIFT : MOD_ALT | MOD_SHIFT;
     candidate.hotkey_modifiers = j.value("hotkey_modifiers", default_modifiers);
     candidate.hotkey_key = j.value("hotkey_key", static_cast<unsigned>('B'));
+    candidate.send_modifiers = j.value("send_modifiers", unsigned(MOD_ALT | MOD_SHIFT));
+    candidate.send_key = j.value("send_key", unsigned(VK_RETURN));
+    // A pre-existing global custom binding wins over a newly added default.
+    if (!j.contains("send_key") && !j.contains("send_modifiers") &&
+        candidate.hotkey_key == candidate.send_key &&
+        candidate.hotkey_modifiers == candidate.send_modifiers)
+      candidate.send_modifiers = MOD_CONTROL | MOD_SHIFT;
     if (!ValidSettings(candidate))
       throw std::runtime_error("Invalid settings values");
     *value = std::move(candidate);
@@ -139,7 +155,7 @@ bool SaveSettings(const Settings& value, std::string* error) {
     if (!ValidSettings(value)) throw std::runtime_error("invalid settings");
     auto path = ConfigPath();
     std::filesystem::create_directories(path.parent_path());
-    Json j = {{"version", 2},
+    Json j = {{"version", 3},
               {"revision", value.revision},
               {"schema", value.schema},
               {"ascii", value.ascii},
@@ -151,8 +167,13 @@ bool SaveSettings(const Settings& value, std::string* error) {
               {"theme", value.theme},
               {"hotkey_modifiers", value.hotkey_modifiers},
               {"hotkey_key", value.hotkey_key},
+              {"send_modifiers", value.send_modifiers},
+              {"send_key", value.send_key},
               {"base_url", value.base_url},
               {"model", value.model},
+              {"ai_connector", value.ai_connector},
+              {"codex_path", value.codex_path},
+              {"codex_model", value.codex_model},
               {"target_language", value.target_language}};
     auto temporary = path;
     temporary += L".tmp";
@@ -208,6 +229,16 @@ bool GenerateAPI(const Settings& config, const Generation& job,
     Fail(error, "Credential unavailable.");
     return false;
   }
+}
+bool GenerateText(const Settings& config, const Generation& job,
+                  const std::function<bool(const std::string&)>& chunk,
+                  const std::function<bool()>& cancelled, std::string* error) {
+  if (config.ai_connector == "codex-cli")
+    return GenerateCodex(config, job, chunk, cancelled, error);
+  if (config.ai_connector == "openai-compatible")
+    return GenerateAPI(config, job, chunk, cancelled, error);
+  Fail(error, "Unknown AI connector. Source retained.");
+  return false;
 }
 bool GenerateWithKey(const Settings& config, const Generation& job,
                      std::wstring key,
