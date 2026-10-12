@@ -1,0 +1,56 @@
+[
+  {
+    "importerRef": "working-tree",
+    "importerSHA256": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d",
+    "archive": "rime-wanxiang-base.zip",
+    "fatal": "ZIP 超过展开大小或压缩比限制。",
+    "sha256": null,
+    "fileCount": null,
+    "expandedBytes": null
+  },
+  {
+    "importerRef": "working-tree",
+    "importerSHA256": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d",
+    "archive": "lingxi-wanxiang-v18.1.1-base-portable.zip",
+    "fatal": null,
+    "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+    "fileCount": 95,
+    "expandedBytes": 91458710
+  },
+  {
+    "importerRef": "796b725",
+    "importerSHA256": "301e501b5bcff2c25c13663c477a329f2b634adc54c4d9b6122edb0857b686ea",
+    "archive": "rime-wanxiang-base.zip",
+    "fatal": "ZIP 超过展开大小或压缩比限制。",
+    "sha256": null,
+    "fileCount": null,
+    "expandedBytes": null
+  },
+  {
+    "importerRef": "796b725",
+    "importerSHA256": "301e501b5bcff2c25c13663c477a329f2b634adc54c4d9b6122edb0857b686ea",
+    "archive": "lingxi-wanxiang-v18.1.1-base-portable.zip",
+    "fatal": null,
+    "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+    "fileCount": 95,
+    "expandedBytes": 91458710
+  },
+  {
+    "importerRef": "958c030",
+    "importerSHA256": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d",
+    "archive": "rime-wanxiang-base.zip",
+    "fatal": "ZIP 超过展开大小或压缩比限制。",
+    "sha256": null,
+    "fileCount": null,
+    "expandedBytes": null
+  },
+  {
+    "importerRef": "958c030",
+    "importerSHA256": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d",
+    "archive": "lingxi-wanxiang-v18.1.1-base-portable.zip",
+    "fatal": null,
+    "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+    "fileCount": 95,
+    "expandedBytes": 91458710
+  }
+]

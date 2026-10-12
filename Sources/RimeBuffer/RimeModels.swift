@@ -24,6 +24,7 @@ struct RimeContextModel {
     var pageNo = 0
     var isLastPage = false
     var highlightedIndex = 0
+    var usesNumericSelectionKeys = true
     var candidates: [RimeCandidateModel] = []
 }
 

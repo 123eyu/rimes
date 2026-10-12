@@ -121,6 +121,7 @@ enum CandidateWindowMetric: String, CaseIterable {
     case preeditHeight
     case candidateFontSize
     case labelFontSize
+    case candidatesPerPage
 
     var title: String {
         switch self {
@@ -130,12 +131,14 @@ enum CandidateWindowMetric: String, CaseIterable {
         case .preeditHeight: return "预编辑高度"
         case .candidateFontSize: return "候选字大小"
         case .labelFontSize: return "序号大小"
+        case .candidatesPerPage: return "每页候选数"
         }
     }
 
     var unit: String {
         switch self {
         case .candidateFontSize, .labelFontSize: return "pt"
+        case .candidatesPerPage: return "个"
         default: return "px"
         }
     }
@@ -148,6 +151,7 @@ enum CandidateWindowMetric: String, CaseIterable {
         case .preeditHeight: return 20
         case .candidateFontSize: return 16
         case .labelFontSize: return 10
+        case .candidatesPerPage: return 9
         }
     }
 
@@ -159,6 +163,7 @@ enum CandidateWindowMetric: String, CaseIterable {
         case .preeditHeight: return 18...36
         case .candidateFontSize: return 12...24
         case .labelFontSize: return 9...18
+        case .candidatesPerPage: return 1...9
         }
     }
 
@@ -183,6 +188,7 @@ struct CandidateWindowMetrics {
     let preeditHeight: CGFloat
     let candidateFontSize: CGFloat
     let labelFontSize: CGFloat
+    var candidatesPerPage: Int = 9
 
     static var current: CandidateWindowMetrics {
         let values = resolvedValues(Dictionary(uniqueKeysWithValues:
@@ -197,7 +203,8 @@ struct CandidateWindowMetrics {
             compactCandidateHeight: get(.compactCandidateHeight),
             preeditHeight: get(.preeditHeight),
             candidateFontSize: get(.candidateFontSize),
-            labelFontSize: get(.labelFontSize)
+            labelFontSize: get(.labelFontSize),
+            candidatesPerPage: Int(get(.candidatesPerPage))
         )
     }
 
@@ -317,6 +324,8 @@ enum CandidateLayout {
     static let preeditHorizontalPadding: CGFloat = 6
     static let annotationFontSize: CGFloat = 9
     static let rootSpacing: CGFloat = 5
+    static let pagingControlsWidth: CGFloat = 42
+    static let pagingReservedWidth = pagingControlsWidth + barSpacing
 
     /// Content-sized chrome, bounded by the configured ceiling and display.
     /// Paging uses that ceiling, never this fitted width, so shrinking a short
@@ -391,6 +400,54 @@ extension CandidateWindowMetric {
 struct CandidateSelection {
     let pageOffset: Int
     let index: Int
+}
+
+struct CandidatePaginationSnapshot {
+    let pages: [[Int]]
+    let visibleIndices: [Int]
+    let visibleLabels: [String]
+    let numberSelections: [Int]
+    let rejectsInvisibleNumber: Bool
+    let showsControls: Bool
+    let canGoBack: Bool
+    let canGoForward: Bool
+    let contentFits: Bool
+}
+
+/// A visual page is bounded by both the user's count and the stable width
+/// ceiling. Reserve the pager before partitioning; never measure against the
+/// shrunken width of the current page or discard a suffix that did not fit.
+struct CandidatePagination {
+    let pages: [[Int]]
+    let availableWidth: CGFloat
+    let showsControls: Bool
+
+    init(widths: [CGFloat], availableWidth: CGFloat, limit: Int,
+         hasEngineNeighbours: Bool, separator: CGFloat = CandidateLayout.candidateSeparatorRunWidth) {
+        func partition(_ available: CGFloat) -> [[Int]] {
+            var pages: [[Int]] = []
+            var page: [Int] = []
+            var used: CGFloat = 0
+            for index in widths.indices {
+                let width = min(available, widths[index])
+                let next = page.isEmpty ? width : used + separator + width
+                if !page.isEmpty, page.count >= max(1, limit) || next > available {
+                    pages.append(page)
+                    page = []
+                    used = 0
+                }
+                used += (page.isEmpty ? 0 : separator) + width
+                page.append(index)
+            }
+            if !page.isEmpty { pages.append(page) }
+            return pages
+        }
+        let fullWidth = max(1, availableWidth)
+        let fullPages = partition(fullWidth)
+        showsControls = !widths.isEmpty && (hasEngineNeighbours || fullPages.count > 1)
+        self.availableWidth = max(1, fullWidth - (showsControls ? CandidateLayout.pagingReservedWidth : 0))
+        pages = showsControls ? partition(self.availableWidth) : fullPages
+    }
 }
 
 enum CandidatePresentationMode {
@@ -542,6 +599,7 @@ final class CandidateWindow {
     private let strip = RimeCandidateSurfaceView(isPreedit: false)
     private let candidateScroll = NSScrollView()
     private let candidateStack = NSStackView()
+    private let pagingControls = CandidatePagingControls()
     private var stripHeightConstraint: NSLayoutConstraint!
     private var candidateHeightConstraint: NSLayoutConstraint!
     private var preeditHeightConstraint: NSLayoutConstraint!
@@ -585,6 +643,16 @@ final class CandidateWindow {
     private var commitContinuationGeneration: UInt64 = 0
 
     var onSelect: ((FocusToken, CandidateSelection) -> Void)?
+    var onPage: ((FocusToken, Int) -> Void)?
+
+    /// Schemas with letter selection keys retain their own labels and routing.
+    var usesNumericSelectionKeys: Bool { currentContext.usesNumericSelectionKeys }
+
+    var canPageBackward: Bool { visualPageIndex > 0 || currentContext.pageNo > 0 }
+    var canPageForward: Bool {
+        visualPageIndex + 1 < candidatePages(panelWidth: activePanelWidth()).count
+            || !currentContext.isLastPage
+    }
 
     var hasCandidates: Bool {
         guard let ownerToken,
@@ -745,7 +813,11 @@ final class CandidateWindow {
         candidateHeightConstraint = candidateScroll.heightAnchor.constraint(equalToConstant: metrics.compactCandidateHeight)
         candidateHeightConstraint.isActive = true
 
-        let barRow = NSStackView(views: [candidateScroll])
+        pagingControls.onPage = { [weak self] delta in
+            guard let self, self.hasInteractableCandidates, let owner = self.ownerToken else { return }
+            self.onPage?(owner, delta)
+        }
+        let barRow = NSStackView(views: [candidateScroll, pagingControls])
         barRow.orientation = .horizontal
         barRow.alignment = .centerY
         barRow.spacing = Self.barSpacing
@@ -898,7 +970,7 @@ final class CandidateWindow {
         if signatureChanged {
             visualPageIndex = pageIndex(containing: selectedIndex, panelWidth: activePanelWidth())
         } else {
-            visualPageIndex = clampVisualPage(visualPageIndex, panelWidth: activePanelWidth())
+            visualPageIndex = pageIndex(containing: selectedIndex, panelWidth: activePanelWidth())
             if isExpanded {
                 expandedPages[0] = ctx
             }
@@ -1067,6 +1139,7 @@ final class CandidateWindow {
         visualPageIndex = pageIndex(containing: selectedIndex, panelWidth: activePanelWidth())
         renderCandidates()
         resetCandidateScroll()
+        if panel.isVisible { layoutAndShowAccordingToPresentation() }
         return true
     }
 
@@ -1215,7 +1288,26 @@ final class CandidateWindow {
         }
         renderCandidates()
         resetCandidateScroll()
+        if panel.isVisible { layoutAndShowAccordingToPresentation() }
         return true
+    }
+
+    /// Enter the last visual subdivision when returning to a previous Rime
+    /// page, otherwise its overflow would be skipped in reverse navigation.
+    func enterEnginePage(direction: Int) {
+        let pages = candidatePages(panelWidth: activePanelWidth())
+        visualPageIndex = direction < 0 ? max(0, pages.count - 1) : 0
+        selectedIndex = pages.indices.contains(visualPageIndex) ? (pages[visualPageIndex].first ?? 0) : 0
+        renderCandidates()
+        resetCandidateScroll()
+        if panel.isVisible { layoutAndShowAccordingToPresentation() }
+    }
+
+    func selection(atVisibleIndex index: Int) -> CandidateSelection? {
+        if isExpanded { return expandedSelection(atVisibleIndex: index) }
+        let indices = currentVisualCandidateIndices(panelWidth: activePanelWidth())
+        guard indices.indices.contains(index) else { return nil }
+        return CandidateSelection(pageOffset: 0, index: indices[index])
     }
 
     /// Resolve a number-key selection against the row that currently owns the
@@ -1619,7 +1711,10 @@ final class CandidateWindow {
                 clampExpandedSelectionToVisiblePrefix()
             }
         }
-        visualPageIndex = clampVisualPage(visualPageIndex, panelWidth: activePanelWidth())
+        visualPageIndex = pageIndex(containing: selectedIndex, panelWidth: activePanelWidth())
+        pagingControls.isHidden = isExpanded || isSingleCharacterSelectionActive
+            || !compactPagination(panelWidth: activePanelWidth()).showsControls
+        pagingControls.update(canGoBack: canPageBackward, canGoForward: canPageForward)
         candidateScroll.isHidden = false
         applyMetrics()
         prepareCandidateGeometryForRendering()
@@ -1647,7 +1742,7 @@ final class CandidateWindow {
             if offset > 0 {
                 candidateStack.addArrangedSubview(candidateSeparatorView())
             }
-            let c = currentContext.candidates[i]
+            let c = compactCandidate(at: i, visibleIndex: offset)
             candidateStack.addArrangedSubview(candidateButton(
                 pageOffset: 0,
                 index: i,
@@ -1709,7 +1804,8 @@ final class CandidateWindow {
                 row.addArrangedSubview(candidateButton(
                     pageOffset: pageOffset,
                     index: index,
-                    candidate: candidate,
+                    candidate: RimeCandidateModel(text: candidate.text, comment: candidate.comment,
+                                                  label: String(offset + 1)),
                     highlighted: isActiveRow && index == selectedIndex,
                     compact: true,
                     width: min(naturalWidths[index], available),
@@ -1725,7 +1821,9 @@ final class CandidateWindow {
     /// the active-row highlight does not reflow that row. No width is shared
     /// across rows.
     private func expandedRowNaturalWidths(page: RimeContextModel) -> [CGFloat] {
-        page.candidates.map(stableCandidateWidth)
+        page.candidates.map {
+            stableCandidateWidth(RimeCandidateModel(text: $0.text, comment: $0.comment, label: "1"))
+        }
     }
 
     /// How many whole columns fit starting at `base`. Pure for `matrix-smoke`.
@@ -2007,12 +2105,14 @@ final class CandidateWindow {
             }
         } else {
             rows = [rowWidth(currentVisualCandidateIndices(panelWidth: budget).map {
-                min(available, stableCandidateWidth(currentContext.candidates[$0]))
+                min(available, stableCandidateWidth(compactCandidate(at: $0, visibleIndex: 0)))
             })]
         }
         let preeditWidth = preeditPill.isHidden ? 0
             : ceil(preeditLabel.intrinsicContentSize.width) + CandidateLayout.preeditHorizontalPadding * 2
-        return CandidateLayout.fittedPanelWidth(rowWidths: rows, preeditWidth: preeditWidth,
+        let pagerWidth: CGFloat = !isExpanded && !isSingleCharacterSelectionActive
+            && compactPagination(panelWidth: budget).showsControls ? CandidateLayout.pagingReservedWidth : 0
+        return CandidateLayout.fittedPanelWidth(rowWidths: rows.map { $0 + pagerWidth }, preeditWidth: preeditWidth,
                                                maximumWidth: budget)
     }
 
@@ -2022,40 +2122,34 @@ final class CandidateWindow {
     }
 
     private func candidateAvailableWidth(panelWidth: CGFloat) -> CGFloat {
-        max(1, panelWidth - Self.barHorizontalPadding * 2)
+        if !isExpanded && !isSingleCharacterSelectionActive {
+            return compactPagination(panelWidth: panelWidth).availableWidth
+        }
+        return max(1, panelWidth - Self.barHorizontalPadding * 2)
     }
 
     private func candidateMaxWidth(panelWidth: CGFloat) -> CGFloat {
-        max(64, candidateAvailableWidth(panelWidth: panelWidth))
+        candidateAvailableWidth(panelWidth: panelWidth)
     }
 
     private func candidatePages(panelWidth: CGFloat) -> [[Int]] {
-        guard !currentContext.candidates.isEmpty else { return [] }
+        compactPagination(panelWidth: panelWidth).pages
+    }
 
-        let available = candidateAvailableWidth(panelWidth: panelWidth)
-        let pageWidth = max(64, available)
-        let maxItemWidth = max(64, pageWidth)
+    private func compactPagination(panelWidth: CGFloat) -> CandidatePagination {
+        CandidatePagination(widths: currentContext.candidates.indices.map {
+            stableCandidateWidth(compactCandidate(at: $0, visibleIndex: 0))
+        },
+            availableWidth: panelWidth - Self.barHorizontalPadding * 2,
+            limit: CandidateWindowMetrics.current.candidatesPerPage,
+            hasEngineNeighbours: currentContext.pageNo > 0 || !currentContext.isLastPage)
+    }
 
-        var pages: [[Int]] = []
-        var page: [Int] = []
-        var usedWidth: CGFloat = 0
-
-        for i in currentContext.candidates.indices {
-            let natural = stableCandidateWidth(currentContext.candidates[i])
-            let width = min(natural, maxItemWidth)
-            let nextWidth = page.isEmpty ? width : usedWidth + separatorRunWidth() + width
-            if !page.isEmpty, nextWidth > pageWidth {
-                pages.append(page)
-                page = [i]
-                usedWidth = width
-            } else {
-                page.append(i)
-                usedWidth = nextWidth
-            }
-        }
-
-        if !page.isEmpty { pages.append(page) }
-        return pages
+    private func compactCandidate(at index: Int, visibleIndex: Int) -> RimeCandidateModel {
+        let candidate = currentContext.candidates[index]
+        guard usesNumericSelectionKeys else { return candidate }
+        return RimeCandidateModel(text: candidate.text, comment: candidate.comment,
+                                  label: String(visibleIndex + 1))
     }
 
     private func separatorRunWidth() -> CGFloat {
@@ -2112,6 +2206,7 @@ final class CandidateWindow {
         preeditLabel.textColor = RimeUI.textPrimary
         preeditPill.applyTheme()
         strip.applyTheme()
+        pagingControls.update(canGoBack: canPageBackward, canGoForward: canPageForward)
     }
 
     private func applyMetrics() {
@@ -2397,10 +2492,12 @@ final class CandidateWindow {
         let budget = window.activePanelWidth()
         var checks: [(String, Bool)] = []
         func render(_ texts: [String]) -> CGFloat {
+            window.currentContext.isLastPage = true
             window.currentContext.candidates = texts.enumerated().map {
                 RimeCandidateModel(text: $0.element, comment: "", label: String($0.offset + 1))
             }
             window.visualPageIndex = 0
+            window.selectedIndex = 0
             window.renderCandidates()
             window.panel.layoutIfNeeded()
             return window.panel.frame.width
@@ -2419,6 +2516,7 @@ final class CandidateWindow {
         var fits = pages.count > 1
         for page in pages.indices {
             window.visualPageIndex = page
+            window.selectedIndex = pages[page][0]
             window.renderCandidates()
             window.panel.layoutIfNeeded()
             window.candidateStack.layoutSubtreeIfNeeded()
@@ -2440,6 +2538,91 @@ final class CandidateWindow {
         checks.append(("matrix width follows its widest visible row without selection jitter",
             abs(matrixWidth - window.panel.frame.width) < 1 && matrixWidth < budget))
         return checks
+    }
+
+    static func paginationNavigationChecksForSmoke(context: RimeContextModel) -> [(String, Bool)] {
+        let window = CandidateWindow()
+        window.currentContext = context
+        window.renderCandidates()
+        let pages = window.candidatePages(panelWidth: window.activePanelWidth())
+        guard pages.count > 1 else { return [("navigation fixture has overflow", false)] }
+        var reached: [Int] = pages[0]
+        for page in pages.indices.dropFirst() {
+            guard window.movePage(delta: 1), window.visualPageIndex == page else {
+                return [("forward navigation reaches each visual page", false)]
+            }
+            reached += window.currentVisualCandidateIndices(panelWidth: window.activePanelWidth())
+        }
+        let forwardBoundary = !window.movePage(delta: 1)
+        var reversed: [Int] = []
+        for page in pages.indices.reversed() {
+            reversed = window.currentVisualCandidateIndices(panelWidth: window.activePanelWidth()) + reversed
+            if page > 0 { _ = window.movePage(delta: -1) }
+        }
+        let backwardBoundary = !window.movePage(delta: -1)
+        window.enterEnginePage(direction: -1)
+        let landsOnPreviousTail = window.visualPageIndex == pages.count - 1
+            && window.selection(atVisibleIndex: 0)?.index == pages.last?.first
+        window.enterEnginePage(direction: 1)
+        let landsOnNextHead = window.visualPageIndex == 0
+            && window.selection(atVisibleIndex: 0)?.index == 0
+        _ = window.moveSelection(delta: context.candidates.count - 1)
+        let arrowsReachTail = window.visualPageIndex == pages.count - 1
+            && window.selectedIndex == context.candidates.count - 1
+        return [
+            ("paging visits each candidate exactly once in both directions",
+                reached == Array(context.candidates.indices) && reversed == reached),
+            ("engine paging starts only at a visual boundary", forwardBoundary && backwardBoundary),
+            ("backward engine entry lands on overflow; forward entry lands at the start", landsOnPreviousTail && landsOnNextHead),
+            ("arrow selection follows the same pages", arrowsReachTail),
+        ]
+    }
+
+    /// Render the actual AppKit hierarchy offscreen, without registering an IME
+    /// or touching a host editor. The selection indices are the same ones that
+    /// keyboard and mouse routes hand to librime.
+    static func paginationSnapshotForSmoke(context: RimeContextModel, page: Int,
+                                           imageURL: URL? = nil) -> CandidatePaginationSnapshot {
+        let window = CandidateWindow()
+        window.currentContext = context
+        let pages = window.candidatePages(panelWidth: window.activePanelWidth())
+        let index = min(max(0, page), max(0, pages.count - 1))
+        window.selectedIndex = pages.isEmpty ? 0 : pages[index][0]
+        window.renderCandidates()
+        window.panel.layoutIfNeeded()
+        window.content.layoutSubtreeIfNeeded()
+        window.candidateStack.layoutSubtreeIfNeeded()
+        let buttons = window.candidateStack.arrangedSubviews.compactMap { $0 as? NSButton }
+        let clip = window.candidateScroll.contentView
+        let fits = buttons.allSatisfy { button in
+            let rect = button.convert(button.bounds, to: clip)
+            return rect.minX >= clip.bounds.minX - 0.5 && rect.maxX <= clip.bounds.maxX + 0.5
+                && rect.minY >= clip.bounds.minY - 0.5 && rect.maxY <= clip.bounds.maxY + 0.5
+        }
+        let pagerRect = window.pagingControls.convert(window.pagingControls.bounds, to: window.content)
+        let viewportRect = clip.convert(clip.bounds, to: window.content)
+        let pagerFits = window.pagingControls.isHidden || (
+            pagerRect.minX >= viewportRect.maxX && pagerRect.maxX <= window.content.bounds.maxX
+                && pagerRect.width >= CandidateLayout.pagingControlsWidth - 0.5
+        )
+        if let imageURL,
+           let bitmap = window.content.bitmapImageRepForCachingDisplay(in: window.content.bounds) {
+            window.content.cacheDisplay(in: window.content.bounds, to: bitmap)
+            if let data = bitmap.representation(using: .png, properties: [:]) {
+                try? data.write(to: imageURL)
+            }
+        }
+        return CandidatePaginationSnapshot(
+            pages: pages,
+            visibleIndices: buttons.map(\.tag),
+            visibleLabels: buttons.map { $0.accessibilityLabel() ?? "" },
+            numberSelections: buttons.indices.compactMap { window.selection(atVisibleIndex: $0)?.index },
+            rejectsInvisibleNumber: window.selection(atVisibleIndex: buttons.count) == nil,
+            showsControls: !window.pagingControls.isHidden,
+            canGoBack: window.canPageBackward,
+            canGoForward: window.canPageForward,
+            contentFits: fits && pagerFits
+        )
     }
 
     /// AppKit-backed typography seam for `candidate-metrics-smoke`. It renders
@@ -2639,6 +2822,67 @@ final class CandidateWindow {
                   CandidateSelection(pageOffset: selection.pageOffset, index: selectedIndex))
     }
 
+}
+
+private final class CandidatePagingControls: NSStackView {
+    private let previousButton = CandidatePageButton()
+    private let nextButton = CandidatePageButton()
+    var onPage: ((Int) -> Void)?
+
+    init() {
+        super.init(frame: .zero)
+        orientation = .horizontal
+        alignment = .centerY
+        spacing = 2
+        translatesAutoresizingMaskIntoConstraints = false
+        for (button, direction, symbol, label) in [
+            (previousButton, -1, "chevron.left", "上一页"),
+            (nextButton, 1, "chevron.right", "下一页"),
+        ] {
+            button.tag = direction
+            button.image = NSImage(systemSymbolName: symbol, accessibilityDescription: label)?
+                .withSymbolConfiguration(.init(pointSize: 10, weight: .semibold))
+            button.imagePosition = .imageOnly
+            button.isBordered = false
+            button.focusRingType = .none
+            button.setButtonType(.momentaryChange)
+            button.target = self
+            button.action = #selector(pageTapped(_:))
+            button.toolTip = direction < 0 ? "上一页（− / Page Up）" : "下一页（= / Page Down）"
+            button.setAccessibilityLabel(label)
+            button.translatesAutoresizingMaskIntoConstraints = false
+            addArrangedSubview(button)
+            NSLayoutConstraint.activate([
+                button.widthAnchor.constraint(equalToConstant: 20),
+                button.heightAnchor.constraint(equalToConstant: 22),
+            ])
+        }
+        setContentHuggingPriority(.required, for: .horizontal)
+        setContentCompressionResistancePriority(.required, for: .horizontal)
+        isHidden = true
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    func update(canGoBack: Bool, canGoForward: Bool) {
+        previousButton.isEnabled = canGoBack
+        nextButton.isEnabled = canGoForward
+        for button in [previousButton, nextButton] {
+            button.contentTintColor = button.isEnabled ? RimeUI.textSecondary : RimeUI.textMuted
+            button.alphaValue = button.isEnabled ? 1 : 0.35
+        }
+    }
+
+    @objc private func pageTapped(_ sender: NSButton) { onPage?(sender.tag) }
+}
+
+private final class CandidatePageButton: NSButton {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+    override var acceptsFirstResponder: Bool { false }
+    override func resetCursorRects() {
+        super.resetCursorRects()
+        if isEnabled { addCursorRect(bounds, cursor: .pointingHand) }
+    }
 }
 
 /// The button remains the click and accessibility target, while a dedicated
@@ -2843,6 +3087,8 @@ final class CandidatePreviewView: NSView {
     private let preeditLabel = NSTextField(labelWithString: "")
     private let strip = RimeCandidateSurfaceView(isPreedit: false)
     private let candidateRow = NSStackView()
+    private let pagingControls = CandidatePagingControls()
+    private var visualPageIndex = 0
     private var heightConstraint: NSLayoutConstraint!
 
     private var preeditHeightConstraint: NSLayoutConstraint!
@@ -2910,7 +3156,12 @@ final class CandidatePreviewView: NSView {
         candidateRow.translatesAutoresizingMaskIntoConstraints = false
         candidateRow.setContentHuggingPriority(.required, for: .horizontal)
 
-        let bar = NSStackView(views: [candidateRow])
+        pagingControls.onPage = { [weak self] delta in
+            guard let self else { return }
+            self.visualPageIndex += delta
+            self.rebuild()
+        }
+        let bar = NSStackView(views: [candidateRow, pagingControls])
         bar.orientation = .horizontal
         bar.alignment = .centerY
         bar.spacing = CandidateLayout.barSpacing
@@ -3014,11 +3265,18 @@ final class CandidatePreviewView: NSView {
                      candidateAttr(label: item.label, text: item.text, highlighted: false, m: m).size().width))
                 + CandidateLayout.compactCandidateHorizontalPadding
         }
-        let count = CandidateWindow.fittedColumnCount(widths: widths,
-            separator: CandidateLayout.candidateSeparatorRunWidth,
-            available: m.baseWidth - CandidateLayout.barHorizontalPadding * 2, base: 0)
-        let rowWidth = widths.prefix(count).reduce(0, +)
+        let pagination = CandidatePagination(widths: widths,
+            availableWidth: m.baseWidth - CandidateLayout.barHorizontalPadding * 2,
+            limit: m.candidatesPerPage, hasEngineNeighbours: false)
+        visualPageIndex = min(max(0, visualPageIndex), pagination.pages.count - 1)
+        let indices = pagination.pages[visualPageIndex]
+        let count = indices.count
+        pagingControls.isHidden = !pagination.showsControls
+        pagingControls.update(canGoBack: visualPageIndex > 0,
+                              canGoForward: visualPageIndex + 1 < pagination.pages.count)
+        let rowWidth = indices.map { min(widths[$0], pagination.availableWidth) }.reduce(0, +)
             + CGFloat(max(0, count - 1)) * CandidateLayout.candidateSeparatorRunWidth
+            + (pagination.showsControls ? CandidateLayout.pagingReservedWidth : 0)
         let windowWidth = CandidateLayout.fittedPanelWidth(rowWidths: [rowWidth],
             preeditWidth: ceil(preeditLabel.intrinsicContentSize.width) + CandidateLayout.preeditHorizontalPadding * 2,
             maximumWidth: m.baseWidth)
@@ -3043,22 +3301,15 @@ final class CandidatePreviewView: NSView {
             candidateRow.removeArrangedSubview($0)
             $0.removeFromSuperview()
         }
-        let available = windowWidth - 2 * CandidateLayout.barHorizontalPadding
-        let candidateAvailable = max(64, available)
-        var used: CGFloat = 0
-        for (i, item) in sampleCandidates.enumerated() {
-            let attr = candidateAttr(label: item.label, text: item.text, highlighted: i == 0, m: m)
-            let w = min(candidateAvailable, widths[i])
-            let hasCandidate = used > 0
-            let separatorRun = CandidateLayout.candidateSeparatorRunWidth
-            let next = hasCandidate ? used + separatorRun + w : w
-            if hasCandidate, next > candidateAvailable { break }
-            if hasCandidate {
+        for (offset, i) in indices.enumerated() {
+            let item = sampleCandidates[i]
+            let attr = candidateAttr(label: String(offset + 1), text: item.text, highlighted: offset == 0, m: m)
+            let w = min(pagination.availableWidth, widths[i])
+            if offset > 0 {
                 candidateRow.addArrangedSubview(candidateSeparator())
             }
-            used = next
             candidateRow.addArrangedSubview(candidatePill(attr,
-                                                          highlighted: i == 0,
+                                                          highlighted: offset == 0,
                                                           width: w,
                                                           height: buttonHeight))
         }

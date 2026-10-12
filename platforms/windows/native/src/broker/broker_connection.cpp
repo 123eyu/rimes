@@ -1,5 +1,6 @@
 #include "rimes_version.hpp"
 #include "broker_connection.hpp"
+#include "../core/buffer_keys.hpp"
 
 #include <atomic>
 #include <iostream>
@@ -414,7 +415,15 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     }
     return RespondPassThrough(request, key, session, response);
   }
-  const std::optional<RimeKeyEvent> translated = TranslateWindowsKey(key);
+  auto engine_key = key;
+  if (runtime_ && runtime_->Capturing(session.target) && session.composing &&
+      runtime_->IsSendChord(key)) {
+    engine_key.virtual_key = VK_RETURN;
+    engine_key.modifiers = 0;
+  }
+  // A composing send chord settles Rime only; its same physical press cannot
+  // deliver, including when the user assigned a letter or function key.
+  const std::optional<RimeKeyEvent> translated = TranslateWindowsKey(engine_key);
   if (!translated.has_value() || engine_ == nullptr || !engine_->IsHealthy()) {
     if (!key_down) {
       session.handled_key_downs.reset(key.virtual_key);
@@ -451,12 +460,15 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   if (runtime_ && runtime_->Capturing(session.target)) {
     // In ASCII mode librime passes printable keys through; Buffer still owns
     // them.
-    if (key_down && !snapshot.handled && translated->keycode >= 32 &&
-        translated->keycode <= 126) {
+    const bool direct_input = key_down && !snapshot.handled &&
+        snapshot.commit_text.empty() && !snapshot.composing &&
+        !core::HasHostCommandModifier(key.modifiers) && translated->keycode >= 32 &&
+        translated->keycode <= 126;
+    if (direct_input) {
       snapshot.handled = true;
       snapshot.commit_text.assign(1, static_cast<char>(translated->keycode));
     }
-    runtime_->Capture(session.target, &snapshot);
+    runtime_->Capture(session.target, &snapshot, direct_input);
   }
   std::uint64_t next_revision = session.revision;
   if (snapshot.handled || snapshot.modifier_snapshot) {

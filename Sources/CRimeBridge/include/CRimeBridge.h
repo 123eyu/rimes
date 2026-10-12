@@ -37,6 +37,8 @@ typedef struct {
     int highlightedIndex;       // index within the current page
     int numCandidates;          // count on the current page (<= BB_MAX_CANDIDATES)
     BBRimeCandidate candidates[BB_MAX_CANDIDATES];
+    // Selection keys, independently of decorative alternative_select_labels.
+    bool usesNumericSelectionKeys;
 } BBRimeContext;
 
 // Engine status. String pointers are bridge-owned, valid until the next

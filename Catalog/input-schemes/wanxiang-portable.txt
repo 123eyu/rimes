@@ -1,0 +1,59 @@
+万象 v18.1.1 Base 全拼 · 跨平台基础兼容包
+
+来源：amzxyz / rime-wanxiang
+正式版本：https://github.com/amzxyz/rime-wanxiang/releases/tag/v18.1.1
+源提交：26a9efeb18e604c091f4d3890d00bec723fe755f
+上游许可：CC BY 4.0（完整文本见 LICENSE-amzxyz-rime-wanxiang.txt）
+本包为灵犀适配版本，非上游原版；逐文件来源和改动见 rimes-package.yaml。
+
+灵犀 iOS 导入方法
+1. 把整个 ZIP 保存到 iPhone 的“文件”App，无需解压。
+2. 打开灵犀输入法主 App → 设置 → Rime 方案包与导入，选择这个 ZIP。
+3. 保持推荐项“万象拼音·灵犀兼容版”，其余五项是依赖方案。
+4. 完成导入、部署、试打，再启用。首次部署会编译词库，需要一些时间。
+
+保留功能
+标准版完整词库、全拼、简拼、普通自动造句、用户词频学习、英文与混合编码、
+部件/笔画反查、繁简及港繁/台繁转换、表情、时间日期、数字金额、计算器等。
+实际键盘是否提供某个快捷键/开关，仍取决于灵犀界面和所连接的硬件键盘。
+
+兼容调整与限制
+- 灵犀当前移动引擎未集成 octagram，因此不携带 .gram 模型，关闭基于模型的
+  contextual_suggestions。长句排序与官方完整环境不同。Lua 的个人上下文学习仍保留。
+- 超级提示和替换缓存改为隔离用户目录内的 wanxiang_tips / wanxiang_replacer，
+  避免带目录的数据库名称被移动环境拒绝；数据库创建失败时正常返回 nil。
+- 移除依赖预编译 charset.reverse.bin 的字符集过滤及对应开关；保留原词库字集。
+  繁简转换使用正式发布包自带的 OpenCC 数据，不依赖该字符集过滤器。
+- 这是固定全拼包。移除 /zrm、/flypy 等写配置后要求桌面重新部署的切换入口。
+  如需双拼，须另行制作对应编码的导入包。
+- 按灵犀导入限制分拆大词典、整理资源路径，同步修正 Lua 纠错词表路径，
+  并生成 Lua 子模块兼容入口。
+- 包内不含既有用户词典、部署产物、其他输入法界面配置。
+
+跨平台使用
+同一个 ZIP 使用标准 Rime 数据目录格式，按灵犀 iOS 的限制取共同功能集。
+需支持 librime-lua 的 Rime 引擎；不能当作键盘皮肤、并击键位或安装程序导入。
+
+平台 / 使用入口 / 验证边界
+- 灵犀 iOS：使用主 App 的 ZIP 导入入口。真实导入器和 iOS 引擎主机切片已验证；
+  未作 iPhone 真机或键盘扩展内存测试。
+- 灵犀 macOS、Windows、Linux、Android：当前产品未提供该 ZIP 的外部方案导入入口。
+  方案数据格式可以共用，但仅下载/复制 ZIP 不会让它出现在这些版本的方案列表。
+- 其他 Rime 客户端（鼠须管/小狼毫/Fcitx5-Rime/同文等）：使用客户端自己的方案目录
+  或方案导入入口；必须带兼容的 librime-lua。Windows/Linux/Android 未作实机测试。
+
+已有桌面 Rime 用户目录的手动安装方法
+1. 备份用户目录，再解压本包到新的临时目录。
+2. 将除 default.yaml、rimes-package.yaml、README-RIMES.txt、LICENSE-* 外的方案资源
+   合并到客户端用户目录；先检查同名 wanxiang 文件，避免覆盖已有个人自定义配置。
+   保留客户端原来的 default.yaml、default.custom.yaml 和用户词典。
+3. 在原 default.custom.yaml 的 patch/schema_list 中保留已有条目并增加：
+     - schema: wanxiang
+   若没有此文件，可创建：
+     patch:
+       schema_list:
+         - schema: wanxiang
+   上述新建示例只有万象一项；已有列表不能直接用它覆盖。
+4. 通过客户端执行“重新部署”，成功后选择“万象拼音·灵犀兼容版”。
+这些步骤适用于允许外部 Rime 方案的客户端，不会解除灵犀桌面版当前的内置方案限制。
+不要直接把本包的 default.yaml 覆盖到日常 Rime 用户目录。

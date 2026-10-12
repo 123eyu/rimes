@@ -5,6 +5,8 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)selectSchema:(NSString *)schema;
 + (NSDictionary *)deployResources:(NSString *)resources schemaIDs:(NSArray<NSString *> *)schemaIDs;
 + (NSDictionary *)validateResources:(NSString *)resources schemaIDs:(NSArray<NSString *> *)schemaIDs;
+/// Read a deployed schema without starting, switching or compiling an engine.
++ (NSDictionary *)keyboardSchemaInfoAtPath:(NSString *)path;
 - (NSDictionary *)processKey:(int32_t)key;
 - (NSDictionary *)selectCandidate:(NSUInteger)index;
 - (void)clear;

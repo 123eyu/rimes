@@ -4,12 +4,14 @@
 #include <msctf.h>
 
 #include <atomic>
+#include <bitset>
 #include <memory>
 #include <string>
 
 #include "BrokerClient.h"
 #include "CandidateWindow.h"
 #include "TsfInterfaces.h"
+#include "candidate_navigation.hpp"
 
 namespace rimes::windows::tsf {
 
@@ -90,6 +92,11 @@ class TextService final : public ITfTextInputProcessorEx,
                              const BrokerInputState& state,
                              TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
   void SelectCandidate(std::size_t index) noexcept;
+  HRESULT CommitCandidate(ITfContext* context, CandidateNavigation::Selection selection,
+                          TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
+  std::optional<BrokerInputState> StepCandidatePage(int delta) noexcept;
+  bool HandleCandidateKey(BrokerKeyPhase phase, ITfContext* context,
+                          WPARAM virtual_key) noexcept;
   HRESULT CommitText(ITfContext* context, const std::wstring& text) noexcept;
   HRESULT UpdateComposition(ITfContext* context,
                             const BrokerInputState& state) noexcept;
@@ -109,7 +116,7 @@ class TextService final : public ITfTextInputProcessorEx,
   HWND notification_window_ = nullptr;
   std::uint64_t last_delivery_ = 0;
   std::uint64_t broker_generation_ = 0;
-  bool return_owned_ = false;
+  WPARAM buffer_owned_key_ = 0;
   void RevokeContext() noexcept;
   ITfContext* active_context_ = nullptr;
   IUnknown* context_identity_ = nullptr;
@@ -120,6 +127,9 @@ class TextService final : public ITfTextInputProcessorEx,
   bool own_buffer_edit_ = false;
   DWORD layout_sink_cookie_ = TF_INVALID_COOKIE;
   BrokerInputState last_state_;
+  CandidateNavigation candidate_navigation_;
+  std::bitset<256> candidate_owned_keys_;
+  std::uint64_t candidate_epoch_ = 0;
 
   std::atomic_ulong reference_count_{1};
   ITfThreadMgr* thread_manager_ = nullptr;

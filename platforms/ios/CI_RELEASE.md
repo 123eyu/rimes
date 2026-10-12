@@ -1,6 +1,6 @@
 # iOS GitHub Actions release
 
-Current target: **1.1.1**, local build **50**, incorporating the mainline clipboard and host-handoff follow-ups after build 49. This is a build target, not a statement of upload, review or availability. The previously submitted build 49 and public build 48 must be checked in App Store Connect before changing distribution. See [build 48 validation](validation/build48/README.md) and its follow-up for the earlier sizing evidence. Source integration does not replace the release candidate’s real-device acceptance. The public [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q) is separate from an App Store release.
+Current iOS target: **1.1.2**, local build **54**, combining native nine-key support for compatible imported full-Pinyin packages with provisional-height gap handling and bounded height recovery. The current publishing record is [build 54 validation](../../validation/ios-release-20261012/README.md); earlier [build 51](../../validation/ios-testflight-wanxiang-20261009/README.md) was TestFlight-only. Build, upload, external testing, App Review and public availability are separate states. The public [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q) is separate from an App Store release.
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs

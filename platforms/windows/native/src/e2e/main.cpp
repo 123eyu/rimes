@@ -41,20 +41,16 @@ void DumpDocument(std::string_view label,
             << " visible=" << snapshot.visible << '\n';
 }
 
-void ClearCapsLockIfLatched() {
-  if ((GetKeyState(VK_CAPITAL) & 1) == 0) {
-    return;
-  }
-  keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY, 0);
-  keybd_event(VK_CAPITAL, 0x45, KEYEVENTF_EXTENDEDKEY | KEYEVENTF_KEYUP, 0);
-}
-
 // Change only this test thread's logical state. Never synthesize desktop input
 // or change the user's hardware modifiers when exercising TSF callbacks.
 class LogicalKeyboardState {
  public:
   LogicalKeyboardState() { GetKeyboardState(saved_); }
   ~LogicalKeyboardState() { SetKeyboardState(saved_); }
+  void Clear() {
+    BYTE state[256]{};
+    SetKeyboardState(state);
+  }
   void Shift(bool down) {
     BYTE state[256]{};
     GetKeyboardState(state);
@@ -387,8 +383,9 @@ int RunTypingScenarios(bool legacy_broker) {
     return EXIT_FAILURE;
   }
 
-  ClearCapsLockIfLatched();
   CheckFocusRestoration();
+  LogicalKeyboardState scenario_keyboard;
+  scenario_keyboard.Clear();
   std::cerr << "caps_lock=" << ((GetKeyState(VK_CAPITAL) & 1) != 0)
             << " shift=" << ((GetKeyState(VK_SHIFT) & 0x8000) != 0) << '\n';
 
@@ -457,6 +454,14 @@ int RunTypingScenarios(bool legacy_broker) {
     Expect(!ascii_eaten && document.text == L"ni",
            "ASCII mode passes the next letter through without delayed raw-code commit");
     service->OnKeyUp(context, 'A', 0, &ascii_eaten);
+    for (const WPARAM key : {VK_SPACE, VK_OEM_COMMA, VK_OEM_PERIOD}) {
+      service->OnTestKeyDown(context, key, 0, &ascii_eaten);
+      Expect(!ascii_eaten, "ASCII spaces and punctuation stay with the host at OnTest");
+      service->OnKeyDown(context, key, 0, &ascii_eaten);
+      Expect(!ascii_eaten && document.text == L"ni",
+             "ASCII spaces and punctuation cannot be swallowed by the IME");
+      service->OnKeyUp(context, key, 0, &ascii_eaten);
+    }
     TapLeftShift(service, context);
     ResetDocument(&document);
     const auto idle_writes = context->write_requests;
@@ -574,8 +579,7 @@ int RunTypingScenarios(bool legacy_broker) {
   for (const WPARAM key : {VK_BACK, VK_RETURN, VK_SPACE}) {
     BOOL idle_eaten = TRUE;
     service->OnTestKeyDown(context, key, 0, &idle_eaten);
-    if (key != VK_SPACE)
-      Expect(!idle_eaten, "idle Backspace/Return stays with the host");
+    Expect(!idle_eaten, "idle Backspace/Return/Space stays with the host at OnTest");
     service->OnKeyDown(context, key, 0, &idle_eaten);
     Expect(!idle_eaten && document.text.empty(),
            "idle host key produces no IME insertion");
@@ -588,6 +592,29 @@ int RunTypingScenarios(bool legacy_broker) {
     service->OnKeyDown(context, key, 0, &idle_eaten);
     Expect(!idle_eaten && document.text.empty(),
            "idle digit callback does not mutate the document or engine");
+  }
+  {
+    LogicalKeyboardState keyboard;
+    for (const bool shifted : {false, true}) {
+      keyboard.Shift(shifted);
+      for (WPARAM key = VK_NUMPAD0; key <= VK_DIVIDE; ++key) {
+        BOOL keypad_eaten = TRUE;
+        service->OnTestKeyDown(context, key, 0, &keypad_eaten);
+        Expect(!keypad_eaten, "idle keypad digits, decimal and operators are not pre-claimed, even with Shift");
+        service->OnKeyDown(context, key, 0, &keypad_eaten);
+        Expect(!keypad_eaten && document.text.empty() && !document.composing,
+               "idle keypad input leaves the editor and Rime session untouched");
+        service->OnTestKeyUp(context, key, 0, &keypad_eaten);
+        Expect(!keypad_eaten, "pass-through keypad input never owns a later release");
+        service->OnKeyUp(context, key, 0, &keypad_eaten);
+        Expect(!keypad_eaten, "keypad release remains with the host");
+      }
+    }
+    keyboard.Shift(false);
+    TypeLatin(service, context, "nihao");
+    TypeVirtualKey(service, context, VK_SPACE, true);
+    Expect(document.text == L"你好", "Chinese typing survives idle keypad pass-through");
+    ResetDocument(&document);
   }
   {
     LogicalKeyboardState keyboard;
@@ -604,6 +631,40 @@ int RunTypingScenarios(bool legacy_broker) {
       keyboard.Command(modifier, false);
     }
   }
+
+  TypeLatin(service, context, "nihao");
+  CandidateSnapshot navigation;
+  CandidateWindow::GetLastSnapshot(&navigation);
+  const auto inline_before_arrows = document.composition;
+  Expect(navigation.items.size() > 1, "candidate navigation fixture has multiple words");
+  const auto second_word = navigation.items.size() > 1 ? navigation.items[1].text : L"";
+  TypeVirtualKey(service, context, VK_RIGHT, true);
+  CandidateWindow::GetLastSnapshot(&navigation);
+  Expect(navigation.highlighted == 1 && document.composition == inline_before_arrows,
+         "Right selects the next candidate without moving the preedit caret");
+  TypeVirtualKey(service, context, VK_SPACE, true);
+  Expect(document.text == second_word && !document.composing,
+         "Space commits the candidate selected with horizontal arrows");
+  ResetDocument(&document);
+  TypeLatin(service, context, "nihao");
+  TypeVirtualKey(service, context, VK_DOWN, true);
+  CandidateWindow::GetLastSnapshot(&navigation);
+  Expect(navigation.matrix_rows.size() >= 2 && navigation.matrix_rows.size() <= 3,
+         "Down expands consecutive engine pages into a matrix");
+  TypeVirtualKey(service, context, VK_UP, true);
+  CandidateWindow::GetLastSnapshot(&navigation);
+  Expect(navigation.matrix_rows.empty() && document.composing,
+         "Up at the first row collapses the matrix and retains inline preedit");
+  TypeVirtualKey(service, context, VK_DOWN, true);
+  CandidateWindow::GetLastSnapshot(&navigation);
+  const auto second_row_start = navigation.matrix_rows.empty() ? 0 : navigation.matrix_rows[0];
+  const auto second_row_word = second_row_start < navigation.items.size()
+      ? navigation.items[second_row_start].text : L"";
+  TypeVirtualKey(service, context, VK_DOWN, true);
+  TypeVirtualKey(service, context, '1', true);
+  Expect(document.text == second_row_word && !document.composing,
+         "matrix number key commits from the active row, not the first page");
+  ResetDocument(&document);
 
   TypeLatin(service, context, "nihao", &document);
   DumpDocument("after nihao", document);

@@ -9,6 +9,7 @@
 #include "../core/control.hpp"
 #include "../engine/rime_snapshot.hpp"
 #include "model.hpp"
+#include "buffer_placement.hpp"
 #include "provider.hpp"
 #include "official_plugins.hpp"
 namespace rimes::windows::workbench {
@@ -16,18 +17,22 @@ class Runtime {
  public:
   using APIGenerator = std::function<bool(const Settings&, const Generation&,
       const std::function<bool(const std::string&)>&, const std::function<bool()>&, std::string*)>;
-  explicit Runtime(APIGenerator generate = GenerateAPI);
+  explicit Runtime(APIGenerator generate = GenerateText);
   ~Runtime();
   Target Register(std::uint32_t process, std::uint64_t session,
                   std::uint64_t context);
   void Remove(Target target);
   void Focus(Target target);
   bool Capturing(Target target);
+  bool IsSendChord(const core::KeyEvent& key);
   bool BeforeKey(Target target, const core::KeyEvent& key, bool composing);
-  void Capture(Target target, engine::EngineSnapshot* snapshot);
+  void Capture(Target target, engine::EngineSnapshot* snapshot,
+               bool direct_input = false);
   core::Json Control(const core::Json& message, std::uint32_t process);
   core::Json Snapshot();
   Target PlacementTarget();
+  std::optional<BufferRect> PlacementCaret(Target target);
+  void CancelOpeningPlacement();
   Settings Configuration();
   bool Configure(Settings value, const std::wstring& key, bool replace_key,
                  std::string* error);
@@ -38,9 +43,12 @@ class Runtime {
   void PauseCapture();
   void Close();
   void Protect();
+  void DiscardBuffer();
   void Paste(std::string text);
   void Send(bool all);
   void Generate(bool translation);
+  void SelectAIMode();
+  void SelectTranslationMode();
   // Stop queued/in-flight automatic translation when changing the displayed
   // mode. Source, completed results and an issued delivery/ack are retained;
   // selecting a mode does not dispatch a new request or deliver content.
@@ -66,6 +74,7 @@ class Runtime {
   Settings settings_;
   OfficialPluginStore plugins_;
   std::string result_plugin_, result_grant_, plugin_status_;
+  std::string result_connector_, result_connector_grant_;
   bool plugin_installing_ = false;
   std::jthread plugin_worker_;
   std::function<void()> notify_;
@@ -76,8 +85,13 @@ class Runtime {
   std::uint64_t pressed_at_ = 0, pending_since_ = 0, edited_at_ = 0;
   Target return_target_;
   std::uint64_t opening_revision_ = 0;
+  std::uint64_t placement_revision_ = 0, opening_at_ = 0, opening_source_revision_ = 0;
+  std::optional<BufferRect> opening_caret_;
   bool return_held_ = false, return_sent_ = false;
+  unsigned return_key_ = 0;
+  bool ai_mode_ = false;
   void Changed();
+  void DiscardBufferLocked();
   void CheckPluginAuthorization();
   std::optional<Delivery> SendAuthorized(bool all);
   void Queue(const std::optional<Delivery>& delivery);

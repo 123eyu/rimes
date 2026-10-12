@@ -204,6 +204,14 @@ jobs:
           open_current = postinstall.index('/usr/bin/open -g "$APP"')
           process_check = postinstall.index('if ! wait_for_canonical_app_process')
           assert retire < conflict_gate < account_reaudit < publish
+          # Sandboxed apps read the system-wide input-source cache, which only
+          # root can rebuild. Register the reconciled canonical bundle as root
+          # before the login user's own enable/select.
+          system_register = postinstall.index(
+              'if rimes_register_input_source_system_wide'
+          )
+          assert account_reaudit < system_register < activate
+          assert postinstall.count('"$EXE" --rimes-tis-register') == 1
           assert publish < kill_old < old_process_gate < all_process_gate
           assert all_process_gate < activate < open_current < process_check
           assert 'SYSTEM_AGENT_TRANSACTION_ACTIVE=1' in postinstall
@@ -586,8 +594,12 @@ jobs:
       - name: Build (debug)
         run: swift build
 
-      # These smoke harnesses exercise local models/config stores only and
-      # exit before the IMK/librime bootstrap, so they run without Squirrel.
+      # Candidate pagination also verifies real librime page/commit routing.
+      # Stage the checksum-verified product runtime without installing an IME.
+      - name: Fetch runtime for candidate engine smoke
+        run: ./scripts/fetch-rime.sh --force
+
+      # All harnesses use disposable profiles; none reads the runner's live IME data.
       - name: Smoke tests
         run: |
           BIN="$(swift build --show-bin-path)/RimeBuffer"
@@ -610,6 +622,7 @@ jobs:
             stats-smoke
             matrix-smoke
             candidate-metrics-smoke
+            candidate-pagination-smoke
             candidate-commit-smoke
             activation-cache-smoke
             theme-smoke

@@ -33,14 +33,13 @@ namespace {
 constexpr UINT kChanged = WM_APP + 80, kTray = WM_APP + 81;
 constexpr UINT kOpenSettings = WM_APP + 82;
 constexpr UINT kUpdateBufferZOrder = WM_APP + 83;
+constexpr UINT kMaintenanceExit = WM_APP + 84;
 constexpr int kToggle = 100, kSettings = 101, kDeploy = 102, kStartup = 103,
               kAbout = 105, kExit = 104, kPasteMenu = 106;
 constexpr int kModeInput = 110, kModeGenerate = 111, kModeTranslate = 112;
 
 std::wstring BufferHotkeyTitle(const Settings& settings) {
-  const auto choice = BufferHotkeyChoiceIndex(settings.hotkey_modifiers);
-  return std::wstring(choice >= 0 ? kBufferHotkeyChoices[static_cast<std::size_t>(choice)].label : L"") +
-         static_cast<wchar_t>(settings.hotkey_key);
+  return ShortcutTitle(settings.hotkey_key, settings.hotkey_modifiers);
 }
 
 DWORD ForegroundProcess() {
@@ -119,6 +118,7 @@ struct Window {
   ui::BufferHitKind pressed_hit = ui::BufferHitKind::kNone;
   int hover = -1;
   HWND tooltip = nullptr;
+  std::wstring tooltip_text;
   std::jthread maintenance;
   std::atomic_bool deploying = false;
   HICON product_icon = nullptr;
@@ -126,6 +126,7 @@ struct Window {
   std::map<UINT, std::wstring> menu_labels;
   std::unique_ptr<BufferHotkeyRegistration> buffer_hotkey;
   std::uint64_t placed_opening_revision = 0;
+  std::uint64_t placed_geometry_revision = 0;
   BufferOpeningSide opening_side = BufferOpeningSide::kBottomFallback;
   bool positioning = false;
   double positioning_scale = 1;
@@ -163,6 +164,7 @@ struct Window {
   void PopupMoreMenu();
   void PopupTrayMenu();
   void AddTrayIcon();
+  void RefreshTrayIcon();
   HMENU BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items);
   void UpdateTooltip(int hit);
   ui::BufferPaintState MakePaintState(const core::Json& state) const;
@@ -208,6 +210,9 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
                        !state.value("uncertain", false) &&
                        (has_result || has_source) &&
                        (!paint.busy || has_result) && status != "Sending...";
+  if (mode == ui::BufferMode::kGenerate && !has_result)
+    paint.send_enabled = has_source && !paint.busy &&
+        state.value("preedit", std::string()).empty() && status != "Sending...";
   paint.paste_enabled = status != "Sending...";
   paint.preedit = Wide(state.value("preedit", std::string()));
   paint.preview = Wide(state.value("preview", std::string()));
@@ -238,7 +243,7 @@ void Window::EnsureSettings() {
         value.hotkey_modifiers, value.hotkey_key,
         [&] { return runtime.Configure(value, key, replace, error); });
     if (result == HotkeyUpdate::kInvalid) {
-      if (error) *error = "快捷键必须为 Ctrl+Shift、Ctrl+Alt 或 Alt+Shift 加 A–Z 字母；设置未保存。";
+      if (error) *error = "快捷键无效或是系统编辑快捷键；设置未保存。";
       return false;
     }
     if (result == HotkeyUpdate::kUnavailable) {
@@ -251,13 +256,7 @@ void Window::EnsureSettings() {
     if (result == HotkeyUpdate::kSaveFailed) return false;
     wcscpy_s(tray.szTip, L"RIMES 输入法与 Buffer");
     Shell_NotifyIconW(NIM_MODIFY, &tray);
-    if (product_icon) {
-      DestroyIcon(product_icon);
-      product_icon = ui::CreateProductIcon(16);
-      tray.hIcon =
-          product_icon ? product_icon : LoadIconW(nullptr, IDI_APPLICATION);
-      Shell_NotifyIconW(NIM_MODIFY, &tray);
-    }
+    RefreshTrayIcon();
     InvalidateRect(window, nullptr, FALSE);
     return true;
   };
@@ -315,6 +314,16 @@ void Window::AddTrayIcon() {
     Shell_NotifyIconW(NIM_MODIFY, &tray);
 }
 
+void Window::RefreshTrayIcon() {
+  auto icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
+  if (!icon) return;
+  const auto previous = product_icon;
+  product_icon = icon;
+  tray.hIcon = icon;
+  Shell_NotifyIconW(NIM_MODIFY, &tray);
+  if (previous) DestroyIcon(previous);
+}
+
 HMENU Window::BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items) {
   HMENU menu = CreatePopupMenu();
   menu_labels.clear();
@@ -345,13 +354,14 @@ void Window::PopupModeMenu() {
   DestroyMenu(menu);
   if (command == kModeInput || command == kModeGenerate ||
       command == kModeTranslate) {
-    // Selection is a real processing boundary, not an API request. Cancel
-    // the previous automatic translation/queued producer first; reviewed
-    // results and an issued insertion remain available for explicit sending.
+    // Retire the previous producer before changing mode. Translation then
+    // arms its sentence debounce; AI generation remains an explicit action.
     runtime.ReturnToInput();
     mode = command == kModeInput ? ui::BufferMode::kInput
         : command == kModeGenerate ? ui::BufferMode::kGenerate
                                    : ui::BufferMode::kTranslate;
+    if (mode == ui::BufferMode::kGenerate) runtime.SelectAIMode();
+    if (mode == ui::BufferMode::kTranslate) runtime.SelectTranslationMode();
   }
   InvalidateRect(window, nullptr, FALSE);
 }
@@ -430,7 +440,8 @@ void Window::PopupTrayMenu() {
 
 void Window::UpdateTooltip(int hit) {
   if (!tooltip) return;
-  const wchar_t* text = L"";
+  tooltip_text.clear();
+  auto& text = tooltip_text;
   switch (static_cast<ui::BufferHitKind>(hit)) {
     case ui::BufferHitKind::kMode:
       text = L"模式";
@@ -447,10 +458,13 @@ void Window::UpdateTooltip(int hit) {
     case ui::BufferHitKind::kCopy:
       text = L"复制";
       break;
-    case ui::BufferHitKind::kSend:
+    case ui::BufferHitKind::kSend: {
+      const auto config = runtime.Configuration();
       text = runtime.Snapshot().value("result", std::string()).empty()
-                 ? L"发送下一块" : L"发送下一块待发结果";
+                 ? L"发送下一块（" : L"发送下一块待发结果（";
+      text += ShortcutTitle(config.send_key, config.send_modifiers) + L"；长按 1.2 秒发送全部）";
       break;
+    }
     case ui::BufferHitKind::kBind:
       text = L"在当前输入框接收输入到 Buffer";
       break;
@@ -461,7 +475,7 @@ void Window::UpdateTooltip(int hit) {
   info.cbSize = sizeof(info);
   info.hwnd = window;
   info.uId = 1;
-  info.lpszText = const_cast<wchar_t*>(text);
+  info.lpszText = text.data();
   SendMessageW(tooltip, TTM_UPDATETIPTEXTW, 0, reinterpret_cast<LPARAM>(&info));
 }
 
@@ -571,7 +585,8 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
       Copy();
       break;
     case ui::BufferHitKind::kSend:
-      runtime.Send(false);
+      if (mode == ui::BufferMode::kGenerate && state.result_blocks.empty()) runtime.Generate(false);
+      else runtime.Send(false);
       break;
     default:
       break;
@@ -581,7 +596,7 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
 void Window::PositionForOpening(const core::Json& state) {
   const auto revision = state.value("opening_revision", 0ULL);
   const auto target = runtime.PlacementTarget();
-  auto anchor = ProbeBufferInputAnchor(target.process);
+  auto anchor = ProbeBufferInputAnchor(target.process, runtime.PlacementCaret(target));
   if (target != runtime.PlacementTarget()) anchor = {};
   HMONITOR monitor = BufferFallbackMonitor();
   if (anchor.caret && FiniteBufferRect(*anchor.caret) &&
@@ -621,6 +636,7 @@ void Window::PositionForOpening(const core::Json& state) {
   positioning = false;
   opening_side = placement.side;
   placed_opening_revision = revision;
+  placed_geometry_revision = state.value("placement_revision", 0ULL);
 }
 
 void Window::Update() {
@@ -632,7 +648,8 @@ void Window::Update() {
   if (!settings || !settings->IsOpen()) theme = ActiveTheme();
   auto state = runtime.Snapshot();
   if (state.value("visible", false) &&
-      placed_opening_revision != state.value("opening_revision", 0ULL))
+      (placed_opening_revision != state.value("opening_revision", 0ULL) ||
+       placed_geometry_revision != state.value("placement_revision", 0ULL)))
     PositionForOpening(state);
   ShowWindow(window,
              state.value("visible", false) ? SW_SHOWNOACTIVATE : SW_HIDE);
@@ -722,10 +739,15 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
   if (!self) return DefWindowProcW(hwnd, message, wparam, lparam);
   try {
     if (self->taskbar_created && message == self->taskbar_created) {
+      self->RefreshTrayIcon();
       self->AddTrayIcon();
       return 0;
     }
     switch (message) {
+      case WM_SETTINGCHANGE:
+      case WM_THEMECHANGED:
+        self->RefreshTrayIcon();
+        return 0;
       case WM_NCCALCSIZE:
         // Keep resize semantics without a native frame subtracting pixels
         // from the 73/105-DIP workbench client area.
@@ -751,14 +773,22 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
       case WM_ERASEBKGND:
         return 1;
       case WM_HOTKEY:
-        if (self->buffer_hotkey && self->buffer_hotkey->Matches(wparam, lparam))
-          self->runtime.Toggle(ForegroundProcess());
+        if (self->buffer_hotkey && self->buffer_hotkey->Matches(wparam, lparam)) {
+          if (self->settings && self->settings->RecordingShortcut())
+            self->settings->RecordShortcut(HIWORD(lparam), LOWORD(lparam) & ~MOD_NOREPEAT);
+          else self->runtime.Toggle(ForegroundProcess());
+        }
         return 0;
       case kChanged:
         self->Update();
         return 0;
       case kOpenSettings:
         self->OpenSettings();
+        return 0;
+      case kMaintenanceExit:
+        // Buffer is disposable IME UI. Stop transient provider work and the
+        // input engine through the same shutdown path as the tray's Exit.
+        DestroyWindow(hwnd);
         return 0;
       case kUpdateBufferZOrder:
         // Recheck the current lifetime: Settings may have reopened while this
@@ -808,6 +838,8 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         return 0;
       }
       case WM_ENTERSIZEMOVE:
+        self->runtime.CancelOpeningPlacement();
+        self->placed_geometry_revision = self->runtime.Snapshot().value("placement_revision", 0ULL);
         // Manual placement takes precedence until the next explicit opening.
         self->opening_side = BufferOpeningSide::kBottomFallback;
         return 0;
@@ -978,7 +1010,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
             break;
           case kDeploy:
             if (!self->deploying.exchange(true)) {
-              self->runtime.Protect();
+              self->runtime.DiscardBuffer();
               self->maintenance = std::jthread([self] {
                 self->deploy();
                 self->deploying.store(false);
@@ -1059,6 +1091,11 @@ bool UiCommands::RequestSettings() {
   return window_ && PostMessageW(window_, kOpenSettings, 0, 0);
 }
 
+bool UiCommands::RequestExit() {
+  std::lock_guard lock(mutex_);
+  return window_ && PostMessageW(window_, kMaintenanceExit, 0, 0);
+}
+
 void RunWindow(Runtime& runtime, const std::function<void()>& stop,
                const std::function<void()>& deploy, UiCommands* commands,
                bool open_settings) {
@@ -1129,7 +1166,7 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   ui.theme = ui::ThemeIdOrDefault(config.theme);
   ui.buffer_hotkey = std::make_unique<BufferHotkeyRegistration>(window);
   ui.buffer_hotkey->RegisterInitial(config.hotkey_modifiers, config.hotkey_key);
-  ui.product_icon = ui::CreateProductIcon(16);
+  ui.product_icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
   ui.tray.cbSize = sizeof(ui.tray);
   ui.tray.hWnd = window;
   ui.tray.uID = 1;

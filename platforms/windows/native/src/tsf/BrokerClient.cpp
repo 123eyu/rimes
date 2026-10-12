@@ -1,4 +1,5 @@
 #include "BrokerClient.h"
+#include "../core/buffer_keys.hpp"
 
 #include <Windows.h>
 
@@ -24,9 +25,11 @@
 #include <vector>
 
 #include "../core/broker_protocol.hpp"
+#include "../core/broker_identity.hpp"
 #include "Diagnostics.h"
 #include "ModuleState.h"
 #include "key_routing.hpp"
+#include "broker_launch.hpp"
 
 namespace rimes::windows::tsf {
 namespace {
@@ -434,7 +437,7 @@ bool BuildEndpoint(std::wstring* endpoint, TokenIdentity* current_identity,
   suffix << L".v2.session-" << *current_session_id << L".user-" << std::hex
          << std::setw(16) << std::setfill(L'0')
          << HashSid(current_identity->sid_string);
-  *endpoint = L"\\\\.\\pipe\\RIMES.Broker" + suffix.str();
+  *endpoint = std::wstring(L"\\\\.\\pipe\\") + core::kBrokerObjectName + suffix.str();
   return true;
 }
 
@@ -626,15 +629,22 @@ bool SiblingBrokerPath(std::wstring* path) noexcept {
   directory.resize(slash + 1);
   auto parent = directory.substr(0, directory.size() - 1);
   parent = parent.substr(0, parent.find_last_of(L"\\/"));
-  *path = parent + L"\\x64\\RimesBroker.exe";
+  *path = parent + L"\\x64\\" + core::kBrokerExecutable;
   if (GetFileAttributesW(path->c_str()) == INVALID_FILE_ATTRIBUTES)
-    *path = directory + L"RimesBroker.exe";
+    *path = directory + core::kBrokerExecutable;
   const DWORD attributes = GetFileAttributesW(path->c_str());
   return attributes != INVALID_FILE_ATTRIBUTES &&
          (attributes & FILE_ATTRIBUTE_DIRECTORY) == 0;
 }
 
 bool LaunchBrokerProcess() noexcept {
+  // The test runner owns the isolated Broker's data and lifetime. A failed
+  // test must never launch the installed Broker or leave an untracked child.
+  if (!core::kAllowBrokerAutoLaunch) return false;
+  wchar_t loaded_path[MAX_PATH]{};
+  const auto length = GetModuleFileNameW(module::Instance(), loaded_path, MAX_PATH);
+  if (!length || length >= MAX_PATH || !IsRegisteredTsfModule(loaded_path))
+    return false;
   std::wstring broker_path;
   if (!SiblingBrokerPath(&broker_path)) {
     return false;
@@ -702,6 +712,11 @@ class NamedPipeBrokerClient final : public BrokerClient {
     notification_window_.store(window);
   }
   bool Capturing() const noexcept override { return capturing_.load(); }
+  bool IsBufferSendKey(WPARAM key) const noexcept override {
+    const auto chord = send_chord_.load();
+    return core::IsBufferSendChord(static_cast<unsigned>(key), ReadModifiers(),
+                                    chord & 0xffU, chord >> 8U);
+  }
   std::uint64_t ConnectionGeneration() const noexcept override {
     return connection_generation_.load();
   }
@@ -886,9 +901,13 @@ class NamedPipeBrokerClient final : public BrokerClient {
     const bool composing = composing_.load(std::memory_order_acquire);
     const bool observe_shift = shift && modifier_capable_.load() &&
                                !HasCommandModifiers(modifiers);
-    const bool capture_key = capturing_.load() && !HasCommandModifiers(modifiers) &&
-        (event.virtual_key == VK_RETURN || event.virtual_key == VK_BACK ||
-         event.virtual_key == VK_ESCAPE);
+    const auto send_chord = send_chord_.load();
+    const bool capture_key = capturing_.load() &&
+        (core::IsBufferSendChord(static_cast<std::uint32_t>(event.virtual_key), modifiers,
+                                send_chord & 0xffU, send_chord >> 8U) ||
+         (!HasCommandModifiers(modifiers) &&
+          (event.virtual_key == VK_RETURN || event.virtual_key == VK_BACK ||
+           event.virtual_key == VK_ESCAPE)));
     if (event.phase == BrokerKeyPhase::kTestKeyDown) {
       // A filtered host shortcut may never receive OnKeyDown. This is local
       // gesture bookkeeping only: test callbacks never send input to Rime.
@@ -1458,8 +1477,18 @@ class NamedPipeBrokerClient final : public BrokerClient {
           std::lock_guard state_lock(io_mutex_);
           if (input_session_id_ != session ||
               connection_generation_.load() != generation) continue;
-          if (kind == "capture")
+          if (kind == "capture") {
+            const auto key = message->value("sendKey", unsigned(VK_RETURN));
+            const auto modifiers = message->value("sendModifiers", unsigned(MOD_ALT | MOD_SHIFT));
+            if (!core::ValidShortcut(key, modifiers, true)) {
+              capturing_.store(false);
+              continue;
+            }
+            // A single atomic snapshot avoids torn key/modifier reads on the
+            // host input thread while settings are being changed.
+            send_chord_.store(key | (modifiers << 8U));
             capturing_.store(message->value("enabled", false));
+          }
           if (kind == "capture" || kind == "deliver") {
             (*message)["connectionGeneration"] = generation;
             std::lock_guard lock(notification_mutex_);
@@ -1563,6 +1592,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
 
   std::atomic<HWND> notification_window_{nullptr};
   std::atomic_bool capturing_{false}, control_capable_{false};
+  std::atomic_uint32_t send_chord_{VK_RETURN | ((MOD_ALT | MOD_SHIFT) << 8U)};
   std::atomic_bool modifier_capable_{false};
   std::atomic_bool key_routing_capable_{false}, ascii_mode_{false};
   std::atomic<std::uint64_t> connection_generation_{0};

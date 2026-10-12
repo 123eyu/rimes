@@ -23,17 +23,18 @@ enum BufferControlRoutingRules {
 }
 
 enum CandidateKeyboardRoutingRules {
-    /// Candidate chrome owns navigation/commit keys, plus 1...9 only while the
-    /// expanded matrix maps those digits onto its visible columns. Zero has no
-    /// candidate-window action and must continue to librime like any other
-    /// schema binding or printable input.
-    static func ownsLocally(keycode: Int32, isExpanded: Bool) -> Bool {
+    /// Visual pages own paging and numeric selection: sending those keys to
+    /// librime would skip overflow or select a candidate outside the viewport.
+    /// Schemas with custom selection labels keep their original digit bindings.
+    static func ownsLocally(keycode: Int32, isExpanded: Bool,
+                            usesNumericLabels: Bool = false) -> Bool {
         switch keycode {
         case RimeKey.left, RimeKey.right, RimeKey.down, RimeKey.up,
-             RimeKey.return, RimeKey.space:
+             RimeKey.return, RimeKey.space, RimeKey.pageUp, RimeKey.pageDown,
+             0x2D, 0x3D:
             return true
         case 0x31...0x39:
-            return isExpanded
+            return isExpanded || usesNumericLabels
         default:
             return false
         }
@@ -6511,7 +6512,8 @@ final class RIMESController: IMKInputController {
         }
         let isLocalCandidateAction = CandidateKeyboardRoutingRules.ownsLocally(
             keycode: keycode,
-            isExpanded: candidateWindow.isExpanded
+            isExpanded: candidateWindow.isExpanded,
+            usesNumericLabels: candidateWindow.usesNumericSelectionKeys
         )
         if isLocalCandidateAction {
             if chord.hasPending {
@@ -6526,6 +6528,10 @@ final class RIMESController: IMKInputController {
             return candidateWindow.moveSelection(delta: -1)
         case RimeKey.right:
             return candidateWindow.moveSelection(delta: 1)
+        case RimeKey.pageUp, 0x2D:
+            return pageCandidates(delta: -1, client: client)
+        case RimeKey.pageDown, 0x3D:
+            return pageCandidates(delta: 1, client: client)
         case RimeKey.down:
             if candidateWindow.isExpanded {
                 extendExpandedPagesIfNeeded()
@@ -6548,10 +6554,10 @@ final class RIMESController: IMKInputController {
             guard let selection = candidateWindow.selectedCandidateSelection else { return false }
             selectCandidate(selection)
             return true
-        case 0x31...0x39 where candidateWindow.isExpanded:
+        case 0x31...0x39 where candidateWindow.isExpanded || candidateWindow.usesNumericSelectionKeys:
             let visibleIndex = Int(keycode - 0x31)
-            guard let selection = candidateWindow.expandedSelection(atVisibleIndex: visibleIndex) else {
-                IMELog.write("candidate matrix digit \(visibleIndex + 1) ignored; candidate is hidden")
+            guard let selection = candidateWindow.selection(atVisibleIndex: visibleIndex) else {
+                IMELog.write("candidate digit \(visibleIndex + 1) ignored; outside visible page")
                 return true
             }
             selectCandidate(selection)
@@ -6564,10 +6570,30 @@ final class RIMESController: IMKInputController {
     @discardableResult
     private func pageCandidates(delta: Int, client: IMKTextInput) -> Bool {
         guard candidateWindow.hasInteractableCandidates else { return false }
+        if candidateWindow.isExpanded {
+            if delta > 0 { extendExpandedPagesIfNeeded() }
+            return candidateWindow.moveExpandedSelection(rowDelta: delta)
+        }
+        guard delta < 0 ? candidateWindow.canPageBackward : candidateWindow.canPageForward else { return true }
         if candidateWindow.movePage(delta: delta) { return true }
+        let before = rimeEngine.getContext(session: session)
         let keycode = delta < 0 ? RimeKey.pageUp : RimeKey.pageDown
         _ = processRimeKey(keycode, mask: 0, client: client)
+        let after = rimeEngine.getContext(session: session)
+        if after.pageNo != before.pageNo, after.input == before.input {
+            candidateWindow.enterEnginePage(direction: delta)
+        }
         return true
+    }
+
+    @discardableResult
+    func pageCandidates(delta: Int, owner: FocusToken) -> Bool {
+        guard session != 0, focusToken == owner,
+              let lease = InputFocusCoordinator.shared.interactionTarget(expected: owner),
+              lease.controller === self, let client = lease.client else { return false }
+        if chord.hasPending { chord.flush() }
+        mutualPairingState.reset()
+        return pageCandidates(delta: delta, client: client)
     }
 
     @discardableResult

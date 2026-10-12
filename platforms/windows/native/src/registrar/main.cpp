@@ -29,8 +29,14 @@ using rimes::windows::tsf::kTextServiceClsidString;
 
 constexpr wchar_t kThreadingModel[] = L"Apartment";
 
+// product_version.rc.in embeds the full mascot first and the black horn
+// second. AddLanguageProfile takes a zero-based icon index, so use the horn
+// for the Windows input-method/language-bar indicator instead of the mascot.
+constexpr ULONG kLanguageProfileIconIndex = 1;
+
 enum class Command {
   kMetadata,
+  kDiagnose,
   kRegister,
   kUnregister,
   kVerify,
@@ -172,6 +178,7 @@ bool PrintWin32Failure(const char* operation, const LSTATUS result) {
 void PrintUsage() {
   std::cerr << "Usage:\n"
             << "  RimesRegistrar metadata\n"
+            << "  RimesRegistrar diagnose\n"
             << "  RimesRegistrar register --dll <absolute-path> [--dry-run]\n"
             << "  RimesRegistrar unregister --dll <absolute-path> [--dry-run]\n"
             << "  RimesRegistrar verify --dll <absolute-path>\n"
@@ -186,6 +193,8 @@ bool ParseOptions(const int argc, wchar_t** argv, Options* options) {
   const std::wstring_view command(argv[1]);
   if (command == L"metadata") {
     options->command = Command::kMetadata;
+  } else if (command == L"diagnose") {
+    options->command = Command::kDiagnose;
   } else if (command == L"register") {
     options->command = Command::kRegister;
   } else if (command == L"unregister") {
@@ -203,7 +212,8 @@ bool ParseOptions(const int argc, wchar_t** argv, Options* options) {
     if (argument == L"--dry-run") {
       if (options->command == Command::kVerify ||
           options->command == Command::kVerifyAbsent ||
-          options->command == Command::kMetadata) {
+          options->command == Command::kMetadata ||
+          options->command == Command::kDiagnose) {
         return false;
       }
       options->dry_run = true;
@@ -216,7 +226,8 @@ bool ParseOptions(const int argc, wchar_t** argv, Options* options) {
     return false;
   }
 
-  if (options->command != Command::kMetadata && options->dll_path.empty()) {
+  if (options->command != Command::kMetadata &&
+      options->command != Command::kDiagnose && options->dll_path.empty()) {
     return false;
   }
   return true;
@@ -731,6 +742,52 @@ bool LoadClassFactory() {
   return true;
 }
 
+// Read-only host-eligibility report. A successful basic COM registration does
+// not prove eligibility in immersive/UI-less hosts, or validate a signature.
+// Never "repair" this by claiming categories the service does not implement.
+bool PrintHostCapabilities() {
+  ComRegistrationState com_state;
+  ComPtr<ITfInputProcessorProfiles> profiles;
+  ComPtr<ITfCategoryMgr> categories;
+  bool processor = false, profile = false;
+  if (!QueryComRegistration(&com_state) || !CreateProfiles(&profiles) ||
+      !CreateCategoryManager(&categories) ||
+      !IsProcessorRegistered(profiles.Get(), &processor) ||
+      !IsProfileRegistered(profiles.Get(), &profile)) return false;
+  BOOL enabled = FALSE;
+  const auto enabled_result = profiles->IsEnabledLanguageProfile(
+      kTextServiceClsid, kLanguageId, kLanguageProfileGuid, &enabled);
+  std::ostringstream output;
+  output << std::boolalpha << "{\"comRegistered\":" << com_state.complete
+         << ",\"processorRegistered\":" << processor
+         << ",\"profileRegistered\":" << profile
+         << ",\"profileEnabled\":"
+         << (SUCCEEDED(enabled_result) ? (enabled ? "true" : "false") : "null")
+         << ",\"categories\":{";
+  struct Category { const char* name; const GUID* guid; };
+  const Category values[] = {
+      {"keyboard", &GUID_TFCAT_TIP_KEYBOARD},
+      {"displayAttributes", &GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER},
+      {"immersive", &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT},
+      {"uiElement", &GUID_TFCAT_TIPCAP_UIELEMENTENABLED},
+      {"systemTray", &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT},
+      {"inputModeCompartment", &GUID_TFCAT_TIPCAP_INPUTMODECOMPARTMENT}};
+  bool first = true;
+  for (const auto& item : values) {
+    ComPtr<IEnumGUID> items;
+    bool present = false;
+    const auto result = categories->EnumItemsInCategory(*item.guid, items.Put());
+    if (FAILED(result)) return PrintHResultFailure("EnumItemsInCategory(diagnose)", result);
+    if (!EnumContainsGuid(items.Get(), kTextServiceClsid, &present)) return false;
+    if (!first) output << ',';
+    first = false;
+    output << '\"' << item.name << "\":" << present;
+  }
+  output << "}}\n";
+  std::cout << output.str();
+  return true;
+}
+
 bool VerifyTsf(const std::wstring& dll_path);
 
 bool VerifyTsfInFreshProcess(const std::wstring& dll_path) {
@@ -849,7 +906,7 @@ bool RegisterTsf(const std::wstring& dll_path) {
     result = profiles->AddLanguageProfile(
         kTextServiceClsid, kLanguageId, kLanguageProfileGuid, kDisplayName,
         static_cast<ULONG>(std::wcslen(kDisplayName)), dll_path.c_str(),
-        static_cast<ULONG>(dll_path.size()), 0);
+        static_cast<ULONG>(dll_path.size()), kLanguageProfileIconIndex);
     if (FAILED(result)) {
       PrintHResultFailure("AddLanguageProfile", result);
       goto rollback;
@@ -887,6 +944,19 @@ bool RegisterTsf(const std::wstring& dll_path) {
     std::cerr << "Registration verification failed; rolling back only state "
                  "created by this invocation.\n";
     goto rollback;
+  }
+  // Existing profiles also need updated icon metadata on upgrade. Refresh only
+  // after verification so a failed COM/TSF check leaves their metadata intact;
+  // do not remove/recreate the profile or change the user's enabled/default state.
+  if (profile_exists) {
+    result = profiles->AddLanguageProfile(
+        kTextServiceClsid, kLanguageId, kLanguageProfileGuid, kDisplayName,
+        static_cast<ULONG>(std::wcslen(kDisplayName)), dll_path.c_str(),
+        static_cast<ULONG>(dll_path.size()), kLanguageProfileIconIndex);
+    if (FAILED(result)) {
+      PrintHResultFailure("AddLanguageProfile(refresh icon)", result);
+      goto rollback;
+    }
   }
   std::cout
       << "Registered RIMES TSF service (current process registry view).\n";
@@ -1107,7 +1177,8 @@ void PrintMetadata() {
             << "\",\n"
             << "    \"languageId\": \"" << language_id.str() << "\",\n"
             << "    \"displayName\": \"" << Utf8(kDisplayName) << "\",\n"
-            << "    \"dll\": \"" << Utf8(kDllFileName) << "\"\n"
+            << "    \"dll\": \"" << Utf8(kDllFileName) << "\",\n"
+            << "    \"iconIndex\": " << kLanguageProfileIconIndex << "\n"
             << "  }\n"
             << "}\n";
 }
@@ -1123,6 +1194,14 @@ int wmain(const int argc, wchar_t** argv) {
   if (options.command == Command::kMetadata) {
     PrintMetadata();
     return 0;
+  }
+  if (options.command == Command::kDiagnose) {
+    ScopedCoInitialize com;
+    if (FAILED(com.result())) {
+      PrintHResultFailure("CoInitializeEx", com.result());
+      return 1;
+    }
+    return PrintHostCapabilities() ? 0 : 1;
   }
 
   std::wstring dll_path;
@@ -1177,6 +1256,7 @@ int wmain(const int argc, wchar_t** argv) {
       succeeded = VerifyTsfAbsent();
       break;
     case Command::kMetadata:
+    case Command::kDiagnose:
       succeeded = true;
       break;
   }

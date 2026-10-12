@@ -1,5 +1,6 @@
 #include "BrokerClient.h"
 #include "key_routing.hpp"
+#include "../core/buffer_keys.hpp"
 
 #include <Windows.h>
 
@@ -56,6 +57,17 @@ void ExpectUnavailable(BrokerClient* client, BrokerKeyPhase phase,
 }
 
 int RunContractTests() {
+  using namespace rimes::windows;
+  const auto send_mods = core::ShortcutModifiers(MOD_ALT | MOD_SHIFT);
+  Expect(core::IsBufferSendChord(VK_RETURN, send_mods), "default send is Alt+Shift+Enter");
+  Expect(core::IsBufferSendChord(VK_RETURN, send_mods | unsigned(core::KeyModifiers::kCapsLock) |
+                                  unsigned(core::KeyModifiers::kNumLock)), "lock state does not affect send prediction");
+  for (const auto extra : {core::KeyModifiers::kControl, core::KeyModifiers::kWindows, core::KeyModifiers::kAltGr})
+    Expect(!core::IsBufferSendChord(VK_RETURN, send_mods | unsigned(extra)), "extra modifiers do not alias send");
+  Expect(!core::IsBufferSendChord(VK_RETURN, unsigned(core::KeyModifiers::kControl)), "old Ctrl+Enter is not a default alias");
+  Expect(core::IsBufferSendChord('J', core::ShortcutModifiers(MOD_CONTROL | MOD_SHIFT), 'J', MOD_CONTROL | MOD_SHIFT),
+         "custom key and modifiers use the same matcher as Broker");
+  Expect(!core::IsBufferSendChord('J', 0, 'J', MOD_CONTROL | MOD_SHIFT), "bare letter never aliases a configured modified send");
   using rimes::windows::tsf::detail::RoutePrintableKey;
   const auto shift = static_cast<std::uint32_t>(
       rimes::windows::core::KeyModifiers::kShift);
@@ -69,9 +81,16 @@ int RunContractTests() {
     Expect(RoutePrintableKey(key, 0, false, true, true),
            "Buffer still captures idle ASCII numbers");
   }
-  for (WPARAM key = VK_NUMPAD0; key <= VK_NUMPAD9; ++key)
-    Expect(!RoutePrintableKey(key, 0, false, false, false),
-           "idle numpad digits stay with the native editor");
+  for (WPARAM key = VK_NUMPAD0; key <= VK_DIVIDE; ++key) {
+    for (const auto modifiers : {std::uint32_t{0}, shift}) {
+      Expect(!RoutePrintableKey(key, modifiers, false, false, false),
+             "idle keypad digits, decimal and operators stay with the native editor, including Shift");
+      Expect(RoutePrintableKey(key, modifiers, true, false, false),
+             "keypad commands during composition remain an IME key");
+      Expect(RoutePrintableKey(key, modifiers, false, true, true),
+             "Buffer still captures keypad input in ASCII mode");
+    }
+  }
   for (const WPARAM key : std::vector<WPARAM>{'A', 'Z', VK_SPACE, VK_OEM_2}) {
     Expect(!RoutePrintableKey(key, 0, false, false, true),
            "authoritative ASCII mode does not claim host printable keys");
@@ -80,6 +99,12 @@ int RunContractTests() {
   }
   Expect(RoutePrintableKey('N', 0, false, false, false),
          "Chinese letters still start a composition");
+  for (const bool ascii : {false, true}) {
+    Expect(!RoutePrintableKey(VK_SPACE, 0, false, false, ascii),
+           "idle space stays with the editor in both Chinese and ASCII modes");
+    Expect(RoutePrintableKey(VK_SPACE, 0, true, false, ascii),
+           "composition space still confirms a candidate");
+  }
   auto client = CreateBrokerClient();
   Expect(client != nullptr, "CreateBrokerClient returns a client");
   if (!client) {

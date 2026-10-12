@@ -20,8 +20,17 @@
 #include <string>
 #include <vector>
 
+#ifdef RIMES_NATIVE_LUA_PLUGIN
+// Desktop cross-check only: the stock Lua plugin has no mobile error recorder.
+// Inspect stderr as well as candidate output; do not equate an empty luaError
+// field in this build with the instrumented iOS runtime's clean-error guarantee.
+#include <dlfcn.h>
+static const char* rimes_lua_last_error() { return ""; }
+static void rimes_lua_clear_error() {}
+#else
 extern "C" const char* rimes_lua_last_error(void);
 extern "C" void rimes_lua_clear_error(void);
+#endif
 
 namespace {
 
@@ -62,6 +71,9 @@ RimeApi* start(const std::string& shared, const std::string& user, bool deployme
     traits.distribution_version = "0.1";
     traits.app_name = "rime.rimes_host_probe";
     traits.min_log_level = 3;
+#ifdef RIMES_NATIVE_LUA_PLUGIN
+    traits.min_log_level = 2;
+#endif
     traits.modules = deployment ? deploying : runtime;
     RimeApi* api = rime_get_api();
     api->setup(&traits);
@@ -77,8 +89,14 @@ std::string lua_error() {
 }  // namespace
 
 int main(int argc, char** argv) {
+#ifdef RIMES_NATIVE_LUA_PLUGIN
+    if (!dlopen(RIMES_NATIVE_LUA_PLUGIN, RTLD_NOW | RTLD_GLOBAL)) {
+        std::fprintf(stderr, "cannot load desktop Lua plugin: %s\n", dlerror());
+        return 2;
+    }
+#endif
     if (argc < 4) {
-        std::fprintf(stderr, "usage: host_probe <staged-root> deploy|load|type <schema>... [keys]\n");
+        std::fprintf(stderr, "usage: host_probe <staged-root> deploy|load|type <schema>... [keys [enabled-option...]]\n");
         return 2;
     }
     const std::string root = argv[1], mode = argv[2];
@@ -123,6 +141,7 @@ int main(int argc, char** argv) {
         const bool selected = session && api->select_schema(session, argv[3]);
         std::string committed;
         if (selected) {
+            for (int i = 5; i < argc; ++i) api->set_option(session, argv[i], true);
             for (const char* key = argv[4]; *key; ++key) {
                 api->process_key(session, *key, 0);
                 RIME_STRUCT(RimeCommit, commit);
@@ -154,7 +173,7 @@ int main(int argc, char** argv) {
             std::printf("%s\"%s\"", i ? "," : "", escaped(candidates[i].c_str()).c_str());
         }
         std::printf("]}\n");
-        failures += !selected;
+        failures += !selected || !error.empty();
         if (session) api->destroy_session(session);
         api->finalize();
         std::filesystem::remove_all(user);

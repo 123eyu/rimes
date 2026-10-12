@@ -4,15 +4,13 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
-#include <string_view>
 #include <vector>
 
 #include "theme.hpp"
 
 namespace rimes::windows::ui {
 
-// Compact horizontal candidate strip metrics (macOS CandidateLayout parity).
-// 96 DPI = one macOS point. Separators stay one physical pixel at paint time.
+// Candidate strip metrics in device-independent pixels (96 DPI).
 struct CandidateStripMetrics {
   int max_strip_width_dip = 460;
   int strip_height_dip = 34;
@@ -26,11 +24,6 @@ struct CandidateStripMetrics {
   int annotation_font_dip = 9;
   int strip_radius_dip = 6;
   int pill_radius_dip = 6;
-  int preedit_radius_dip = 5;
-  int preedit_height_dip = 20;
-  int preedit_gap_dip = 5;
-  int preedit_inset_dip = 6;
-  int preedit_font_dip = 12;
   int caret_gap_dip = 6;
 };
 
@@ -67,8 +60,6 @@ struct DipRect {
 struct CandidateStripLayout {
   float width_dip = 0;
   float height_dip = 0;
-  bool show_preedit = false;
-  DipRect preedit{};
   DipRect strip{};
   std::vector<DipRect> pills;   // parallel to input items
   std::vector<std::size_t> order;  // paint/hit order by visual row
@@ -76,79 +67,106 @@ struct CandidateStripLayout {
 };
 
 // Reserve each item inside the actual viewport, including a single very long
-// candidate. Painting and hit testing use these exact rectangles. Wrapped rows
-// preserve page order, and semibold width is supplied by the native measurer.
+// candidate. Horizontal pages stay on one row, using the monitor width before
+// clipping long entries. Painting and hit testing use these exact rectangles;
+// semibold width is supplied by the native measurer. Composition stays inline
+// in the host editor, so this layout contains only candidates.
 [[nodiscard]] inline CandidateStripLayout LayoutCandidateStripMeasured(
     const std::vector<CandidateStripItem>& items,
-    float measured_preedit_width_dip, bool show_preedit,
     const CandidateStripMetrics& metrics, float available_width_dip, bool vertical = false, float available_height_dip = 0.f) {
   CandidateStripLayout layout;
-  const float max_width = (std::max)(1.f, (std::min)(
-      static_cast<float>(metrics.max_strip_width_dip),
-      available_width_dip > 0.f ? available_width_dip
-                               : static_cast<float>(metrics.max_strip_width_dip)));
+  if (items.empty()) return layout;
+  const float viewport = available_width_dip > 0.f ? available_width_dip
+      : static_cast<float>(metrics.max_strip_width_dip);
+  const float max_width = (std::max)(1.f, vertical ? (std::min)(viewport,
+      static_cast<float>(metrics.max_strip_width_dip)) : viewport);
   const float pad = (std::min)(static_cast<float>(metrics.bar_horizontal_padding_dip),
                                max_width * 0.2f);
   const float inner = max_width - 2.f * pad;
-  const float gap = static_cast<float>(metrics.inter_pill_spacing_dip * 2 +
-                                        metrics.separator_width_dip);
+  // Leave space for every hit target even in an exceptionally narrow viewport.
+  const float gap = (std::min)(
+      static_cast<float>(metrics.inter_pill_spacing_dip * 2 +
+                         metrics.separator_width_dip),
+      inner / static_cast<float>(2 * items.size() - 1));
   const float strip_h = static_cast<float>(metrics.strip_height_dip);
   const float pill_h = static_cast<float>(metrics.pill_height_dip);
-  const float preedit_h = show_preedit
-      ? static_cast<float>(metrics.preedit_height_dip) : 0.f;
-  const float strip_top = show_preedit && !items.empty()
-      ? preedit_h + static_cast<float>(metrics.preedit_gap_dip) : 0.f;
   const int vertical_rows = vertical && available_height_dip > 0.f
-      ? (std::max)(1, static_cast<int>((available_height_dip - strip_top) / strip_h))
+      ? (std::max)(1, static_cast<int>(available_height_dip / strip_h))
       : static_cast<int>((std::max)(std::size_t{1}, items.size()));
   const int vertical_columns = vertical
       ? (std::max)(1, (static_cast<int>(items.size()) + vertical_rows - 1) / vertical_rows) : 1;
   const float column_width = inner / static_cast<float>(vertical_columns);
+  std::vector<float> widths;
+  widths.reserve(items.size());
+  for (const auto& item : items) {
+    widths.push_back(static_cast<float>((std::max)(0, item.content_width_dip)) +
+                     2.f * static_cast<float>(metrics.pill_padding_dip));
+  }
+  float width_limit = column_width;
+  if (!vertical) {
+    // Share the remaining width among long entries, preserving short entries
+    // at their natural width instead of letting one long phrase crowd them out.
+    auto sorted = widths;
+    std::sort(sorted.begin(), sorted.end());
+    float remaining = inner - gap * static_cast<float>(items.size() - 1);
+    for (std::size_t i = 0; i < sorted.size(); ++i) {
+      width_limit = remaining / static_cast<float>(sorted.size() - i);
+      if (sorted[i] >= width_limit) break;
+      remaining -= sorted[i];
+    }
+  }
   float row_end = 0.f, widest = 0.f;
   int row = 0;
   layout.pills.reserve(items.size());
   layout.order.reserve(items.size());
   for (std::size_t i = 0; i < items.size(); ++i) {
-    const float content = static_cast<float>((std::max)(0, items[i].content_width_dip));
-    const float width = (std::min)(vertical ? column_width : inner, (std::max)(
-        2.f * static_cast<float>(metrics.pill_padding_dip),
-        content + 2.f * static_cast<float>(metrics.pill_padding_dip)));
+    const float width = (std::min)(width_limit, widths[i]);
     float x = row_end == 0.f ? 0.f : row_end + gap;
     if (vertical) {
       row = static_cast<int>(i) % vertical_rows;
       x = static_cast<float>(static_cast<int>(i) / vertical_rows) * column_width;
-    } else if (row_end > 0.f && x + width > inner + 0.01f) {
-      ++row;
-      x = 0.f;
     }
-    const float y = strip_top + strip_h * static_cast<float>(row) +
+    const float y = strip_h * static_cast<float>(row) +
                     (strip_h - pill_h) * 0.5f;
-    layout.pills.push_back({pad + x, y, pad + x + width, y + pill_h});
+    const float right = (std::min)(max_width - pad, pad + x + width);
+    layout.pills.push_back({pad + x, y, right, y + pill_h});
     layout.order.push_back(i);
-    row_end = x + width;
+    row_end = right - pad;
     widest = (std::max)(widest, row_end);
   }
-  layout.row_count = items.empty() ? 0 : vertical ? (std::min)(vertical_rows, static_cast<int>(items.size())) : row + 1;
-  layout.show_preedit = show_preedit;
-  const float preedit_w = show_preedit ? (std::min)(max_width, (std::max)(24.f,
-      (std::max)(0.f, measured_preedit_width_dip) +
-          2.f * static_cast<float>(metrics.preedit_inset_dip))) : 0.f;
-  const float strip_w = items.empty() ? 0.f : widest + 2.f * pad;
-  layout.width_dip = (std::min)(max_width, (std::max)(preedit_w, strip_w));
-  layout.strip = {0.f, strip_top, layout.width_dip,
-                  strip_top + strip_h * static_cast<float>(layout.row_count)};
-  layout.preedit = show_preedit ? DipRect{0.f, 0.f, preedit_w, preedit_h} : DipRect{};
-  layout.height_dip = items.empty() ? preedit_h : layout.strip.bottom;
+  layout.row_count = vertical ? (std::min)(vertical_rows, static_cast<int>(items.size())) : 1;
+  layout.width_dip = (std::min)(max_width, widest + 2.f * pad);
+  layout.height_dip = strip_h * static_cast<float>(layout.row_count);
+  layout.strip = {0.f, 0.f, layout.width_dip, layout.height_dip};
   return layout;
 }
 
-[[nodiscard]] inline CandidateStripLayout LayoutCandidateStrip(
-    const std::vector<CandidateStripItem>& items, std::wstring_view preedit,
+[[nodiscard]] inline CandidateStripLayout LayoutCandidateMatrixMeasured(
+    const std::vector<CandidateStripItem>& items,
+    const std::vector<std::size_t>& row_sizes,
     const CandidateStripMetrics& metrics, float available_width_dip) {
-  return LayoutCandidateStripMeasured(items,
-      static_cast<float>(preedit.size()) *
-          static_cast<float>(metrics.preedit_font_dip) * 0.6f,
-      !preedit.empty(), metrics, available_width_dip);
+  CandidateStripLayout matrix;
+  std::size_t offset = 0;
+  for (const auto count : row_sizes) {
+    if (count == 0 || count > items.size() - offset) return {};
+    const std::vector<CandidateStripItem> row(
+        items.begin() + offset, items.begin() + offset + count);
+    const auto layout = LayoutCandidateStripMeasured(row, metrics, available_width_dip);
+    const float top = matrix.height_dip + (offset == 0 ? 0.f : 3.f);
+    for (auto pill : layout.pills) {
+      pill.top += top;
+      pill.bottom += top;
+      matrix.pills.push_back(pill);
+      matrix.order.push_back(matrix.order.size());
+    }
+    matrix.width_dip = (std::max)(matrix.width_dip, layout.width_dip);
+    matrix.height_dip = top + layout.height_dip;
+    ++matrix.row_count;
+    offset += count;
+  }
+  if (offset != items.size()) return {};
+  matrix.strip = {0, 0, matrix.width_dip, matrix.height_dip};
+  return matrix;
 }
 
 [[nodiscard]] inline int HitTestCandidateStrip(

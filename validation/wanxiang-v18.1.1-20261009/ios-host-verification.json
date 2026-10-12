@@ -1,0 +1,629 @@
+{
+ "id": "wanxiang",
+ "status": "ready",
+ "version": "20261008.26a9efe",
+ "recommended": [
+  "wanxiang"
+ ],
+ "availableUpstream": [
+  "wanxiang",
+  "wanxiang_abbrev",
+  "wanxiang_abbrev_t9",
+  "wanxiang_english",
+  "wanxiang_mixedcode",
+  "wanxiang_phrase",
+  "wanxiang_phrase_t9",
+  "wanxiang_reverse",
+  "wanxiang_t9",
+  "wanxiang_t9i"
+ ],
+ "lint": {
+  "fatal": null,
+  "schemes": [
+   {
+    "id": "wanxiang",
+    "name": "万象拼音·灵犀兼容版",
+    "dependencies": [
+     "wanxiang_mixedcode",
+     "wanxiang_reverse",
+     "wanxiang_english",
+     "wanxiang_abbrev",
+     "wanxiang_phrase"
+    ],
+    "recommended": true,
+    "blocking": [],
+    "warnings": []
+   },
+   {
+    "id": "wanxiang_abbrev",
+    "name": "万象：简码词库转换",
+    "dependencies": [],
+    "recommended": false,
+    "blocking": [],
+    "warnings": []
+   },
+   {
+    "id": "wanxiang_english",
+    "name": "万象英文",
+    "dependencies": [],
+    "recommended": false,
+    "blocking": [],
+    "warnings": []
+   },
+   {
+    "id": "wanxiang_mixedcode",
+    "name": "万象：英文与混合编码",
+    "dependencies": [],
+    "recommended": false,
+    "blocking": [],
+    "warnings": []
+   },
+   {
+    "id": "wanxiang_phrase",
+    "name": "万象：自定义词库转换",
+    "dependencies": [],
+    "recommended": false,
+    "blocking": [],
+    "warnings": []
+   },
+   {
+    "id": "wanxiang_reverse",
+    "name": "万象：拆分与笔画反查",
+    "dependencies": [],
+    "recommended": false,
+    "blocking": [],
+    "warnings": []
+   }
+  ],
+  "warnings": [
+   "global default.custom.yaml, installation state and other frontends' settings are never imported",
+   "lua/wanxiang/bit.lua: optional module bit is not in the package",
+   "lua/wanxiang/bit.lua: optional module bit32 is not in the package",
+   "lua/wanxiang/random_tools.lua: optional module bit is not in the package",
+   "lua/wanxiang/random_tools.lua: optional module bit32 is not in the package",
+   "scheme has Lua input logic; it runs in the restricted runtime"
+  ],
+  "unsupported": [],
+  "fileCount": 95,
+  "expandedBytes": 91458710,
+  "skipped": []
+ },
+ "notes": [],
+ "components": [
+  [
+   "amzxyz/rime-wanxiang",
+   "26a9efeb18e604c091f4d3890d00bec723fe755f",
+   "CC-BY-4.0"
+  ],
+  [
+   "scholay/rimes",
+   "generated",
+   "Apache-2.0"
+  ]
+ ],
+ "modifications": [
+  [
+   "README-RIMES.txt",
+   "added mobile import instructions and explicit feature limitations"
+  ],
+  [
+   "default.yaml",
+   "schema_list replaced with this package's schemes; unrelated top-level settings dropped"
+  ],
+  [
+   "dicts_abbrev.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_cuoyin.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_diming.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_duoyin.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_en.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_fangyan.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_huaxue.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_jichu.dict.yaml",
+   "import_tables extended with the parts of a dictionary split for the 32 MB file limit"
+  ],
+  [
+   "dicts_jichu.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_jichu.dict.yaml",
+   "split into 2 files for the 32 MB file limit; this file keeps the first part"
+  ],
+  [
+   "dicts_jichu.part2.dict.yaml",
+   "part 2 of dicts_jichu.dict.yaml, split verbatim at a line boundary for the 32 MB file limit"
+  ],
+  [
+   "dicts_lianxiang.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_mingren.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_mixed.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_renming.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_shici.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_taifeng.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_wuzhong.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_yaopin.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_yiren.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_yixue.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "dicts_zi.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_context_reorder__F.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_context_reorder__P.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_super_english__F.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_super_english__P.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_super_english__T.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_super_sequence__F.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_super_sequence__P.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_unicode_conversion__P.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/rimes_shims/wanxiang_unicode_conversion__T.lua",
+   "generated module returning one field of an upstream Lua module"
+  ],
+  [
+   "lua/wanxiang/super_comment_preedit.lua",
+   "Lua correction dictionary path aligned with the flattened packaged source table"
+  ],
+  [
+   "lua/wanxiang/super_replacer.lua",
+   "generated cache database moved to a mobile-compatible resource name inside the isolated user directory"
+  ],
+  [
+   "lua/wanxiang/super_tips.lua",
+   "generated cache database moved to a mobile-compatible resource name inside the isolated user directory"
+  ],
+  [
+   "lua/wanxiang/userdb.lua",
+   "return nil when native UserDb allocation fails, preventing recursive __index on a missing _db"
+  ],
+  [
+   "wanxiang.dict.yaml",
+   "import_tables extended with the parts of a dictionary split for the 32 MB file limit"
+  ],
+  [
+   "wanxiang.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "wanxiang.schema.yaml",
+   "Lua components of the form *module*field routed through generated one-line modules"
+  ],
+  [
+   "wanxiang.schema.yaml",
+   "mobile Base full-pinyin profile: disable unavailable octagram, prebuilt charset filter and desktop redeployment commands; label compatibility limits"
+  ],
+  [
+   "wanxiang_abbrev.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "wanxiang_english.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ],
+  [
+   "wanxiang_english.schema.yaml",
+   "Lua components of the form *module*field routed through generated one-line modules"
+  ],
+  [
+   "wanxiang_mixedcode.dict.yaml",
+   "resource ids rewritten for flattened subdirectory files"
+  ]
+ ],
+ "fileCount": 95,
+ "expandedBytes": 91458710,
+ "contentSHA256": "13a7a8c9c86d939cc190c0451dba14322ea2be4e1ee42934f3c1719e3f3ad091",
+ "archive": "rimes-scheme-wanxiang-20261008.26a9efe.zip",
+ "bytes": 33402176,
+ "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+ "verification": {
+  "importer": {
+   "expandedBytes": 91458710,
+   "fatal": null,
+   "fileCount": 95,
+   "schemes": [
+    {
+     "blocking": [],
+     "dependencies": [
+      "wanxiang_mixedcode",
+      "wanxiang_reverse",
+      "wanxiang_english",
+      "wanxiang_abbrev",
+      "wanxiang_phrase"
+     ],
+     "id": "wanxiang",
+     "name": "万象拼音·灵犀兼容版",
+     "recommended": true,
+     "warnings": []
+    },
+    {
+     "blocking": [],
+     "dependencies": [],
+     "id": "wanxiang_abbrev",
+     "name": "万象：简码词库转换",
+     "recommended": false,
+     "warnings": []
+    },
+    {
+     "blocking": [],
+     "dependencies": [],
+     "id": "wanxiang_english",
+     "name": "万象英文",
+     "recommended": false,
+     "warnings": []
+    },
+    {
+     "blocking": [],
+     "dependencies": [],
+     "id": "wanxiang_mixedcode",
+     "name": "万象：英文与混合编码",
+     "recommended": false,
+     "warnings": []
+    },
+    {
+     "blocking": [],
+     "dependencies": [],
+     "id": "wanxiang_phrase",
+     "name": "万象：自定义词库转换",
+     "recommended": false,
+     "warnings": []
+    },
+    {
+     "blocking": [],
+     "dependencies": [],
+     "id": "wanxiang_reverse",
+     "name": "万象：拆分与笔画反查",
+     "recommended": false,
+     "warnings": []
+    }
+   ],
+   "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+   "unsupported": [],
+   "warnings": [
+    "不会导入全局 default.custom.yaml、安装标识、其他输入法界面配置，也不会修改现有并击方案。",
+    "lua/wanxiang/bit.lua 的可选模块 bit 未随包提供，将使用脚本已有降级路径。",
+    "lua/wanxiang/bit.lua 的可选模块 bit32 未随包提供，将使用脚本已有降级路径。",
+    "lua/wanxiang/random_tools.lua 的可选模块 bit 未随包提供，将使用脚本已有降级路径。",
+    "lua/wanxiang/random_tools.lua 的可选模块 bit32 未随包提供，将使用脚本已有降级路径。",
+    "方案含 Lua 输入逻辑，将在受限运行环境中执行；导入检查不会执行脚本。"
+   ]
+  },
+  "deploy": {
+   "schemes": [
+    "wanxiang_mixedcode",
+    "wanxiang_reverse",
+    "wanxiang_english",
+    "wanxiang_abbrev",
+    "wanxiang_phrase",
+    "wanxiang"
+   ],
+   "failures": [],
+   "seconds": 9.9,
+   "peakMemoryMB": 1322,
+   "deployedMB": 205,
+   "withinDeployedLimit": true
+  },
+  "load": {
+   "schemes": [
+    "wanxiang"
+   ],
+   "failures": []
+  },
+  "probes": [
+   {
+    "schema": "wanxiang",
+    "keys": "nihao",
+    "expect": "你好",
+    "passed": true,
+    "candidates": [
+     "你好",
+     "拟好",
+     "泥蒿",
+     "你",
+     "泥"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "nihao ",
+    "expect": "你好",
+    "passed": true,
+    "candidates": [],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "zhongguo",
+    "expect": "中国",
+    "passed": true,
+    "candidates": [
+     "中国",
+     "种过",
+     "重过",
+     "种果",
+     "中过"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "jingji",
+    "expect": "經濟",
+    "options": [
+     "s2t"
+    ],
+    "passed": true,
+    "candidates": [
+     "經濟",
+     "競技",
+     "經紀",
+     "荊棘",
+     "京急"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "jingji",
+    "expect": "經濟",
+    "options": [
+     "s2hk"
+    ],
+    "passed": true,
+    "candidates": [
+     "經濟",
+     "競技",
+     "經紀",
+     "荊棘",
+     "京急"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "jingji",
+    "expect": "經濟",
+    "options": [
+     "s2tw"
+    ],
+    "passed": true,
+    "candidates": [
+     "經濟",
+     "競技",
+     "經紀",
+     "荊棘",
+     "京急"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "U4e2d",
+    "expect": "中",
+    "passed": true,
+    "candidates": [
+     "中",
+     "U+4E2D",
+     "0x4E2D",
+     "20013",
+     "0b100111000101101"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "R123",
+    "expect": "壹佰贰拾叁元整",
+    "passed": true,
+    "candidates": [
+     "一百二十三",
+     "壹佰贰拾叁元整",
+     "壹佰贰拾叁",
+     "一百二十三元整",
+     "123"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "V1+1",
+    "expect": "1+1=2",
+    "passed": true,
+    "candidates": [
+     "2",
+     "1+1=2"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "/rq",
+    "expect": "年",
+    "passed": true,
+    "candidates": [
+     "2026年10月09日",
+     "2026-10-09",
+     "2026/10/09",
+     "2026.10.09",
+     "20261009"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "/wx",
+    "expect": "标准版v18.1.1",
+    "passed": true,
+    "candidates": [
+     "标准版v18.1.1",
+     "https://github.com/amzxyz/rime-wanxiang",
+     "https://cnb.cool/amzxyz/rime-wanxiang",
+     "https://amzxyz.github.io/rime-wanxiang/"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "`shiba",
+    "expect": "木",
+    "passed": true,
+    "candidates": [
+     "木",
+     "矲",
+     "𥑽",
+     "𩚿",
+     "豝"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "xiaolian",
+    "expect": "😀",
+    "options": [
+     "emoji"
+    ],
+    "passed": true,
+    "candidates": [
+     "笑脸",
+     "😀",
+     "小脸",
+     "小莲",
+     "孝廉"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "hello",
+    "expect": "hello",
+    "passed": true,
+    "candidates": [
+     "hello",
+     "河流里",
+     "河里捞",
+     "合拢了",
+     "赫雷拉"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "apple",
+    "expect": "苹果",
+    "options": [
+     "english_chinese"
+    ],
+    "passed": true,
+    "candidates": [
+     "apple",
+     "苹果",
+     "apples",
+     "applet",
+     "小程序"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "`mumu8",
+    "expect": "林",
+    "passed": true,
+    "candidates": [
+     "林",
+     "栂",
+     "樑",
+     "㮪",
+     "㯦"
+    ],
+    "luaError": ""
+   },
+   {
+    "schema": "wanxiang",
+    "keys": "/sym",
+    "expect": "超级符号",
+    "passed": true,
+    "candidates": [
+     "超级符号"
+    ],
+    "luaError": ""
+   }
+  ],
+  "passed": true,
+  "importerSHA256": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d"
+ }
+}

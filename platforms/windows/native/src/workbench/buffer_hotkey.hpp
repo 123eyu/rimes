@@ -26,7 +26,7 @@ class BufferHotkeyRegistration {
   HotkeyUpdate Update(unsigned modifiers, unsigned key, Save save) {
     // A rejected/malformed setting must never reserve an ordinary typing key
     // or a system shortcut. MOD_NOREPEAT is internal, not a user modifier.
-    if (!ValidBufferHotkeyModifiers(modifiers) || key < 'A' || key > 'Z')
+    if (!core::ValidShortcut(key, modifiers))
       return HotkeyUpdate::kInvalid;
     if (Registered() && modifiers == modifiers_ && key == key_)
       return save() ? HotkeyUpdate::kSaved : HotkeyUpdate::kSaveFailed;
