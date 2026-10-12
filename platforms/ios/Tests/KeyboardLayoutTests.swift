@@ -644,7 +644,14 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertEqual(ThinkingCaption.caption("还没想完"), "")
         XCTAssertEqual(ThinkingCaption.caption("Let me think about the ranking of"), "Let me think about the ranking of")
         XCTAssertFalse(c2.layoutViews.result.text.contains(ThinkingText.marker))
-        c2.developmentPreview("答案是这样。"); RunLoop.main.run(until: Date().addingTimeInterval(1.0))
+        c2.developmentPreview("答案是这样。")
+        // CADisplayLink advances per rendered frame and caps long frame gaps.
+        // A busy headless simulator may not deliver enough frames in one second;
+        // wait for completion within a bound, keeping the partial-reveal checks above.
+        let deadline = Date().addingTimeInterval(5)
+        while c2.layoutViews.result.text != "答案是这样。", Date() < deadline {
+            RunLoop.main.run(until: Date().addingTimeInterval(0.02))
+        }
         XCTAssertFalse(c2.layoutViews.result.thinking)
         XCTAssertEqual(c2.layoutViews.result.text, "答案是这样。")
     }
