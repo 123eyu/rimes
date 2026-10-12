@@ -294,6 +294,28 @@ class GitHistoryTests(unittest.TestCase):
         self.assertEqual(len(problems), 1)
         self.assertIn("Shrink the capsule", problems[0])
 
+    def test_lint_reconciles_an_already_applied_patch_without_allowing_new_bad_titles(self):
+        start = self.run_git("rev-parse", "HEAD").strip()
+        self.run_git("switch", "-c", "historical", start)
+        (self.root / "installer.txt").write_text("fixed installer\n")
+        self.run_git("add", "installer.txt")
+        self.commit("release(windows): historical installer fix")
+        old = self.run_git("rev-parse", "HEAD").strip()
+
+        self.run_git("switch", "-c", "integration", start)
+        self.run_git("cherry-pick", "--no-commit", old)
+        self.commit("fix(windows): deliver installer fix")
+        base = self.run_git("rev-parse", "HEAD").strip()
+        self.run_git("merge", "--no-ff", "historical", "-m", "chore: reconcile history")
+        self.assertEqual(tool.lint_commits(base, "HEAD"), [])
+
+        (self.root / "installer.txt").write_text("a genuinely different fix\n")
+        self.run_git("add", "installer.txt")
+        self.commit("release(windows): new unsupported title")
+        problems = tool.lint_commits(base, "HEAD")
+        self.assertEqual(len(problems), 1)
+        self.assertIn("new unsupported title", problems[0])
+
 
 class PlistTests(unittest.TestCase):
     def test_product_version_anchor_is_required(self):

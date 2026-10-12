@@ -524,6 +524,17 @@ def lint_commits(base: str, head: str) -> list[str]:
         if commit.subject.startswith('Revert "'):
             continue
         match = commit.parsed
+        if match is None or match["type"] not in ALLOWED_TYPES:
+            # Connecting an old branch can add its original commit to the range
+            # after the same patch was already cherry-picked into base. Check
+            # that commit's own lineage: `git cherry base head` cannot find the
+            # equivalent once the merge makes base an ancestor of head.
+            equivalent = any(
+                line.startswith("- ") and line[2:].startswith(commit.sha)
+                for line in git("cherry", base, commit.sha).splitlines()
+            )
+            if equivalent:
+                continue
         if match is None:
             problems.append(f"{commit.sha} {commit.subject}")
         elif match["type"] not in ALLOWED_TYPES:
