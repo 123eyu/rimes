@@ -179,9 +179,9 @@ import RimesCore
         check(container: idleHeight, content: idleHeight)
     }
 
-    @MainActor private func gapFixture() throws -> (keyboard: KeyboardViewController, container: UIView, idleHeight: CGFloat, window: UIWindow) {
+    @MainActor private func gapFixture(presented: Bool = true) throws -> (keyboard: KeyboardViewController, container: UIView, idleHeight: CGFloat, window: UIWindow) {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 900))
-        let parent = UIViewController()
+        let parent = GapTestContainerViewController()
         window.rootViewController = parent; window.makeKeyAndVisible()
         let container = UIView(frame: CGRect(x: 0, y: 0, width: 393, height: 874))
         parent.view.addSubview(container)
@@ -192,6 +192,11 @@ import RimesCore
         parent.addChild(keyboard); container.addSubview(keyboard.view)
         keyboard.didMove(toParent: parent)
         container.layoutIfNeeded()
+        if presented {
+            keyboard.beginAppearanceTransition(true, animated: false)
+            keyboard.endAppearanceTransition()
+            container.layoutIfNeeded()
+        }
         return (keyboard, container, keyboard.view.bounds.height, window)
     }
 
@@ -252,6 +257,65 @@ import RimesCore
         XCTAssertEqual(gap.height, 0, accuracy: 0.5)
         XCTAssertEqual(gap.recoveryAttempts, 0)
         XCTAssertFalse(keyboard.view.hasAmbiguousLayout)
+    }
+
+    func testUnchangedGapStartsRecoveryOnlyWhenKeyboardIsPresented() async throws {
+        let (keyboard, container, idleHeight, window) = try gapFixture(presented: false)
+        defer { keyboard.beginAppearanceTransition(false, animated: false); keyboard.endAppearanceTransition(); window.isHidden = true }
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 874 - idleHeight, accuracy: 0.5)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        // Presentation must start recovery even though no new gap is laid out.
+        keyboard.beginAppearanceTransition(true, animated: false); keyboard.endAppearanceTransition()
+        container.layoutIfNeeded()
+        XCTAssertTrue(keyboard.developmentHeightGap.recoveryScheduled)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertGreaterThanOrEqual(keyboard.developmentHeightGap.recoveryAttempts, 1)
+    }
+
+    func testClosingBufferOnDisappearDoesNotRestartGapRecovery() async throws {
+        let (keyboard, container, idleHeight, window) = try gapFixture()
+        defer { window.isHidden = true }
+        keyboard.developmentBuffer("关闭时检查高度")
+        container.frame.size.height = idleHeight + 80
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        keyboard.beginAppearanceTransition(false, animated: false); keyboard.endAppearanceTransition()
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        XCTAssertTrue(keyboard.layoutViews.buffer.isHidden)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        try await Task.sleep(nanoseconds: 600_000_000)
+        XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+    }
+
+    func testHostResigningCancelsRecoveryAndOffscreenLayoutCannotRestartIt() async throws {
+        let (keyboard, container, idleHeight, window) = try gapFixture()
+        defer { keyboard.beginAppearanceTransition(false, animated: false); keyboard.endAppearanceTransition(); window.isHidden = true }
+        keyboard.developmentBuffer("暂时失去焦点")
+        container.frame.size.height = idleHeight + 160
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        XCTAssertTrue(keyboard.developmentHeightGap.recoveryScheduled)
+        NotificationCenter.default.post(name: .NSExtensionHostWillResignActive, object: nil)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        // The host changes its container while the extension is inactive. That
+        // creates another gap callback, which must not restart height requests.
+        container.frame.size.height += 40
+        container.setNeedsLayout(); container.layoutIfNeeded()
+        XCTAssertGreaterThan(keyboard.developmentHeightGap.height, 80)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        try await Task.sleep(nanoseconds: 600_000_000)
+        XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
+        XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
+        // Reactivation can resume recovery without another gap-height change.
+        NotificationCenter.default.post(name: .NSExtensionHostDidBecomeActive, object: nil)
+        XCTAssertTrue(keyboard.developmentHeightGap.recoveryScheduled)
+        try await Task.sleep(nanoseconds: 200_000_000)
+        XCTAssertGreaterThanOrEqual(keyboard.developmentHeightGap.recoveryAttempts, 1)
     }
 
     func testHeightFollowsContentAndRotationAfterSystemSizing() throws {
@@ -331,4 +395,10 @@ import RimesCore
 @MainActor private final class SizingTestTextField: UITextField {
     let keyboard = KeyboardViewController()
     override var inputViewController: UIInputViewController? { keyboard }
+}
+
+/// Gap fixtures drive the extension's appearance independently of the host's
+/// visible window, just as the remote host may lay it out before presentation.
+@MainActor private final class GapTestContainerViewController: UIViewController {
+    override var shouldAutomaticallyForwardAppearanceMethods: Bool { false }
 }

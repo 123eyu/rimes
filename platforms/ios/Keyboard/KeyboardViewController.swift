@@ -568,6 +568,9 @@ final class KeyboardViewController: UIInputViewController {
         // changes for Buffer and candidates; it does not eliminate iOS cold-start
         // presentation flicker on its own.
         reassertHeight()
+        // The first gap can be laid out before the keyboard is presented. Its
+        // height may stay unchanged, so do not wait for another gap callback.
+        scheduleGapRecovery()
         releaseEdgeTouchDelay(); surface.feedback.prepare(); metrics.presented(since: initializationStart)
     }
     /// The second height calculation: registers the content height with the host
@@ -589,9 +592,12 @@ final class KeyboardViewController: UIInputViewController {
         scheduleGapRecovery()
     }
     private func scheduleGapRecovery() {
-        guard gapRecoveryAttempts < Self.gapRecoveryDelays.count else { return }
+        guard onscreen, gapPlaceholder.gap > 0.5, gapRecovery == nil,
+              gapRecoveryAttempts < Self.gapRecoveryDelays.count else { return }
         let work = DispatchWorkItem { [weak self] in
-            guard let self, self.gapPlaceholder.gap > 0.5 else { return }
+            guard let self else { return }
+            self.gapRecovery = nil
+            guard self.onscreen, self.gapPlaceholder.gap > 0.5 else { return }
             self.gapRecoveryAttempts += 1
             self.reassertHeight()
             self.scheduleGapRecovery()
@@ -611,13 +617,14 @@ final class KeyboardViewController: UIInputViewController {
         }
     }
     override func viewWillDisappear(_ animated: Bool) {
-        gapRecovery?.cancel(); gapRecovery = nil
         protect(); super.viewWillDisappear(animated)
     }
     @objc private func resume() {
         guard isViewLoaded, view.window != nil else { return }
         onscreen = true; currentDocument = DocumentIdentity.read(textDocumentProxy)
+        gapRecoveryAttempts = 0
         reloadPreferences(); choose(preferences.scheme); render()
+        scheduleGapRecovery()
         surface.feedback.prepare()
         applyPendingPaste()
     }
@@ -631,6 +638,11 @@ final class KeyboardViewController: UIInputViewController {
         bufferEnabled = mode.0; selectedPlugin = mode.1; refreshPluginMenu(); render()
     }
     @objc private func protect() {
+        // Losing focus can also close Buffer and change the gap during render.
+        // Stop recovery centrally and mark the keyboard inactive before cleanup
+        // so that neither path can enqueue another offscreen height request.
+        onscreen = false
+        gapRecovery?.cancel(); gapRecovery = nil
         closeClipboard()
         cancelBufferImport(); pendingPaste = nil
         candidateStrip.cancelSelection()
@@ -641,7 +653,7 @@ final class KeyboardViewController: UIInputViewController {
         cancelDeletes(); surface.shifted = false; shiftButton.isSelected = false; punctuationOpen = false
         metrics.sampleMemory(); metrics.save()
         delivery.discardMarkedText()
-        onscreen = false; consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
+        consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { candidateStrip.cancelSelection(); cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
     override func textDidChange(_ textInput: UITextInput?) {
@@ -2279,8 +2291,8 @@ final class KeyboardViewController: UIInputViewController {
     var layoutViews: (buffer: UIView, candidates: CandidateStrip, keys: KeySurface, settings: KeycapButton, bottom: UIStackView, source: SingleLineTextView, insert: InsertKeycapButton, globe: KeycapButton, result: SingleLineTextView, stop: KeycapButton) {
         (bufferPanel, candidateStrip, surface, moreButton, bottom, source, insertButton, globe, result, stopButton)
     }
-    var developmentHeightGap: (height: CGFloat, wordmark: String, wordmarkVisible: Bool, recoveryAttempts: Int) {
-        (gapPlaceholder.bounds.height, HeightGapPlaceholder.wordmark, gapPlaceholder.wordmarkVisible, gapRecoveryAttempts)
+    var developmentHeightGap: (height: CGFloat, wordmark: String, wordmarkVisible: Bool, recoveryAttempts: Int, recoveryScheduled: Bool) {
+        (gapPlaceholder.bounds.height, HeightGapPlaceholder.wordmark, gapPlaceholder.wordmarkVisible, gapRecoveryAttempts, gapRecovery != nil)
     }
     func developmentType(_ text: String) { type(text) }
     func developmentResetPreferences(bundledData: @escaping (OfficialPluginCatalog.Entry) throws -> Data = OfficialPluginCatalog.bundledData) {
