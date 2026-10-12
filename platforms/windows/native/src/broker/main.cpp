@@ -9,6 +9,7 @@
 #include "../engine/rime_engine.hpp"
 #include "../workbench/window.hpp"
 #include "autostart.hpp"
+#include "../schemes/scheme_library.hpp"
 #include "broker_connection.hpp"
 #include "broker_options.hpp"
 #include "default_paths.hpp"
@@ -47,6 +48,7 @@ void PrintUsage() {
       << L"  RimesBroker --print-paths\n"
       << L"  RimesBroker --deploy-only\n"
       << L"  RimesBroker --settings\n"
+      << L"  RimesBroker --schemes\n"
       << L"  RimesBroker --install-autostart | --remove-autostart\n"
       << L"  RimesBroker [--once] [--rime-dll <absolute-path>]\n"
       << L"      [--shared-data-dir <absolute-path>]\n"
@@ -70,6 +72,9 @@ void PrintUsage() {
 int wmain(const int argc, wchar_t** argv) {
   using namespace rimes::windows;
   using namespace rimes::windows::broker;
+
+  if (argc >= 2 && (std::wstring(argv[1]) == L"--schemes" || std::wstring(argv[1]) == L"--scheme-deploy" || std::wstring(argv[1]) == L"--scheme-import-smoke"))
+    return schemes::RunManager(argc, argv);
 
   BrokerOptions options;
   std::wstring error;
@@ -183,6 +188,19 @@ int wmain(const int argc, wchar_t** argv) {
     return 0;
   }
 
+  std::optional<rimes::schemes::Selection> imported;
+  if (options.used_default_paths) {
+    imported = schemes::Library().Active();
+    if (imported) {
+      options.engine.shared_data_dir = imported->resources;
+      options.engine.user_data_dir = imported->user;
+    }
+  }
+  std::unique_ptr<schemes::UsageLock> imported_usage;
+  if (imported) {
+    try { imported_usage = std::make_unique<schemes::UsageLock>(imported->user, false); }
+    catch (const std::exception& e) { std::cerr << e.what() << '\n'; return 1; }
+  }
   engine::RimeEngine engine;
   std::string engine_error;
   if (!engine.Start(options.engine, &engine_error)) {
@@ -194,6 +212,7 @@ int wmain(const int argc, wchar_t** argv) {
 
   NamedPipeServer server(&security);
   workbench::Runtime runtime;
+  if (imported) runtime.SetImportedSchema(imported->schema);
   workbench::UiCommands commands;
   const bool interactive = security.session_id() != 0;
   struct StopEvent {

@@ -102,6 +102,31 @@ void TestMidScalarOffsetFailsClosed() {
         "offset inside a UTF-8 scalar must be rejected");
 }
 
+void TestMalformedOptionalCommentPreservesCandidate() {
+  const std::string malformed("\xE4\xB8", 2);  // Truncated CJK annotation.
+  std::vector<RawCandidateView> candidates = {{"valid", malformed, "1"}};
+  RawSnapshotView raw;
+  raw.handled = true;
+  raw.has_context = true;
+  raw.candidates = candidates;
+  raw.page_size = 1;
+  raw.highlighted_candidate = 0;
+  EngineSnapshot snapshot;
+  std::string error;
+  Check(BuildEngineSnapshot(raw, &snapshot, &error) && error.empty() &&
+            snapshot.candidates.size() == 1 &&
+            snapshot.candidates[0].text == "valid" &&
+            snapshot.candidates[0].comment.empty(),
+        "malformed optional annotations cannot discard valid input candidates");
+  candidates[0].text = malformed;
+  Check(!BuildEngineSnapshot(raw, &snapshot),
+        "malformed candidate text remains rejected");
+  candidates[0].text = "valid";
+  raw.commit_text = malformed;
+  Check(!BuildEngineSnapshot(raw, &snapshot),
+        "malformed committed text remains rejected");
+}
+
 void TestCandidateLimitsFailClosed() {
   std::vector<RawCandidateView> candidates(core::kMaxCandidateCount + 1,
                                            {"x", "", "1"});
@@ -177,6 +202,7 @@ int main() {
   using namespace rimes::windows::engine;
   TestUtf8AndSnapshotConversion();
   TestMalformedUtf8FailsClosed();
+  TestMalformedOptionalCommentPreservesCandidate();
   TestMidScalarOffsetFailsClosed();
   TestCandidateLimitsFailClosed();
   TestUnhandledInputIsMutationFree();

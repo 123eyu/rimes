@@ -1,4 +1,5 @@
 #include "provider.hpp"
+#include "scheme_import.hpp"
 
 #include <wincred.h>
 #include <winhttp.h>
@@ -81,10 +82,7 @@ bool ValidTheme(const std::string& theme) {
          theme == "rasta";
 }
 bool ValidSettings(const Settings& value) {
-  const bool schema = value.schema == "rime_ice" ||
-                      value.schema == "double_pinyin" ||
-                      value.schema == "double_pinyin_flypy" ||
-                      value.schema == "wubi86" || value.schema == "english" || value.schema == "my_combo";
+  const bool schema = rimes::schemes::ValidID(value.schema);
   return schema && value.candidate_count >= 1 && value.candidate_count <= 9 && ValidTheme(value.theme) && value.font_size >= 10 &&
          (value.auto_send_seconds == 0 || value.auto_send_seconds == 1 || value.auto_send_seconds == 2 ||
           value.auto_send_seconds == 3 || value.auto_send_seconds == 5) &&

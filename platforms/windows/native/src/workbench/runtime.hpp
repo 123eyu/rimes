@@ -34,6 +34,7 @@ class Runtime {
   std::optional<BufferRect> PlacementCaret(Target target);
   void CancelOpeningPlacement();
   Settings Configuration();
+  void SetImportedSchema(std::string schema);
   bool Configure(Settings value, const std::wstring& key, bool replace_key,
                  std::string* error);
   void Toggle(std::uint32_t foreground_process);
@@ -81,6 +82,7 @@ class Runtime {
   std::condition_variable event_, api_event_;
   std::map<std::uint64_t, Entry> sessions_;
   Model model_;
+  std::string imported_schema_;
   Settings settings_;
   OfficialPluginStore plugins_;
   std::string result_plugin_, result_grant_, plugin_status_;

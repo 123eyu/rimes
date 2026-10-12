@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.27)
 
 project(RIMESLinuxIme VERSION 0.1.0 LANGUAGES C CXX)
 
@@ -13,10 +13,16 @@ set(CMAKE_C_STANDARD 11)
 
 include(GNUInstallDirs)
 include(CTest)
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../../LICENSES/"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../../THIRD_PARTY_NOTICES.md"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes")
 
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
 pkg_check_modules(Rime REQUIRED IMPORTED_TARGET rime>=1.7.0)
+
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../Shared/SchemeImport" "scheme-import")
 
 set(RIMES_BUFFER_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../buffer")
 set(RIMES_CAPSULE_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/../capsule")
@@ -71,7 +77,7 @@ add_library(RimesEngine STATIC
 target_include_directories(RimesEngine PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
-target_link_libraries(RimesEngine PUBLIC PkgConfig::Rime Threads::Threads)
+target_link_libraries(RimesEngine PUBLIC PkgConfig::Rime Threads::Threads RimesSchemeImport)
 set_target_properties(RimesEngine PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesEngine)
 
@@ -127,8 +133,17 @@ if(RIMES_BUILD_FCITX5)
     install(DIRECTORY data/icons/hicolor
             DESTINATION "${CMAKE_INSTALL_DATADIR}/icons")
 
-    pkg_check_modules(GTK3 gtk+-3.0)
+    # The Fcitx configuration entry launches the GTK scheme manager. Do not
+    # silently build an addon whose advertised import entry is absent.
+    pkg_check_modules(GTK3 REQUIRED gtk+-3.0)
     if(GTK3_FOUND)
+        add_executable(rimes-schemes src/schemes/scheme_manager.cpp)
+        target_include_directories(rimes-schemes PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-schemes PRIVATE RimesEngine RimesSchemeImport ${GTK3_LIBRARIES})
+        target_compile_options(rimes-schemes PRIVATE ${GTK3_CFLAGS_OTHER})
+        rimes_harden(rimes-schemes)
+        install(TARGETS rimes-schemes DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        install(FILES data/org.scholay.rimes.schemes.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
         pkg_check_modules(GTK_LAYER_SHELL gtk-layer-shell-0)
         add_executable(rimes-buffer
             "${RIMES_BUFFER_ROOT}/ui/rimes_buffer_app.cpp"

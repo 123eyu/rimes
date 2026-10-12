@@ -7,9 +7,9 @@ ROOT = HERE.parents[2]
 WORK = ROOT / 'Vendor/ios-build'
 POLICY = HERE / 'lua-sandbox'
 
-def prepare():
+def prepare(work=WORK):
     lock = json.loads((POLICY / 'versions.json').read_text())
-    plugin = WORK / 'librime/plugins/lua'
+    plugin = work / 'librime/plugins/lua'
     revision = lock['librimeLua']['commit']
     if not (plugin / '.git').exists():
         subprocess.run(['git', 'clone', '--no-checkout', lock['librimeLua']['repository'], str(plugin)], check=True)
@@ -17,12 +17,12 @@ def prepare():
     head = subprocess.check_output(['git', '-C', str(plugin), 'rev-parse', 'HEAD'], text=True).strip()
     if head != revision:
         raise RuntimeError(f'librime-lua checkout is {head}, expected pinned {revision}; refusing to overwrite it')
-    archive = WORK / f'lua-{lock["lua"]["version"]}.tar.gz'
+    archive = work / f'lua-{lock["lua"]["version"]}.tar.gz'
     if not archive.exists(): urllib.request.urlretrieve(lock['lua']['url'], archive)
     if hashlib.sha256(archive.read_bytes()).hexdigest() != lock['lua']['sha256']:
         raise RuntimeError('Lua archive SHA256 mismatch')
-    extracted = WORK / f'lua-{lock["lua"]["version"]}'
-    with tarfile.open(archive) as files: files.extractall(WORK, filter='data')
+    extracted = work / f'lua-{lock["lua"]["version"]}'
+    with tarfile.open(archive) as files: files.extractall(work, filter='data')
     lua = plugin / 'thirdparty/lua5.4'
     lua.mkdir(parents=True, exist_ok=True)
     for source in (extracted / 'src').iterdir():
@@ -76,7 +76,7 @@ def prepare():
          '    auto safe_path = rimes_lua_path(f, true);\n    return !safe_path.empty() && t.SaveToFile(COMPAT<Deployer>::to_path(safe_path));')])
     patch('src/types_ext.cc', [
         ('  an<T> make(const string& db_name, const string& db_class) {',
-         '  an<T> make(const string& db_name, const string& db_class) {\n    if (!rimes_lua_resource_name(db_name) || (db_class != "userdb" && db_class != "plain_userdb")) return {};'),
+         '  an<T> make(const string& db_name, const string& db_class) {\n    if (!rimes_lua_userdb_name(db_name, db_class)) return {};'),
         ('  an<T> make(const string& dict_name) {',
          '  an<T> make(const string& dict_name) {\n    if (!rimes_lua_resource_name(dict_name)) return {};')])
     patch('src/opencc.cc', [

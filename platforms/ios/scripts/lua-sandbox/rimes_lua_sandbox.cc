@@ -109,6 +109,29 @@ bool rimes_lua_resource_name(const std::string &name) {
     return name.find_first_not_of("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-.") == std::string::npos;
 }
 
+bool rimes_lua_userdb_name(const std::string &name, const std::string &dbClass) {
+    if (name.empty() || name.size() > 256 || name.front() == '/' || name.back() == '/' ||
+        (dbClass != "userdb" && dbClass != "plain_userdb")) return false;
+    // Native Rime appends the database class to this relative resource name.
+    // Permit namespaces used by upstream schemes, never arbitrary file paths.
+    size_t start = 0;
+    for (size_t end = 0; end <= name.size(); ++end) {
+        if (end != name.size() && name[end] != '/') continue;
+        const auto part = name.substr(start, end - start);
+        if (part == "." || !rimes_lua_resource_name(part)) return false;
+        start = end + 1;
+    }
+    const auto filename = name + (dbClass == "userdb" ? ".userdb" : ".userdb.txt");
+    const auto target = rimes_lua_path(filename, true, false);
+    if (target.empty()) return false;
+    std::error_code error;
+    fs::create_directories(fs::path(target).parent_path(), error);
+    if (error) return false;
+    // Recheck after creating the parent; existing and dangling symlinks must
+    // remain inside the per-package user directory, not the shared source tree.
+    return !rimes_lua_path(filename, true, false).empty();
+}
+
 extern "C" FILE *rimes_lua_fopen(const char *name, const char *mode) {
     if (!name || !mode) { errno = EACCES; return nullptr; }
     const bool write = std::string(mode).find_first_of("wa+") != std::string::npos;

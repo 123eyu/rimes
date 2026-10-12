@@ -370,6 +370,7 @@ final class RimeEngine {
            !override.isEmpty {
             return override
         }
+        if let imported = MacRimeSchemeLibrary.shared.runtimeResources { return imported.path }
         if let ss = Bundle.main.sharedSupportPath,
            FileManager.default.fileExists(atPath: ss + "/default.yaml") {
             return ss
@@ -395,6 +396,7 @@ final class RimeEngine {
     private static let defaultUserDir = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent("Library/\(RimesPaths.directoryName)").path
     private let userDataDir = ProcessInfo.processInfo.environment["RIMEBUFFER_USER_DIR"]
+        ?? MacRimeSchemeLibrary.shared.runtimeUserDirectory?.path
         ?? RimeEngine.defaultUserDir
     private let logDir = ProcessInfo.processInfo.environment["RIMEBUFFER_USER_DIR"]
         ?? RimeEngine.defaultUserDir

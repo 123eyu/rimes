@@ -116,6 +116,30 @@ New-Item -ItemType Directory -Path $workRoot -Force | Out-Null
 $runtime = & $fetchScript -Architecture $Architecture -OutputDirectory (Join-Path $workRoot 'librime')
 $rimeDll = Resolve-RimesExistingPath -Path $runtime.DllPath -PathType Leaf
 
+# Exercise the actual archive/store/compiler path with real pinned Rime. This
+# maintenance mode has no IPC, registration or installed-profile side effects.
+Copy-Item -LiteralPath $rimeDll -Destination (Join-Path $artifactRoot 'rime.dll') -Force
+& $brokerPath --scheme-import-smoke (Join-Path $workRoot 'scheme-import')
+if ($LASTEXITCODE -ne 0) { throw 'Native scheme import/typing/rollback smoke failed.' }
+
+$fixture = Join-Path $workRoot 'wanxiang-original.zip'
+python (Join-Path $windowsRoot '../../scripts/input-schemes/fetch_fixture.py') $fixture
+if ($LASTEXITCODE -ne 0) { throw 'Pinned original scheme fixture could not be verified.' }
+$expected = ([string][char]0x4f60) + [char]0x597d
+& $brokerPath --scheme-import-smoke (Join-Path $workRoot 'wanxiang-import') $fixture wanxiang nihao $expected
+if ($LASTEXITCODE -ne 0) {
+    # Only this isolated fixture's compiler logs; no installed profile or text.
+    Get-ChildItem -LiteralPath (Join-Path $workRoot 'wanxiang-import/library/logs') -Filter '*.log' |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 12 }
+    throw 'Original Wanxiang import and native typing failed.'
+}
+& $brokerPath --scheme-import-smoke (Join-Path $workRoot 'wanxiang-t9-import') $fixture wanxiang_t9 64426 $expected
+if ($LASTEXITCODE -ne 0) {
+    Get-ChildItem -LiteralPath (Join-Path $workRoot 'wanxiang-t9-import/library/logs') -Filter '*.log' |
+        ForEach-Object { Get-Content -LiteralPath $_.FullName -Tail 12 }
+    throw 'Original Wanxiang nine-key typing failed.'
+}
+
 $sharedDir = Join-Path $workRoot 'shared'
 $userDir = Join-Path $workRoot 'user'
 $logDir = Join-Path $workRoot 'logs'

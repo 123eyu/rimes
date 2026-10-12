@@ -258,6 +258,11 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
 void Window::EnsureSettings() {
   if (settings) return;
   SettingsUiCallbacks cb;
+  cb.open_schemes = [this] {
+    wchar_t path[32768]{};
+    const DWORD count = GetModuleFileNameW(nullptr, path, 32768);
+    return count > 0 && count < 32768 && reinterpret_cast<INT_PTR>(ShellExecuteW(window, L"open", path, L"--schemes", nullptr, SW_SHOWNORMAL)) > 32;
+  };
   cb.load = [this] { return runtime.Configuration(); };
   cb.save = [this](Settings value, const std::wstring& key, bool replace,
                    std::string* error) {

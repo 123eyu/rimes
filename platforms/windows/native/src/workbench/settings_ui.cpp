@@ -2,6 +2,7 @@
 
 #include <dwmapi.h>
 #include <commctrl.h>
+#include <shellapi.h>
 
 #include <algorithm>
 #include <cmath>
@@ -58,6 +59,7 @@ SettingsUiHost::~SettingsUiHost() {
 }
 
 void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
+  draft_.imported_schema = config.imported_scheme ? Wide(config.schema) : L"";
   draft_.schema_index = 0;
   for (int i = 0; i < 6; ++i) {
     if (config.schema == Utf8(std::wstring(kSchemas[i]))) draft_.schema_index = i;
@@ -238,7 +240,7 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
       return true;
     }
     if (key == VK_RETURN && GetFocus() != hwnd_) {
-      if (GetFocus() == record_hotkey_ || GetFocus() == record_send_ || GetFocus() == reset_shortcuts_) {
+      if (GetFocus() == schemes_button_ || GetFocus() == record_hotkey_ || GetFocus() == record_send_ || GetFocus() == reset_shortcuts_) {
         SendMessageW(GetFocus(), BM_CLICK, 0, 0);
         return true;
       }
@@ -247,7 +249,7 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
     }
     if (key == VK_TAB) {
       std::vector<HWND> controls;
-      for (const auto control : {check_ascii_, check_trad_, check_punct_,
+      for (const auto control : {schemes_button_, check_ascii_, check_trad_, check_punct_,
                                 edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_, record_hotkey_,
                                 combo_send_modifiers_, edit_send_, record_send_, reset_shortcuts_, edit_base_,
                                 edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
@@ -256,7 +258,7 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
       const bool back = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
       const int sidebar = static_cast<int>(draft_.page);
       int grid = sidebar;
-      if (draft_.subpage == 0 && draft_.page == ui::SettingsPage::kInput)
+      if (draft_.subpage == 0 && draft_.page == ui::SettingsPage::kInput && draft_.imported_schema.empty())
         grid = 100 + draft_.schema_index;
       if (draft_.subpage == 0 && draft_.page == ui::SettingsPage::kAppearance)
         grid = 200 + draft_.theme_index;
@@ -337,6 +339,11 @@ void SettingsUiHost::CreateOrUpdateChildren() {
     if (!control) control = CreateWindowExW(0, L"BUTTON", title, WS_CHILD | WS_TABSTOP | BS_OWNERDRAW,
         0, 0, 1, 1, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
   };
+  make_button(schemes_button_, L"导入与管理方案…", 415);
+  EnableWindow(schemes_button_, static_cast<bool>(callbacks_.open_schemes));
+  if (!imported_label_) imported_label_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT,
+      0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
+  SetWindowTextW(imported_label_, (L"当前使用导入方案：" + draft_.imported_schema + L"\n可在方案管理中启用其他方案或恢复内置方案。重启 RIMES 后生效。").c_str());
   make_button(record_hotkey_, L"录入快捷键", 409);
   make_button(record_send_, L"录入快捷键", 410);
   make_button(reset_shortcuts_, L"恢复全部默认快捷键", 411);
@@ -511,6 +518,11 @@ void SettingsUiHost::Relayout() {
   Place(combo_auto_send_, auto_dropdown, dpi_, behavior);
   Place(combo_translation_, translation_dropdown, dpi_, behavior);
   Place(check_close_after_, layout_.close_after_check, dpi_, behavior);
+  const bool schemes = draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0;
+  Place(schemes_button_, {layout_.body.left, layout_.body.top + 170, layout_.body.left + 225, layout_.body.top + 204}, dpi_, schemes);
+  Place(imported_label_, {layout_.body.left, layout_.body.top, layout_.body.right, layout_.body.top + 100}, dpi_, schemes && !draft_.imported_schema.empty());
+  SendMessageW(schemes_button_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
+  SendMessageW(imported_label_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   Place(check_ascii_, layout_.check_ascii, dpi_, input);
   Place(check_trad_, layout_.check_trad, dpi_, input);
   Place(check_punct_, layout_.check_punct, dpi_, input);
@@ -691,7 +703,7 @@ void SettingsUiHost::ActivateHit(int hit) {
     draft_.focus = static_cast<int>(draft_.page);
     Relayout();
   } else if (hit >= 100 && hit < 106 &&
-             draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0) {
+             draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0 && draft_.imported_schema.empty()) {
     draft_.schema_index = hit - 100;
     draft_.focus = hit;
     InvalidateRect(hwnd_, nullptr, FALSE);
@@ -744,6 +756,11 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       if (wparam == 11 && self->draft_.page == ui::SettingsPage::kPlugins) self->UpdatePlugins();
       return 0;
     case WM_COMMAND:
+      if (LOWORD(wparam) == 415 && HIWORD(wparam) == BN_CLICKED) {
+        if (!self->callbacks_.open_schemes || !self->callbacks_.open_schemes())
+          MessageBoxW(hwnd, L"无法打开方案管理。", L"RIMES 设置", MB_OK | MB_ICONERROR);
+        return 0;
+      }
       if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 409 || LOWORD(wparam) == 410)) {
         const int recording = LOWORD(wparam) == 410 ? 1 : 0;
         const bool stop = self->recording_shortcut_ == recording;
@@ -1025,6 +1042,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       self->record_hotkey_ = self->record_send_ = self->reset_shortcuts_ = self->shortcut_feedback_ = nullptr;
       KillTimer(hwnd, 11);
       self->hwnd_ = nullptr;
+      self->schemes_button_ = self->imported_label_ = nullptr;
       self->edit_font_ = self->edit_candidate_count_ = self->edit_hotkey_ = self->edit_base_ = nullptr;
       self->combo_hotkey_modifiers_ = nullptr;
       self->edit_model_ = self->edit_key_ = self->edit_lang_ = nullptr;

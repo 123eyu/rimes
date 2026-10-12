@@ -11,6 +11,9 @@ public final class EngineInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();
         try {
+            if(arguments!=null && "scheme-import".equals(arguments.getString("mode"))) {
+                result.putString("stream",SchemeImportContract.run(this,arguments.getString("archive"))); finish(-1,result); return;
+            }
             if(arguments!=null && "upgrade-retain-baseline".equals(arguments.getString("mode"))) {
                 result.putString("stream",UpgradeDataContract.retainBaseline(this)); finish(-1,result); return;
             }

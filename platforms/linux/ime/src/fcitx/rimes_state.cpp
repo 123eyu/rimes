@@ -41,6 +41,11 @@ rimes::linuxime::RimeEngine::SessionId RimesState::EnsureSession() {
     if (session_ == 0) {
         FCITX_LOGC(rimes_log, Error) << "session create failed";
     }
+    if (session_ != 0 && !ime_->initialSchema().empty() &&
+        !ime_->engine().SelectSchema(session_, ime_->initialSchema(), &error)) {
+        ime_->engine().DestroySession(session_); session_ = 0;
+        FCITX_LOGC(rimes_log, Error) << "imported schema could not be selected";
+    }
     return session_;
 }
 
@@ -82,24 +87,24 @@ void RimesState::keyEvent(KeyEvent& event) {
 
     if (!event.isRelease()) {
         int select_index = -1;
-        if (composing_ &&
+        if (ime_->initialSchema().empty() && composing_ &&
             rimes::linuxime::IsCandidateSelectDigit(static_cast<std::int32_t>(event.key().sym()),
                                                     &select_index)) {
             selectCandidate(select_index);
             event.filterAndAccept();
             return;
         }
-        if (composing_ && event.key().check(FcitxKey_Escape)) {
+        if (ime_->initialSchema().empty() && composing_ && event.key().check(FcitxKey_Escape)) {
             reset();
             event.filterAndAccept();
             return;
         }
-        if (composing_ && event.key().check(FcitxKey_Page_Down)) {
+        if (ime_->initialSchema().empty() && composing_ && event.key().check(FcitxKey_Page_Down)) {
             page(true);
             event.filterAndAccept();
             return;
         }
-        if (composing_ && event.key().check(FcitxKey_Page_Up)) {
+        if (ime_->initialSchema().empty() && composing_ && event.key().check(FcitxKey_Page_Up)) {
             page(false);
             event.filterAndAccept();
             return;
