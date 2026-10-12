@@ -339,7 +339,7 @@ void SettingsUiHost::CreateOrUpdateChildren() {
     if (!control) control = CreateWindowExW(0, L"BUTTON", title, WS_CHILD | WS_TABSTOP | BS_OWNERDRAW,
         0, 0, 1, 1, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
   };
-  make_button(schemes_button_, L"导入与管理方案…", 412);
+  make_button(schemes_button_, L"导入与管理方案…", 415);
   EnableWindow(schemes_button_, static_cast<bool>(callbacks_.open_schemes));
   if (!imported_label_) imported_label_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT,
       0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
@@ -756,7 +756,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       if (wparam == 11 && self->draft_.page == ui::SettingsPage::kPlugins) self->UpdatePlugins();
       return 0;
     case WM_COMMAND:
-      if (LOWORD(wparam) == 412 && HIWORD(wparam) == BN_CLICKED) {
+      if (LOWORD(wparam) == 415 && HIWORD(wparam) == BN_CLICKED) {
         if (!self->callbacks_.open_schemes || !self->callbacks_.open_schemes())
           MessageBoxW(hwnd, L"无法打开方案管理。", L"RIMES 设置", MB_OK | MB_ICONERROR);
         return 0;
