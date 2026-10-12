@@ -179,7 +179,7 @@ bool NormalizeDllPath(const std::filesystem::path& path, std::wstring* output,
 
 bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
                         std::string* output, std::string* error,
-                        const char* field) noexcept {
+                        const char* field, bool optional_comment = false) noexcept {
   try {
     if (value == nullptr) {
       output->clear();
@@ -194,6 +194,12 @@ bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
         static_cast<std::size_t>(static_cast<const char*>(terminator) - value);
     output->assign(value, length);
     if (!detail::IsValidUtf8(*output)) {
+      if (optional_comment) {
+        // A Lua reverse-lookup annotation is display metadata. An invalid
+        // comment must not disable otherwise valid composition or candidates.
+        output->clear();
+        return true;
+      }
       SetError(error, std::string("librime returned invalid UTF-8 in ") + field);
       return false;
     }
@@ -710,7 +716,7 @@ class RimeEngine::Impl final {
                                     &candidate.text, error, "candidate text") &&
                  CopyBoundedCString(context.menu.candidates[index].comment,
                                     core::kMaxCandidateCommentBytes,
-                                    &candidate.comment, error, "candidate comment");
+                                    &candidate.comment, error, "candidate comment", true);
         if (!copied) {
           break;
         }

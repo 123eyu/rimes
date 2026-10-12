@@ -10,6 +10,7 @@ The source change in PR #126 builds on the Windows Buffer work merged by PR #124
 - Linux: Ubuntu 24.04 container build and 15 CTest cases passed; original Wanxiang full-Pinyin/T9 passed with the pinned Rime/Lua runtime. An older distro runtime lacking required Lua functionality rejected the import before activation.
 - Common-family regression: [common-families.json](common-families.json) records exact archive hashes for ten scheme imports, eight with actual candidate selection and commit. These are historical catalog-generated packages, not untouched upstream archives. Zhengma and Tiger have import/load coverage only.
 - Windows: MSVC x64/x86 build, CTest, and native `rime.dll` import/typing checks run in PR #126 CI. The initial run exposed a duplicate settings control ID between scheme management and Buffer close-after-send. The fix gives them separate IDs and tests independent dispatch. Use the latest commit's CI results for the final outcome.
+- The original Wanxiang dependency `wanxiang_mixedcode` returned a malformed UTF-8 candidate comment on the pinned Windows runtime. Optional annotation decoding now drops that comment alone; candidate text, preedit and commit text remain strictly validated. Portable engine snapshot tests cover both preservation and rejection paths; the original archive is unchanged.
 
 ## Host and distribution boundaries
 

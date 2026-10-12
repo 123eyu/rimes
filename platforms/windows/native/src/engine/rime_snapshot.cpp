@@ -251,9 +251,12 @@ bool BuildEngineSnapshot(const RawSnapshotView& raw,
         SetError(error, "candidate text must not be empty");
         return false;
       }
+      const std::string_view comment = detail::IsValidUtf8(raw_candidate.comment)
+                                           ? raw_candidate.comment
+                                           : std::string_view{};
       if (!ValidateText(raw_candidate.text, core::kMaxCandidateTextBytes,
                         "candidate text exceeds its engine limit", error) ||
-          !ValidateText(raw_candidate.comment,
+          !ValidateText(comment,
                         core::kMaxCandidateCommentBytes,
                         "candidate comment exceeds its engine limit", error) ||
           !ValidateText(raw_candidate.label, core::kMaxCandidateLabelBytes,
@@ -262,7 +265,7 @@ bool BuildEngineSnapshot(const RawSnapshotView& raw,
       }
       built.candidates.push_back(
           {static_cast<std::uint32_t>(first_candidate_id + index),
-           std::string(raw_candidate.text), std::string(raw_candidate.comment),
+           std::string(raw_candidate.text), std::string(comment),
            std::string(raw_candidate.label)});
     }
 
