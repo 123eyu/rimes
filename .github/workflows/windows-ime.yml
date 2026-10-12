@@ -114,6 +114,13 @@ jobs:
             -Configuration Release `
             -RunBuild
 
+      - name: Verify local Chinese and English translation
+        if: matrix.architecture == 'x64'
+        shell: pwsh
+        run: |
+          python platforms/windows/tests/local_translation_smoke.py --bin platforms/windows/native/out/build/windows-x64/Release
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Upload unsigned foundation binaries
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -121,6 +128,7 @@ jobs:
           path: |
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsf.dll
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesBroker.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/translation/**
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesE2EBroker.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRegistrar.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfE2E.exe

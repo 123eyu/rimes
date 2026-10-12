@@ -45,6 +45,8 @@ class Model {
   std::deque<Block> source, result;
   std::string preview, preedit, status;
   std::uint64_t revision = 1;
+  std::size_t insertion = 0;
+  bool selected = false, generated_mode = false;
   void Focus(Target target);
   void Revoke(Target target);
   void Open();
@@ -53,8 +55,14 @@ class Model {
   void Discard();
   bool Append(std::string text, InputKind kind = InputKind::kCommit);
   bool Backspace();
+  bool DeleteForward();
+  bool MoveInsertion(int direction);
+  bool SetInsertion(std::size_t index);
+  bool SelectAll();
+  void ReturnToEdit();
   std::string SourceText() const;
   std::string ResultText() const;
+  bool CompleteResult() const;
   Generation Generate(std::uint64_t settings_revision, bool translation,
                       bool complete_sentence_only = false);
   bool Accepts(const Generation& job, std::uint64_t settings_revision) const;
@@ -76,12 +84,15 @@ class Model {
   std::uint64_t next_id_ = 1, next_request_ = 1, generation_ = 0;
   bool send_all_ = false;
   std::map<std::uint64_t, std::string> source_links_;
+  std::map<std::uint64_t, std::uint64_t> result_units_;
   std::uint64_t send_until_ = 0;
   std::string translated_source_;
+  std::string translating_prefix_;
   // Only an uninterrupted direct-input run is character-editable. Accepted
   // Rime commits are hard block boundaries, just like the macOS workbench.
   std::vector<std::uint64_t> direct_blocks_;
   void RemoveSourcePrefix(std::size_t bytes);
+  void SourceEdited();
 };
 std::vector<std::string> Sentences(const std::string& text);
 }  // namespace rimes::windows::workbench

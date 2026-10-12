@@ -81,6 +81,7 @@ void Model::Protect() {
 void Model::Discard() {
   Protect();
   source.clear(); result.clear(); source_links_.clear();
+  result_units_.clear(); insertion = 0; selected = false; generated_mode = false;
   translated_source_.clear(); pending_.reset();
   send_all_ = false; send_until_ = 0;
   uncertain = false; translate = false;
@@ -91,29 +92,38 @@ void Model::Discard() {
 }
 std::string Model::SourceText() const { return Join(source); }
 std::string Model::ResultText() const { return Join(result); }
+bool Model::CompleteResult() const {
+  return !result.empty() && !busy && preedit.empty() &&
+      (!translate || SourceText() == translated_source_);
+}
 bool Model::Append(std::string text, InputKind kind) {
   if (text.empty()) return true;
-  if (SourceText().size() + text.size() > kLimit ||
+  if ((selected ? 0 : SourceText().size()) + text.size() > kLimit ||
       (pending_ && pending_->result))
     return false;
-  // Completed translation output is immutable until delivered or explicitly
-  // cancelled.
-  if (!translate) {
-    Cancel();
-    result.clear();
-    source_links_.clear();
-    translated_source_.clear();
+  if (selected) {
+    if (pending_) return false;
+    source.clear(); insertion = 0; selected = false; direct_blocks_.clear();
   }
+  insertion = (std::min)(insertion, source.size());
+  if (insertion != source.size()) direct_blocks_.clear();
+  auto insert = [&](std::string value) {
+    const auto id = next_id_++;
+    source.insert(source.begin() + static_cast<std::ptrdiff_t>(insertion),
+                  {id, std::move(value)});
+    ++insertion;
+    return id;
+  };
   if (kind != InputKind::kDirect) {
     direct_blocks_.clear();
     if (kind == InputKind::kCommit) {
-      source.push_back({next_id_++, std::move(text)});
+      insert(std::move(text));
     } else {
       for (auto& part : Sentences(text))
-        source.push_back({next_id_++, std::move(part)});
+        insert(std::move(part));
     }
   } else {
-    const bool extend = !source.empty() && !direct_blocks_.empty() &&
+    const bool extend = insertion == source.size() && !source.empty() && !direct_blocks_.empty() &&
         direct_blocks_.back() == source.back().id &&
         (!pending_ || pending_->block.id != source.back().id) &&
         !EndsSentence(source.back().text) &&
@@ -124,26 +134,26 @@ bool Model::Append(std::string text, InputKind kind) {
       auto parts = Sentences(source.back().text + text);
       source.back().text = std::move(parts.front());
       for (std::size_t i = 1; i < parts.size(); ++i) {
-        source.push_back({next_id_++, std::move(parts[i])});
-        direct_blocks_.push_back(source.back().id);
+        direct_blocks_.push_back(insert(std::move(parts[i])));
       }
     } else {
       for (auto& part : Sentences(text)) {
-        source.push_back({next_id_++, std::move(part)});
-        direct_blocks_.push_back(source.back().id);
+        direct_blocks_.push_back(insert(std::move(part)));
       }
     }
   }
   ++revision;
+  SourceEdited();
   return true;
 }
 bool Model::Backspace() {
   if (source.empty() || pending_) return false;
-  Cancel();
-  result.clear();
-  source_links_.clear();
-  translated_source_.clear();
-  if (!direct_blocks_.empty() && direct_blocks_.back() == source.back().id) {
+  insertion = (std::min)(insertion, source.size());
+  if (selected) {
+    source.clear(); insertion = 0; selected = false; direct_blocks_.clear();
+  } else if (!insertion) {
+    return false;
+  } else if (insertion == source.size() && !direct_blocks_.empty() && direct_blocks_.back() == source.back().id) {
     auto& text = source.back().text;
     auto last = text.size() - 1;
     while (last > 0 && (static_cast<unsigned char>(text[last]) & 0xc0) == 0x80)
@@ -151,14 +161,69 @@ bool Model::Backspace() {
     text.erase(last);
     if (text.empty()) {
       source.pop_back();
+      --insertion;
       direct_blocks_.pop_back();
     }
   } else {
     direct_blocks_.clear();
-    source.pop_back();
+    source.erase(source.begin() + static_cast<std::ptrdiff_t>(--insertion));
   }
   ++revision;
+  Cancel();
+  SourceEdited();
   return true;
+}
+bool Model::SetInsertion(std::size_t index) {
+  if (pending_) return false;
+  direct_blocks_.clear();
+  insertion = (std::min)(index, source.size());
+  selected = false;
+  return true;
+}
+bool Model::MoveInsertion(int direction) {
+  if (selected) return SetInsertion(direction < 0 ? 0 : source.size());
+  return SetInsertion(direction < 0 ? (insertion ? insertion - 1 : 0) : insertion + 1);
+}
+bool Model::SelectAll() {
+  if (pending_) return false;
+  selected = !source.empty(); direct_blocks_.clear();
+  return selected;
+}
+bool Model::DeleteForward() {
+  if (selected) return Backspace();
+  if (pending_ || insertion >= source.size()) return false;
+  source.erase(source.begin() + static_cast<std::ptrdiff_t>(insertion));
+  direct_blocks_.clear(); ++revision; Cancel(); SourceEdited();
+  return true;
+}
+void Model::ReturnToEdit() {
+  if (pending_) return;
+  Cancel(); result.clear(); source_links_.clear(); result_units_.clear();
+  translated_source_.clear(); status = "Buffer";
+}
+void Model::SourceEdited() {
+  if (!translate) { ReturnToEdit(); return; }
+  // Keep retired output and unchanged complete source units. Editing a tail
+  // must not discard accepted output or include retired source in a new job.
+  const auto text = SourceText();
+  if (busy && !text.starts_with(translating_prefix_)) Cancel();
+  std::string prefix;
+  bool changed = false;
+  for (auto it = source_links_.begin(); it != source_links_.end();) {
+    if (!changed && text.starts_with(prefix + it->second)) {
+      prefix += it->second; ++it;
+    } else {
+      changed = true;
+      const auto unit = result_units_.contains(it->first) ? result_units_.at(it->first) : it->first;
+      std::erase_if(result, [&](const Block& b) {
+        const auto found = result_units_.find(b.id);
+        return found != result_units_.end() && found->second == unit;
+      });
+      std::erase_if(result_units_, [&](const auto& entry) { return entry.second == unit; });
+      it = source_links_.erase(it);
+    }
+  }
+  translated_source_ = std::move(prefix);
 }
 Generation Model::Generate(std::uint64_t settings_revision, bool translation,
                             bool complete_sentence_only) {
@@ -177,6 +242,7 @@ Generation Model::Generate(std::uint64_t settings_revision, bool translation,
   }
   busy = !job.source.empty() && !pending_ && (translation || result.empty());
   if (busy) {
+    translating_prefix_ = translation ? job.prefix + job.source : std::string{};
     preview.clear();
     status = "Waiting for response...";
   }
@@ -209,9 +275,14 @@ bool Model::Finish(const Generation& job, std::uint64_t settings_revision,
     status = "Request failed. Source retained.";
     return false;
   }
-  for (auto& text : Sentences(preview))
+  const auto unit = next_id_;
+  for (auto& text : Sentences(preview)) {
+    result_units_[next_id_] = unit;
     result.push_back({next_id_++, std::move(text)});
-  source_links_[result.back().id] = job.source;
+  }
+  // Translation source retires when its FIRST child is accepted. Generation
+  // keeps its source until the last child, for the return-to-edit lifecycle.
+  source_links_[job.translation ? unit : result.back().id] = job.source;
   translated_source_ += job.source;
   preview.clear();
   status = "Ready";
@@ -227,7 +298,7 @@ void Model::InvalidatePluginResults() {
   // An already-issued insertion must still be acknowledged exactly once.
   // Prevent continuation, then discard remaining results after that ack.
   if (pending_) return;
-  result.clear(); source_links_.clear(); translated_source_.clear();
+  result.clear(); source_links_.clear(); result_units_.clear(); translated_source_.clear();
   status = "Plugin authorization changed. Source retained.";
 }
 std::optional<Delivery> Model::Send(bool all) {
@@ -235,14 +306,18 @@ std::optional<Delivery> Model::Send(bool all) {
       uncertain || (busy && result.empty()))
     return {};
   const bool output = !result.empty();
+  if (!output && (translate || generated_mode)) return {};
   const auto& blocks = output ? result : source;
   if (blocks.empty()) return {};
   if (output && !translated_source_.empty() &&
       !SourceText().starts_with(translated_source_))
     return {};
-  if (!send_all_) send_until_ = blocks.back().id;
+  // Logical insertion can make source ids non-monotonic in display order.
+  // Freeze the creation watermark, not the id of the rightmost block.
+  if (!send_all_) send_until_ = next_id_ - 1;
   send_all_ = all;
   pending_ = Delivery{next_request_++, bound, blocks.front(), output};
+  if (!output) { insertion = source.size(); selected = false; }
   direct_blocks_.clear();
   status = "Sending...";
   return pending_;
@@ -253,7 +328,10 @@ void Model::RemoveSourcePrefix(std::size_t bytes) {
     auto take = (std::min)(bytes, b.text.size());
     b.text.erase(0, take);
     bytes -= take;
-    if (b.text.empty()) source.pop_front();
+    if (b.text.empty()) {
+      source.pop_front();
+      if (insertion) --insertion;
+    }
   }
   ++revision;
 }
@@ -277,6 +355,8 @@ std::optional<Delivery> Model::Acknowledge(std::uint64_t request, Target target,
     return {};
   }
   blocks.pop_front();
+  if (!delivered.result && insertion) --insertion;
+  if (delivered.result) result_units_.erase(delivered.block.id);
   if (delivered.result) {
     const auto link = source_links_.find(delivered.block.id);
     if (link != source_links_.end()) {

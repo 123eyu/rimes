@@ -57,7 +57,8 @@ void TestGenerationReadyTwoRails() {
   state.source_blocks = {{L"Explain DIP", false}};
   state.result_blocks = {{L"DIP keeps layout stable", false}};
   const auto layout = LayoutBuffer(state, 760);
-  Check(layout.height_dip == 105, "generation-ready uses 105 DIP");
+  Check(layout.height_dip == 73 && !layout.show_source && layout.show_edit,
+        "generated answer replaces prompt on one rail with return-to-edit");
   Check(layout.show_result, "generation shows result rail");
   Check(layout.result_rail.bottom < layout.chrome.bottom,
         "result rail fits inside height");
@@ -77,7 +78,7 @@ void TestGenerationWaiting() {
   state.source_blocks = {{L"Summarize", false}};
   state.preview = L"Themes share…";
   const auto layout = LayoutBuffer(state, 760);
-  Check(layout.height_dip == 105, "waiting generation uses 105 DIP");
+  Check(layout.height_dip == 73 && !layout.show_source, "waiting generation uses one result rail");
   Check(BufferLayoutFullyContained(layout), "waiting generation contained");
   Check(layout.waiting.bottom <= layout.height_dip + 0.01f,
         "waiting indicator inside bounds");
@@ -129,7 +130,7 @@ void TestPrimaryActionCluster() {
         state.busy = busy;
         const auto layout = LayoutBuffer(state, width);
         using Hit = rimes::windows::ui::BufferHitKind;
-        Check(HitTestBuffer(layout, layout.source_text.left + 1,
+        if (layout.show_source) Check(HitTestBuffer(layout, layout.source_text.left + 1,
                             layout.source_text.top + 1) == Hit::kBind,
               "clicking source text explicitly binds capture in every mode");
         Check(HitTestBuffer(layout, layout.status_label.left + 1,
@@ -150,7 +151,7 @@ void TestPrimaryActionCluster() {
         Check(BufferLayoutFullyContained(layout), "every mode clears inner chrome");
         Check(RectInside(layout.paste, primary) && RectInside(layout.send, primary),
               "action rectangles remain within primary rail");
-        Check(layout.source_rail.left == primary.left &&
+        if (layout.show_source) Check(layout.source_rail.left == primary.left &&
                   layout.source_rail.right == primary.right,
               "overlay never narrows either outer rail");
         Check(layout.show_copy ? layout.paste.right < layout.copy.left &&
@@ -160,8 +161,8 @@ void TestPrimaryActionCluster() {
         const auto& text = layout.show_result ? layout.result_text : layout.source_text;
         Check(text.right < layout.paste.left, "text clears the primary action cluster");
         if (layout.show_result && busy)
-          Check(text.right < layout.waiting.left && layout.waiting.right < layout.paste.left,
-                "waiting indicator cannot overlap text or actions");
+          Check(text.right < layout.waiting.left && layout.waiting.left == layout.send.left,
+                "waiting animation replaces the primary action");
       }
     }
   }

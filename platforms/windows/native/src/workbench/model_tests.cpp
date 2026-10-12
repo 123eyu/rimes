@@ -11,6 +11,44 @@ void Check(bool ok, const char* message) {
 }
 int main() {
   Target a{10, 1, 1}, b{10, 2, 2};
+  Model editing;
+  editing.Focus(a); editing.Open(); editing.Append("A"); editing.Append("C");
+  Check(editing.MoveInsertion(-1) && editing.Append("B") && editing.SourceText() == "ABC",
+        "insertion preserves hard blocks on both sides");
+  Check(editing.DeleteForward() && editing.SourceText() == "AB", "delete removes following block");
+  Check(editing.SelectAll() && editing.Append("替换") && editing.SourceText() == "替换",
+        "select-all replacement edits the Buffer only");
+  Model reordered; reordered.Focus(a); reordered.Open(); reordered.Append("A"); reordered.Append("C");
+  reordered.SetInsertion(1); reordered.Append("B");
+  auto ordered_send = reordered.Send(true);
+  Check(ordered_send && !reordered.SetInsertion(0), "issued source head cannot be moved or edited");
+  for (const auto* expected : {"A", "B", "C"}) {
+    Check(ordered_send && ordered_send->block.text == expected, "send-all follows visual order after insertion");
+    ordered_send = reordered.Acknowledge(ordered_send->request, a, true);
+  }
+  Check(!ordered_send && reordered.source.empty(), "inserted later ids do not truncate send-all");
+  Model split;
+  split.Focus(a); split.Open(); split.translate = true; split.Append("原文。后文。");
+  auto split_job = split.Generate(1, true);
+  split.Stream(split_job, 1, "First. Second."); split.Finish(split_job, 1, true);
+  Check(!split.CompleteResult(), "copy waits for untranslated tail");
+  auto split_delivery = split.Send(false);
+  Check(split_delivery.has_value(), "first translated child can send");
+  split.Acknowledge(split_delivery->request, a, true);
+  Check(split.SourceText() == "后文。" && split.ResultText() == "Second.",
+        "first acknowledged child retires source exactly once");
+  split.Append("x", InputKind::kDirect); split.Backspace();
+  Check(split.ResultText() == "Second.", "tail editing preserves unsent children of retired source");
+  auto suffix_job = split.Generate(1, true);
+  Check(suffix_job.source == "后文。", "next job never replays retired original");
+  split.Stream(suffix_job, 1, "Tail."); split.Finish(suffix_job, 1, true);
+  Check(split.CompleteResult(), "complete copy contains remaining children and translated tail");
+  split.SetInsertion(0); split.Append("new");
+  Check(split.ResultText() == "Second.", "editing untranslated prefix only invalidates affected units");
+  Model active;
+  active.translate = true; active.Append("Old."); auto active_job = active.Generate(1, true);
+  active.SetInsertion(0); active.Append("New");
+  Check(!active.busy && !active.Stream(active_job, 1, "stale"), "prefix edit cancels stale local or remote work");
   Model blocks;
   blocks.Focus(a); blocks.Open();
   blocks.Append("你好"); blocks.Append("世界");
@@ -81,6 +119,10 @@ int main() {
   t.Append("💡");
   Check(t.Backspace() && t.SourceText() == "第二句。",
         "backspace preserves UTF-8");
+  d = t.Send(false);
+  Check(!d && !t.uncertain, "translation never falls back to untranslated source");
+  job = t.Generate(1, true);
+  t.Stream(job, 1, "Second sentence."); t.Finish(job, 1, true);
   d = t.Send(false);
   t.LostAcknowledgement();
   Check(t.uncertain && !t.Send(false), "lost ack never retries");

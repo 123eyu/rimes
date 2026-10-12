@@ -905,8 +905,13 @@ class NamedPipeBrokerClient final : public BrokerClient {
     const bool capture_key = capturing_.load() &&
         (core::IsBufferSendChord(static_cast<std::uint32_t>(event.virtual_key), modifiers,
                                 send_chord & 0xffU, send_chord >> 8U) ||
+         ((modifiers & ~static_cast<unsigned>(protocol::KeyModifiers::kCapsLock)) ==
+             static_cast<unsigned>(protocol::KeyModifiers::kControl) &&
+          (event.virtual_key == 'A' || event.virtual_key == 'C' || event.virtual_key == 'V')) ||
          (!HasCommandModifiers(modifiers) &&
           (event.virtual_key == VK_RETURN || event.virtual_key == VK_BACK ||
+           event.virtual_key == VK_LEFT || event.virtual_key == VK_RIGHT ||
+           event.virtual_key == VK_HOME || event.virtual_key == VK_END || event.virtual_key == VK_DELETE ||
            event.virtual_key == VK_ESCAPE)));
     if (event.phase == BrokerKeyPhase::kTestKeyDown) {
       // A filtered host shortcut may never receive OnKeyDown. This is local
@@ -1489,14 +1494,14 @@ class NamedPipeBrokerClient final : public BrokerClient {
             send_chord_.store(key | (modifiers << 8U));
             capturing_.store(message->value("enabled", false));
           }
-          if (kind == "capture" || kind == "deliver") {
+          if (kind == "capture" || kind == "deliver" || kind == "buffer_caret") {
             (*message)["connectionGeneration"] = generation;
             std::lock_guard lock(notification_mutex_);
             if (notifications_.size() >= 128) return;
             notifications_.push_back(std::move(*message));
           }
         }
-        if (kind == "capture" || kind == "deliver") {
+        if (kind == "capture" || kind == "deliver" || kind == "buffer_caret") {
           const auto window = notification_window_.load();
           if (window) PostMessageW(window, kBrokerNotification, 0, 0);
         } else if (kind == "disconnected")

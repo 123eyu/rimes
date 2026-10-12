@@ -12,7 +12,7 @@ enum class HotkeyUpdate { kSaved, kInvalid, kUnavailable, kSaveFailed };
 // race. No fallback chord is silently substituted after a conflict.
 class BufferHotkeyRegistration {
  public:
-  explicit BufferHotkeyRegistration(HWND window) : window_(window) {}
+  explicit BufferHotkeyRegistration(HWND window, int offset = 0) : window_(window), offset_(offset) {}
   ~BufferHotkeyRegistration() { Reset(); }
   BufferHotkeyRegistration(const BufferHotkeyRegistration&) = delete;
   BufferHotkeyRegistration& operator=(const BufferHotkeyRegistration&) = delete;
@@ -34,7 +34,7 @@ class BufferHotkeyRegistration {
     // A failed cleanup stays tracked for Reset; never accumulate another
     // registration under an id whose release was not confirmed.
     if (owned_[candidate - 1]) return HotkeyUpdate::kUnavailable;
-    if (!RegisterHotKey(window_, candidate, modifiers | MOD_NOREPEAT, key))
+    if (!RegisterHotKey(window_, offset_ + candidate, modifiers | MOD_NOREPEAT, key))
       return HotkeyUpdate::kUnavailable;
     owned_[candidate - 1] = true;
     bool saved = false;
@@ -56,7 +56,7 @@ class BufferHotkeyRegistration {
   }
 
   bool Matches(WPARAM id, LPARAM chord) const noexcept {
-    return Registered() && id == static_cast<WPARAM>(id_) &&
+    return Registered() && id == static_cast<WPARAM>(offset_ + id_) &&
            (static_cast<unsigned>(LOWORD(chord)) &
             ~static_cast<unsigned>(MOD_NOREPEAT)) == modifiers_ &&
            HIWORD(chord) == key_;
@@ -70,10 +70,11 @@ class BufferHotkeyRegistration {
 
  private:
   void Release(int id) noexcept {
-    if (owned_[id - 1] && UnregisterHotKey(window_, id))
+    if (owned_[id - 1] && UnregisterHotKey(window_, offset_ + id))
       owned_[id - 1] = false;
   }
   HWND window_;
+  int offset_ = 0;
   int id_ = 0;
   unsigned modifiers_ = 0, key_ = 0;
   bool owned_[2] = {false, false};

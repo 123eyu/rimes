@@ -118,7 +118,7 @@ add_library(RimesWorkbench STATIC
     src/workbench/model.cpp
     src/workbench/official_plugins.cpp
     src/workbench/provider.cpp
-    src/workbench/codex_cli.cpp
+    src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
     src/workbench/runtime.cpp
     src/workbench/settings_ui.cpp
     src/workbench/window.cpp
@@ -150,6 +150,9 @@ target_link_libraries(RimesBroker PRIVATE
 )
 rimes_harden_target(RimesBroker)
 rimes_use_unicode_console_entrypoint(RimesBroker)
+add_custom_command(TARGET RimesBroker POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+        "${CMAKE_CURRENT_SOURCE_DIR}/../translation" "$<TARGET_FILE_DIR:RimesBroker>/translation")
 
 add_library(RimesTsf SHARED
     src/tsf/BrokerClient.cpp
@@ -294,12 +297,16 @@ if(RIMES_BUILD_TESTS)
     target_link_libraries(RimesOfficialPluginTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesOfficialPluginTests)
     add_test(NAME RimesOfficialPlugins COMMAND RimesOfficialPluginTests)
-    add_executable(RimesProviderProbe src/workbench/provider_probe.cpp src/workbench/provider.cpp src/workbench/codex_cli.cpp src/workbench/model.cpp)
+    add_executable(RimesProviderProbe src/workbench/provider_probe.cpp src/workbench/provider.cpp src/workbench/codex_cli.cpp src/workbench/local_translation.cpp src/workbench/model.cpp)
     target_link_libraries(RimesProviderProbe PRIVATE RimesCore winhttp advapi32)
     rimes_harden_target(RimesProviderProbe)
     rimes_use_unicode_console_entrypoint(RimesProviderProbe)
     add_executable(RimesSseTests src/workbench/sse_tests.cpp)
     add_executable(RimesCodexTests src/workbench/codex_cli_tests.cpp)
+    add_executable(RimesLocalTranslationProbe src/workbench/local_translation_probe.cpp)
+    target_link_libraries(RimesLocalTranslationProbe PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesLocalTranslationProbe)
+    rimes_use_unicode_console_entrypoint(RimesLocalTranslationProbe)
     target_link_libraries(RimesCodexTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesCodexTests)
     add_executable(RimesCodexFixture src/workbench/codex_cli_fixture.cpp)
@@ -401,7 +408,7 @@ if(RIMES_BUILD_TESTS)
     add_executable(RimesSettingsTests
         src/workbench/settings_tests.cpp
         src/workbench/provider.cpp
-        src/workbench/codex_cli.cpp
+        src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
         src/workbench/model.cpp
     )
     target_link_libraries(RimesSettingsTests PRIVATE RimesCore winhttp advapi32)
@@ -472,7 +479,7 @@ if(RIMES_BUILD_TESTS)
         src/visual_preview/main.cpp
         src/workbench/settings_ui.cpp
         src/workbench/provider.cpp
-        src/workbench/codex_cli.cpp
+        src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
         src/workbench/model.cpp
         src/tsf/CandidateWindow.cpp
         src/tsf/ModuleState.cpp
@@ -482,7 +489,7 @@ if(RIMES_BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/src/tsf"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/workbench"
     )
-    target_link_libraries(RimesVisualPreview PRIVATE
+    target_link_libraries(RimesVisualPreview PRIVATE windowscodecs comctl32
         RimesCore
         dwmapi
         d2d1

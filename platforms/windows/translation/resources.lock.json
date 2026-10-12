@@ -1,0 +1,77 @@
+{
+  "format": 1,
+  "resources": [
+    {
+      "name": "ctranslate2",
+      "version": "4.6.0",
+      "file": "ctranslate2-4.6.0-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/ec/4c/0ecd260233290bee4b2facec4d8e755e57d8781d68f276e1248433993c9f/ctranslate2-4.6.0-cp312-cp312-win_amd64.whl",
+      "sha256": "511cdf810a5bf6a2cec735799e5cd47966e63f8f7688fdee1b97fed621abda00",
+      "kind": "wheel",
+      "bytes": 19470040
+    },
+    {
+      "name": "sentencepiece",
+      "version": "0.2.0",
+      "file": "sentencepiece-0.2.0-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/c6/97/d159c32642306ee2b70732077632895438867b3b6df282354bd550cf2a67/sentencepiece-0.2.0-cp312-cp312-win_amd64.whl",
+      "sha256": "7a673a72aab81fef5ebe755c6e0cc60087d1f3a4700835d40537183c1703a45f",
+      "kind": "wheel",
+      "bytes": 991994
+    },
+    {
+      "name": "numpy",
+      "version": "2.2.6",
+      "file": "numpy-2.2.6-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/36/fa/8c9210162ca1b88529ab76b41ba02d433fd54fecaf6feb70ef9f124683f1/numpy-2.2.6-cp312-cp312-win_amd64.whl",
+      "sha256": "c1f9540be57940698ed329904db803cf7a402f3fc200bfe599334c9bd84a40b2",
+      "kind": "wheel",
+      "bytes": 12614190
+    },
+    {
+      "name": "PyYAML",
+      "version": "6.0.2",
+      "file": "PyYAML-6.0.2-cp312-cp312-win_amd64.whl",
+      "url": "https://files.pythonhosted.org/packages/0c/e8/4f648c598b17c3d06e8753d7d13d57542b30d56e6c2dedf9c331ae56312e/PyYAML-6.0.2-cp312-cp312-win_amd64.whl",
+      "sha256": "7e7401d0de89a9a855c839bc697c079a4af81cf878373abd7dc625847d25cbd8",
+      "kind": "wheel",
+      "bytes": 156338
+    },
+    {
+      "name": "python",
+      "version": "3.12.10",
+      "file": "python-3.12.10-embed-amd64.zip",
+      "url": "https://www.python.org/ftp/python/3.12.10/python-3.12.10-embed-amd64.zip",
+      "kind": "python",
+      "sha256": "4acbed6dd1c744b0376e3b1cf57ce906f9dc9e95e68824584c8099a63025a3c3",
+      "bytes": 11133606
+    },
+    {
+      "name": "zh_en",
+      "version": "1.9",
+      "file": "translate-zh_en-1_9.argosmodel",
+      "url": "https://argos-net.com/v1/translate-zh_en-1_9.argosmodel",
+      "kind": "model",
+      "sha256": "62e7af5a3a48b530e47b7b3e5c78c2de79073ecd815750d2bf3ab35b4a67da2d",
+      "bytes": 74481402
+    },
+    {
+      "name": "en_zh",
+      "version": "1.9",
+      "file": "translate-en_zh-1_9.argosmodel",
+      "url": "https://argos-net.com/v1/translate-en_zh-1_9.argosmodel",
+      "kind": "model",
+      "sha256": "433e7c4f034d87fbe2353161e05f18646d7999452f801a4e1f0378522b9850ab",
+      "bytes": 70743021
+    },
+    {
+      "name": "setuptools",
+      "version": "80.9.0",
+      "file": "setuptools-80.9.0-py3-none-any.whl",
+      "url": "https://files.pythonhosted.org/packages/a3/dc/17031897dae0efacfea57dfd3a82fdd2a2aeb58e0ff71b77b87e44edc772/setuptools-80.9.0-py3-none-any.whl",
+      "sha256": "062d34222ad13e0cc312a4c02d73f059e86a4acbfbdea8f8f76b28c99f306922",
+      "kind": "wheel",
+      "bytes": 1201486
+    }
+  ]
+}

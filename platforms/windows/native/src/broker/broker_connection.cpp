@@ -388,6 +388,18 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     return RespondWithInputState(request, std::move(state), response);
   }
 
+  // Resolve the current Rime composition before a Buffer source edit. This
+  // is an internal engine operation, never a synthesized host key/paste.
+  const auto command_modifiers = key.modifiers & ~static_cast<unsigned>(core::KeyModifiers::kCapsLock);
+  if (!test_only && runtime_ && runtime_->Capturing(session.target) && session.composing && key_down &&
+      command_modifiers == static_cast<unsigned>(core::KeyModifiers::kControl) &&
+      (key.virtual_key == 'A' || key.virtual_key == 'V')) {
+    engine::EngineSnapshot settled;
+    if (!engine_->ProcessKey(session.engine_session_id, 0xff0d, 0, &settled, nullptr))
+      return RespondPassThrough(request, key, session, response);
+    runtime_->Capture(session.target, &settled);
+    session.composing = settled.composing;
+  }
   if (!test_only && runtime_ &&
       runtime_->BeforeKey(session.target, key, session.composing)) {
     // Paused Buffer input must not run a Shift tap through librime: it could

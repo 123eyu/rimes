@@ -1221,12 +1221,12 @@ void TextService::UpdateCandidateWindow(
     snapshot.page_start = state.page_start;
     snapshot.page_size = state.page_size;
     snapshot.composition = state.composition;
-    const RECT queried = QueryCaretRect(context, cookie);
+    const RECT queried = capture_active_ ? buffer_caret_ : QueryCaretRect(context, cookie);
     // A host mid-composition can refuse every caret source, which yields an
     // all-zero rectangle. That is unknown geometry, not a caret at the screen
     // origin: reusing the previous placement keeps the popup next to the input
     // field, and suppressing it beats showing it at the work-area corner.
-    const RECT previous = candidate_window_.snapshot().caret_rect;
+    const RECT previous = capture_active_ ? RECT{} : candidate_window_.snapshot().caret_rect;
     ScreenRect resolved{};
     if (!ResolveCandidateCaret({queried.left, queried.top, queried.right,
                                 queried.bottom},
@@ -1531,6 +1531,7 @@ LRESULT CALLBACK TextService::NotificationProcedure(HWND window, UINT message,
 void TextService::SetCapture(bool enabled) {
   if (enabled == capture_active_) return;
   capture_active_ = enabled;
+  buffer_caret_ = {};
   if (edit_valid_) edit_valid_->store(false);
   edit_valid_ = std::make_shared<std::atomic_bool>(true);
   if (active_context_ && composition_) {
@@ -1563,6 +1564,22 @@ void TextService::OnBrokerNotification() {
       continue;
     const auto kind = message->value("kind", "");
     if (message->value("context", 0ULL) != context_generation_) continue;
+    if (kind == "buffer_caret") {
+      const auto rect = message->find("rect");
+      if (capture_active_ && broker_client_->Capturing() && active_context_ &&
+          message->value("openingRevision", 0ULL) == buffer_opening_ &&
+          rect != message->end() && rect->is_array() && rect->size() == 4 &&
+          std::all_of(rect->begin(), rect->end(), [](const core::Json& n) { return n.is_number_integer(); })) {
+        RECT caret{(*rect)[0].get<LONG>(), (*rect)[1].get<LONG>(),
+                   (*rect)[2].get<LONG>(), (*rect)[3].get<LONG>()};
+        if (caret.bottom > caret.top && caret.bottom - caret.top < 600 &&
+            caret.right >= caret.left && caret.right - caret.left < 100) {
+          buffer_caret_ = caret;
+          UpdateCandidateWindow(active_context_, last_state_);
+        }
+      }
+      continue;
+    }
     if (kind == "capture") {
       candidate_window_.SetFont(
           (std::clamp)(message->value("font", 16U), 10U, 40U));
@@ -1570,6 +1587,9 @@ void TextService::OnBrokerNotification() {
       candidate_window_.SetTheme(ui::ThemeIdOrDefault(
           message->value("theme", std::string("night"))));
       const bool enabled = message->value("enabled", false);
+      const auto opening = message->value("openingRevision", 0ULL);
+      if (opening != buffer_opening_) buffer_caret_ = {};
+      buffer_opening_ = opening;
       const auto opening_context = context_generation_;
       const auto opening_valid = edit_valid_;
       auto same_focus = [this, opening_context, opening_valid] {

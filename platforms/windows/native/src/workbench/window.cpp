@@ -125,6 +125,15 @@ struct Window {
   HFONT menu_font = nullptr;
   std::map<UINT, std::wstring> menu_labels;
   std::unique_ptr<BufferHotkeyRegistration> buffer_hotkey;
+  std::unique_ptr<BufferHotkeyRegistration> send_hotkey;
+  unsigned held_send_key = 0;
+  std::uint64_t shown_revision = 0;
+  std::size_t shown_insertion = 0;
+  std::wstring shown_preedit;
+  unsigned shown_preedit_caret = 0;
+  float last_result_width = 0;
+  HICON target_icon = nullptr;
+  DWORD target_pid = 0;
   std::uint64_t placed_opening_revision = 0;
   std::uint64_t placed_geometry_revision = 0;
   BufferOpeningSide opening_side = BufferOpeningSide::kBottomFallback;
@@ -136,6 +145,7 @@ struct Window {
          UiCommands* c)
       : runtime(r), stop(std::move(s)), deploy(std::move(d)), commands(c) {}
   ~Window() {
+    if (target_icon) DestroyIcon(target_icon);
     if (maintenance.joinable()) maintenance.join();
     if (product_icon) DestroyIcon(product_icon);
     if (menu_font) DeleteObject(menu_font);
@@ -167,6 +177,8 @@ struct Window {
   void RefreshTrayIcon();
   HMENU BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items);
   void UpdateTooltip(int hit);
+  void UpdateTargetIcon(DWORD process);
+  void PublishLogicalCaret(const ui::BufferPaintState& paint);
   ui::BufferPaintState MakePaintState(const core::Json& state) const;
   static LRESULT CALLBACK Procedure(HWND, UINT, WPARAM, LPARAM);
 };
@@ -174,7 +186,13 @@ struct Window {
 ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   ui::BufferPaintState paint{};
   paint.theme = theme;
-  paint.mode = mode;
+  paint.mode = static_cast<ui::BufferMode>(state.value("mode", 0));
+  paint.insertion = state.value("insertion", std::size_t{});
+  paint.preedit_caret = state.value("preedit_caret", 0U);
+  paint.selected = state.value("selected", false);
+  paint.auto_send_seconds = state.value("auto_send_seconds", 0U);
+  paint.close_after_send = state.value("close_after_send", false);
+  paint.spinner_phase = static_cast<float>(GetTickCount64() % 1000) * 0.006283f;
   paint.busy = state.value("busy", false);
   paint.translate = state.value("translate", false);
   paint.capturing = state.value("capture", false);
@@ -205,12 +223,14 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   const bool has_source = !state.value("source", std::string()).empty();
   if (has_result && !paint.translate)
     paint.status += L" · 待发结果已保留";
-  paint.copy_enabled = has_result || has_source;
+  paint.copy_enabled = !paint.busy && !state.value("pending", false) &&
+      !state.value("uncertain", false) && state.value("preedit", std::string()).empty() &&
+      (has_result ? state.value("complete_result", false) : (has_source && (paint.selected || !paint.bound)));
   paint.send_enabled = paint.capturing && paint.bound &&
                        !state.value("uncertain", false) &&
                        (has_result || has_source) &&
                        (!paint.busy || has_result) && status != "Sending...";
-  if (mode == ui::BufferMode::kGenerate && !has_result)
+  if (paint.mode != ui::BufferMode::kInput && !has_result)
     paint.send_enabled = has_source && !paint.busy &&
         state.value("preedit", std::string()).empty() && status != "Sending...";
   paint.paste_enabled = status != "Sending...";
@@ -228,6 +248,8 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   for (const auto& block : state["result_blocks"])
     paint.result_blocks.push_back(
         {Wide(block.value("text", std::string())), false});
+  if (state.value("auto_remaining_ms", 0LL) > 0)
+    paint.status = std::to_wstring((state.value("auto_remaining_ms", 0LL) + 999) / 1000) + L" 秒后上屏";
   // Do NOT append preview into result_blocks — painter draws preview as the
   // single streaming tail to avoid duplicated waiting output.
   return paint;
@@ -456,15 +478,21 @@ void Window::UpdateTooltip(int hit) {
       text = L"粘贴";
       break;
     case ui::BufferHitKind::kCopy:
-      text = L"复制";
+      text = L"复制完整结果并关闭（Ctrl+C）";
       break;
     case ui::BufferHitKind::kSend: {
       const auto config = runtime.Configuration();
-      text = runtime.Snapshot().value("result", std::string()).empty()
-                 ? L"发送下一块（" : L"发送下一块待发结果（";
-      text += ShortcutTitle(config.send_key, config.send_modifiers) + L"；长按 1.2 秒发送全部）";
+      const auto state = runtime.Snapshot();
+      text = state.value("busy", false) ? L"正在处理…" :
+          state.value("mode", 0) != 0 && state.value("result", std::string()).empty()
+              ? (state.value("mode", 0) == 2 ? L"翻译原文" : L"生成结果") : L"发送下一块";
+      text += L"（" + ShortcutTitle(config.send_key, config.send_modifiers) + L"；长按 1 秒全部上屏）";
       break;
     }
+    case ui::BufferHitKind::kConfigure: text = L"当前插件设置（Alt+Shift+S 打开设置）"; break;
+    case ui::BufferHitKind::kEdit: text = L"返回编辑，放弃当前生成结果"; break;
+    case ui::BufferHitKind::kAutoSend: text = L"自动发送：手动 / 1 / 2 / 3 / 5 秒"; break;
+    case ui::BufferHitKind::kCloseAfter: text = L"发送最后一块后关闭 Buffer"; break;
     case ui::BufferHitKind::kBind:
       text = L"在当前输入框接收输入到 Buffer";
       break;
@@ -480,10 +508,9 @@ void Window::UpdateTooltip(int hit) {
 }
 
 void Window::Copy() {
-  auto snapshot = runtime.Snapshot();
-  auto text = snapshot.value("result", std::string());
-  if (text.empty()) text = snapshot.value("source", std::string());
-  if (text.empty()) return;
+  auto ticket = runtime.PrepareCopy();
+  if (ticket.is_null()) return;
+  auto text = ticket.value("text", std::string());
   auto wide = Wide(text);
   if (!OpenClipboard(window)) return;
   HGLOBAL memory =
@@ -493,8 +520,8 @@ void Window::Copy() {
     if (data) {
       memcpy(data, wide.c_str(), (wide.size() + 1) * sizeof(wchar_t));
       GlobalUnlock(memory);
-      EmptyClipboard();
-      if (!SetClipboardData(CF_UNICODETEXT, memory)) GlobalFree(memory);
+      if (!runtime.CommitCopy(ticket, [&] { return EmptyClipboard() && SetClipboardData(CF_UNICODETEXT, memory); }))
+        GlobalFree(memory);
     } else
       GlobalFree(memory);
   }
@@ -566,6 +593,24 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
       (hit == ui::BufferHitKind::kSend && !state.send_enabled))
     return;
   switch (hit) {
+    case ui::BufferHitKind::kConfigure:
+      OpenSettings();
+      settings->OpenPage(window, state.mode == ui::BufferMode::kGenerate
+          ? ui::SettingsPage::kApi : ui::SettingsPage::kBuffer,
+          state.mode == ui::BufferMode::kGenerate ? 0 : 1);
+      break;
+    case ui::BufferHitKind::kEdit:
+      runtime.ReturnToEdit();
+      break;
+    case ui::BufferHitKind::kAutoSend: {
+      const auto seconds = state.auto_send_seconds;
+      runtime.SetAutoSend(seconds == 0 ? 1 : seconds == 1 ? 2 : seconds == 2 ? 3 : seconds == 3 ? 5 : 0,
+          state.close_after_send);
+      break;
+    }
+    case ui::BufferHitKind::kCloseAfter:
+      runtime.SetAutoSend(state.auto_send_seconds, !state.close_after_send);
+      break;
     case ui::BufferHitKind::kBind:
       runtime.Bind(ForegroundProcess());
       break;
@@ -585,7 +630,8 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
       Copy();
       break;
     case ui::BufferHitKind::kSend:
-      if (mode == ui::BufferMode::kGenerate && state.result_blocks.empty()) runtime.Generate(false);
+      if (state.mode != ui::BufferMode::kInput && state.result_blocks.empty())
+        runtime.Generate(state.mode == ui::BufferMode::kTranslate);
       else runtime.Send(false);
       break;
     default:
@@ -639,6 +685,33 @@ void Window::PositionForOpening(const core::Json& state) {
   placed_geometry_revision = state.value("placement_revision", 0ULL);
 }
 
+void Window::UpdateTargetIcon(DWORD process) {
+  if (target_pid == process) return;
+  target_pid = process;
+  if (target_icon) { DestroyIcon(target_icon); target_icon = nullptr; }
+  if (!process) return;
+  HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, process);
+  if (!handle) return;
+  wchar_t path[32768]{}; DWORD length = static_cast<DWORD>(std::size(path));
+  if (QueryFullProcessImageNameW(handle, 0, path, &length)) {
+    SHFILEINFOW info{};
+    if (SHGetFileInfoW(path, 0, &info, sizeof(info), SHGFI_ICON | SHGFI_SMALLICON))
+      target_icon = info.hIcon;
+  }
+  CloseHandle(handle);
+}
+void Window::PublishLogicalCaret(const ui::BufferPaintState& paint) {
+  if (!paint.capturing || !last_layout.show_source || !format || !write) return;
+  const float x = last_layout.source_text.left - scroll[0] + ui::MeasureBufferCaret(write, format, paint);
+  if (x < last_layout.source_text.left || x > last_layout.source_text.right) return;
+  const float scale = static_cast<float>(GetDpiForWindow(window)) / 96.0f;
+  POINT point{static_cast<LONG>(std::lround(x * scale)),
+              static_cast<LONG>(std::lround((last_layout.source_rail.top + 6) * scale))};
+  ClientToScreen(window, &point);
+  RECT caret{point.x, point.y, point.x + 1,
+      point.y + static_cast<LONG>(std::lround((last_layout.source_rail.height() - 12) * scale))};
+  runtime.PublishCaret(caret);
+}
 void Window::Update() {
   if (runtime.Stopping()) {
     PostMessageW(window, WM_CLOSE, 0, 0);
@@ -647,6 +720,19 @@ void Window::Update() {
   // Keep unsaved settings theme preview while the settings host is open.
   if (!settings || !settings->IsOpen()) theme = ActiveTheme();
   auto state = runtime.Snapshot();
+  mode = static_cast<ui::BufferMode>(state.value("mode", 0));
+  UpdateTargetIcon(state.value("target_pid", 0U));
+  const auto config = runtime.Configuration();
+  if (send_hotkey) {
+    if (state.value("capture", false) && state.value("visible", false) &&
+        state.value("preedit", std::string()).empty() &&
+        core::ValidShortcut(config.send_key, config.send_modifiers))
+      send_hotkey->RegisterInitial(config.send_modifiers, config.send_key);
+    else send_hotkey->Reset();
+  }
+  const auto clipboard_action = runtime.TakeClipboardAction();
+  if (clipboard_action == 'V') { Paste(); return; }
+  if (clipboard_action == 'C') { Copy(); return; }
   if (state.value("visible", false) &&
       (placed_opening_revision != state.value("opening_revision", 0ULL) ||
        placed_geometry_revision != state.value("placement_revision", 0ULL)))
@@ -667,6 +753,22 @@ void Window::Update() {
                                 last_layout.source_text.width());
     scroll[1] = ui::ClampScroll(scroll[1], result_content,
                                 last_layout.result_text.width());
+    const auto revision = state.value("revision", 0ULL);
+    if (revision != shown_revision || paint.insertion != shown_insertion ||
+        paint.preedit != shown_preedit || paint.preedit_caret != shown_preedit_caret) {
+      if (last_layout.show_source) {
+        const float caret = ui::MeasureBufferCaret(write, format, paint);
+        const float viewport = last_layout.source_text.width();
+        if (caret < scroll[0] + 12) scroll[0] = (std::max)(0.0f, caret - 12);
+        if (caret > scroll[0] + viewport - 16) scroll[0] = (std::max)(0.0f, caret - viewport + 16);
+      }
+      shown_revision = revision; shown_insertion = paint.insertion;
+      shown_preedit = paint.preedit; shown_preedit_caret = paint.preedit_caret;
+    }
+    if (last_layout.show_result && result_content != last_result_width &&
+        scroll[1] >= (std::max)(0.0f, last_result_width - last_layout.result_text.width()) - 2)
+      scroll[1] = (std::max)(0.0f, result_content - last_layout.result_text.width());
+    last_result_width = result_content;
     RECT window_rect{};
     GetWindowRect(window, &window_rect);
     const int height =
@@ -684,6 +786,7 @@ void Window::Update() {
     }
   }
   UpdateBufferZOrder();
+  PublishLogicalCaret(MakePaintState(state));
   InvalidateRect(window, nullptr, FALSE);
 }
 
@@ -721,6 +824,13 @@ void Window::Paint() {
       brush = nullptr;
       render->Release();
       render = nullptr;
+    }
+    if (target_icon && paint_state.bound) {
+      const auto box = last_layout.association;
+      const float scale = dpi / 96.0f;
+      DrawIconEx(paint.hdc, static_cast<int>((box.left + 2) * scale),
+          static_cast<int>((box.top + 2) * scale), target_icon,
+          static_cast<int>(18 * scale), static_cast<int>(18 * scale), 0, nullptr, DI_NORMAL);
     }
   }
   EndPaint(window, &paint);
@@ -773,6 +883,11 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
       case WM_ERASEBKGND:
         return 1;
       case WM_HOTKEY:
+        if (wparam == 20) { self->OpenSettings(); return 0; }
+        if (self->send_hotkey && self->send_hotkey->Matches(wparam, lparam)) {
+          if (self->runtime.ShortcutDown(ForegroundProcess())) self->held_send_key = HIWORD(lparam);
+          return 0;
+        }
         if (self->buffer_hotkey && self->buffer_hotkey->Matches(wparam, lparam)) {
           if (self->settings && self->settings->RecordingShortcut())
             self->settings->RecordShortcut(HIWORD(lparam), LOWORD(lparam) & ~MOD_NOREPEAT);
@@ -796,6 +911,15 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         self->UpdateBufferZOrder();
         return 0;
       case WM_TIMER:
+        if (self->held_send_key && !(GetAsyncKeyState(static_cast<int>(self->held_send_key)) & 0x8000)) {
+          self->held_send_key = 0; self->runtime.ShortcutUp();
+        }
+        {
+          const auto state = self->runtime.Snapshot();
+          if (state.value("capture", false) && state.value("target_pid", 0U) != ForegroundProcess())
+            self->runtime.PauseCapture();
+          if (state.value("busy", false)) InvalidateRect(hwnd, nullptr, FALSE);
+        }
         self->runtime.Tick();
         return 0;
       case WM_MEASUREITEM: {
@@ -901,7 +1025,18 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         const auto pressed = self->pressed_hit;
         self->pressed_hit = ui::BufferHitKind::kNone;
         InvalidateRect(hwnd, nullptr, FALSE);
-        if (hit != ui::BufferHitKind::kNone && hit == pressed)
+        if (hit == ui::BufferHitKind::kBind && hit == pressed) {
+          const auto state = self->MakePaintState(self->runtime.Snapshot());
+          if (!state.capturing) self->runtime.Bind(ForegroundProcess());
+          float at = self->last_layout.source_text.left - self->scroll[0];
+          std::size_t index = 0;
+          for (const auto& block : state.source_blocks) {
+            const auto width = ui::MeasureBufferContent(self->write, self->format, {block}, L"");
+            if (x < at + width * .5f) break;
+            at += width; ++index;
+          }
+          self->runtime.SetInsertion(index);
+        } else if (hit != ui::BufferHitKind::kNone && hit == pressed)
           self->ApplyHit(hit);
         return 0;
       }
@@ -948,6 +1083,9 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         limits->ptMaxTrackSize = {MulDiv(1100, dpi, 96), MulDiv(400, dpi, 96)};
         return 0;
       }
+      case WM_MOVE:
+        self->PublishLogicalCaret(self->MakePaintState(self->runtime.Snapshot()));
+        break;
       case WM_SIZE: {
         if (self->render)
           self->render->Resize(D2D1::SizeU(LOWORD(lparam), HIWORD(lparam)));
@@ -985,8 +1123,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
                 ui::HitTestBuffer(self->last_layout, x, y)))
           return HTCLIENT;
         if (self->last_layout.toolbar.contains(x, y) &&
-            !self->last_layout.mode_chip.contains(x, y) &&
-            !self->last_layout.status_label.contains(x, y))
+            !self->last_layout.mode_chip.contains(x, y))
           return HTCAPTION;
         return HTCLIENT;
       }
@@ -1064,6 +1201,8 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         self->notification.store(nullptr);
         self->runtime.SetNotify({});
         if (self->buffer_hotkey) self->buffer_hotkey->Reset();
+        if (self->send_hotkey) self->send_hotkey->Reset();
+        UnregisterHotKey(hwnd, 20);
         WTSUnRegisterSessionNotification(hwnd);
         Shell_NotifyIconW(NIM_DELETE, &self->tray);
         self->settings.reset();
@@ -1165,7 +1304,9 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   auto config = runtime.Configuration();
   ui.theme = ui::ThemeIdOrDefault(config.theme);
   ui.buffer_hotkey = std::make_unique<BufferHotkeyRegistration>(window);
+  ui.send_hotkey = std::make_unique<BufferHotkeyRegistration>(window, 8);
   ui.buffer_hotkey->RegisterInitial(config.hotkey_modifiers, config.hotkey_key);
+  RegisterHotKey(window, 20, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'S');
   ui.product_icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
   ui.tray.cbSize = sizeof(ui.tray);
   ui.tray.hWnd = window;
@@ -1203,7 +1344,7 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
     SendMessageW(ui.tooltip, TTM_ADDTOOLW, 0, reinterpret_cast<LPARAM>(&info));
   }
   WTSRegisterSessionNotification(window, NOTIFY_FOR_THIS_SESSION);
-  SetTimer(window, 1, 100, nullptr);
+  SetTimer(window, 1, 25, nullptr);
   if (commands) commands->Attach(window);
   if (open_settings) ui.OpenSettings();
   MSG message{};

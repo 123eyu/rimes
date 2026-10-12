@@ -121,6 +121,15 @@ inline void DrawD2DIcon(ID2D1RenderTarget* target, ID2D1SolidColorBrush* brush,
       line(cx - s * 0.45f, cy - s * 0.25f, cx, cy + s * 0.35f);
       line(cx, cy + s * 0.35f, cx + s * 0.45f, cy - s * 0.25f);
       break;
+    case IconId::kSettings:
+      target->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), s * 0.5f, s * 0.5f), brush, stroke);
+      target->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), s * 0.18f, s * 0.18f), brush, stroke);
+      for (int i = 0; i < 8; ++i) {
+        const float angle = static_cast<float>(i) * 0.785398f;
+        line(cx + std::cos(angle) * s * 0.48f, cy + std::sin(angle) * s * 0.48f,
+             cx + std::cos(angle) * s * 0.72f, cy + std::sin(angle) * s * 0.72f);
+      }
+      break;
     case IconId::kCheck:
       line(cx - s * 0.45f, cy + s * 0.05f, cx - s * 0.1f, cy + s * 0.45f);
       line(cx - s * 0.1f, cy + s * 0.45f, cx + s * 0.5f, cy - s * 0.4f);
@@ -166,6 +175,18 @@ inline float MeasureBufferContent(IDWriteFactory* write,
   };
   for (const auto& block : blocks) add(block.text, false);
   add(tail, source_tail);
+  return width;
+}
+inline float MeasureBufferCaret(IDWriteFactory* write, IDWriteTextFormat* body,
+                                const BufferPaintState& state) {
+  const auto index = (std::min)(state.insertion, state.source_blocks.size());
+  std::vector<BufferBlockView> prefix(state.source_blocks.begin(),
+      state.source_blocks.begin() + static_cast<std::ptrdiff_t>(index));
+  auto width = MeasureBufferContent(write, body, prefix, L"");
+  if (!state.preedit.empty()) {
+    const auto part = state.preedit.substr(0, state.preedit_caret);
+    width += MeasureBufferContent(write, body, {}, part) - (part.empty() ? 0.0f : 5.0f);
+  }
   return width;
 }
 
@@ -259,6 +280,26 @@ inline void DrawBufferWorkbench(const BufferPaintContext& ctx,
                layout.mode_chip.right - 4, layout.mode_chip.bottom - 4},
               p.text_muted, 1.1f);
 
+  draw_control_bg(layout.configure, BufferHitKind::kConfigure, true, p.buffer);
+  DrawD2DIcon(target, brush, IconId::kSettings, layout.configure, p.text_secondary);
+  if (layout.show_edit) {
+    draw_control_bg(layout.edit, BufferHitKind::kEdit, true, p.buffer);
+    brush->SetColor(ColorF(p.text_secondary));
+    const auto b = layout.edit;
+    const float y = (b.top + b.bottom) * .5f;
+    target->DrawLine({b.left + 6, y}, {b.right - 5, y}, brush, 1.4f);
+    target->DrawLine({b.left + 6, y}, {b.left + 10, y - 4}, brush, 1.4f);
+    target->DrawLine({b.left + 6, y}, {b.left + 10, y + 4}, brush, 1.4f);
+  }
+  draw_control_bg(layout.auto_send, BufferHitKind::kAutoSend, true, p.buffer);
+  brush->SetColor(ColorF(state.auto_send_seconds ? p.accent_text : p.text_secondary));
+  const auto timer = state.auto_send_seconds ? std::to_wstring(state.auto_send_seconds) + L" 秒" : L"手动";
+  target->DrawTextW(timer.c_str(), static_cast<UINT32>(timer.size()), label,
+      D2D1::RectF(layout.auto_send.left + 5, layout.auto_send.top, layout.auto_send.right - 3, layout.auto_send.bottom), brush);
+  draw_control_bg(layout.close_after, BufferHitKind::kCloseAfter, true, p.buffer);
+  DrawD2DIcon(target, brush, state.close_after_send ? IconId::kCheck : IconId::kClose,
+      layout.close_after, state.close_after_send ? p.accent_text : p.text_muted);
+
   if (state.bound || !state.status.empty()) {
     const std::wstring status =
         !state.status.empty()
@@ -301,6 +342,11 @@ inline void DrawBufferWorkbench(const BufferPaintContext& ctx,
         D2D1::RectF(text_box.left, text_box.top, text_box.right, text_box.bottom),
         D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
     float x = text_box.left - scroll;
+    if (!result_lane && state.selected) {
+      brush->SetColor(ColorF(p.buffer_chip_selected));
+      target->FillRectangle(D2D1::RectF(text_box.left, text_box.top + 3,
+          text_box.right, text_box.bottom - 3), brush);
+    }
     auto paint_item = [&](const std::wstring& text, bool streaming,
                           bool preedit) {
       if (text.empty()) return;
@@ -335,19 +381,22 @@ inline void DrawBufferWorkbench(const BufferPaintContext& ctx,
                                     text_box.right, text_box.bottom),
                         brush, D2D1_DRAW_TEXT_OPTIONS_CLIP);
     } else {
-      for (const auto& block : blocks)
-        paint_item(block.text, block.streaming, false);
-      if (!tail.empty()) paint_item(tail, true, !result_lane);
-      if (!result_lane && state.capturing) {
-        brush->SetColor(ColorF(p.accent));
-        target->DrawLine(D2D1::Point2F(x - 3, rail.top + 7),
-                         D2D1::Point2F(x - 3, rail.bottom - 7), brush, 2);
+      for (std::size_t i = 0; i <= blocks.size(); ++i) {
+        if (!result_lane && i == (std::min)(state.insertion, blocks.size()) && !tail.empty())
+          paint_item(tail, true, true);
+        if (i < blocks.size()) paint_item(blocks[i].text, blocks[i].streaming, false);
       }
+      if (result_lane && !tail.empty()) paint_item(tail, true, false);
+    }
+    if (!result_lane && state.capturing && !state.selected) {
+      const auto caret_x = text_box.left - scroll + MeasureBufferCaret(write, body, state);
+      brush->SetColor(ColorF(p.accent));
+      target->DrawLine({caret_x, rail.top + 7}, {caret_x, rail.bottom - 7}, brush, 1.5f);
     }
     target->PopAxisAlignedClip();
   };
 
-  paint_rail(layout.source_rail, layout.source_text,
+  if (layout.show_source) paint_rail(layout.source_rail, layout.source_text,
              layout.show_result ? p.buffer_source_rail : p.candidate,
              state.source_blocks, state.preedit, false, state.scroll_source);
   if (layout.show_result) {
@@ -374,19 +423,22 @@ inline void DrawBufferWorkbench(const BufferPaintContext& ctx,
     draw_control_bg(layout.send, BufferHitKind::kSend, state.send_enabled, action_surface);
     // The primary action generates before a final exists; it only sends a
     // reviewed final afterwards. This is shared by API and local CLI routes.
-    const auto primary = state.mode == BufferMode::kGenerate && state.result_blocks.empty()
+    const auto primary = state.mode != BufferMode::kInput && state.result_blocks.empty()
         ? IconId::kSparkles : IconId::kPlane;
-    DrawD2DIcon(target, brush, primary, layout.send,
+    if (!state.busy) DrawD2DIcon(target, brush, primary, layout.send,
                 icon_color(BufferHitKind::kSend, state.send_enabled,
                            p.accent_text));
   }
   if (layout.show_result && state.busy) {
-    // Single waiting indicator in the result rail (not on send).
-    brush->SetColor(ColorF(p.accent));
+    // The same primary control owns generation, waiting and delivery.
     const float cx = (layout.waiting.left + layout.waiting.right) * 0.5f;
     const float cy = (layout.waiting.top + layout.waiting.bottom) * 0.5f;
-    target->DrawEllipse(D2D1::Ellipse(D2D1::Point2F(cx, cy), 5.0f, 5.0f), brush,
-                        hairline * 1.5f);
+    for (int i = 0; i < 8; ++i) {
+      const float angle = state.spinner_phase + static_cast<float>(i) * 0.785398f;
+      brush->SetColor(ColorF(p.accent, 0.2f + static_cast<float>(i) * 0.1f));
+      target->DrawLine({cx + std::cos(angle) * 4, cy + std::sin(angle) * 4},
+                      {cx + std::cos(angle) * 7, cy + std::sin(angle) * 7}, brush, 1.6f);
+    }
   }
 }
 

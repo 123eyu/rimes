@@ -180,10 +180,10 @@ std::filesystem::path ResolveCodex(const std::string& override_path) {
   }
   throw std::runtime_error("Codex CLI not found. Install/login with Codex and configure its .exe path.");
 }
-bool RunCodexTextProcess(const std::filesystem::path& executable,
+static bool RunTextProcess(const std::filesystem::path& executable,
     const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
     const std::string& input, const std::function<bool(const std::string&)>& chunk,
-    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms, bool codex) {
   try {
     if (cancelled()) return false;
     Require(ValidExecutable(executable) && input.size() <= Model::kLimit + 65536);
@@ -239,7 +239,7 @@ bool RunCodexTextProcess(const std::filesystem::path& executable,
         if (writer.joinable()) { CancelSynchronousIo(writer.native_handle()); writer.join(); }
       }
     } stop_tree{job, process, writer};
-    CodexJsonDecoder decoder; const auto started = GetTickCount64();
+    CodexJsonDecoder decoder; std::string raw; const auto started = GetTickCount64();
     bool valid = true, stopped = false; std::size_t stderr_bytes = 0;
     std::array<char, 8192> buffer{};
     for (;;) {
@@ -251,7 +251,11 @@ bool RunCodexTextProcess(const std::filesystem::path& executable,
         while (available) {
           DWORD count = 0;
           if (!ReadFile(handle, buffer.data(), (std::min)(available, static_cast<DWORD>(buffer.size())), &count, nullptr) || !count) break;
-          if (output) valid = decoder.Feed(std::string_view(buffer.data(), count));
+          if (output) {
+            if (codex) valid = decoder.Feed(std::string_view(buffer.data(), count));
+            else if (raw.size() + count > Model::kLimit * 6 + 65536) valid = false;
+            else raw.append(buffer.data(), count);
+          }
           else { stderr_bytes += count; valid = stderr_bytes <= 1024 * 1024; }
           if (!valid) break;
           available -= count;
@@ -270,16 +274,30 @@ bool RunCodexTextProcess(const std::filesystem::path& executable,
     DWORD exit_code = 1; GetExitCodeProcess(process.value, &exit_code);
     job.Reset(); WaitForSingleObject(process.value, 2000);
     CancelSynchronousIo(writer.native_handle()); writer.join();
-    if (stopped || !valid || !written || exit_code != 0 || !decoder.Finish() || cancelled()) {
+    if (stopped || !valid || !written || exit_code != 0 || (codex && !decoder.Finish()) || cancelled()) {
       if (error) *error = stopped ? "Codex cancelled or timed out. Source retained."
           : "Codex failed or violated the text-only protocol. Check CLI/login. Source retained.";
       return false;
     }
-    return chunk(decoder.Text()) && !cancelled();
+    return chunk(codex ? decoder.Text() : raw) && !cancelled();
   } catch (...) {
     if (error) *error = "Codex CLI unavailable or incompatible. Check its .exe path/login. Source retained.";
     return false;
   }
+}
+bool RunCodexTextProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const std::function<bool(const std::string&)>& chunk,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
+  return RunTextProcess(executable, arguments, workspace, input, chunk, cancelled, error, timeout_ms, true);
+}
+bool RunLocalTextProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const std::function<bool(const std::string&)>& chunk,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
+  const bool ok = RunTextProcess(executable, arguments, workspace, input, chunk, cancelled, error, timeout_ms, false);
+  if (!ok && error && error->empty()) *error = "Local translation failed or timed out. Source retained.";
+  return ok;
 }
 bool GenerateCodex(const Settings& config, const Generation& job,
     const std::function<bool(const std::string&)>& chunk,

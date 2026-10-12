@@ -341,7 +341,7 @@ void TestOwnedClicksAndTransientDetails() {
   int previews = 0;
   ui::ThemeId preview = ui::ThemeId::kNight;
   workbench::SettingsUiCallbacks callbacks;
-  callbacks.load = [] { return workbench::Settings{}; };
+  callbacks.load = [] { workbench::Settings s; s.close_after_send = false; return s; };
   callbacks.load_theme = [] { return ui::ThemeId::kNight; };
   callbacks.save = [&](workbench::Settings, const std::wstring&, bool, std::string*) {
     ++saves;
@@ -1095,7 +1095,24 @@ void TestSettingsPreserveRuntimeAndStreaming() {
 }
 }  // namespace
 
+void TestBufferBehaviorControls() {
+  workbench::Settings saved; int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [] { workbench::Settings s; s.close_after_send = false; return s; };
+  callbacks.save = [&](workbench::Settings value, const std::wstring&, bool, std::string*) { saved = value; ++saves; return true; };
+  workbench::SettingsUiHost host(callbacks);
+  host.OpenPage(nullptr, ui::SettingsPage::kBuffer, 1, false);
+  const HWND window = host.hwnd();
+  Check(window && GetDlgItem(window, 413) && GetDlgItem(window, 414), "Buffer behavior exposes real controls");
+  SendMessageW(GetDlgItem(window, 413), CB_SETCURSEL, 4, 0);
+  SendMessageW(GetDlgItem(window, 414), CB_SETCURSEL, 1, 0);
+  SendMessageW(window, WM_COMMAND, MAKEWPARAM(412, BN_CLICKED), reinterpret_cast<LPARAM>(GetDlgItem(window, 412)));
+  host.Close(true);
+  Check(saves == 1 && saved.auto_send_seconds == 5 && saved.close_after_send && saved.translation_provider == "ai",
+        "Buffer behavior controls persist their values");
+}
 int main() {
+  TestBufferBehaviorControls();
   TestNestedHitTargets();
   TestOwnedClicksAndTransientDetails();
   TestCandidateSettingsControls();

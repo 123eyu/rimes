@@ -40,12 +40,12 @@ struct SettingsFonts {
                          CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
                          L"Segoe UI");
     };
-    sidebar = make(12, FW_MEDIUM);
+    sidebar = make(13, FW_MEDIUM);
     title = make(11, FW_SEMIBOLD);
-    heading = make(20, FW_BOLD);
-    body = make(11, FW_NORMAL);
-    family = make(9, FW_NORMAL);
-    control = make(11, FW_NORMAL);
+    heading = make(20, FW_SEMIBOLD);
+    body = make(13, FW_NORMAL);
+    family = make(11, FW_NORMAL);
+    control = make(13, FW_NORMAL);
   }
 };
 
@@ -327,13 +327,22 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
   } else if (draft.page == SettingsPage::kBuffer) {
     SelectObject(dc, fonts.body);
     SetTextColor(dc, ToColorRef(p.text_secondary));
-    RECT help = px(layout.body);
-    DrawTextW(dc, L"输入先进入缓冲区，再由你发送到已绑定的输入框。\n\n"
-                 L"配置的发送键：轻按发送下一块，长按 1.2 秒发送全部。\n"
-                 L"切换输入框后暂停输入和发送。先点宿主输入框，再点 Buffer 原文区重新绑定；也可按快捷键。\n"
-                 L"切换处理模式会停止旧自动翻译；已完成待发结果保留，仍可显式发送。\n"
-                 L"关闭窗口保留本次内容，退出后不恢复正文。", -1, &help,
-              DT_LEFT | DT_WORDBREAK);
+    for (const auto group : {DipRect{layout.body.left, layout.body.top, layout.body.right, layout.body.top + 130},
+                             DipRect{layout.body.left, layout.body.top + 150, layout.body.right, layout.body.top + 278}}) {
+      FillRoundRect(dc, px(group), MulDiv(10, static_cast<int>(dpi), 96), ToColorRef(p.surface_secondary));
+      StrokeRoundRect(dc, px(group), MulDiv(10, static_cast<int>(dpi), 96), ToColorRef(p.border));
+    }
+    const wchar_t* labels[] = {L"自动发送", L"翻译方式", L"目标语言"};
+    const DipRect rows[] = {layout.auto_send_combo, layout.translation_combo, layout.buffer_language};
+    for (int i = 0; i < 3; ++i) {
+      RECT label = px({layout.body.left + 18, rows[i].top, rows[i].left - 12, rows[i].bottom});
+      DrawTextW(dc, labels[i], -1, &label, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
+    }
+    RECT help = px({layout.body.left + 4, layout.body.top + 294, layout.body.right - 4, layout.body.top + 390});
+    SelectObject(dc, fonts.family);
+    DrawTextW(dc, L"本地翻译首次下载约 182 MiB 中英模型，之后无需联网或 API 密钥。\n"
+                 L"目标语言填写 English 或中文；其他语言可选择 AI 翻译。\n\n"
+                 L"切换输入框会暂停发送，重新关联后重新倒计时。发送确认完成后才移除内容。", -1, &help, DT_LEFT | DT_WORDBREAK);
   } else if (draft.page == SettingsPage::kApi) {
     SelectObject(dc, fonts.body);
     SetTextColor(dc, ToColorRef(p.text_secondary));
@@ -382,7 +391,7 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
 
   const DipRect* fields[] = {&layout.font_edit, &layout.candidate_count_edit, &layout.hotkey_edit, &layout.send_edit,
       &layout.base_edit, &layout.model_edit, &layout.key_edit, &layout.lang_edit,
-      &layout.codex_path_edit, &layout.codex_model_edit};
+      &layout.codex_path_edit, &layout.codex_model_edit, &layout.buffer_language};
   for (const auto* field : fields) {
     if (field->width() <= 0) continue;
     RECT box = px(*field);

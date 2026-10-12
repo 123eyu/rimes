@@ -35,7 +35,8 @@ class SettingsUiHost {
   explicit SettingsUiHost(SettingsUiCallbacks callbacks);
   ~SettingsUiHost();
 
-  void Open(HWND owner);
+  void Open(HWND owner, bool visible = true);
+  void OpenPage(HWND owner, ui::SettingsPage page, int subpage = 0, bool visible = true);
   void Close(bool persist);
   [[nodiscard]] bool IsOpen() const noexcept { return hwnd_ != nullptr; }
   [[nodiscard]] HWND hwnd() const noexcept { return hwnd_; }
@@ -55,6 +56,7 @@ class SettingsUiHost {
   void InvalidateHover(int hit);
   void ActivateHit(int hit);
   static LRESULT CALLBACK Procedure(HWND, UINT, WPARAM, LPARAM);
+  static LRESULT CALLBACK ComboProcedure(HWND, UINT, WPARAM, LPARAM, UINT_PTR, DWORD_PTR);
 
   SettingsUiCallbacks callbacks_;
   ui::SettingsDraft draft_{};
@@ -79,6 +81,7 @@ class SettingsUiHost {
   HWND edit_model_ = nullptr;
   HWND edit_key_ = nullptr;
   HWND edit_lang_ = nullptr;
+  HWND combo_auto_send_ = nullptr, check_close_after_ = nullptr, combo_translation_ = nullptr;
   HWND check_ascii_ = nullptr;
   HWND check_trad_ = nullptr;
   HWND check_punct_ = nullptr;
