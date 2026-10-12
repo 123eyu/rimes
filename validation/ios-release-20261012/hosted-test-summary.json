@@ -12,7 +12,7 @@
       },
       "expectedFailures" : 0,
       "failedTests" : 0,
-      "passedTests" : 241,
+      "passedTests" : 244,
       "skippedTests" : 2,
       "testPlanConfiguration" : {
         "configurationId" : "1",
@@ -23,10 +23,20 @@
   "environmentDescription" : "RIMES · Built with macOS 27.0",
   "expectedFailures" : 0,
   "failedTests" : 0,
-  "finishTime" : 1791792435.844,
-  "passedTests" : 241,
+  "finishTime" : 1791794319.686,
+  "passedTests" : 244,
   "result" : "Passed",
   "runtimeWarnings" : [
+    {
+      "issueType" : "Runtime Warning",
+      "message" : "[Internal] Thread running at User-interactive quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL" : "file:///Users/isaac/.codex/worktrees/ios-release-20261012/rimes/platforms/ios/Keyboard/KeyboardViewController.swift"
+    },
+    {
+      "issueType" : "Runtime Warning",
+      "message" : "[Internal] Thread running at User-interactive quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
+      "sourceURL" : "file:///Users/isaac/.codex/worktrees/ios-release-20261012/rimes/platforms/ios/Keyboard/KeyboardViewController.swift"
+    },
     {
       "issueType" : "Runtime Warning",
       "message" : "[Internal] Thread running at User-interactive quality-of-service class waiting on a lower QoS thread running at Default quality-of-service class. Investigate ways to avoid priority inversions",
@@ -344,7 +354,7 @@
     }
   ],
   "skippedTests" : 2,
-  "startTime" : 1791792322.011,
+  "startTime" : 1791794202.283,
   "statistics" : [
 
   ],
@@ -355,9 +365,9 @@
   "topInsights" : [
     {
       "category" : "Longest Test Runs",
-      "impact" : "28% of duration",
-      "text" : "3 longest test runs with outlier durations exceeding 4.31s (three standard deviations)"
+      "impact" : "29% of duration",
+      "text" : "3 longest test runs with outlier durations exceeding 4.60s (three standard deviations)"
     }
   ],
-  "totalTestCount" : 243
+  "totalTestCount" : 246
 }
