@@ -1,0 +1,12 @@
+{
+  "result": "Passed",
+  "total": 249,
+  "passed": 247,
+  "skipped": 2,
+  "failed": 0,
+  "coldStartSizingTests": 14,
+  "sourceBase": "6b90e48d67d7ff84d1660c33d7e8775f790a9b6f",
+  "coldStartFix": "36017c0a991ff14b349907bec15ccd62e37bd692",
+  "actualWanxiangZIP": "Passed",
+  "physicalDeviceAcceptanceOfBuild55": false
+}

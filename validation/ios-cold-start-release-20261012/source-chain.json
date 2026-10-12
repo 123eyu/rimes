@@ -1,0 +1,14 @@
+{
+  "supersededBuild54": {
+    "sourceCommit": "5db23ee537f78076f4cc3bf032c9777d7b403b89",
+    "keyboardSourceSHA256": "ebd3b41634978a27f84efe61b0d47f16da9380e1d5c66c1b26cfec12eebf844a",
+    "coldStartFixIncluded": false
+  },
+  "correctedBuild55": {
+    "baseCommit": "6b90e48d67d7ff84d1660c33d7e8775f790a9b6f",
+    "coldStartFixCommit": "36017c0a991ff14b349907bec15ccd62e37bd692",
+    "keyboardSourceSHA256": "6c048bdb5fe269982b855bb8427e45e417d5089af1488e7d195be8ad22b3e37f",
+    "coldStartFixIncluded": true
+  },
+  "sourceAudit": "Build54 froze the release branch before the newer cold-start fix was merged into main. Apple delivered that archive; the source selection was incomplete."
+}
