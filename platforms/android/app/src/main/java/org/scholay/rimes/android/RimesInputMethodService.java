@@ -698,7 +698,8 @@ public final class RimesInputMethodService extends InputMethodService {
         dispatch(() -> replaceNineKey(raw));
     }
     private void chooseLayout(String selected) {
-        if(selected.equals(layout) && (!selected.equals("nineKey") || schema.equals("rimes_pinyin"))) return;
+        if(selected.equals(layout) && (!selected.equals("nineKey") || schema.equals("rimes_pinyin"))
+                && (importedScheme==null || selected.equals(nineKeyEngine()?"nineKey":"qwerty"))) return;
         settleAndSwitch(() -> {
             changeSettingsPair(() -> settings.setLayout(selected)); numeric=false; symbols=false; emoji=false; uppercase=false; spellingOpen=false;
             if(selected.equals("nineKey")) english=false;

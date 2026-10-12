@@ -156,6 +156,14 @@ final class ServiceDeliveryContract {
                 check(engine.selections.get()==2 && original.equals(engine.selected),"unavailable optional variant returns to the activated schema");
                 check(!(Boolean)get(fixture.service,"failed") && (Boolean)get(fixture.service,"ready"),"fallback preserves a usable engine");
                 check((Boolean)invoke(fixture.service,"nineKeyEngine",new Class<?>[0])==nine,"visible layout follows the schema that actually loaded");
+                engine.rejectedSchema=null;
+                invoke(fixture.service,"chooseLayout",new Class<?>[]{String.class},nine?"qwerty":"nineKey");
+            });
+            engineIdle(instrumentation);
+            onMain(instrumentation,() -> {
+                Fixture fixture=reference.get();
+                check(engine.selections.get()==3 && optional.equals(engine.selected),"tapping the saved but unloaded layout retries its optional schema");
+                check((Boolean)invoke(fixture.service,"nineKeyEngine",new Class<?>[0])!=nine,"successful retry updates the visible layout");
             });
         } finally {
             onMain(instrumentation,() -> {if(reference.get()!=null) reference.get().close();});
