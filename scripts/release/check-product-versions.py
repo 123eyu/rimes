@@ -27,14 +27,20 @@ def check(root, android=None, windows=None, require_all=False):
     spec = (ios / 'project.yml').read_text()
     marketing = re.findall(r"^\s+MARKETING_VERSION: ['\"]([^'\"]+)['\"]", spec, re.M)
     build = re.findall(r"^\s+CURRENT_PROJECT_VERSION: ['\"]([0-9]+)['\"]", spec, re.M)
-    require(marketing == [version] and len(build) == 1, 'iOS project.yml version drift')
+    require(len(marketing) == 1 and len(build) == 1, 'iOS project.yml version drift')
+    ios_version = marketing[0]
+    ios_parts = parse_product_version(ios_version, 'iOS MARKETING_VERSION')
+    require(ios_parts[:2] == root_version[:2],
+            'iOS MARKETING_VERSION must stay on the root major/minor line')
+    require(ios_parts[2] >= root_version[2],
+            'iOS patch version must not be lower than root VERSION')
     project = (ios / 'RIMES.xcodeproj/project.pbxproj').read_text()
-    require(set(re.findall(r'MARKETING_VERSION = ([^;]+);', project)) == {version},
+    require(set(re.findall(r'MARKETING_VERSION = ([^;]+);', project)) == {ios_version},
             'Generated Xcode project marketing version drift')
     require(set(re.findall(r'CURRENT_PROJECT_VERSION = ([^;]+);', project)) == {build[0]},
             'Generated Xcode project build number drift')
     result = {'target': version, 'macos': {'version': version},
-              'ios': {'version': version, 'build': int(build[0])},
+              'ios': {'version': ios_version, 'build': int(build[0])},
               'linux': 'excluded; unchanged'}
     if android:
         base = android / 'platforms/android'
