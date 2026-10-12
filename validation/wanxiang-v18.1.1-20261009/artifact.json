@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-09",
+  "upstreamRelease": "https://github.com/amzxyz/rime-wanxiang/releases/tag/v18.1.1",
+  "upstreamArchiveSHA256": "abd00fd2b4135453e53b81d8ac893301e808fdb52290ea72977714dfc67400a2",
+  "archive": "lingxi-wanxiang-v18.1.1-base-portable.zip",
+  "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+  "bytes": 33402176,
+  "sourceSHA256": {
+    "scripts/input-schemes/scheme_build.py": "c311640a8d11c94e0f85e71b3340e315270edeb1022b2b122aba9d96697cee64",
+    "scripts/input-schemes/host_probe.cc": "e9f076f3c7fd65e396e62db7634e68311ba3dc60b1b390fff54fc9093c218930",
+    "scripts/input-schemes/scheme_lint.py": "cbb289c3618a287b298dea9cf6f71a3ad5099dded22eceec4ca4d590f4c9e5d6",
+    "platforms/ios/App/RimeSchemeImportService.swift": "7a579e93c4b6e8eb3cf877a81ee87eba2da82139cf69ebea01ddb629ec7dcc6d",
+    "Catalog/input-schemes/wanxiang-portable.txt": "397a3a8e9b1e2d3309e6c1aa61fce18306c10c5c064aece02d562b98de2b1edf"
+  },
+  "iosEngineHostSHA256": "ada6e237278c884701887201d3bfaa0c075ee0b3a3db6153167a668d1513daed",
+  "mobileProbesPassed": 17,
+  "macosProbesPassed": 17,
+  "unitTests": 38,
+  "unverified": [
+    "iPhone device and keyboard-extension memory",
+    "Windows device",
+    "Android device",
+    "Linux device"
+  ],
+  "lingxiZipImportPlatforms": [
+    "iOS"
+  ]
+}

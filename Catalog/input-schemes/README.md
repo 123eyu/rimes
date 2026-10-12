@@ -120,6 +120,18 @@ to recommend (default: every scheme in the root). `providers` are the shared sou
 complete a package: prelude, essay, the stock Rime schemes that others depend on, OpenCC
 data, and 雾凇 for the files derived configurations borrow from it.
 
+An entry may use `sourceArchive` (`url`, `sha256`, optional `licenseFile`) when a
+formal release contains generated resources absent from the Git source archive.
+The builder verifies the release checksum; `licenseFile` is fetched from the pinned
+source commit if the ZIP omits it. `pin` leaves these entries fixed: update the
+revision, release URL and checksum together. The manifest retains the archive source.
+
+Wanxiang uses the v18.1.1 Base release and the explicit `wanxiang-portable-v18.1.1`
+compatibility profile. It repairs the Lua cache database names, includes the release's
+OpenCC data, and disables unavailable octagram, precompiled charset filtering and
+desktop layout-switch/redeploy commands. It is a fixed full-pinyin package. See
+[`wanxiang-portable.txt`](wanxiang-portable.txt) for the user-facing import instructions and limits.
+
 Categories: `phonetic` 音码 (全拼, 双拼, 注音, 拼式, 并击), `shape` 形码 (五笔, 仓颉, 郑码,
 笔画, 行列, 宇浩, 虎码, …), `phonetic-shape` 音形码 (小鹤音形, 自然码, 键道, 声笔, 魔然, 墨奇,
 …), `dialect` 方言与古汉语, `auxiliary`.
@@ -186,6 +198,9 @@ python3 -m venv .venv && .venv/bin/pip install -r scripts/input-schemes/requirem
 To add a scheme, append an entry to `sources.json` (run `pin` to fill in the revision),
 build and verify it, and commit `sources.json`, `index.json` and `CATALOG.md`. Add `probes`
 (`schema`, `keys`, `expect`) when you know a code that must produce a given candidate.
+Probes may set an `options` list (for example `["s2tw"]`) before typing. Both matching
+output and a clean Lua runtime are required; a candidate produced alongside a Lua
+error is a failed probe.
 
 To publish, run `index --collect <dir>`: it copies the `publishable` ZIPs and a `SHA256SUMS`
 file into `<dir>`. Upload those as release assets and let the website read `index.json`:

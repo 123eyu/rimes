@@ -1,0 +1,511 @@
+{
+  "archive": "rimes-scheme-wanxiang-20261008.26a9efe.zip",
+  "sha256": "91041724bfca27080184abad84506a423a5dc751759e5cc734e7d5f8c7ae08be",
+  "engine": "macOS bundled librime 1.16.0 + librime-lua",
+  "librarySHA256": "abb06aa5b3f53de375bc401512b49a7a31b7ed5ee62b2ef7a438512abee5958f",
+  "luaPluginSHA256": "a0862901b4d36d35aba7012f05c132dd087890cca564609c5d1ea3ba9de7c12b",
+  "luaDiagnosticsAvailable": false,
+  "errorLevelLogs": [],
+  "stderr": "WARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:01:53.457157 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:01:53.459085 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:04.844030 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:04.844669 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:05.646943 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:05.647594 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:06.492435 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:06.493151 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:07.359547 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:07.360276 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:08.175108 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:08.175803 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:09.060674 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:09.061341 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:09.953310 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:09.954022 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:10.865474 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:10.866164 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:11.754092 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:11.754739 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:12.647578 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:12.648244 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:13.545371 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:13.546504 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:14.437967 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:14.438608 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:15.326651 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:15.327310 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:16.236871 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:16.237533 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:17.152066 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:17.152922 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:18.074751 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:18.075508 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:18.795675 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:18.796307 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n\nWARNING: Logging before InitGoogleLogging() is written to STDERR\nI20261009 15:02:19.412492 0x203d3ff80 modules.cc:96] registering components from module 'lua'.\nI20261009 15:02:19.413149 0x203d3ff80 modules.cc:87] rime.lua info: rime.lua should be either in the rime user data directory or in the rime shared data directory\n",
+  "rows": [
+    {
+      "mode": "deploy",
+      "passed": true,
+      "results": [
+        {
+          "step": "deploy",
+          "target": "default.yaml",
+          "ok": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang_mixedcode",
+          "ok": true,
+          "compiled": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang_reverse",
+          "ok": true,
+          "compiled": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang_english",
+          "ok": true,
+          "compiled": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang_abbrev",
+          "ok": true,
+          "compiled": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang_phrase",
+          "ok": true,
+          "compiled": true
+        },
+        {
+          "step": "deploy",
+          "target": "wanxiang",
+          "ok": true,
+          "compiled": true
+        }
+      ]
+    },
+    {
+      "mode": "load",
+      "passed": true,
+      "results": [
+        {
+          "step": "load",
+          "target": "wanxiang",
+          "ok": true,
+          "luaError": ""
+        }
+      ]
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "nihao",
+      "expect": "你好",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "nihao",
+        "ok": true,
+        "commit": "",
+        "preedit": "ni hao",
+        "luaError": "",
+        "candidates": [
+          "你好",
+          "拟好",
+          "泥蒿",
+          "你",
+          "泥",
+          "拟",
+          "腻",
+          "逆",
+          "尼",
+          "妮"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "nihao ",
+      "expect": "你好",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "nihao ",
+        "ok": true,
+        "commit": "你好",
+        "preedit": "",
+        "luaError": "",
+        "candidates": []
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "zhongguo",
+      "expect": "中国",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "zhongguo",
+        "ok": true,
+        "commit": "",
+        "preedit": "zhong guo",
+        "luaError": "",
+        "candidates": [
+          "中国",
+          "种过",
+          "重过",
+          "种果",
+          "中过",
+          "中果",
+          "中古",
+          "钟鼓",
+          "中谷",
+          "忠骨"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "jingji",
+      "expect": "經濟",
+      "options": [
+        "s2t"
+      ],
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "jingji",
+        "ok": true,
+        "commit": "",
+        "preedit": "jing ji",
+        "luaError": "",
+        "candidates": [
+          "經濟",
+          "競技",
+          "經紀",
+          "荊棘",
+          "京急",
+          "靜寂",
+          "京籍",
+          "京冀",
+          "京畿",
+          "京基"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "jingji",
+      "expect": "經濟",
+      "options": [
+        "s2hk"
+      ],
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "jingji",
+        "ok": true,
+        "commit": "",
+        "preedit": "jing ji",
+        "luaError": "",
+        "candidates": [
+          "經濟",
+          "競技",
+          "經紀",
+          "荊棘",
+          "京急",
+          "靜寂",
+          "京籍",
+          "京冀",
+          "京畿",
+          "京基"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "jingji",
+      "expect": "經濟",
+      "options": [
+        "s2tw"
+      ],
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "jingji",
+        "ok": true,
+        "commit": "",
+        "preedit": "jing ji",
+        "luaError": "",
+        "candidates": [
+          "經濟",
+          "競技",
+          "經紀",
+          "荊棘",
+          "京急",
+          "靜寂",
+          "京籍",
+          "京冀",
+          "京畿",
+          "京基"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "U4e2d",
+      "expect": "中",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "U4e2d",
+        "ok": true,
+        "commit": "",
+        "preedit": "U4e2d",
+        "luaError": "",
+        "candidates": [
+          "中",
+          "U+4E2D",
+          "0x4E2D",
+          "20013",
+          "0b100111000101101",
+          "0o47055",
+          "\\u4E2D",
+          "\\u{4E2D}",
+          "E4 B8 AD",
+          "4E2D"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "R123",
+      "expect": "壹佰贰拾叁元整",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "R123",
+        "ok": true,
+        "commit": "",
+        "preedit": "R123",
+        "luaError": "",
+        "candidates": [
+          "一百二十三",
+          "壹佰贰拾叁元整",
+          "壹佰贰拾叁",
+          "一百二十三元整",
+          "123",
+          "￥123.00",
+          "1.23×10²",
+          "1.23E+02",
+          "123×10⁰",
+          "0x7B"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "V1+1",
+      "expect": "1+1=2",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "V1+1",
+        "ok": true,
+        "commit": "",
+        "preedit": "V1+1〔计算器〕",
+        "luaError": "",
+        "candidates": [
+          "2",
+          "1+1=2"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "/rq",
+      "expect": "年",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "/rq",
+        "ok": true,
+        "commit": "",
+        "preedit": "/rq 〔282/365〕",
+        "luaError": "",
+        "candidates": [
+          "2026年10月09日",
+          "2026-10-09",
+          "2026/10/09",
+          "2026.10.09",
+          "20261009",
+          "2026年10月9日",
+          "26年10月9日",
+          "10月9日",
+          "二〇二六年十月九日",
+          "丙午年戊戌月丙辰日丙申时"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "/wx",
+      "expect": "标准版v18.1.1",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "/wx",
+        "ok": true,
+        "commit": "",
+        "preedit": "/wx",
+        "luaError": "",
+        "candidates": [
+          "标准版v18.1.1",
+          "https://github.com/amzxyz/rime-wanxiang",
+          "https://cnb.cool/amzxyz/rime-wanxiang",
+          "https://amzxyz.github.io/rime-wanxiang/"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "`shiba",
+      "expect": "木",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "`shiba",
+        "ok": true,
+        "commit": "",
+        "preedit": "shiba",
+        "luaError": "",
+        "candidates": [
+          "木",
+          "矲",
+          "𥑽",
+          "𩚿",
+          "豝",
+          "𥐙",
+          "𧱒",
+          "𩚥",
+          "𩠀",
+          "祓"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "xiaolian",
+      "expect": "😀",
+      "options": [
+        "emoji"
+      ],
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "xiaolian",
+        "ok": true,
+        "commit": "",
+        "preedit": "xiao lian",
+        "luaError": "",
+        "candidates": [
+          "笑脸",
+          "😀",
+          "小脸",
+          "小莲",
+          "孝廉",
+          "小怜",
+          "小李",
+          "效力",
+          "小丽",
+          "小莉"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "hello",
+      "expect": "hello",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "hello",
+        "ok": true,
+        "commit": "",
+        "preedit": "hello",
+        "luaError": "",
+        "candidates": [
+          "hello",
+          "河流里",
+          "河里捞",
+          "合拢了",
+          "赫雷拉",
+          "赫雷罗",
+          "和聊了",
+          "合理了",
+          "河里了",
+          "和离了"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "apple",
+      "expect": "苹果",
+      "options": [
+        "english_chinese"
+      ],
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "apple",
+        "ok": true,
+        "commit": "",
+        "preedit": "apple",
+        "luaError": "",
+        "candidates": [
+          "apple",
+          "苹果",
+          "apples",
+          "applet",
+          "小程序",
+          "Appleby",
+          "阿普尔比",
+          "Apple ID",
+          "苹果账号",
+          "Apple MPEG-4"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "`mumu8",
+      "expect": "林",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "`mumu8",
+        "ok": true,
+        "commit": "",
+        "preedit": "mumu²",
+        "luaError": "",
+        "candidates": [
+          "林",
+          "栂",
+          "樑",
+          "㮪",
+          "㯦",
+          "綝",
+          "𣖪",
+          "𦳮",
+          "𪳐"
+        ]
+      }
+    },
+    {
+      "schema": "wanxiang",
+      "keys": "/sym",
+      "expect": "超级符号",
+      "passed": true,
+      "result": {
+        "step": "type",
+        "target": "wanxiang",
+        "keys": "/sym",
+        "ok": true,
+        "commit": "",
+        "preedit": "/sym",
+        "luaError": "",
+        "candidates": [
+          "超级符号"
+        ]
+      }
+    }
+  ],
+  "passed": true
+}

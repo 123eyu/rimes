@@ -1,6 +1,9 @@
 """Tests for the edits scheme_build makes so upstream files pass the import contract."""
 
 import unittest
+from unittest.mock import patch
+import json
+import subprocess
 import zipfile
 from pathlib import Path
 import tempfile
@@ -173,6 +176,34 @@ class DefaultTests(unittest.TestCase):
 
 
 class ArchiveTests(unittest.TestCase):
+    def test_release_source_checks_bytes_even_when_extracted_tree_is_cached(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cache = Path(folder)
+            archive = cache / "source.zip"
+            build.write_zip(archive, {"demo.schema.yaml": b"schema: {schema_id: demo}\n"})
+            digest = build.sha256(archive.read_bytes())
+            (cache / "archives").mkdir()
+            pinned = cache / "archives" / (digest + ".zip")
+            archive.rename(pinned)
+            entry = {"id": "demo", "sourceArchive": {"url": "https://example.invalid/source.zip", "sha256": digest}}
+            tree = build.fetch_release(entry, cache)
+            self.assertTrue((tree / "demo.schema.yaml").is_file())
+            pinned.write_bytes(b"changed release")
+            with self.assertRaisesRegex(build.BuildError, "checksum mismatch"):
+                build.fetch_release(entry, cache)
+
+    def test_release_source_rejects_parent_traversal(self):
+        with tempfile.TemporaryDirectory() as folder:
+            cache = Path(folder)
+            archive = cache / "source.zip"
+            build.write_zip(archive, {"../outside.txt": b"outside"})
+            digest = build.sha256(archive.read_bytes())
+            (cache / "archives").mkdir()
+            archive.rename(cache / "archives" / (digest + ".zip"))
+            entry = {"id": "demo", "sourceArchive": {"url": "https://example.invalid/source.zip", "sha256": digest}}
+            with self.assertRaisesRegex(build.BuildError, "unsafe release archive path"):
+                build.fetch_release(entry, cache)
+
     def test_archive_is_deterministic_and_within_the_ratio_limit(self):
         files = {"demo.schema.yaml": b"schema: {schema_id: demo, name: x}\ntranslator: {dictionary: demo}\n",
                  "demo.dict.yaml": b"---\nname: demo\n...\n" + b"\xe4\xb8\x80\ta\n" * 200_000,
@@ -186,6 +217,29 @@ class ArchiveTests(unittest.TestCase):
             with zipfile.ZipFile(first) as archive:
                 for info in archive.infolist():
                     self.assertLessEqual(info.file_size, max(1, info.compress_size) * lint.MAX_COMPRESSION_RATIO)
+
+
+class VerificationTests(unittest.TestCase):
+    def test_matching_candidate_cannot_hide_lua_error_or_failed_process(self):
+        for error, returncode in (("Lua failure", 0), ("", 1)):
+            with self.subTest(error=error, returncode=returncode), tempfile.TemporaryDirectory() as folder:
+                root = Path(folder)
+                review = {"fatal": None, "schemes": [{"id": "demo", "blocking": []}],
+                          "staged": {"root": str(root), "selected": ["demo"], "deployment": ["demo"]}}
+                replies = [
+                    subprocess.CompletedProcess([], 0, json.dumps(review), ""),
+                    subprocess.CompletedProcess([], 0, '{"target":"demo","ok":true,"compiled":true}', ""),
+                    subprocess.CompletedProcess([], 0, '{"target":"demo","ok":true}', ""),
+                    subprocess.CompletedProcess([], returncode, json.dumps({"ok": True, "candidates": ["你好"], "luaError": error}), ""),
+                ]
+                with patch.object(build, "run", side_effect=replies):
+                    result = build.verify_one(
+                        {"archive": "demo.zip", "recommended": ["demo"]},
+                        {"probes": [{"schema": "demo", "keys": "nihao", "expect": "你好"}]},
+                        Path("harness"), Path("probe"), root, 30,
+                    )
+                self.assertFalse(result["passed"])
+                self.assertFalse(result["probes"][0]["passed"])
 
 
 if __name__ == "__main__":

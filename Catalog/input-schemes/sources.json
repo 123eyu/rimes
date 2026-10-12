@@ -533,8 +533,8 @@
    "category": "phonetic",
    "family": "quanpin",
    "repo": "amzxyz/rime-wanxiang",
-   "revision": "11f31d42f24295a6a5a2ebdcac92240f65b7ca75",
-   "revisionDate": "2026-10-06",
+   "revision": "26a9efeb18e604c091f4d3890d00bec723fe755f",
+   "revisionDate": "2026-10-08",
    "schemas": [
     "wanxiang"
    ],
@@ -544,8 +544,110 @@
      "schema": "wanxiang",
      "keys": "nihao",
      "expect": "你好"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "nihao ",
+     "expect": "你好"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "zhongguo",
+     "expect": "中国"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "jingji",
+     "expect": "經濟",
+     "options": [
+      "s2t"
+     ]
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "jingji",
+     "expect": "經濟",
+     "options": [
+      "s2hk"
+     ]
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "jingji",
+     "expect": "經濟",
+     "options": [
+      "s2tw"
+     ]
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "U4e2d",
+     "expect": "中"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "R123",
+     "expect": "壹佰贰拾叁元整"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "V1+1",
+     "expect": "1+1=2"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "/rq",
+     "expect": "年"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "/wx",
+     "expect": "标准版v18.1.1"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "`shiba",
+     "expect": "木"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "xiaolian",
+     "expect": "😀",
+     "options": [
+      "emoji"
+     ]
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "hello",
+     "expect": "hello"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "apple",
+     "expect": "苹果",
+     "options": [
+      "english_chinese"
+     ]
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "`mumu8",
+     "expect": "林"
+    },
+    {
+     "schema": "wanxiang",
+     "keys": "/sym",
+     "expect": "超级符号"
     }
-   ]
+   ],
+   "sourceArchive": {
+    "url": "https://github.com/amzxyz/rime-wanxiang/releases/download/v18.1.1/rime-wanxiang-base.zip",
+    "sha256": "abd00fd2b4135453e53b81d8ac893301e808fdb52290ea72977714dfc67400a2",
+    "licenseFile": "LICENSE"
+   },
+   "compatibility": "wanxiang-portable-v18.1.1",
+   "note": "v18.1.1 Base 全拼跨平台基础兼容包，按灵犀 iOS 能力适配；不含语法模型、预编译字符集过滤或键盘内切换双拼后重新部署。当前灵犀仅 iOS 提供 ZIP 导入入口；其他平台需支持外部方案的 Rime 客户端。"
   },
   {
    "id": "oh-my-rime",
