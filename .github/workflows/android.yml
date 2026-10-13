@@ -101,14 +101,16 @@ jobs:
             sleep 2
           done
           test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
-          adb -s emulator-5554 root
-          adb -s emulator-5554 wait-for-device
-          adb -s emulator-5554 install app/build/outputs/apk/debug/app-debug.apk
-          adb -s emulator-5554 install app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          adb -s emulator-5554 install -t app/build/outputs/apk/debug/app-debug.apk
+          adb -s emulator-5554 install -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
           python3 ../../scripts/input-schemes/fetch_fixture.py .native/wanxiang-original.zip
           adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug mkdir -p cache
-          adb -s emulator-5554 push .native/wanxiang-original.zip /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip
-          adb -s emulator-5554 shell chmod 644 /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip
+          # Stream the unchanged archive as the debuggable app's own UID;
+          # this also works on images without an adb-root service.
+          adb -s emulator-5554 shell -T 'run-as org.scholay.rimes.android.debug tee cache/wanxiang-original.zip >/dev/null' < .native/wanxiang-original.zip
+          expected_hash=$(sha256sum .native/wanxiang-original.zip | cut -d ' ' -f 1)
+          device_hash=$(adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug sha256sum cache/wanxiang-original.zip | cut -d ' ' -f 1)
+          test "$expected_hash" = "$device_hash"
           adb -s emulator-5554 shell am instrument -w -e mode scheme-import -e archive /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/scheme-import-emulator.log
           grep -Fq 'PASS real JNI import' .native/scheme-import-emulator.log
           grep -Fq 'INSTRUMENTATION_CODE: -1' .native/scheme-import-emulator.log
