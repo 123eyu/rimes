@@ -38,8 +38,8 @@ enum class ServeResult {
 
 class NamedPipeServer {
  public:
-  explicit NamedPipeServer(UserSecurityContext* security)
-      : security_(security) {}
+  explicit NamedPipeServer(UserSecurityContext* security, bool input_only = false)
+      : security_(security), input_only_(input_only) {}
 
   void RequestStop() noexcept { stopping_.store(true); }
 
@@ -53,6 +53,7 @@ class NamedPipeServer {
 
  private:
   UserSecurityContext* security_;
+  bool input_only_;
   std::atomic_bool stopping_{false};
 };
 

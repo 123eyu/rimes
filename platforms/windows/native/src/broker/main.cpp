@@ -193,6 +193,7 @@ int wmain(const int argc, wchar_t** argv) {
   }
 
   NamedPipeServer server(&security);
+  NamedPipeServer input_server(&security, true);
   workbench::Runtime runtime;
   workbench::UiCommands commands;
   const bool interactive = security.session_id() != 0;
@@ -209,7 +210,7 @@ int wmain(const int argc, wchar_t** argv) {
   if (interactive && !options.serve_once)
     ui = std::jthread([&] {
       workbench::RunWindow(
-          runtime, [&] { server.RequestStop(); },
+          runtime, [&] { server.RequestStop(); input_server.RequestStop(); },
           [&] { engine.RunMaintenance(true, nullptr); }, &commands,
           options.open_settings);
     });
@@ -223,11 +224,30 @@ int wmain(const int argc, wchar_t** argv) {
         if (!commands.RequestExit()) { Sleep(25); continue; }
       } else {
         server.RequestStop();
+        input_server.RequestStop();
       }
       break;
     }
   });
   error.clear();
+  // A deliberately smaller authority for sandboxed hosts: ordinary engine
+  // sessions only. No workbench target, clipboard, AI, settings or delivery.
+  std::jthread input_worker;
+  if (!options.serve_once) input_worker = std::jthread([&] {
+    std::wstring input_error;
+    const auto input_result = input_server.ServeClients(
+        [&](DWORD) {
+          auto connection = std::make_shared<BrokerConnection>(
+              security.session_id(), &engine, interactive ? &runtime : nullptr,
+              std::function<bool()>{}, true);
+          return [connection](const core::Frame& request, DWORD peer,
+                              core::Frame* response) {
+            return connection->Handle(request, peer, response);
+          };
+        }, false, &input_error);
+    if (input_result == ServeResult::kFatalError)
+      std::wcerr << L"Input-only endpoint unavailable: " << input_error << L'\n';
+  });
   const ServeResult result = server.ServeClients(
       [&security, &engine, &runtime, &commands, interactive, &options](DWORD) {
         auto connection = std::make_shared<BrokerConnection>(
@@ -242,6 +262,8 @@ int wmain(const int argc, wchar_t** argv) {
             };
       },
       options.serve_once, &error);
+  input_server.RequestStop();
+  if (input_worker.joinable()) input_worker.join();
   runtime.Stop();
   if (ui.joinable()) ui.join();
   if (result == ServeResult::kFatalError) {

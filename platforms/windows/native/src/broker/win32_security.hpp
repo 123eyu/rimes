@@ -13,8 +13,9 @@ namespace rimes::windows::broker {
 
 std::wstring FormatWindowsError(DWORD error_code);
 
-// Owns a protected DACL granting access only to the user who started the
-// broker. The same SECURITY_ATTRIBUTES are used for the mutex and named pipe.
+// Maintenance objects and the desktop pipe remain private to the user. The
+// separate input-only endpoint also admits AppContainers, authenticated by
+// user SID and session before any frame is handled.
 class UserSecurityContext {
  public:
   UserSecurityContext() = default;
@@ -26,6 +27,7 @@ class UserSecurityContext {
   bool Initialize(std::wstring* error);
 
   [[nodiscard]] SECURITY_ATTRIBUTES* attributes() { return &attributes_; }
+  [[nodiscard]] SECURITY_ATTRIBUTES* input_attributes() { return &input_attributes_; }
   [[nodiscard]] const std::wstring& sid_string() const { return sid_string_; }
   [[nodiscard]] PSID sid() const {
     return sid_bytes_.empty()
@@ -42,7 +44,9 @@ class UserSecurityContext {
 
  private:
   PSECURITY_DESCRIPTOR descriptor_ = nullptr;
+  PSECURITY_DESCRIPTOR input_descriptor_ = nullptr;
   SECURITY_ATTRIBUTES attributes_{};
+  SECURITY_ATTRIBUTES input_attributes_{};
   std::vector<std::byte> sid_bytes_;
   std::wstring sid_string_;
   DWORD session_id_ = 0;

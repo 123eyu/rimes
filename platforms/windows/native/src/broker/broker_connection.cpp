@@ -44,11 +44,13 @@ void LogEngineFailure(std::string_view operation,
 BrokerConnection::BrokerConnection(DWORD broker_session_id,
                                    engine::RimeEngine* engine,
                                    workbench::Runtime* runtime,
-                                   std::function<bool()> open_settings) noexcept
+                                   std::function<bool()> open_settings,
+                                   bool input_only) noexcept
     : broker_session_id_(broker_session_id),
       engine_(engine),
-      runtime_(runtime),
-      open_settings_(std::move(open_settings)) {}
+      runtime_(input_only ? nullptr : runtime),
+      settings_(runtime),
+      open_settings_(input_only ? std::function<bool()>{} : std::move(open_settings)) {}
 
 BrokerConnection::~BrokerConnection() { CloseAllSessions(); }
 
@@ -243,13 +245,13 @@ ClientAction BrokerConnection::HandleOpenSession(const core::Frame& request,
     state.context_id = open.context_id;
     state.engine_session_id = engine_session;
     state.schema_id = open.schema_id;
-    if (runtime_) {
-      const auto config = runtime_->Configuration();
+    if (settings_) {
+      const auto config = settings_->Configuration();
       if (!engine_->Configure(engine_session, config.schema, config.ascii,
                               config.traditional, config.ascii_punctuation,
                               nullptr, config.candidate_count))
         throw std::runtime_error("Schema unavailable");
-      state.target =
+      if (runtime_) state.target =
           runtime_->Register(peer_process_, session_id, open.context_id);
       state.schema_id = config.schema;
       state.settings_revision = config.revision;
@@ -347,14 +349,14 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   }
   session.last_sequence_id = key.sequence_id;
   if (session.candidate_guard) {
-    const auto revision = runtime_ ? runtime_->Configuration().revision : 0;
+    const auto revision = settings_ ? settings_->Configuration().revision : 0;
     const bool valid = *session.candidate_guard == revision;
     session.candidate_guard.reset();
     if (!valid) return RespondPassThrough(request, key, session, response);
   }
-  if (runtime_) {
-    const auto config = runtime_->Configuration();
-    const bool capture = runtime_->Capturing(session.target);
+  if (settings_) {
+    const auto config = settings_->Configuration();
+    const bool capture = runtime_ && runtime_->Capturing(session.target);
     if (session.settings_revision != config.revision ||
         session.capture != capture) {
       if (!engine_->Configure(session.engine_session_id, config.schema,

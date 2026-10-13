@@ -60,6 +60,8 @@ jobs:
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesE2EBroker.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRegistrar.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfE2E.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesSandboxProbe.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesAppContainerLauncher.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfTestHost.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/rimes-windows-registration.json
           if-no-files-found: error
@@ -100,7 +102,7 @@ jobs:
             -Architecture '${{ matrix.architecture }}' `
             -Configuration Release `
             -WorkDirectory "$env:RUNNER_TEMP/rimes-ime-e2e" `
-            -ProbeDesktop
+            -ProbeDesktop -AppContainer
 
       - name: Upload typing-test diagnostics
         if: always()

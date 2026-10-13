@@ -41,6 +41,12 @@ class CandidateWindow {
 
   void Update(const CandidateSnapshot& snapshot) noexcept;
   void Hide() noexcept;
+  void SetOwner(HWND owner) noexcept {
+    owner_ = owner;
+    if (window_) SetWindowLongPtrW(window_, GWLP_HWNDPARENT,
+                                  reinterpret_cast<LONG_PTR>(owner));
+  }
+  bool IsVisible() const noexcept { return window_ && IsWindowVisible(window_); }
   void SetSelect(std::function<void(std::size_t)> select) {
     select_ = std::move(select);
   }
@@ -85,6 +91,7 @@ class CandidateWindow {
   int hover_index_ = -1;
   int pressed_index_ = -1;
   HWND window_ = nullptr;
+  HWND owner_ = nullptr;
   CandidateSnapshot snapshot_{};
   // Last computed DIP hit rectangles in window client space (DIP).
   mutable std::vector<ui::DipRect> hit_pills_;

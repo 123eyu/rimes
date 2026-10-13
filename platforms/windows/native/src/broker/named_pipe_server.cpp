@@ -386,10 +386,12 @@ ServeResult NamedPipeServer::ServeClients(
 
     const DWORD access = PIPE_ACCESS_DUPLEX | FILE_FLAG_OVERLAPPED |
                          (first_instance ? FILE_FLAG_FIRST_PIPE_INSTANCE : 0);
-    UniquePipe pipe(CreateNamedPipeW(security_->pipe_name().c_str(), access,
+    const auto name = security_->pipe_name() + (input_only_ ? L".input" : L"");
+    UniquePipe pipe(CreateNamedPipeW(name.c_str(), access,
                                      pipe_mode, PIPE_UNLIMITED_INSTANCES,
                                      64U * 1024U, 64U * 1024U, 0,
-                                     security_->attributes()));
+                                     input_only_ ? security_->input_attributes()
+                                                 : security_->attributes()));
     first_instance = false;
     if (pipe.get() == INVALID_HANDLE_VALUE) {
       pipe.release();

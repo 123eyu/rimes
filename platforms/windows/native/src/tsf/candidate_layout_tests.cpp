@@ -294,6 +294,15 @@ void TestCandidateMatrixNavigation() {
   Check(navigation.MoveRow(-1, step) && !navigation.expanded() && engine_row == 0,
         "Up on the first matrix row collapses without cancelling composition");
   Check(navigation.MoveRow(1, step), "matrix opens again");
+  Check(navigation.SelectVisibleIndex(19, step) && navigation.row() == 2 &&
+            navigation.column() == 1 && engine_row == 2,
+        "host selection across preview pages synchronizes the engine");
+  Check(navigation.MoveRow(-1, step) && navigation.row() == 1 && engine_row == 1,
+        "keyboard navigation after host selection starts on the selected page");
+  Check(navigation.SelectVisibleIndex(1, step) && engine_row == 0,
+        "host can select back across pages");
+  Check(!navigation.SelectVisibleIndex(100, step) && engine_row == 0,
+        "invalid host selection does not move the engine");
   for (std::size_t row = 1; row <= 5; ++row) {
     Check(navigation.MoveRow(1, step) && navigation.row() == row && engine_row == row,
           "Down continues beyond the first three pages");

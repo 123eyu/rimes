@@ -5,6 +5,7 @@
 #include <textstor.h>
 
 #include <atomic>
+#include <functional>
 #include <string>
 #include <vector>
 
@@ -26,10 +27,22 @@ struct FakeDocument {
   HWND view_window = nullptr;
 };
 
-class FakeThreadMgr final : public ITfThreadMgr, public ITfKeystrokeMgr {
+class FakeThreadMgr final : public ITfThreadMgr, public ITfKeystrokeMgr,
+                            public ITfUIElementMgr {
  public:
   FakeThreadMgr() noexcept = default;
   bool thread_focus = true;
+  bool ui_enabled = false, ui_show = false, ui_fail_begin = false;
+  unsigned ui_begin = 0, ui_update = 0, ui_end = 0;
+  DWORD ui_first_flags = 0;
+  ITfUIElement* ui_element = nullptr;
+  std::function<void()> on_ui_begin;
+  std::function<void()> on_ui_update;
+  HRESULT STDMETHODCALLTYPE BeginUIElement(ITfUIElement*, BOOL*, DWORD*) override;
+  HRESULT STDMETHODCALLTYPE UpdateUIElement(DWORD) override;
+  HRESULT STDMETHODCALLTYPE EndUIElement(DWORD) override;
+  HRESULT STDMETHODCALLTYPE GetUIElement(DWORD, ITfUIElement**) override;
+  HRESULT STDMETHODCALLTYPE EnumUIElements(IEnumTfUIElements**) override { return E_NOTIMPL; }
 
   HRESULT STDMETHODCALLTYPE QueryInterface(REFIID interface_id,
                                            void** object) override;

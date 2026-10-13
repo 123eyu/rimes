@@ -120,6 +120,39 @@ void TestStartupRetry() {
   Check(output && output->value("kind", "") == "ok" && posts == 1,
         "retry posts only after UI becomes ready");
 }
+void TestInputOnlyConnectionCannotReachWorkbench() {
+  workbench::Runtime runtime;
+  int requests = 0;
+  const auto before = runtime.Snapshot();
+  for (const auto* op : {"open_settings", "snapshot", "focus", "wait", "ack",
+                         "toggle", "bind", "send", "generate", "unknown"}) {
+    broker::BrokerConnection connection(42, nullptr, &runtime,
+                                        [&] { ++requests; return true; }, true);
+    core::Frame response;
+    Check(connection.Handle(Hello(100), 100, &response) ==
+              broker::ClientAction::kContinue, "input-only hello succeeds");
+    core::BrokerHello hello;
+    Check(core::DecodeBrokerHello(response.payload, &hello) &&
+              (hello.capabilities & 1ULL) == 0,
+          "input-only endpoint never advertises workbench capability");
+    Check(connection.Handle(Command({{"op", op}}), 100, &response) ==
+              broker::ClientAction::kCloseAfterResponse &&
+              response.header.message_type == core::MessageType::kError,
+          "input-only endpoint rejects every non-input control");
+  }
+  Check(requests == 0 && runtime.Snapshot() == before,
+        "restricted commands cannot open UI or mutate workbench state");
+  broker::BrokerConnection connection(42, nullptr, &runtime, {}, true);
+  core::Frame response;
+  connection.Handle(Hello(100), 100, &response);
+  Check(connection.Handle(Command({{"op", "candidate_guard"}, {"session", 99},
+                                   {"revision", 1}, {"index", 0}}), 100, &response) ==
+            broker::ClientAction::kContinue,
+        "input-only endpoint retains candidate revision guard");
+  const auto output = core::DecodeControl(response.payload);
+  Check(output && output->value("kind", "") == "stale",
+        "candidate guard refuses a foreign input session");
+}
 int posted_commands = 0;
 LRESULT CALLBACK FixtureProcedure(HWND window, UINT message, WPARAM wparam,
                                   LPARAM lparam) {
@@ -165,6 +198,7 @@ int main() {
   TestCommandRequiresVerifiedHelloAndInteractiveHandler();
   TestLatePeerAndMalformedCommandsCannotOpenSettings();
   TestStartupRetry();
+  TestInputOnlyConnectionCannotReachWorkbench();
   TestUiDispatcherRetiresItsWindow();
   return failures ? EXIT_FAILURE : EXIT_SUCCESS;
 }

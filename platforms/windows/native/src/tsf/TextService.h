@@ -10,6 +10,7 @@
 
 #include "BrokerClient.h"
 #include "CandidateWindow.h"
+#include "CandidateUIElement.h"
 #include "TsfInterfaces.h"
 #include "candidate_navigation.hpp"
 
@@ -83,6 +84,7 @@ class TextService final : public ITfTextInputProcessorEx,
 
  private:
   friend struct CaretRegressionProbe;
+  friend struct CandidateUIRegressionProbe;
   ~TextService();
 
   HRESULT HandleKey(BrokerKeyPhase phase, ITfContext* context,
@@ -92,6 +94,7 @@ class TextService final : public ITfTextInputProcessorEx,
                              const BrokerInputState& state,
                              TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
   void SelectCandidate(std::size_t index) noexcept;
+  bool IsFocusedContext() const noexcept;
   HRESULT CommitCandidate(ITfContext* context, CandidateNavigation::Selection selection,
                           TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
   std::optional<BrokerInputState> StepCandidatePage(int delta) noexcept;
@@ -104,6 +107,9 @@ class TextService final : public ITfTextInputProcessorEx,
   void UpdateCandidateWindow(ITfContext* context,
                              const BrokerInputState& state,
                              TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
+  void EndCandidateUI() noexcept;
+  void PublishCandidateUI(ITfContext*, const CandidateSnapshot&);
+  HRESULT CandidateUIAction(CandidateUIElement::Action, UINT);
   RECT QueryCaretRect(ITfContext* context,
                       TfEditCookie cookie = TF_INVALID_EDIT_COOKIE) noexcept;
   void ClearCompositionPointer() noexcept;
@@ -143,6 +149,9 @@ class TextService final : public ITfTextInputProcessorEx,
   bool ending_composition_ = false;
   std::unique_ptr<BrokerClient> broker_client_;
   CandidateWindow candidate_window_;
+  ITfUIElementMgr* ui_manager_ = nullptr;
+  CandidateUIElement* candidate_ui_ = nullptr;
+  DWORD candidate_ui_id_ = TF_INVALID_UIELEMENTID;
 };
 
 }  // namespace rimes::windows::tsf
