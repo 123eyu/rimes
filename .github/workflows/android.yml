@@ -72,11 +72,30 @@ jobs:
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
           "$sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64'
           export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          # The command-line tools and emulator do not share the runner's
+          # default AVD lookup path. Give both the same disposable location.
+          export ANDROID_USER_HOME="$RUNNER_TEMP/rimes-android"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
           sudo chmod 666 /dev/kvm
-          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --name rimes-import --package 'system-images;android-35;google_apis;x86_64'
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --name rimes-import --path "$ANDROID_AVD_HOME/rimes-import.avd" --package 'system-images;android-35;google_apis;x86_64'
+          test -f "$ANDROID_AVD_HOME/rimes-import.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fxq rimes-import
           "$ANDROID_HOME/emulator/emulator" -avd rimes-import -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > .native/emulator.log 2>&1 &
-          trap 'adb -s emulator-5554 emu kill || true' EXIT
-          timeout 180 adb -s emulator-5554 wait-for-device
+          emulator_pid=$!
+          cleanup_emulator() {
+            result=$?
+            if [[ "$result" != 0 ]]; then tail -n 100 .native/emulator.log; fi
+            adb -s emulator-5554 emu kill || true
+            return "$result"
+          }
+          trap cleanup_emulator EXIT
+          for attempt in $(seq 1 90); do
+            kill -0 "$emulator_pid"
+            [[ "$(adb -s emulator-5554 get-state 2>/dev/null || true)" == device ]] && break
+            sleep 2
+          done
+          test "$(adb -s emulator-5554 get-state)" = device
           for attempt in $(seq 1 90); do
             [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
             sleep 2

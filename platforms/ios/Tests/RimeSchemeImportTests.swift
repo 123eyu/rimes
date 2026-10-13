@@ -390,6 +390,18 @@ final class RimeSchemeImportTests: XCTestCase {
         XCTAssertEqual(size, dictionary.count)
     }
 
+    func testCompressedDictionaryHeaderCanStopBeforeTheBodyEnds() throws {
+        var files = fixture
+        let rows = (0..<8_000).map { "词条\($0)\taa\t\($0 + 1)" }.joined(separator: "\n")
+        let dictionary = Data(("---\nname: demo\nversion: '1'\n...\n" + rows + "\n").utf8)
+        files["demo.dict.yaml"] = dictionary
+        let review = try RimeSchemeImportService.inspect(data: archive(files, compressed: true), sourceName: "压缩词典")
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        XCTAssertEqual(try Data(contentsOf: staged.rootURL.appendingPathComponent("demo.dict.yaml")), dictionary)
+    }
+
     func testLuaReverseLookupDataIsStagedButCompiledSchemaCachesAreNot() throws {
         var files = fixture
         let bytes = Data([0x52, 0x49, 0x4d, 0x45])

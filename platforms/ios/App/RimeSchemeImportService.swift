@@ -835,20 +835,24 @@ enum RimeSchemeImportService {
             return data
         }
         func dictionaryHeader(_ entry: Entry) throws -> Data {
-            struct HeaderComplete: Error {}
+            let progress = Progress()
             var header = Data(), completed = false
             do {
-                _ = try archive.extract(entry, bufferSize: 16_384) { chunk in
+                _ = try archive.extract(entry, bufferSize: 16_384, progress: progress) { chunk in
                     guard header.count <= maximumConfigurationSize - chunk.count else { throw invalid("词典头超过 512 KB：\(entry.path)。") }
                     header.append(chunk)
                     if let range = header.range(of: Data("\n...".utf8)),
                        header.count > range.upperBound,
                        [UInt8(9), UInt8(10), UInt8(13), UInt8(32)].contains(header[range.upperBound]) {
                         header = header.subdata(in: 0..<range.lowerBound)
-                        completed = true; throw HeaderComplete()
+                        completed = true
+                        progress.cancel()
                     }
                 }
-            } catch is HeaderComplete { /* Body remains unread until staging checks full CRC. */ }
+            } catch Archive.ArchiveError.cancelledOperation where completed {
+                // Use ZIPFoundation's cancellation contract for both stored and
+                // deflated entries. Staging still checks the complete body CRC.
+            }
             if !completed, header.contains(9) { throw invalid("词典缺少 YAML 结束标记：\(entry.path)。") }
             return header
         }
