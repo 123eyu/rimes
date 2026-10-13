@@ -1,6 +1,6 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.3**, local build **56**, including standard upstream ZIP and coded UTF-8 dictionary import from current main. The prior build-55 cold-start fixes remain. Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
+Current iOS target: **1.1.3**, local build **57**, including standard upstream ZIP and coded UTF-8 dictionary import from current main. Build 57 also avoids hidden Buffer layout work and stops offscreen status animations. The prior build-55 cold-start fixes remain. Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs
