@@ -100,7 +100,17 @@
 
 ## 安装
 
-当前公开版本：[macOS 1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1)、[Android 1.1.1](https://github.com/scholay/rimes/releases/tag/android-v1.1.1)、[Windows 1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1)、[iOS App Store 1.1.0](https://apps.apple.com/us/app/lingxi-ime/id6814620242)。macOS 包已签名和公证，Android 使用长期签名，Windows EXE 未签名。iOS 也提供 [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)，可安装构建以 TestFlight 为准。Linux 目前公开提供方案数据预览包。最新源码与公开安装包的差异见[全平台包审计](validation/release-refresh-20261007.md)，各平台可用版本以发布页或商店为准。
+[1.1.3 全平台发布页](https://github.com/scholay/rimes/releases/tag/v1.1.3)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
+
+| 平台 | 版本与安装入口 |
+|---|---|
+| macOS | [1.1.3 PKG](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-1.1.3.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.1.3 APK](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Android-1.1.3.apk)，版本码 17，沿用长期签名 |
+| Windows | [1.1.3 EXE](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Windows-1.1.3-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.1.3 DEB](https://github.com/scholay/rimes/releases/download/v1.1.3/fcitx5-rimes_1.1.3_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
+| iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。1.1.3（56）已提交商店和外部测试审核；审核通过前，公开可安装版本仍以 Apple 页面为准 |
+
+本轮构建、导入测试与安装验收范围见[1.1.3 发布记录](docs/releases/1.1.3.md)。
 
 macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 RIMES，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/rimes/issues/90)。
 
@@ -115,7 +125,7 @@ cd rimes
 |---|---|---|
 | macOS | 输入法，以及 Buffer、Capsule、Mailbox | `./build_install.sh` |
 | iOS | 键盘与主 App（iOS 17+）：离线拼音、自然码、五笔、英文，以及 Buffer | 用 Xcode 打开 [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md) |
-| Windows | 原生 TSF 输入法、Buffer、并击及官方插件设置；支持 x64 / x86 | 见 [`platforms/windows/native/README.md`](platforms/windows/native/README.md) |
+| Windows | 原生 TSF 输入法、Buffer、并击及官方插件设置；x64 系统，x64／x86 TSF | 见 [`platforms/windows/native/README.md`](platforms/windows/native/README.md) |
 | Android | 原生输入法（InputConnection）、Buffer、六个官方插件和可配置 AI 服务 | 见 [`platforms/android/README.md`](platforms/android/README.md) |
 | Linux | Fcitx5 输入法、Buffer、Capsule。还没有 Mailbox | 见 [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
 
