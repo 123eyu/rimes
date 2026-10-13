@@ -1207,6 +1207,7 @@ final class KeyboardViewController: UIInputViewController {
     }
     private func renderBuffer() {
         bufferPanel.isHidden = !bufferEnabled; bufferButton.isSelected = bufferEnabled
+        statusLight.isHidden = !bufferEnabled || !onscreen
         defer { refreshMoreMenu(); refreshDefaultBuffer(); renderPanel(); refreshReturnKey() }
         guard bufferEnabled else {
             hostSnapshot = nil; captureTimer?.invalidate(); captureTimer = nil
@@ -1215,6 +1216,7 @@ final class KeyboardViewController: UIInputViewController {
             if !source.text.isEmpty { source.text = ""; source.setBlocks([], active: nil) }
             if !result.text.isEmpty { result.text = ""; result.setBlocks([], active: nil) }
             source.caretLocation = nil
+            result.waiting = false
             insertButton.isEnabled = false; insertButton.cancelPress()
             refreshBufferImports()
             return
@@ -1273,7 +1275,6 @@ final class KeyboardViewController: UIInputViewController {
         insertionSlot.isHidden = !bufferEnabled
         settingsButton.isHidden = !bufferEnabled
         settingsButton.isSelected = panelOpen
-        statusLight.isHidden = !bufferEnabled
         statusLight.skin = preferences.resolvedTheme
         statusLight.set(outputState)
         runButton.isHidden = !bufferEnabled || selectedPlugin?.isAI != true
@@ -1373,34 +1374,36 @@ final class KeyboardViewController: UIInputViewController {
             y -= rowHeight; item.frame = CGRect(x: 5, y: y, width: max(0, view.bounds.width - 10), height: rowHeight); y -= item === bottom && compactTypingKeys ? 1 : 4
         }
         let landscape = view.bounds.width > 600
-        let bufferRowHeight: CGFloat = landscape ? 28 : 36
-        let topLine = CGRect(x: 36, y: 0, width: max(0, bufferPanel.bounds.width - 72), height: bufferRowHeight)
-        typingStats.font = .monospacedDigitSystemFont(ofSize: landscape ? 14 : 16, weight: .medium)
-        insertionSlot.frame = CGRect(x: bufferPanel.bounds.width - 32, y: 0, width: 32, height: bufferRowHeight)
-        // Right column: Send, plugin and the Buffer switch line up above each other;
-        // settings sits alone on the left of the candidate row.
-        aiButton.frame = CGRect(x: bufferPanel.bounds.width - 32, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-        // Input row: [settings] [input line] [Run] [plugin]. Run appears only for AI plugins.
-        // Left column: status light above the settings key, both 1U like the right column.
-        let settingsWidth: CGFloat = settingsButton.isHidden ? 0 : 36, runWidth: CGFloat = runButton.isHidden ? 0 : 36
-        statusLight.frame = CGRect(x: 0, y: 0, width: 32, height: bufferRowHeight)
-        settingsButton.frame = CGRect(x: 0, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-        runButton.frame = CGRect(x: bufferPanel.bounds.width - 68, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-        let bottomLine = CGRect(x: settingsWidth, y: bufferRowHeight + 4, width: max(0, bufferPanel.bounds.width - 36 - runWidth - settingsWidth), height: bufferRowHeight)
-        // Default sends what you type, so the input line sits beside Send and the typing
-        // readout drops below it. Plugins send their output, which stays on top.
-        if isDefaultBuffer { source.frame = topLine; result.frame = bottomLine } else { result.frame = topLine; source.frame = bottomLine }
-        pasteButton.frame = CGRect(x: source.frame.maxX - 44, y: source.frame.minY, width: 44, height: bufferRowHeight)
-        importPrompt.frame = CGRect(x: source.frame.minX + 3, y: source.frame.minY + 2, width: max(0, source.frame.width - 50), height: max(0, bufferRowHeight - 4))
-        importPrompt.font = source.font
-        typingStats.frame = CGRect(x: 8, y: 0, width: max(0, result.bounds.width - 16), height: bufferRowHeight)
+        if bufferEnabled {
+            let bufferRowHeight: CGFloat = landscape ? 28 : 36
+            let topLine = CGRect(x: 36, y: 0, width: max(0, bufferPanel.bounds.width - 72), height: bufferRowHeight)
+            typingStats.font = .monospacedDigitSystemFont(ofSize: landscape ? 14 : 16, weight: .medium)
+            insertionSlot.frame = CGRect(x: bufferPanel.bounds.width - 32, y: 0, width: 32, height: bufferRowHeight)
+            // Right column: Send, plugin and the Buffer switch line up above each other;
+            // settings sits alone on the left of the candidate row.
+            aiButton.frame = CGRect(x: bufferPanel.bounds.width - 32, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
+            // Input row: [settings] [input line] [Run] [plugin]. Run appears only for AI plugins.
+            // Left column: status light above the settings key, both 1U like the right column.
+            let settingsWidth: CGFloat = settingsButton.isHidden ? 0 : 36, runWidth: CGFloat = runButton.isHidden ? 0 : 36
+            statusLight.frame = CGRect(x: 0, y: 0, width: 32, height: bufferRowHeight)
+            settingsButton.frame = CGRect(x: 0, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
+            runButton.frame = CGRect(x: bufferPanel.bounds.width - 68, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
+            let bottomLine = CGRect(x: settingsWidth, y: bufferRowHeight + 4, width: max(0, bufferPanel.bounds.width - 36 - runWidth - settingsWidth), height: bufferRowHeight)
+            // Default sends what you type, so the input line sits beside Send and the typing
+            // readout drops below it. Plugins send their output, which stays on top.
+            if isDefaultBuffer { source.frame = topLine; result.frame = bottomLine } else { result.frame = topLine; source.frame = bottomLine }
+            pasteButton.frame = CGRect(x: source.frame.maxX - 44, y: source.frame.minY, width: 44, height: bufferRowHeight)
+            importPrompt.frame = CGRect(x: source.frame.minX + 3, y: source.frame.minY + 2, width: max(0, source.frame.width - 50), height: max(0, bufferRowHeight - 4))
+            importPrompt.font = source.font
+            typingStats.frame = CGRect(x: 8, y: 0, width: max(0, result.bounds.width - 16), height: bufferRowHeight)
+            result.font = .systemFont(ofSize: landscape ? 14 : 15)
+        }
         bufferButton.frame = CGRect(x: candidatePanel.bounds.width - 32, y: 0, width: 32, height: 32)
         candidateStrip.frame = candidatePanel.bounds
         moreButton.frame = CGRect(x: 0, y: 0, width: 32, height: 32)
         handPreview.frame = CGRect(x: 36, y: 0, width: max(0, candidatePanel.bounds.width - 72), height: 32)
         shortcuts.frame = handPreview.frame
         handPreview.landscape = landscape
-        result.font = .systemFont(ofSize: landscape ? 14 : 15)
         bottom.layoutIfNeeded()
         insertButton.frame = insertionSlot.bounds; stopButton.frame = insertionSlot.bounds
         // Settings cover the keys only, so the Buffer lines stay visible while choosing.
