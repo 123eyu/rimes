@@ -14,6 +14,13 @@ Linux 现在有两层，互相独立：
 
 IBus 自己的 RIMES 引擎尚未开始；需要什么见 IME README。
 
+**安装完整 Linux 输入法：Debian／Ubuntu 推荐使用项目 `v*` Release 附带的 deb。**
+用 `apt install ./fcitx5-rimes_<版本>_<架构>.deb` 安装或升级，
+用 `apt remove fcitx5-rimes` 卸载并保留用户词库与学习记录。
+源码安装、完整输入法卸载脚本及发布维护要求见
+[完整输入法安装与卸载说明](ime/README.md#install-and-upgrade-debian--ubuntu-recommended)。
+下文的安装／卸载脚本仅适用于数据预览包。
+
 ---
 
 # RIMES Linux Data / Input-Schemes Preview
