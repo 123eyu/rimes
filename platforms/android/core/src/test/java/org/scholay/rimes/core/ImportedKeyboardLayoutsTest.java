@@ -87,4 +87,13 @@ public final class ImportedKeyboardLayoutsTest {
             assertEquals("demo",ImportedKeyboardLayouts.read(root,"demo").schema("nineKey"));
         } finally {RimeSchemeArchive.remove(root);}
     }
+    @Test public void malformedUtf8DoesNotEnableAnOptionalLayout() throws Exception {
+        File root=Files.createTempDirectory("rime-layouts").toFile();
+        try {
+            schema(root,"demo","words",false,null);schema(root,"demo_t9","words",true,null);
+            File file=new File(root,"build/demo_t9.schema.yaml");
+            Files.write(file.toPath(),new byte[]{(byte)0xc3,0x28},java.nio.file.StandardOpenOption.APPEND);
+            assertEquals("demo",ImportedKeyboardLayouts.read(root,"demo").schema("nineKey"));
+        } finally {RimeSchemeArchive.remove(root);}
+    }
 }

@@ -43,14 +43,28 @@ final class SchemeImportContract {
                     type(engine,active.layouts.schema("nineKey"),"64426","你好");
                 }
                 store.activate(null,null);check(store.active()==null,"restore built-in selection");
+                File text=new File(root,"dictionary.tsv");
+                Files.write(text.toPath(),"词库验收\tceshi\t100\n".getBytes(StandardCharsets.UTF_8));
+                String textDigest=RimeSchemeArchive.sha256(text);
+                RimeSchemeArchive.Review textReview=RimeSchemeArchive.inspectTextDictionary(text,"Text fixture",new File(root,"text.zip"));
+                String textSchema=textReview.schemes.get(0).id;
+                String textID=store.install(textReview,"Text fixture",Collections.singletonList(textSchema)).getString("id");
+                check(store.active()==null,"text installation must not activate");
+                store.activate(textID,textSchema);
+                RimeSchemeStore.Selection textActive=new RimeSchemeStore(store.root).active();
+                check(textActive!=null && textActive.schemaID.equals(textSchema),"text selection survives reload");
+                engine.initialize(textActive.resources.getAbsolutePath(),user.getAbsolutePath());
+                type(engine,textSchema,"ceshi","词库验收");
+                check(textDigest.equals(RimeSchemeArchive.sha256(text)),"original text dictionary remains unchanged");
+                store.activate(null,null);
                 // Restore the actual bundled engine environment before testing deletion.
                 File builtin=EngineResources.prepare(context),builtinUser=new File(root,"builtin-user");Files.createDirectories(builtinUser.toPath());
                 engine.initialize(builtin.getAbsolutePath(),builtinUser.getAbsolutePath());
                 type(engine,"rimes_pinyin_private","nihao","你好");
-                File marker=new File(user,"retain.txt");Files.writeString(marker.toPath(),"public fixture");
-                store.remove(id);check(store.packages().isEmpty() && marker.isFile(),"delete resources without deleting learning data");
+                File marker=new File(user,"retain.txt");Files.write(marker.toPath(),"public fixture".getBytes(StandardCharsets.UTF_8));
+                store.remove(id);store.remove(textID);check(store.packages().isEmpty() && marker.isFile(),"delete resources without deleting learning data");
                 check(digest.equals(RimeSchemeArchive.sha256(archive)),"original ZIP remains unchanged");
-                return "PASS real JNI import, deploy, Lua module/userdb, candidate and commit, cold selection, built-in fallback, deletion; SHA256="+digest+"\n";
+                return "PASS real JNI import, deploy, Lua module/userdb, candidate and commit, single-entry text dictionary, cold selection, built-in fallback, deletion; SHA256="+digest+"\n";
             }).get(10,TimeUnit.MINUTES);
         } finally {RimeSchemeArchive.remove(root);}
     }

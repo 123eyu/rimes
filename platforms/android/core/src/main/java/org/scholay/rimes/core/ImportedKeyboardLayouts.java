@@ -1,6 +1,7 @@
 package org.scholay.rimes.core;
 
 import java.io.File;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.*;
@@ -37,7 +38,10 @@ public final class ImportedKeyboardLayouts {
         try {
             if(Files.isSymbolicLink(build.toPath()) || Files.isSymbolicLink(file.toPath()) || !file.isFile() || file.length()>1024*1024) return Collections.emptyMap();
             LoaderOptions options=new LoaderOptions();options.setCodePointLimit(1024*1024);options.setMaxAliasesForCollections(32);
-            Object parsed=new Yaml(new SafeConstructor(options)).load(Files.readString(file.toPath(),StandardCharsets.UTF_8));
+            // Files.readString is absent on supported Android runtimes. Keep
+            // strict UTF-8 decoding without depending on that newer API.
+            String yaml=StandardCharsets.UTF_8.newDecoder().decode(ByteBuffer.wrap(Files.readAllBytes(file.toPath()))).toString();
+            Object parsed=new Yaml(new SafeConstructor(options)).load(yaml);
             if(parsed instanceof Map && id.equals(string((Map<?,?>)parsed,"schema","schema_id"))) return (Map<?,?>)parsed;
         } catch(Exception ignored) {}
         return Collections.emptyMap();

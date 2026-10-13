@@ -36,6 +36,7 @@ on:
       - '.github/workflows/release.yml'
       - '.github/workflows/linux-deb.yml'
       - 'platforms/linux/ime/**'
+      - 'scripts/input-schemes/repair-rime-table.py'
       - 'platforms/linux/buffer/**'
       - 'platforms/linux/capsule/**'
       - 'scripts/platform-preview/**'
