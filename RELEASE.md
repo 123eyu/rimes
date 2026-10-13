@@ -1,12 +1,14 @@
 # 发布流程
 
-所有应用代码以 `main` 为集成主线，各平台独立构建、验收、记版本和发布；不要求同时发布。
+所有应用代码以 `main` 为集成主线，各平台独立构建和验收。Linux deb 跟随项目 `v*` 版本，
+附在同一 GitHub Release；iOS、Android、Windows 保持各自版本与发布渠道。
 分支与本地维护方式见 [MAINTENANCE.md](MAINTENANCE.md)。本地合入 `main` 不会触发远端构建，
 也不等于批准推送、创建 tag、安装或发布。下文的 `release.sh` 和签名包流程主要面向 macOS。
 
 **合并到 main → macOS CI 全绿 → `./scripts/release.sh <渠道>` → tag → 签名暂存 → 真机同路验收 → 第二次批准 → GitHub Release。**
 
-2026-10-07 的更新目标为 macOS、iOS、Android **1.1.1**，Windows **1.1.2**；Linux 不纳入正式包更新。
+2026-10-07 的更新目标为 macOS、iOS、Android **1.1.1**，Windows **1.1.2**，当时未纳入 Linux。
+后续 `v*` 发布增加 Ubuntu 24.04 amd64 deb 与校验文件，Linux 本地默认版本也读取根 `VERSION`。
 目标与验收记录见 [1.1.0 发布计划](docs/releases/1.1.0-plan.md)；[1.0 发布准备](RELEASE-1.0.0.md)保留作历史记录。macOS 的 `VERSION`、`Info.plist` 与正式 tag 必须一致。发布脚本不修改、不提交任何文件，只在 `origin/main` 上创建并推送一个 tag；
 构建、验证、发布说明和 Release 由 GitHub Actions 完成。macOS 与数据预览的发布中心是
 [`scholay/rimes`](https://github.com/scholay/rimes/releases)；iOS 独立走 App Store Connect。
@@ -33,12 +35,12 @@ flowchart LR
 | iOS | `ios-vX.Y.Z`（App Store 工作流） | [iOS 发布流程](platforms/ios/CI_RELEASE.md) | App Store 签名 IPA、独立 build number；当前公开测试使用 TestFlight | TestFlight / App Store，分别记录审核状态 |
 | Android | `android-vX.Y.Z`（维护者发布） | `platforms/android/scripts/build-release.sh` | 长期密钥签名 APK / AAB | 下载 APK 保留数据升级 |
 | Windows 原生 | `windows-vX.Y.Z`（维护者发布） | [Windows 构建](platforms/windows/native/README.md) | x64 / x86 完整载荷、EXE 安装器与 ZIP；当前 EXE 未签名 | 下载 EXE 升级，按安装器提示重启或注销 |
-| Linux 原生实验版 | 暂无自动发布 tag | [Linux 构建](platforms/linux/ime/README.md) | Fcitx5 Artifact；可在 Linux 本地打 `.deb` | 实验性手动部署 |
+| Linux 原生 | 同项目 `vX.Y.Z` / `vX.Y.Z-preview.N` | [Linux 安装与打包](platforms/linux/ime/README.md) | 同一 Release 的 `fcitx5-rimes_<version>_amd64.deb` 与 `.sha256` | 下载新 deb 后 `sudo apt install ./文件.deb` |
 | Windows / Linux 数据预览（维护通道） | `platform-preview-vX.Y.Z` | `./scripts/release.sh platform minor` | 数据与脚本包，Pre-release | 手动安装，见 [CROSS-PLATFORM-PREVIEW.md](CROSS-PLATFORM-PREVIEW.md) |
 
-> GitHub required checks 与 macOS 发布门禁暂不改变。iOS、Windows IME、Linux IME 按相关路径分别运行
-> PR / main 检查；旧数据预览与 Windows Foundation 保留每周/手动检查。它们不阻断无关的 macOS
-> 发布，但受影响平台自身有失败或真机验收缺口时，不得把它标记为可发布。
+> GitHub required checks 不变。iOS、Windows IME、Linux IME 按相关路径分别运行 PR / main 检查；
+> 旧数据预览与 Windows Foundation 保留每周/手动检查。`v*` 的发布工作流另外要求本次 Linux deb
+> 构建与安装／重装／卸载测试成功后才公开 Release。真实桌面验收须单独记录。
 
 > Developer Program 资格或一张 Developer ID 证书本身不能把预览版变成正式版。首个正式
 > `vX.Y.Z` 必须同时具备同一 Team 的 **Developer ID Application + Developer ID Installer** 证书及私钥、
@@ -53,8 +55,8 @@ flowchart LR
    `feat(scope): …`、`fix: …`、`perf:`、`refactor:`、`docs:`、`test:`、`build:`、`ci:`、`chore:`、`style:`、`revert:`。
    发布说明由提交信息生成，CI 的「Release tooling」会拒绝不合规的提交。
 2. **不直接推送 main。** main 受 ruleset 保护：合并必须经过 PR，且必需的 macOS CI 检查通过。
-3. **按平台整理用户可见变更，独立安排预览版。** 合并代码不自动创建版本，纯 Windows/Linux/iOS 改动
-   不要求发布 macOS 预览版；实际发布仍需维护者授权。
+3. **按平台整理用户可见变更。** 合并代码不自动创建版本；Linux 在下次项目 `v*` 发布时同步 deb，
+   并检查其安装、升级、卸载说明与依赖兼容性。实际发布仍需维护者授权。
 4. 一条预览线经过真机验证后，只有完整的正式发布前提都满足时才能用 `stable` 转正；Developer ID
    可用并不单独构成发布授权。
 
@@ -80,7 +82,7 @@ git switch main && git pull --ff-only
 - `origin` 的 fetch / push 地址都指向 `scholay/rimes`；
 - 当前在 `main`，工作区干净，`HEAD` 等于 `origin/main`；
 - `origin/main` 这个提交的 `CI` 已通过（其中包含 macOS build/runtime smoke 与发布工具校验）；
-- Windows / Linux 的独立 workflow 结果不阻断 macOS preview/stable tag；
+- Windows / Linux 的独立 workflow 结果不阻断创建 preview/stable tag；tag 后的本次 Linux deb 打包验收是公开 Release 的条件；
 - 新 tag 不存在，并高于同渠道已发布的版本；
 - `Info.plist` 版本仍是占位值，预置插件 catalog 已同步；
 - 正式版还要求 `macos-release` 与 `macos-publish` 都存在；二者都要有非空 required reviewers、禁止
@@ -118,6 +120,10 @@ git switch main && git pull --ff-only
    重公证，然后以完全相同的字节创建 Latest，并下载公开资产再次读回校验。
 5. **发布说明** = 安装与校验说明 + 自动生成的「变更」：自上一个**公开 GitHub macOS Release**以来的提交
    按类型分组，列出合并的 PR 和完整对比链接。取消或未公开的 tag 绝不作为比较基线。
+6. **Linux deb**：`linux-deb.yml` 在 Ubuntu 24.04 amd64 构建同一提交，运行原生测试与 deb 安装／重装／
+   卸载验证；Release 公开须等待此 job 成功。随后只向已公开的同名 `v*` Release 附加 deb 与其 `.sha256`，
+   再下载读回比对，重试只接受相同字节，不覆盖资产。预览版本映射为 `X.Y.Z~preview.N`，正式版本必须与
+   根 `VERSION` 一致。每次发布同步 Linux 变更与安装文档；完整验收另需 X11/Wayland 实际输入测试。
 
 工作流失败时**不要删除 tag 重来**：修复后发布下一个版本号。tag、资产与 SHA-256 一经发布即不可变，
 ruleset 必须禁止删除或移动 `v*` 与 `platform-preview-v*` tag；正式 `v*` 还必须限制创建权限。

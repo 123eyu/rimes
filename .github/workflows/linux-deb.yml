@@ -1,0 +1,62 @@
+name: Linux deb package
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: false
+        default: ''
+    outputs:
+      artifact_name:
+        value: ${{ jobs.package.outputs.artifact_name }}
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    name: Ubuntu 24.04 amd64 deb installation and removal
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    outputs:
+      artifact_name: ${{ steps.artifact.outputs.name }}
+    env:
+      RIMES_RELEASE_VERSION: ${{ inputs.version }}
+    steps:
+      - name: Checkout exact source
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+
+      - name: Install distro build and package dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake extra-cmake-modules pkg-config gettext \
+            libfcitx5core-dev libfcitx5utils-dev libfcitx5config-dev fcitx5-modules-dev \
+            fcitx5 fcitx5-modules librime-dev librime-plugin-lua librime-bin \
+            libgtk-3-dev libgtk-layer-shell-dev libarchive-dev libssl-dev
+
+      - name: Source install and uninstall tests
+        run: python3 -m unittest discover -s platforms/linux/ime/tests -p 'test_*.py' -v
+
+      - name: Build deb and test its linked runtime
+        run: platforms/linux/ime/scripts/package-deb.sh "$RUNNER_TEMP/rimes-deb"
+
+      - name: Install, reinstall and remove the exact deb
+        env:
+          RIMES_DEB_TEST_DISPOSABLE: '1'
+        run: platforms/linux/ime/tests/deb_lifecycle.sh "$RUNNER_TEMP"/rimes-deb/*.deb
+
+      - name: Name the immutable package artifact
+        id: artifact
+        run: echo "name=rimes-linux-deb-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}" >> "$GITHUB_OUTPUT"
+
+      - name: Upload verified deb and checksum
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ${{ steps.artifact.outputs.name }}
+          path: ${{ runner.temp }}/rimes-deb/*
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0

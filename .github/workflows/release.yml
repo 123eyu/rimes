@@ -34,6 +34,12 @@ on:
       - 'scripts/release.sh'
       - 'scripts/release/**'
       - '.github/workflows/release.yml'
+      - '.github/workflows/linux-deb.yml'
+      - 'platforms/linux/ime/**'
+      - 'platforms/linux/buffer/**'
+      - 'platforms/linux/capsule/**'
+      - 'scripts/platform-preview/**'
+      - 'VERSION'
   schedule:
     # 03:17 Asia/Shanghai: catch packaging drift on main before anyone tags.
     - cron: '17 19 * * *'
@@ -654,9 +660,17 @@ jobs:
           retention-days: 1
           compression-level: 0
 
+  build_linux_deb:
+    needs: build_and_smoke
+    uses: ./.github/workflows/linux-deb.yml
+    with:
+      # Untagged rehearsals exercise the current Linux product target; a
+      # macOS-only rehearsal version override must not impersonate a Linux tag.
+      version: ${{ (needs.build_and_smoke.outputs.is_release == 'true' || needs.build_and_smoke.outputs.is_unsigned_preview == 'true') && needs.build_and_smoke.outputs.version || '' }}
+
   publish_unsigned_preview:
     name: Passively verify and publish unsigned preview
-    needs: build_and_smoke
+    needs: [build_and_smoke, build_linux_deb]
     if: >-
       needs.build_and_smoke.result == 'success' &&
       needs.build_and_smoke.outputs.is_unsigned_preview == 'true' &&
@@ -1149,6 +1163,15 @@ jobs:
           构建过程已在一次性 macOS runner 上真实执行 `sudo installer` 并验证退出状态、
           固定安装路径、输入法元数据、通用架构及 ad-hoc 代码签名；这不能替代不同 macOS
           版本上的 Gatekeeper 界面测试。
+
+          ## Linux（Ubuntu 24.04 amd64）
+
+          同一 Release 随后附带 `fcitx5-rimes_<版本>_amd64.deb` 与 `.sha256`。
+          预览版的 Debian 版本使用 `~preview.N`。校验后用 `sudo apt install ./文件.deb`
+          安装或升级，用 `sudo apt remove fcitx5-rimes` 卸载，保留用户词库和学习记录。
+          安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加 RIMES；
+          [完整安装与卸载说明](https://github.com/scholay/rimes/blob/main/platforms/linux/ime/README.md)。
+          deb 使用发行版 librime，其他系统需满足包内依赖，X11/Wayland 桌面体验需单独验收。
           EOF
           printf '\n' >>"$notes"
           python3 scripts/release/release_tool.py notes --tag "$PREVIEW_TAG" >>"$notes"
@@ -1820,6 +1843,15 @@ jobs:
           | 文件 | SHA256 |
           |------|--------|
           | PKG | `PKG_SHA256_PLACEHOLDER` |
+
+          ### Linux（Ubuntu 24.04 amd64）
+          同一 Release 随后附带 `fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` 与 `.sha256`。
+          用 `sha256sum -c fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb.sha256` 校验，
+          再用 `sudo apt install ./fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` 安装或升级。
+          `sudo apt remove fcitx5-rimes` 卸载程序并保留用户词库与学习记录。
+          安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加 RIMES；
+          [完整安装与卸载说明](https://github.com/scholay/rimes/blob/main/platforms/linux/ime/README.md)。
+          deb 使用发行版 librime，其他系统需满足包内依赖，X11/Wayland 桌面体验需单独验收。
           EOF
           /usr/bin/sed -i '' \
             -e "s/VERSION_PLACEHOLDER/$VERSION/g" \
@@ -1889,7 +1921,7 @@ jobs:
 
   publish_staged_release:
     name: Approve and publish staged macOS release
-    needs: [build_and_smoke, sign_and_stage]
+    needs: [build_and_smoke, sign_and_stage, build_linux_deb]
     if: >-
       needs.build_and_smoke.result == 'success' &&
       needs.sign_and_stage.result == 'success' &&
@@ -2103,3 +2135,58 @@ jobs:
           expected_sums="$RUNNER_TEMP/rimes-published-sums.expected"
           printf '%s  %s\n' "$EXPECTED_PKG_SHA" "$PKG" >"$expected_sums"
           cmp "$expected_sums" "$readback/SHA256SUMS"
+
+  attach_linux_deb:
+    name: Attach verified Linux deb to the same release
+    needs: [build_and_smoke, build_linux_deb, publish_unsigned_preview, publish_staged_release]
+    if: >-
+      !cancelled() &&
+      needs.build_linux_deb.result == 'success' &&
+      (needs.publish_unsigned_preview.result == 'success' || needs.publish_staged_release.result == 'success') &&
+      github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
+      github.repository == 'scholay/rimes'
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+    steps:
+      - name: Download the tested package from this run
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: ${{ needs.build_linux_deb.outputs.artifact_name }}
+          path: ${{ runner.temp }}/linux-deb
+
+      - name: Verify, attach and read back Linux assets
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: scholay/rimes
+          RELEASE_VERSION: ${{ needs.build_and_smoke.outputs.version }}
+        run: |
+          set -euo pipefail
+          [[ "$GITHUB_REF_NAME" == "v$RELEASE_VERSION" ]]
+          deb_version="${RELEASE_VERSION/-preview./~preview.}"
+          package="fcitx5-rimes_${deb_version}_amd64.deb"
+          assets="$RUNNER_TEMP/linux-deb"
+          [[ -f "$assets/$package" && ! -L "$assets/$package" ]]
+          [[ -f "$assets/$package.sha256" && ! -L "$assets/$package.sha256" ]]
+          [[ "$(find "$assets" -mindepth 1 -maxdepth 1 | wc -l)" -eq 2 ]]
+          [[ "$(dpkg-deb -f "$assets/$package" Package)" == fcitx5-rimes ]]
+          [[ "$(dpkg-deb -f "$assets/$package" Version)" == "$deb_version" ]]
+          [[ "$(dpkg-deb -f "$assets/$package" Architecture)" == amd64 ]]
+          (cd "$assets" && sha256sum "$package") > "$RUNNER_TEMP/linux-deb.expected.sha256"
+          cmp "$RUNNER_TEMP/linux-deb.expected.sha256" "$assets/$package.sha256"
+          [[ "$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq .isDraft)" == false ]]
+          readback="$RUNNER_TEMP/linux-deb-readback"
+          mkdir -p "$readback"
+          for asset in "$package" "$package.sha256"; do
+            # A retry may find an asset already uploaded. Accept only identical
+            # bytes; never replace a published asset or create another release.
+            if gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -Fxq "$asset"; then
+              gh release download "$GITHUB_REF_NAME" --pattern "$asset" --dir "$readback"
+              cmp "$assets/$asset" "$readback/$asset"
+            else
+              gh release upload "$GITHUB_REF_NAME" "$assets/$asset"
+              gh release download "$GITHUB_REF_NAME" --pattern "$asset" --dir "$readback"
+              cmp "$assets/$asset" "$readback/$asset"
+            fi
+          done
+          (cd "$readback" && sha256sum -c "$package.sha256")

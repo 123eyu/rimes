@@ -93,18 +93,109 @@ unset. An import with unavailable components/Lua APIs fails without replacing th
 scheme. OpenCC tables required by an imported scheme must be in its own ZIP.
 The private prefix is not automatically added to the existing `.deb` packaging workflow.
 
-## Build and install
+## Install and upgrade (Debian / Ubuntu: recommended)
+
+Use the `fcitx5-rimes_<version>_amd64.deb` and matching `.sha256` attached to
+the project's [GitHub Release](https://github.com/scholay/rimes/releases).
+Older releases may not have a deb; until a release with this asset is
+published, build one locally using the packaging instructions below.
+The release workflow builds on Ubuntu 24.04 amd64. Other Debian/Ubuntu
+versions must satisfy the package's declared dependencies; rebuild on the
+target distribution or architecture when they do not. This is a Fcitx5
+package, not an IBus engine.
+
+In the directory containing the downloaded files (replace the filename with
+the chosen version):
 
 ```bash
-platforms/linux/ime/scripts/build.sh
-platforms/linux/ime/scripts/install.sh          # default prefix: ~/.local
-# or
-sudo RIMES_IME_PREFIX=/usr platforms/linux/ime/scripts/install.sh
+sha256sum -c fcitx5-rimes_<version>_amd64.deb.sha256
+sudo apt install ./fcitx5-rimes_<version>_amd64.deb
 fcitx5 -r
 ```
 
+Then add **RIMES** in Fcitx5 configuration. Upgrade by downloading the next
+release and running the same `apt install` command. A downloaded deb does
+not configure an apt repository or automatic updates.
+
+To uninstall the deb:
+
+```bash
+sudo apt remove fcitx5-rimes
+fcitx5 -r
+```
+
+Remove RIMES from the Fcitx5 input-method list as well. User dictionaries,
+learning records, imported schemes and Capsule notes remain in
+`${XDG_DATA_HOME:-$HOME/.local/share}/rimes`. Do not delete this directory
+when removing the application. If a source installation already exists,
+uninstall it with the instructions below before switching to the deb.
+
+## Build and install from source (development)
+
+All commands below run from the repository root. Source installation needs
+Python 3 in addition to the build dependencies.
+
+```bash
+platforms/linux/ime/scripts/build.sh
+platforms/linux/ime/scripts/install.sh --skip-build  # default prefix: ~/.local
+fcitx5 -r
+```
+
+`install.sh` without `--skip-build` builds first. Keep the same prefix used
+for the build; to change it, run a build for that prefix. For a system-wide
+source install, use `sudo platforms/linux/ime/scripts/install.sh --prefix /usr`.
+`--build-dir DIR` / `RIMES_IME_BUILD_DIR` selects a non-default build tree;
+`--prefix DIR` / `RIMES_IME_PREFIX` selects the installation prefix.
+
 Then add **RIMES** in Fcitx5 configuration. Restart the compositor/session if
 the new input method does not appear.
+
+The installer stages and records the addon, companion programs, Fcitx5
+descriptors, icons, licenses **and** shared dictionary data in
+`<prefix>/share/rimes/ime-install-manifest.json`. Keep this manifest; it lets
+uninstall work even after the build directory has been removed. A private
+engine selected with `RIMES_IME_RIME_PREFIX` still needs its original library
+directory while the input method is installed.
+
+### Uninstall a source installation
+
+Switch to another input method, remove RIMES from Fcitx5 configuration, then:
+
+```bash
+platforms/linux/ime/scripts/uninstall.sh --dry-run
+platforms/linux/ime/scripts/uninstall.sh
+fcitx5 -r
+
+# For a source installation with --prefix /usr:
+sudo platforms/linux/ime/scripts/uninstall.sh --prefix /usr --dry-run
+sudo platforms/linux/ime/scripts/uninstall.sh --prefix /usr
+```
+
+Use the original prefix. The script removes only recorded application files
+whose SHA-256 still matches, and then empty directories. If a managed file
+was edited or replaced by a symlink, it stops before deleting anything;
+move or restore that file and retry. Unrecorded files are preserved, including
+user dictionaries (`*.userdb`), `schemes/learning`, imported schemes, notes,
+runtime configuration and logs. It never recursively removes `share/rimes`
+or `~/.local`, and it does not remove the private engine or restart Fcitx5.
+`DESTDIR` is supported for staged installs and uninstalls.
+
+For installations made before the persistent manifest was added, keep the
+original build directory and corresponding source checkout, and run:
+
+```bash
+platforms/linux/ime/scripts/uninstall.sh --build-dir platforms/linux/ime/build --dry-run
+platforms/linux/ime/scripts/uninstall.sh --build-dir platforms/linux/ime/build
+```
+
+This fallback restricts the original `install_manifest.txt` to known RIMES
+program/resource paths and checks shared data against that source version.
+Old installers did not record program hashes, so the fallback cannot detect
+edits to those program files. Missing files are harmless; changed shared data
+stops removal. Without either manifest, the script does not guess which files
+belong to RIMES. The data preview's `platforms/linux/scripts/uninstall.sh`
+is a separate installer and does not uninstall this addon. Use `apt remove`
+for deb installations.
 
 Environment overrides used by tests and unusual layouts:
 
@@ -121,18 +212,51 @@ platforms/linux/ime/scripts/package-deb.sh /tmp/rimes-deb
 ```
 
 writes `fcitx5-rimes_<version>_<arch>.deb` (addon + `rimes-buffer` +
-`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + reviewed data).
+`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + `rimes-schemes` +
+reviewed data) and a matching `.sha256`. It runs CTest and a real librime
+typing smoke before packaging. Build-essential supplies `dpkg-shlibdeps`,
+which derives library dependencies from the actual ELF files; the Lua module
+is also required explicitly. The deb uses the distribution's librime; it
+does not bundle the optional private engine. Unset `RIMES_IME_RIME_PREFIX`
+before packaging, or use a source install when that engine is needed.
 The package `Recommends: libgtk-layer-shell0, wl-clipboard` so a wlroots
 session can keep the rail overlay and copy notes without a GTK serial.
 Flatpak notes are in
 `packaging/flatpak/README.md`. The data preview tarball is a separate artifact
 and stays data-only.
 
+### Versioned releases
+
+Linux now uses the repository-root `VERSION` for source builds and ordinary
+local packages. The shared `vX.Y.Z` release workflow produces the deb for
+the **same tag and commit** and attaches it to the same Release as macOS.
+`vX.Y.Z-preview.N` is packaged as Debian version `X.Y.Z~preview.N`, so apt
+orders it before `X.Y.Z`. `RIMES_RELEASE_VERSION` supplies this tag version
+in CI; a formal package version must match root `VERSION`.
+
+The reusable `linux-deb.yml` workflow builds on Ubuntu 24.04 amd64, runs source
+install/uninstall tests, then installs, reinstalls and removes the exact deb
+on a disposable runner while checking user-data preservation. Publication
+waits for this job; only an existing, successfully published `v*` Release
+receives the deb and checksum. PR/manual/nightly rehearsals retain CI
+artifacts without publishing. Source changes, installed-host typing, CI
+results and publicly downloadable assets remain separate evidence.
+
+For every version, review these install/upgrade/uninstall instructions,
+dependency compatibility and Linux release notes along with the code. Verify
+the actual release deb on the intended X11/Wayland desktop before claiming
+desktop acceptance; headless package tests do not establish it.
+
 ## Tests
 
 ```bash
+python3 -m unittest discover -s platforms/linux/ime/tests -p 'test_*.py' -v
 platforms/linux/ime/scripts/run-tests.sh
 ```
+
+The Python lifecycle tests use real CMake file installation in temporary
+prefixes and do not install an input method on the host. The deb lifecycle
+test is only for disposable Linux runners (`RIMES_DEB_TEST_DISPOSABLE=1`).
 
 1. CTest unit tests (keysyms, UTF-8 snapshot, path isolation)
 2. Live `librime` smoke: `nihao` + Space, number selection, paging, Escape

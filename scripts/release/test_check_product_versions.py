@@ -42,6 +42,11 @@ class ProductVersionTests(unittest.TestCase):
         self.write(self.root / 'platforms/android/app/build.gradle.kts',
                    'val rimesVersion = rootProject.file("VERSION").readText().trim()\n'
                    'versionName = rimesVersion\nversionCode = 48\n')
+        self.write(self.root / 'platforms/linux/ime/CMakeLists.txt',
+                   'file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../../VERSION" RIMES_PRODUCT_VERSION)\n'
+                   'project(RIMESLinuxIme VERSION ${RIMES_PRODUCT_VERSION} LANGUAGES C CXX)\n')
+        self.write(self.root / 'platforms/linux/ime/scripts/package-deb.sh',
+                   'PRODUCT_VERSION=$(tr -d "[:space:]" < "$REPO_ROOT/VERSION")\n')
 
     def check(self):
         return VERSIONS.check(self.root, self.root, self.windows, require_all=True)
@@ -56,6 +61,12 @@ class ProductVersionTests(unittest.TestCase):
         result = self.check()
         self.assertEqual(result['android'], {'version': '1.1.0', 'versionCode': 48})
         self.assertEqual(result['windows'], {'version': '1.1.0', 'fileVersion': '1.1.0.0'})
+        self.assertEqual(result['linux'], {'version': '1.1.0', 'releaseChannel': 'v*'})
+
+    def test_linux_cannot_drift_to_an_independent_version(self):
+        self.write(self.root / 'platforms/linux/ime/VERSION', '0.1.0\n')
+        with self.assertRaisesRegex(ValueError, 'independent VERSION'):
+            self.check()
 
     def test_windows_patch_advance_preserves_other_product_versions(self):
         self.write(self.windows_base / 'VERSION', '1.1.1\n')

@@ -1,6 +1,10 @@
 cmake_minimum_required(VERSION 3.27)
 
-project(RIMESLinuxIme VERSION 0.1.0 LANGUAGES C CXX)
+if(NOT DEFINED RIMES_PRODUCT_VERSION)
+    file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../../VERSION" RIMES_PRODUCT_VERSION)
+    string(STRIP "${RIMES_PRODUCT_VERSION}" RIMES_PRODUCT_VERSION)
+endif()
+project(RIMESLinuxIme VERSION ${RIMES_PRODUCT_VERSION} LANGUAGES C CXX)
 
 option(RIMES_BUILD_FCITX5 "Build the Fcitx5 RIMES addon" ON)
 option(RIMES_BUILD_TESTS "Build unit tests and headless E2E hosts" ON)
@@ -78,6 +82,7 @@ target_include_directories(RimesEngine PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 target_link_libraries(RimesEngine PUBLIC PkgConfig::Rime Threads::Threads RimesSchemeImport)
+target_compile_definitions(RimesEngine PRIVATE RIMES_DISTRIBUTION_VERSION="${PROJECT_VERSION}")
 set_target_properties(RimesEngine PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesEngine)
 
