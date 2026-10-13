@@ -10,6 +10,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[4]
 LOCK = json.loads((ROOT / 'platforms/ios/dependencies.lock.json').read_text())
@@ -32,6 +33,7 @@ def main():
     revision = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if revision != LOCK['librime']['commit']:
         raise RuntimeError('Cached librime revision differs from the lock; choose an empty --work directory')
+    run(sys.executable, ROOT / 'scripts/input-schemes/repair-rime-table.py', source)
     spec = importlib.util.spec_from_file_location('rimes_lua_policy', ROOT / 'platforms/ios/scripts/prepare-lua.py')
     policy = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(policy)

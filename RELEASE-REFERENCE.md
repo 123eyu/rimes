@@ -18,6 +18,9 @@ tag 推送后，[`.github/workflows/release.yml`](.github/workflows/release.yml)
 - **`publish_staged_release`** 是第三台全新 runner，进入不含任何签名/公证 Secrets 的受保护
   `macos-publish` Environment。required reviewer 必须先审阅维护者的真机验收记录；该 job 只认证 stage 的
   artifact ID/digest/运行号/commit，逐字节复核四个成员并从中发布，绝不 checkout、重建、重签或重公证。
+- **`build_linux_deb`** 在无发布权限的 Ubuntu 24.04 amd64 runner 上构建同一版本的 deb，并验证安装、
+  重装、卸载与用户数据保留。两个公开发布 job 都等待它成功；随后 **`attach_linux_deb`** 向已公开的
+  同名 `v*` Release 添加 deb 与单独的 `.sha256`，下载读回比对，不覆盖已存在的不同字节。
 
 构建步骤：
 
@@ -49,8 +52,9 @@ Gatekeeper 策略。signed-stage 出现后，维护者必须下载其中的**精
 - 正式版 tag 必须在签名前精确指向当时的 `origin/main`；签名完成后 tag 不得移动，stage 与发布前各复核
   其 commit，Release 必须仍为空位。主线随后有新提交不会改变已审计 tag 的字节。
 - 预览版 tag 必须指向已在 main 上的提交，tag 在发布前不得移动，Release 必须仍为空位。
-- 预览版 Release 只包含 `RIMES-X.Y.Z-preview.N.pkg` 与 `SHA256SUMS`，标记为 Pre-release、`latest=false`，
-  正文写明 unsigned / not notarized 并链接 `UNSIGNED-PREVIEW.md`。
+- 预览版 Release 的 macOS 资产为 `RIMES-X.Y.Z-preview.N.pkg` 与 `SHA256SUMS`；Linux job 随后附加
+  `fcitx5-rimes_X.Y.Z~preview.N_amd64.deb` 与其 `.sha256`。Release 标记为 Pre-release、`latest=false`，
+  正文写明 macOS unsigned / not notarized，链接 `UNSIGNED-PREVIEW.md` 并附 Linux 安装说明。
 - PR、定时和手动运行都是演练：版本号默认取下一个预览版本，只上传保留 7 天的 Artifact。
 
 ## 二、正式发布环境与 Secrets
@@ -148,7 +152,8 @@ CI 和 `scripts/release.sh` 都会用 `--check` 阻止版本或文档漂移。�
 | `Platform Preview Data` | 每周 / 手动 | 跨平台数据闭包校验与 Windows / Linux 包事务；维护性检查，不阻断 macOS 发布 |
 | `Windows Native Foundation` | 每周 / 手动 | Windows 原生 x64 / x86 构建与测试；维护性检查，不阻断 macOS 发布 |
 | `Windows IME` | 相关路径的 PR / push 到 main、手动 | x64 / x86 构建、Fake TSF + 真 Broker 打字测试和独立 Artifact；不是安装包发布 |
-| `Linux IME` | 相关路径的 PR / push 到 main、手动 | Fcitx5 / Buffer / Capsule 构建与 headless E2E、独立 Artifact |
+| `Linux IME` | 相关路径的 PR / push 到 main、手动 | Fcitx5 / Buffer / Capsule 构建与 headless E2E、源码安装卸载、deb 安装／重装／卸载与 Artifact |
+| `Linux deb package`（可复用） | `Linux IME` 与 `Release macOS` 调用 | Ubuntu 24.04 amd64 deb + SHA-256；`v*` 发布成功后附到同一 Release，演练只保留 Artifact |
 | `iOS checks` | 相关路径的 PR / push 到 main、手动 | 共享测试、iOS 构建和模拟器测试；无商店提交 |
 | `Release iOS to App Store` | `ios-v*` tag | 必须来自 main 历史；独立签名、build number 与审核流程，见 iOS CI_RELEASE.md |
 | `Release macOS`（演练） | 打包相关 PR、每日定时、手动 | 完整通用构建、打包、从最新 Release 升级安装，不发布 |
@@ -156,7 +161,8 @@ CI 和 `scripts/release.sh` 都会用 `--check` 阻止版本或文档漂移。�
 
 main 的 ruleset 只要求 `CI` 的 `Release tooling` 与 macOS `build` 成功；`Release macOS` 演练带路径过滤，
 不作为必需检查，由定时运行兜底。Windows / Linux IME 的 PR 检查提供平台证据，但不加入 macOS
-发布门禁；平台验收与正式发布是各自独立的决定。完整维护约定见 [MAINTENANCE.md](MAINTENANCE.md)。
+tag 创建门禁；`v*` 发布工作流内的 Linux deb 构建及包测试必须成功，才公开组合 Release。
+Linux 桌面验收仍须单独记录。完整维护约定见 [MAINTENANCE.md](MAINTENANCE.md)。
 
 ## 六、安装器（[`scripts/make-pkg.sh`](scripts/make-pkg.sh)）
 

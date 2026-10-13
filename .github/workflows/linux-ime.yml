@@ -11,12 +11,15 @@ on:
       - "platforms/linux/**"
       - "Shared/SchemeImport/**"
       - "scripts/input-schemes/fetch_fixture.py"
+      - "scripts/input-schemes/repair-rime-table.py"
       - "platforms/ios/scripts/prepare-lua.py"
       - "platforms/ios/scripts/lua-sandbox/**"
       - "platforms/ios/dependencies.lock.json"
       - "rime-data/**"
       - "scripts/platform-preview/**"
       - ".github/workflows/linux-ime.yml"
+      - ".github/workflows/linux-deb.yml"
+      - "VERSION"
   push:
     branches:
       - main
@@ -24,12 +27,15 @@ on:
       - "platforms/linux/**"
       - "Shared/SchemeImport/**"
       - "scripts/input-schemes/fetch_fixture.py"
+      - "scripts/input-schemes/repair-rime-table.py"
       - "platforms/ios/scripts/prepare-lua.py"
       - "platforms/ios/scripts/lua-sandbox/**"
       - "platforms/ios/dependencies.lock.json"
       - "rime-data/**"
       - "scripts/platform-preview/**"
       - ".github/workflows/linux-ime.yml"
+      - ".github/workflows/linux-deb.yml"
+      - "VERSION"
   workflow_dispatch:
 
 permissions:
@@ -40,9 +46,12 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  deb-package:
+    uses: ./.github/workflows/linux-deb.yml
+
   build-and-e2e:
     name: Fcitx5 addon + headless typing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -64,13 +73,16 @@ jobs:
             xvfb xdotool dbus-x11 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev \
-            qtbase5-dev fonts-noto-cjk weston wtype sway
+            qtbase5-dev fonts-noto-cjk weston wtype sway patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
         run: |
           python3 platforms/linux/ime/scripts/build-engine.py
           echo "RIMES_IME_RIME_PREFIX=$PWD/platforms/linux/ime/.engine/install" >> "$GITHUB_ENV"
           echo "LD_LIBRARY_PATH=$PWD/platforms/linux/ime/.engine/install/lib" >> "$GITHUB_ENV"
+
+      - name: Source installation and uninstall lifecycle
+        run: python3 -m unittest discover -s platforms/linux/ime/tests -p 'test_*.py' -v
 
       - name: Build
         run: platforms/linux/ime/scripts/build.sh

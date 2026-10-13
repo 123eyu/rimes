@@ -66,6 +66,22 @@ class MainlineChannelTests(unittest.TestCase):
                     if name != "ios.yml":
                         self.assertRegex(block, r"['\"]scripts/platform-preview/\*\*['\"]")
 
+    def test_linux_deb_is_required_and_attached_only_after_project_publication(self):
+        text = workflow("release.yml")
+        self.assertIn('needs: [build_and_smoke, build_linux_deb]', text)
+        self.assertIn('needs: [build_and_smoke, sign_and_stage, build_linux_deb]', text)
+        attach = text.split('  attach_linux_deb:', 1)[1]
+        self.assertIn("needs.publish_unsigned_preview.result == 'success'", attach)
+        self.assertIn("needs.publish_staged_release.result == 'success'", attach)
+        self.assertIn("github.event_name == 'push'", attach)
+        self.assertIn('gh release upload', attach)
+        self.assertIn('gh release download', attach)
+        self.assertNotIn('gh release create', attach)
+        self.assertNotIn('--clobber', attach)
+        package = workflow('linux-deb.yml')
+        self.assertIn('tests/deb_lifecycle.sh', package)
+        self.assertNotIn('contents: write', package)
+
 
 if __name__ == "__main__":
     unittest.main()

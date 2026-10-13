@@ -138,7 +138,7 @@ final class ServiceDeliveryContract {
             for(String id:new String[]{"demo","demo_t9"}) {
                 String yaml="schema:\n  schema_id: "+id+"\nengine:\n  translators: [script_translator]\ntranslator:\n  dictionary: words\nspeller:\n  alphabet: abcdefghijklmnopqrstuvwxyz23456789\n  delimiter: \"'\"\n  algebra:\n    - erase/^xx$/\n";
                 if(id.endsWith("_t9")) yaml+="    - xlit/abcdefghijklmnopqrstuvwxyz/22233344455566677778889999/\n";
-                java.nio.file.Files.writeString(new java.io.File(build,id+".schema.yaml").toPath(),yaml);
+                java.nio.file.Files.write(new java.io.File(build,id+".schema.yaml").toPath(),yaml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
             }
             onMain(instrumentation,() -> {
                 Fixture fixture=new Fixture(false);reference.set(fixture);
