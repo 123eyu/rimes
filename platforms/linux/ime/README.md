@@ -91,7 +91,7 @@ Keep that prefix when installing/running this build; installed targets retain it
 search path. Building against a distro runtime remains possible by leaving the variable
 unset. An import with unavailable components/Lua APIs fails without replacing the active
 scheme. OpenCC tables required by an imported scheme must be in its own ZIP.
-The private prefix is not automatically added to the existing `.deb` packaging workflow.
+Release `.deb` packages include this private Rime/Lua build with a distinct library identity, so the system Rime package remains untouched.
 
 ## Build and install
 
@@ -117,11 +117,13 @@ Environment overrides used by tests and unusual layouts:
 ## Packaging
 
 ```bash
+python3 platforms/linux/ime/scripts/build-engine.py
 platforms/linux/ime/scripts/package-deb.sh /tmp/rimes-deb
 ```
 
 writes `fcitx5-rimes_<version>_<arch>.deb` (addon + `rimes-buffer` +
-`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + reviewed data).
+`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + `rimes-schemes` + private Rime/Lua + reviewed data).
+The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.3_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
 The package `Recommends: libgtk-layer-shell0, wl-clipboard` so a wlroots
 session can keep the rail overlay and copy notes without a GTK serial.
 Flatpak notes are in

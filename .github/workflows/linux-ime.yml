@@ -42,7 +42,7 @@ concurrency:
 jobs:
   build-and-e2e:
     name: Fcitx5 addon + headless typing
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
@@ -64,7 +64,7 @@ jobs:
             xvfb xdotool dbus-x11 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev \
-            qtbase5-dev fonts-noto-cjk weston wtype sway
+            qtbase5-dev fonts-noto-cjk weston wtype sway patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
         run: |
@@ -91,6 +91,34 @@ jobs:
 
       - name: Existing Linux data-package smoke still passes
         run: platforms/linux/tests/smoke.sh
+
+      - name: Package and verify installed third-party imports
+        run: |
+          set -euo pipefail
+          platforms/linux/ime/scripts/package-deb.sh "$RUNNER_TEMP/linux-release"
+          sudo apt-get install -y "$RUNNER_TEMP"/linux-release/*.deb
+          installed_lib=$(ldd /usr/bin/rimes-schemes | awk '/librimes-rime/{print $3}')
+          [[ "$installed_lib" == /usr/lib/*/rimes/librimes-rime.so.1 ]]
+          test -x /usr/bin/rimes-schemes
+          test -f /usr/share/applications/org.scholay.rimes.schemes.desktop
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --import "$RUNNER_TEMP/installed-import" "$RUNNER_TEMP/wanxiang-original.zip" wanxiang
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --verify "$RUNNER_TEMP/installed-import" nihao 你好
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --import "$RUNNER_TEMP/installed-t9" "$RUNNER_TEMP/wanxiang-original.zip" wanxiang_t9
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --verify "$RUNNER_TEMP/installed-t9" 64426 你好
+          printf '词库验收\tceshi\t100\n' > "$RUNNER_TEMP/dictionary.tsv"
+          text_schema="text_$(sha256sum "$RUNNER_TEMP/dictionary.tsv" | cut -c1-16)"
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --import "$RUNNER_TEMP/installed-text" "$RUNNER_TEMP/dictionary.tsv" "$text_schema"
+          env -u LD_LIBRARY_PATH /usr/bin/rimes-schemes --verify "$RUNNER_TEMP/installed-text" ceshi 词库验收
+          python3 -c 'import json,os,pathlib; p=pathlib.Path(os.environ["RUNNER_TEMP"])/"linux-release"; (p/"BUILD-INFO.json").write_text(json.dumps({"version":pathlib.Path("VERSION").read_text().strip(),"commit":os.environ["GITHUB_SHA"],"platform":"Ubuntu 24.04 amd64 / Fcitx5","installedSchemeImport":"passed"},indent=2)+"\n")'
+          sudo apt-get remove -y fcitx5-rimes
+
+      - name: Upload Linux installer and validation identity
+        uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3
+        with:
+          name: RIMES-Linux-release-${{ github.sha }}
+          path: ${{ runner.temp }}/linux-release/
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Upload unsigned addon (not a release asset)
         uses: actions/upload-artifact@65462800fd760344b1a7b4382951275a0abb4808 # v4.3.3

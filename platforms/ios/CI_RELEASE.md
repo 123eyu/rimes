@@ -1,6 +1,6 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.2**, local build **55**, rebuilt from current main to include the cold-start provisional-height response omitted from TestFlight build 54. See [build 55 source and validation](../../validation/ios-cold-start-release-20261012/README.md). Native imported nine-key layouts and lifecycle cleanup remain. Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
+Current iOS target: **1.1.3**, local build **56**, including standard upstream ZIP and coded UTF-8 dictionary import from current main. The prior build-55 cold-start fixes remain. Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs

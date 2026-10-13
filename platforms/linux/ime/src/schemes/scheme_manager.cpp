@@ -386,7 +386,22 @@ int main(int argc, char **argv) {
       return Compile(argv[2], {argv + 3, argv + argc});
     if (argc >= 5 && std::string(argv[1]) == "--import") {
       schemes::Library library(fs::absolute(argv[2]));
-      auto review = schemes::Inspect(fs::absolute(argv[3]));
+      GError *error = nullptr;
+      char *directory = g_dir_make_tmp("rimes-schemes-cli-XXXXXX", &error);
+      if (!directory) {
+        std::string message = error ? error->message : "Cannot create import workspace";
+        g_clear_error(&error);
+        throw std::runtime_error(message);
+      }
+      struct Temporary {
+        fs::path path;
+        ~Temporary() {
+          std::error_code ignored;
+          fs::remove_all(path, ignored);
+        }
+      } temporary{directory};
+      g_free(directory);
+      auto review = Inspect(fs::absolute(argv[3]), temporary.path / "text.zip");
       auto package = library.Install(review, {argv + 4, argv + argc}, Deploy);
       library.Activate(package.id, argv[4]);
       std::cout << package.id << ' ' << package.source_digest << '\n';

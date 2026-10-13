@@ -138,6 +138,43 @@ jobs:
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfE2E.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfTestHost.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/rimes-windows-registration.json
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/build-identity.json
+          if-no-files-found: error
+          retention-days: 14
+
+  package:
+    name: Package installer and verify bundled imports
+    needs: [build-and-test, e2e-typing]
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Prepare pinned official plugin sources
+        run: python scripts/prepare-official-plugins.py
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: RIMES-Windows-IME-UNSIGNED-x64-${{ github.sha }}
+          path: platforms/windows/native/out/build/windows-x64/Release
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: RIMES-Windows-IME-UNSIGNED-x86-${{ github.sha }}
+          path: platforms/windows/native/out/build/windows-x86/Release
+      - name: Assemble EXE and verify packaged Rime schemes
+        shell: powershell
+        run: |
+          ./platforms/windows/scripts/New-RimesCiPackage.ps1 -Commit '${{ github.sha }}' -OutputDirectory "$env:RUNNER_TEMP/rimes-release"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: RIMES-Windows-release-${{ github.sha }}
+          path: |
+            ${{ runner.temp }}/rimes-release/*.exe
+            ${{ runner.temp }}/rimes-release/*.zip
+            ${{ runner.temp }}/rimes-release/BUILD-INFO.json
+            ${{ runner.temp }}/rimes-release/SHA256SUMS
           if-no-files-found: error
           retention-days: 14
           compression-level: 6

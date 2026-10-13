@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: platforms/android
@@ -65,6 +65,33 @@ jobs:
         run: python3 resources/dictionary/verify-dictionary.py --check --apk app/build/outputs/apk/debug/app-debug.apk
       - name: Verify APK 16 KB alignment
         run: "$ANDROID_HOME/build-tools/36.0.0/zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk"
+      - name: Verify original scheme import on Android emulator
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$sdkmanager" 'emulator' 'system-images;android-35;google_apis;x86_64'
+          sudo chmod 666 /dev/kvm
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --name rimes-import --package 'system-images;android-35;google_apis;x86_64'
+          "$ANDROID_HOME/emulator/emulator" -avd rimes-import -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > .native/emulator.log 2>&1 &
+          trap 'adb -s emulator-5554 emu kill || true' EXIT
+          timeout 180 adb -s emulator-5554 wait-for-device
+          for attempt in $(seq 1 90); do
+            [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
+            sleep 2
+          done
+          test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
+          adb -s emulator-5554 root
+          adb -s emulator-5554 wait-for-device
+          adb -s emulator-5554 install app/build/outputs/apk/debug/app-debug.apk
+          adb -s emulator-5554 install app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          python3 ../../scripts/input-schemes/fetch_fixture.py .native/wanxiang-original.zip
+          adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug mkdir -p cache
+          adb -s emulator-5554 push .native/wanxiang-original.zip /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip
+          adb -s emulator-5554 shell chmod 644 /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip
+          adb -s emulator-5554 shell am instrument -w -e mode scheme-import -e archive /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/scheme-import-emulator.log
+          grep -Fq 'PASS real JNI import' .native/scheme-import-emulator.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/scheme-import-emulator.log
       - name: Upload development APK and reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -78,6 +105,8 @@ jobs:
             platforms/android/app/build/generated/rime/build-receipt.json
             platforms/android/app/build/generated/rime/assets/rime/manifest.json
             platforms/android/.native/engine-contract.log
+            platforms/android/.native/emulator.log
+            platforms/android/.native/scheme-import-emulator.log
           retention-days: 14
           if-no-files-found: warn
       # No publishing, production signing keys, device install or macOS release gate.

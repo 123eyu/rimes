@@ -39,6 +39,10 @@ class ProductVersionTests(unittest.TestCase):
         self.write(self.root / 'platforms/ios/RIMES.xcodeproj/project.pbxproj',
                    f'MARKETING_VERSION = {version};\nCURRENT_PROJECT_VERSION = 48;\n')
         self.write(self.root / 'platforms/android/VERSION', version + '\n')
+        self.write(self.root / 'platforms/linux/ime/VERSION', version + '\n')
+        self.write(self.root / 'platforms/linux/ime/CMakeLists.txt',
+                   'file(READ "${CMAKE_CURRENT_SOURCE_DIR}/VERSION" RIMES_PRODUCT_VERSION)\n'
+                   'project(RIMESLinuxIme VERSION ${RIMES_PRODUCT_VERSION} LANGUAGES C CXX)\n')
         self.write(self.root / 'platforms/android/app/build.gradle.kts',
                    'val rimesVersion = rootProject.file("VERSION").readText().trim()\n'
                    'versionName = rimesVersion\nversionCode = 48\n')
@@ -56,6 +60,18 @@ class ProductVersionTests(unittest.TestCase):
         result = self.check()
         self.assertEqual(result['android'], {'version': '1.1.0', 'versionCode': 48})
         self.assertEqual(result['windows'], {'version': '1.1.0', 'fileVersion': '1.1.0.0'})
+        self.assertEqual(result['linux'], {'version': '1.1.0'})
+
+    def test_linux_old_experimental_anchor_is_rejected(self):
+        self.write(self.root / 'platforms/linux/ime/VERSION', '0.1.0\n')
+        with self.assertRaisesRegex(ValueError, 'Linux VERSION must stay'):
+            self.check()
+
+    def test_linux_hardcoded_binary_version_is_rejected(self):
+        self.write(self.root / 'platforms/linux/ime/CMakeLists.txt',
+                   'project(RIMESLinuxIme VERSION 0.1.0 LANGUAGES CXX)\n')
+        with self.assertRaisesRegex(ValueError, 'Linux must consume'):
+            self.check()
 
     def test_windows_patch_advance_preserves_other_product_versions(self):
         self.write(self.windows_base / 'VERSION', '1.1.1\n')

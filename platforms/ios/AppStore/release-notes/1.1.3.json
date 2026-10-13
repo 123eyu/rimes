@@ -1,0 +1,5 @@
+{
+  "zh-Hans": "新增跨平台 Rime 方案导入：在设置中导入标准方案 ZIP 或带编码的 UTF-8 文本词库，检查、部署并启用。改进原始方案包兼容性、导入失败恢复和删除清理，支持配套的全拼与九键方案。",
+  "zh-Hant": "新增跨平台 Rime 方案匯入：在設定中匯入標準方案 ZIP 或附編碼的 UTF-8 文字詞庫，檢查、部署並啟用。改善原始方案包相容性、匯入失敗復原與刪除清理，支援配套的全拼與九鍵方案。",
+  "en-US": "Import standard Rime scheme ZIPs and coded UTF-8 text dictionaries from Settings. Review, deploy, and enable schemes without repacking them for each platform. This update improves upstream package compatibility, recovery after failed imports, package removal, and paired full-keyboard and nine-key schemes."
+}
