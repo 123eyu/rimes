@@ -70,7 +70,8 @@ jobs:
         run: |
           set -euo pipefail
           sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
-          "$sdkmanager" 'emulator' 'system-images;android-35;google_apis;x86_64'
+          "$sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64'
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
           sudo chmod 666 /dev/kvm
           echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --name rimes-import --package 'system-images;android-35;google_apis;x86_64'
           "$ANDROID_HOME/emulator/emulator" -avd rimes-import -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > .native/emulator.log 2>&1 &

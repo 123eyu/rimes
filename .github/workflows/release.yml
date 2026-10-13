@@ -363,6 +363,16 @@ jobs:
               "$BIN" "$smoke"
           done
 
+      - name: Verify portable imports in the assembled app
+        run: |
+          set -euo pipefail
+          BIN="$GITHUB_WORKSPACE/RIMES.app/Contents/MacOS/RIMES"
+          export RIMEBUFFER_FRAMEWORKS_DIR="$GITHUB_WORKSPACE/RIMES.app/Contents/Frameworks"
+          python3 scripts/input-schemes/fetch_fixture.py "$RUNNER_TEMP/wanxiang-original.zip"
+          "$BIN" scheme-import-smoke
+          "$BIN" scheme-import-smoke "$RUNNER_TEMP/wanxiang-original.zip" wanxiang nihao 你好
+          "$BIN" scheme-import-smoke "$RUNNER_TEMP/wanxiang-original.zip" wanxiang_t9 64426 你好
+
       # Rehearsals and unsigned previews are ad-hoc signed and never enter the
       # protected signing environment. The temporary APP_ZIP below is only an
       # internal handoff/verification artifact; a formal vX.Y.Z tag skips this
