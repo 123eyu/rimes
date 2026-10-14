@@ -7,6 +7,8 @@ Es un método de entrada para varios sistemas operativos. Tres superficies origi
 
 Admite esquemas de pinyin completo, doble pinyin, Shengbi, Wubi e inglés, además de la escritura por acordes usada en estenotipia y de la importación personalizada. Para quien empieza, el paquete **incluye** librime y los diccionarios, y se puede usar al instalarlo.
 
+Las cinco plataformas incluyen **Wubi 86** y **Lingxi Wubi**. Wubi 86 permite buscar con `z` seguido de pinyin y muestra los códigos Wubi entre paréntesis junto a los candidatos. Lingxi Wubi busca Wubi y pinyin sin cambiar de modo y prioriza las coincidencias Wubi exactas. Ambos esquemas confirman automáticamente un candidato Wubi único tras cuatro teclas; los códigos ambiguos y las búsquedas en pinyin mantienen la selección de candidatos. Véase la [guía Wubi](docs/wubi.md).
+
 > **RIMES** es el nombre de la arquitectura del proyecto. Los nombres públicos del producto son **Lingxi IME** en inglés, **灵犀输入法** en chino simplificado y **靈犀輸入法** en chino tradicional. Estos nombres ya se utilizan en la ficha de iOS en el App Store.
 
 ## Vídeos
@@ -34,7 +36,7 @@ Con un solo método de entrada se cubren la traducción, la generación y la rev
 
 | Función | Atajo | Contenido | Acción | Dónde se guarda | Límite |
 |---|---|---|---|---|---|
-| Esquemas | — | Pinyin completo Rime Ice, Natural Code, Xiaohe, Wubi 86, inglés | — | — | — |
+| Esquemas | — | Pinyin completo Rime Ice, Natural Code, Xiaohe, Wubi 86, Lingxi Wubi, inglés | — | — | — |
 | Búfer | `⌘⇧B` | Texto antes de confirmarlo | Cambia a RIMES y luego captura y entrega por bloques | — | Si cambias de método, solo se usa el portapapeles del sistema, no IMK |
 | Barra Capsule | `⌘⇧V` | Copias recientes; notas, imágenes, PDF, habilidades, contraseñas | Clic para elegir, doble clic o Retorno para pegar. `⌘S` guarda | Solo en este Mac | Pegar exige Accesibilidad; si no hay permiso, solo llega al portapapeles |
 | Mailbox | `⌘⇧M` | Conversaciones de IA, notas, envíos por revisar | Conversación nueva; el primer Retorno inicia la generación | El modelo queda ligado a esa conversación | Los CLI usan su modelo predeterminado |
@@ -79,7 +81,7 @@ Todos los complementos de la tabla vienen con RIMES y quedan activados en una in
 
 ## Instalación
 
-Versiones públicas: [macOS 1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1), [Android 1.1.1](https://github.com/scholay/rimes/releases/tag/android-v1.1.1), [Windows 1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1) e [iOS App Store 1.1.0](https://apps.apple.com/us/app/lingxi-ime/id6814620242). El paquete de macOS está firmado y notarizado; Android usa la clave de firma de larga duración; el EXE de Windows no está firmado. iOS también ofrece una [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); allí se muestran los builds disponibles. Linux ofrece actualmente una vista previa de los datos de esquemas. Consulta la [auditoría de paquetes](validation/release-refresh-20261007.md) para conocer las diferencias con el código actual. También puedes compilar el código localmente:
+La [versión 1.1.4](https://github.com/scholay/rimes/releases/tag/v1.1.4) ofrece paquetes PKG para macOS, APK/AAB para Android, EXE/ZIP para Windows y DEB para Linux (Ubuntu 24.04 amd64 / Fcitx5). El paquete de macOS está firmado y notarizado; Android mantiene la clave de firma existente; el EXE de Windows no está firmado. Para iOS, consulta la [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) o la [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); las páginas de Apple muestran las versiones disponibles. Las cinco plataformas permiten importar el mismo ZIP de Rime o diccionario UTF-8 TXT/TSV con códigos de entrada. Consulta la [guía de importación](docs/portable-scheme-import.md) y el [registro de validación de 1.1.4](docs/releases/1.1.4.md). También puedes compilar desde el código fuente.
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/rimes.git

@@ -7,7 +7,7 @@ RIMES is an input method for more than one operating system. Three original slot
 
 Schemes include full Pinyin, double Pinyin, Shengbi, Wubi, and English, plus the chorded input used in stenography and custom imports. For new users, the package **bundles** librime and the dictionaries and is ready to use.
 
-All five platforms include **Wubi 86** and **Lingxi Wubi**. Wubi 86 supports `z` followed by Pinyin, such as `zni`, with Wubi codes shown in parentheses. Lingxi Wubi accepts Wubi codes and Pinyin without switching modes, prioritizing exact Wubi matches. See the [Wubi guide](docs/wubi.md).
+All five platforms include **Wubi 86** and **Lingxi Wubi**. Wubi 86 supports `z` followed by Pinyin, such as `zni`, with Wubi codes shown in parentheses. Lingxi Wubi accepts Wubi codes and Pinyin without switching modes, prioritizing exact Wubi matches. Both schemes automatically commit a unique four-key Wubi candidate; ambiguous codes and Pinyin lookups retain candidate selection. See the [Wubi guide](docs/wubi.md).
 
 > **RIMES** is the name of the project’s architecture. The public product names are **Lingxi IME** in English, **灵犀输入法** in Simplified Chinese, and **靈犀輸入法** in Traditional Chinese. These names are already used for the iOS App Store listing.
 
@@ -94,7 +94,17 @@ Bundled plug-ins use the defaults above. Optional plug-ins require installation 
 
 ## Install
 
-Public versions: [macOS 1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1), [Android 1.1.1](https://github.com/scholay/rimes/releases/tag/android-v1.1.1), [Windows 1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1), and [iOS App Store 1.1.0](https://apps.apple.com/us/app/lingxi-ime/id6814620242). The macOS package is signed and notarized; Android uses the long-term signing key; the Windows EXE is unsigned. iOS also offers a [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q); TestFlight shows the builds available to install. Linux currently offers a scheme-data preview. See the [package audit](validation/release-refresh-20261007.md) for differences between source and public installers; each release page or store shows current availability.
+The [1.1.4 release](https://github.com/scholay/rimes/releases/tag/v1.1.4) provides macOS PKG, Android APK/AAB, Windows EXE/ZIP, and Linux DEB packages. All five platforms support importing the same standard Rime ZIP or encoded UTF-8 TXT/TSV dictionary; see the [import guide](docs/portable-scheme-import.md).
+
+| Platform | Installation |
+|---|---|
+| macOS | [1.1.4 PKG](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-1.1.4.pkg), Apple Silicon and Intel, signed and notarized |
+| Android | [1.1.4 APK](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Android-1.1.4.apk), version code 18, signed with the existing long-term key |
+| Windows | [1.1.4 EXE](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
+| Linux | [1.1.4 DEB](https://github.com/scholay/rimes/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb), Ubuntu 24.04 amd64 / Fcitx5 |
+| iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q). Apple’s pages show the currently available builds. |
+
+See the [1.1.4 release record](docs/releases/1.1.4.md) for build, import, and installation validation.
 
 A user has reported host-app crashes on macOS 27 when switching to RIMES in the App Store sandboxed versions of WeChat and QQ after installation. If affected, switch to another input method and follow the [per-app input-source cache backup and recovery guide](docs/macos/input-source-cache-recovery.md#english). The installer does not clear other apps' caches; restarting the app or logging out is not a guaranteed fix. Investigation remains open in [#90](https://github.com/scholay/rimes/issues/90).
 
