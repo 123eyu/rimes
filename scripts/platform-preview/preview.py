@@ -24,6 +24,7 @@ EXPECTED_SCHEMAS = (
     "double_pinyin",
     "double_pinyin_flypy",
     "wubi86",
+    "lingxi_wubi",
     "english",
 )
 EXPECTED_EXTENSION_SCHEMAS = ("my_combo",)

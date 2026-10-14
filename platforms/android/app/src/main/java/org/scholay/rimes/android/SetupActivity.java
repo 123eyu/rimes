@@ -206,6 +206,7 @@ public final class SetupActivity extends Activity {
     }
     private String schemeName(String id) {
         if(id.equals("rimes_ziranma")) return t("自然码双拼","Natural Code");
+        if(id.equals("lingxi_wubi")) return t("灵犀五笔","Lingxi Wubi");
         if(id.equals("rimes_wubi")) return t("五笔 86","Wubi 86"); return t("全拼 · Pinyin","Pinyin");
     }
     private String layoutName(String id) {
@@ -299,7 +300,7 @@ public final class SetupActivity extends Activity {
         row(imports,KeyboardIcon.STACK_LAYERS,t("导入和管理 Rime 方案","Import and manage Rime schemes"),
             t("ZIP · 方案、词典、Lua 与 OpenCC","ZIP · schemas, dictionaries, Lua and OpenCC"),null,"settings.schema.import",
             () -> startActivity(new Intent(this,RimeSchemesActivity.class)));
-        LinearLayout choices=group(t("中文输入方案","Chinese input scheme")); String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi"}; String[] samples={"nihao → 你好","nihk → 你好","wq → 你"};
+        LinearLayout choices=group(t("中文输入方案","Chinese input scheme")); String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"}; String[] samples={"nihao → 你好","nihk → 你好","wq → 你 · zni → 你 (wq)","wq / ni → 你"};
         for(int i=0;i<ids.length;i++) { String id=ids[i]; choice(choices,schemeName(id),samples[i],"settings.schema."+id,settings.getSchema().equals(id),() -> {
             try { new RimeSchemeStore(this).activate(null,null); settings.setSchema(id); render(); }
             catch(Exception e) { android.widget.Toast.makeText(this,e.getMessage(),android.widget.Toast.LENGTH_LONG).show(); }
@@ -401,7 +402,7 @@ public final class SetupActivity extends Activity {
     }
     private void resources() {
         LinearLayout bundled=group(t("随应用安装","Bundled with the app")); row(bundled,KeyboardIcon.STACK_LAYERS,"librime",t("离线引擎","Offline engine"),"1.17.0","settings.resources.engine",null);
-        for(String id:new String[]{"rimes_pinyin","rimes_ziranma","rimes_wubi"}) row(bundled,KeyboardIcon.BOOK,schemeName(id),t("已预编译，无需下载","Precompiled; no download needed"),null,"settings.resources."+id,null);
+        for(String id:new String[]{"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"}) row(bundled,KeyboardIcon.BOOK,schemeName(id),t("已预编译，无需下载","Precompiled; no download needed"),null,"settings.resources."+id,null);
         note(t("系统词典与用户词库分别保存，更新应用保留用户词库。在默认方案中可以导入 Rime ZIP。","System dictionaries and learned words are stored separately. App updates preserve learned words. Import Rime ZIPs from Default scheme."));
         LinearLayout actions=group(t("管理","Manage")); row(actions,KeyboardIcon.STACK_LAYERS,t("本机词库学习","Local word learning"),null,null,"settings.resources.data",() -> navigate("data"));
         row(actions,KeyboardIcon.BOOK,t("第三方许可","Third-party licenses"),null,null,"settings.resources.licenses",() -> navigate("licenses"));

@@ -132,8 +132,8 @@ public final class RimesInputMethodService extends InputMethodService {
         }
     }
     private long session;
-    private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi"};
-    private static final String[] NAMES={"拼音","自然码","五笔"};
+    private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"};
+    private static final String[] NAMES={"拼音","自然码","五笔","灵犀五笔"};
 
     @Override public void onCreate() {
         super.onCreate();
@@ -1113,8 +1113,9 @@ public final class RimesInputMethodService extends InputMethodService {
             item.setVisibility(exists?View.VISIBLE:View.GONE);
             if(exists) {
                 String value=!chordPreview.isEmpty()?chordPreview:marks?PunctuationLayout.STRIP.get(i):snapshot.candidates.get(i);
-                setText(item,value);
-                item.setContentDescription(marks?value:"候选"+(i+1)+" "+value);
+                String comment=marks || !chordPreview.isEmpty() || nineKeyEngine() || i>=snapshot.comments.size()?"":snapshot.comments.get(i);
+                ((KeyButton)item).candidate(value,comment);
+                item.setContentDescription(marks?value:"候选"+(i+1)+" "+value+(comment.isEmpty()?"":" "+comment));
             }
             item.setEnabled(exists && pending==0 && chordPreview.isEmpty());
         }

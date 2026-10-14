@@ -5,6 +5,7 @@ enum InputEncoding: String, CaseIterable, Codable {
     case naturalDoublePinyin
     case xiaoheDoublePinyin
     case wubi86
+    case lingxiWubi
     case english
 
     var title: String {
@@ -13,6 +14,7 @@ enum InputEncoding: String, CaseIterable, Codable {
         case .naturalDoublePinyin: return "自然码双拼"
         case .xiaoheDoublePinyin: return "小鹤双拼"
         case .wubi86: return "五笔86"
+        case .lingxiWubi: return "灵犀五笔"
         case .english: return "英文"
         }
     }
@@ -91,6 +93,12 @@ enum InputConfigurationResolver {
             configuration: .init(encoding: .wubi86,
                                  keyingMode: .sequential),
             schemaID: "wubi86",
+            lexiconFamily: .wubi86
+        ),
+        RuntimeInputProfile(
+            configuration: .init(encoding: .lingxiWubi,
+                                 keyingMode: .sequential),
+            schemaID: "lingxi_wubi",
             lexiconFamily: .wubi86
         ),
         RuntimeInputProfile(
@@ -465,7 +473,8 @@ enum InputSchemaCatalog {
         InputSchemaOption(id: "rime_ice", name: "雾凇全拼", detail: "完整拼音输入"),
         InputSchemaOption(id: "double_pinyin", name: "自然码双拼", detail: "自然码双拼方案"),
         InputSchemaOption(id: "double_pinyin_flypy", name: "小鹤双拼", detail: "小鹤双拼方案"),
-        InputSchemaOption(id: "wubi86", name: "五笔86", detail: "86 版五笔字型"),
+        InputSchemaOption(id: "wubi86", name: "五笔86", detail: "86 版五笔 · z 引导全拼查字"),
+        InputSchemaOption(id: "lingxi_wubi", name: "灵犀五笔", detail: "五笔与全拼混输 · 拼音候选提示五笔码"),
         InputSchemaOption(id: "english", name: "英文", detail: "英文候选与补全"),
         InputSchemaOption(id: ChordExtensionStore.schemaID,
                           name: ChordKeymapStore.shared.activeProfile.name,

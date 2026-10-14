@@ -11,7 +11,7 @@ class RimesIme;
 
 class RimesCandidateWord final : public CandidateWord {
 public:
-    RimesCandidateWord(RimesIme* ime, int index, Text text);
+    RimesCandidateWord(RimesIme* ime, int index, Text text, const std::string& comment);
     void select(InputContext* inputContext) const override;
 
 private:

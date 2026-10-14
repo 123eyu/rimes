@@ -52,10 +52,11 @@ class NativeDataTests(unittest.TestCase):
 
     def test_only_reviewed_and_referenced_files_are_staged(self):
         summary = self.stage()
-        self.assertEqual(summary["files"], 7)
+        self.assertEqual(summary["files"], 8)
         self.assertEqual(summary["productSchemas"], list(native.PRODUCT_SCHEMAS))
         self.assertEqual((self.output / "my_combo.schema.yaml").read_bytes(), self.chord.read_bytes())
         self.assertEqual((self.output / "wubi86.custom.yaml").read_text(encoding="utf-8"), native.WINDOWS_PATCHES["wubi86.custom.yaml"])
+        self.assertEqual((self.output / "lingxi_wubi.custom.yaml").read_text(encoding="utf-8"), native.WINDOWS_PATCHES["lingxi_wubi.custom.yaml"])
         self.assertEqual(native.verify(self.output), summary)
         self.assertFalse((self.output / "private.userdb").exists())
         self.assertFalse((self.output / "opencc/unreferenced.ocd2").exists())

@@ -23,6 +23,27 @@ import UIKit
         strip.buttons.indices.first { frame(strip.buttons[$0], in: strip).contains(point) }
     }
 
+    func testCodeHintsAreSmallerMeasuredAndNeverChangeTheSelectedText() throws {
+        let strip = CandidateStrip()
+        strip.update(["你", "你好"], comments: ["(wq wqi wqiy)", "(wqvb)"])
+        strip.frame = CGRect(x: 0, y: 0, width: 320, height: 32); strip.layoutIfNeeded()
+        let plain = CandidateLayout.measure(["你", "你好"], width: 320, expanded: false, landscape: false)
+        let button = try XCTUnwrap(strip.buttons.first)
+        button.layoutIfNeeded()
+        XCTAssertEqual(button.currentTitle, "你")
+        XCTAssertEqual(button.accessibilityValue, "(wq wqi wqiy)")
+        XCTAssertLessThan(button.commentLabel.font.pointSize, try XCTUnwrap(button.titleLabel?.font.pointSize))
+        XCTAssertGreaterThan(button.bounds.width, plain.frames[0].width)
+        XCTAssertLessThanOrEqual(button.commentLabel.frame.maxX, button.bounds.width)
+        var selected: [Int] = []; strip.onSelect = { selected.append($0) }
+        button.sendActions(for: .touchUpInside); XCTAssertEqual(selected, [0])
+        strip.update(["你", "你好"], comments: ["(wq)", "(wqvb)"])
+        XCTAssertEqual(strip.buttons[0].comment, "(wq)")
+        strip.update(["你", "你好"])
+        XCTAssertTrue(strip.buttons[0].commentLabel.isHidden)
+        XCTAssertNil(strip.buttons[0].accessibilityValue)
+    }
+
     func testEveryMatrixRowScrollsAndReflowsAroundVisibleControls() {
         for width: CGFloat in [320, 393, 852] {
             for controls in [false, true] {

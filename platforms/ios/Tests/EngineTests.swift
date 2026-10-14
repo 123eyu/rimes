@@ -15,6 +15,48 @@ import RimesCore
             engine.clear()
         }
     }
+    func testWubiPinyinLookupAndMixedInputCommitOnlyText() throws {
+        let engine = MobileEngine()
+        for (schema, code, expected, hint) in [
+            ("rimes_wubi", "zni", "你", "wq"),
+            ("rimes_wubi", "znihao", "你好", "wqvb"),
+            ("lingxi_wubi", "wq", "你", ""),
+            ("lingxi_wubi", "nihao", "你好", "wqvb"),
+            ("lingxi_wubi", "zni", "你", "wq")
+        ] {
+            XCTAssertTrue(engine.select(schema: schema))
+            var state = EngineSnapshot()
+            for key in code.unicodeScalars { state = engine.process(key: Int32(key.value)) }
+            let index = try XCTUnwrap(state.candidates.firstIndex(of: expected), "\(schema)/\(code)")
+            if !hint.isEmpty {
+                let comment = engine.candidateReadings[index]
+                XCTAssertTrue(comment.hasPrefix("(") && comment.hasSuffix(")"), comment)
+                XCTAssertTrue(comment.contains(hint), comment)
+            }
+            if code == "wq" { XCTAssertEqual(index, 0) }
+            XCTAssertEqual(engine.candidate(index).commit, expected)
+            XCTAssertTrue(engine.currentSnapshot.candidates.isEmpty)
+        }
+        XCTAssertTrue(engine.select(schema: "rimes_wubi"))
+        for key in "zni".unicodeScalars { _ = engine.process(key: Int32(key.value)) }
+        _ = engine.process(key: 0xff08)
+        XCTAssertEqual(engine.rawInput, "zn")
+        engine.clear()
+    }
+    func testOnlyUniqueFourKeyWubiEntriesAutoCommit() {
+        let engine = MobileEngine()
+        for schema in ["rimes_wubi", "lingxi_wubi"] {
+            XCTAssertTrue(engine.select(schema: schema))
+            for code in ["voni", "wqiy", "zfiao", "fiao"] where code != "fiao" || schema == "lingxi_wubi" {
+                engine.clear()
+                for (index, key) in code.unicodeScalars.enumerated() {
+                    let state = engine.process(key: Int32(key.value))
+                    XCTAssertEqual(state.commit, code == "voni" && index == 3 ? "灵犀" : "", "\(schema)/\(code)/\(index)")
+                }
+            }
+        }
+        engine.clear()
+    }
     func testDefaultChordUsesZiranmaForSinglesFragmentsAndSyllables() throws {
         let config = AppConfiguration()
         let restored = try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(config))

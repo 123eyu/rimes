@@ -1084,6 +1084,7 @@ final class KeyboardViewController: UIInputViewController {
         }
         candidateStrip.showsChineseMarks = punctuationOpen
         candidateStrip.update(punctuationOpen ? PunctuationLayout.strip : showingAssociations ? associations : snapshot.candidates,
+                              comments: punctuationOpen || showingAssociations || usesNineKey ? [] : engine.candidateReadings,
                               context: punctuationOpen ? "punctuation" : showingAssociations ? "associations" : "composition:\(snapshot.preedit)")
         renderHandPreview(); renderShortcuts(); refreshLanguageSwap(); refreshKeyboardSkin(); renderBuffer(); resize()
     }

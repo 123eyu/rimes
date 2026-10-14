@@ -18,8 +18,8 @@ int main(int argc,char** argv) {
     api->setup(&traits); api->initialize(&traits);
     if(mode!="export") {
         auto session=api->create_session(); require(session!=0,"session");
-        struct Case { const char* schema; const char* code; const char* expected; };
-        Case cases[]={{"rimes_pinyin","nihao","你好"},{"rimes_pinyin9","64426","你好"},{"rimes_ziranma","nihk","你好"},{"rimes_wubi","wq","你"}};
+        struct Case { const char* schema; const char* code; const char* expected; const char* hint = ""; };
+        Case cases[]={{"rimes_pinyin","nihao","你好"},{"rimes_pinyin9","64426","你好"},{"rimes_ziranma","nihk","你好"},{"rimes_wubi","wq","你"},{"rimes_wubi","zni","你","wq"},{"rimes_wubi","znihao","你好","wqvb"},{"lingxi_wubi","wq","你"},{"lingxi_wubi","nihao","你好","wqvb"},{"lingxi_wubi","zni","你","wq"}};
         for(const auto& item:cases) {
             std::string schema=item.schema;
             if(mode.rfind("private",0)==0) schema+="_private";
@@ -30,12 +30,31 @@ int main(int argc,char** argv) {
             require(context.menu.page_size==9,"nine candidates per page");
             require(context.menu.num_candidates>0,"candidates available");
             require(std::string(context.menu.candidates[0].text)==item.expected,"first candidate");
+            if (*item.hint) {
+                std::string hint=context.menu.candidates[0].comment?context.menu.candidates[0].comment:"";
+                require(hint.size()>2 && hint.front()=='(' && hint.back()==')' && hint.find(item.hint)!=std::string::npos,"parenthesized Wubi code hint");
+            }
             api->free_context(&context);
             require(api->select_candidate(session,0),"select first");
             RIME_STRUCT(RimeCommit,commit);
             require(api->get_commit(session,&commit),"commit available");
             require(std::string(commit.text)==item.expected,"committed text"); api->free_commit(&commit);
             std::printf("PASS %s %s -> %s\n",schema.c_str(),item.code,item.expected);
+            api->clear_composition(session);
+        }
+        for (const char* base : {"rimes_wubi", "lingxi_wubi"}) {
+            const std::string schema=std::string(base)+(mode.rfind("private",0)==0?"_private":"");
+            require(api->select_schema(session,schema.c_str()),"auto-commit schema");
+            for (const char* code : {"voni", "wqiy", "zfiao", "fiao"}) {
+                if (std::string(code)=="fiao" && std::string(base)=="rimes_wubi") continue;
+                api->clear_composition(session); int typed=0;
+                for(const char* key=code;*key;++key) {
+                    api->process_key(session,*key,0); ++typed;
+                    RIME_STRUCT(RimeCommit,commit); bool got=api->get_commit(session,&commit);
+                    require(got==(std::string(code)=="voni" && typed==4),"only unique fourth Wubi key auto-commits");
+                    if(got) { require(std::string(commit.text)=="灵犀","exact auto commit"); api->free_commit(&commit); }
+                }
+            }
             api->clear_composition(session);
         }
         require(api->select_schema(session,mode.rfind("private",0)==0?"rimes_pinyin_private":"rimes_pinyin"),"pinyin");

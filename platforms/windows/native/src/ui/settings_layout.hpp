@@ -27,10 +27,11 @@ inline constexpr IconId kSettingsPageIcons[] = {
     IconId::kKeyboard, IconId::kPalette, IconId::kGrid, IconId::kLink,
     IconId::kGrid, IconId::kSettings};
 inline constexpr const wchar_t* kSettingsSchemeTitles[] = {
-    L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"英文", L"isaac2026"};
+    L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"灵犀五笔", L"英文", L"isaac2026"};
 inline constexpr IconId kSettingsSchemeIcons[] = {
-    IconId::kAlphabet, IconId::kKeyboard, IconId::kBird, IconId::kGrid,
+    IconId::kAlphabet, IconId::kKeyboard, IconId::kBird, IconId::kGrid, IconId::kGrid,
     IconId::kEnglish, IconId::kKeyboard};
+inline constexpr int kSettingsSchemeCount = sizeof(kSettingsSchemeTitles) / sizeof(kSettingsSchemeTitles[0]);
 inline constexpr const wchar_t* kSettingsSubpageLabels[][2] = {
     {L"输入方案", L"选项"},
     {L"主题", L"尺寸"},
@@ -201,8 +202,8 @@ struct SettingsLayout {
     const int columns = 3;
     const float card_h = static_cast<float>(m.choice_card_height_dip);
     const float card_w = (body_w - gap * (columns - 1)) / columns;
-    layout.scheme_cards.resize(6);
-    for (int i = 0; i < 6; ++i) {
+    layout.scheme_cards.resize(kSettingsSchemeCount);
+    for (int i = 0; i < kSettingsSchemeCount; ++i) {
       const int row = i / columns;
       const int col = i % columns;
       const float x = layout.body.left + static_cast<float>(col) * (card_w + gap);

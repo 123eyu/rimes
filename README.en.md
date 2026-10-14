@@ -7,6 +7,8 @@ RIMES is an input method for more than one operating system. Three original slot
 
 Schemes include full Pinyin, double Pinyin, Shengbi, Wubi, and English, plus the chorded input used in stenography and custom imports. For new users, the package **bundles** librime and the dictionaries and is ready to use.
 
+All five platforms include **Wubi 86** and **Lingxi Wubi**. Wubi 86 supports `z` followed by Pinyin, such as `zni`, with Wubi codes shown in parentheses. Lingxi Wubi accepts Wubi codes and Pinyin without switching modes, prioritizing exact Wubi matches. See the [Wubi guide](docs/wubi.md).
+
 > **RIMES** is the name of the project’s architecture. The public product names are **Lingxi IME** in English, **灵犀输入法** in Simplified Chinese, and **靈犀輸入法** in Traditional Chinese. These names are already used for the iOS App Store listing.
 
 ## Demo videos
@@ -34,7 +36,7 @@ One input method covers everyday translation, generation, and polishing, without
 
 | Capability | Shortcut | Contents | Action | Storage | Limit |
 |---|---|---|---|---|---|
-| Input schemes | — | Rime Ice full Pinyin, Natural Code, Xiaohe, Wubi 86, English | — | — | — |
+| Input schemes | — | Rime Ice full Pinyin, Natural Code, Xiaohe, Wubi 86, Lingxi Wubi, English | — | — | — |
 | Buffer | `⌘⇧B` | Text before it is committed | Switch to RIMES, then capture and deliver in chunks | — | After you switch away, only the system clipboard is used, not IMK |
 | Capsule bar | `⌘⇧V` | Recent copies; notes, images, PDFs, skills, passwords | Click to select, double-click or Return to paste. `⌘S` saves | This Mac only | Paste needs Accessibility; otherwise it only reaches the clipboard |
 | Mailbox | `⌘⇧M` | AI conversations, notes, items waiting for review | New conversation; the first Return starts generation | The model is bound to that conversation | CLIs use their default model |

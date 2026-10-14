@@ -35,6 +35,7 @@ patch:
     - schema: double_pinyin
     - schema: double_pinyin_flypy
     - schema: wubi86
+    - schema: lingxi_wubi
     - schema: english
     - schema: my_combo
   menu/page_size: 9
@@ -51,6 +52,8 @@ patch:
     tips: none
 """
 }
+
+WINDOWS_PATCHES["lingxi_wubi.custom.yaml"] = WINDOWS_PATCHES["wubi86.custom.yaml"]
 
 
 def regular_file(path: Path) -> None:

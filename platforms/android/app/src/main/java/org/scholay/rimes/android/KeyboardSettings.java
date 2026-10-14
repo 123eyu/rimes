@@ -24,7 +24,7 @@ public final class KeyboardSettings {
     public static final boolean DEFAULT_LEARNING=true;
     public static final boolean DEFAULT_AI_MOCK_ENABLED=true;
 
-    private static final List<String> SCHEMA_VALUES=values("rimes_pinyin","rimes_ziranma","rimes_wubi");
+    private static final List<String> SCHEMA_VALUES=values("rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi");
     private static final List<String> LAYOUT_VALUES=values("qwerty","nineKey","orthogonal","splitOrthogonal");
     private static final List<String> DIRECTION_VALUES=values("auto","zh-en","en-zh");
     private static final List<String> THEME_VALUES=themeIDs();

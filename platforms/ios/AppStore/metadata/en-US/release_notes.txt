@@ -1,3 +1,3 @@
-Improves typing responsiveness and reduces unnecessary resource use after closing Buffer or switching apps.
+Adds Lingxi Wubi with direct Wubi and Pinyin input. Wubi 86 now supports z-prefixed Pinyin lookup with smaller Wubi code hints beside candidates. Existing schemes and learned words are preserved.
 
-Import standard Rime scheme ZIPs and coded UTF-8 text dictionaries from Settings. Review, deploy, and enable schemes without repacking them for each platform. This update improves upstream package compatibility, recovery after failed imports, package removal, and paired full-keyboard and nine-key schemes.
+Both Wubi schemes automatically commit a unique four-key Wubi match while keeping ambiguous codes and Pinyin lookups available for selection.

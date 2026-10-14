@@ -7,7 +7,7 @@ WORK = ANDROID / '.native'
 LOCK = json.loads((ROOT / 'platforms/ios/dependencies.lock.json').read_text())
 NDK = '29.0.14206865'
 CMAKE = '3.22.1'
-SCHEMAS = ('rimes_pinyin', 'rimes_pinyin9', 'rimes_ziranma', 'rimes_wubi')
+SCHEMAS = ('rimes_pinyin', 'rimes_pinyin9', 'rimes_ziranma', 'rimes_wubi', 'lingxi_wubi')
 def schema_source(name):
     root = ANDROID/'resources' if name == 'rimes_pinyin9' else ROOT/'platforms/ios/Resources/EngineData'
     return root/(name+'.schema.yaml')
@@ -114,6 +114,8 @@ def prepare_data():
     if 'schema: rimes_pinyin9' not in default:
         default = default.replace('  - schema: rimes_pinyin\n', '  - schema: rimes_pinyin\n  - schema: rimes_pinyin9\n')
     (stage/'default.yaml').write_text(default)
+    (stage/'lua').mkdir()
+    shutil.copy2(ROOT/'rime-data/lua/rimes_wubi_autocommit.lua',stage/'lua/rimes_wubi_autocommit.lua')
     for schema in SCHEMAS:
         data = schema_source(schema).read_text()
         (stage/(schema+'.schema.yaml')).write_text(data)
@@ -142,6 +144,7 @@ def prepare_data():
     for path in (stage/'build').iterdir():
         if path.suffix in ('.bin','.yaml'): shutil.copy2(path,dest/'build'/path.name)
     shutil.copy2(stage/'default.yaml',dest/'default.yaml')
+    shutil.copytree(stage/'lua',dest/'lua')
     shutil.copy2(ANDROID/'resources/nine-key-syllables.json',dest/'nine-key-syllables.json')
     shutil.copy2(ANDROID/'resources/chord-profile.json',dest/'chord-profile.json')
     # Runtime only needs compiled data. Source dictionaries remain pinned build inputs.
@@ -150,6 +153,7 @@ def prepare_data():
     shutil.copy2(ROOT/'LICENSE',licenses/'RIMES-Apache-2.0.txt')
     shutil.copy2(ROOT/'NOTICE',licenses/'RIMES-NOTICE.txt')
     shutil.copy2(ROOT/'OfficialPlugins/NOTICE',licenses/'RIMES-Plugins-NOTICE.txt')
+    shutil.copy2(ROOT/'rime-data/licenses/rime-wubi-SOURCE.md',licenses/'rime-wubi-SOURCE.md')
     entries = {str(p.relative_to(dest)):sha(p) for p in sorted(dest.rglob('*')) if p.is_file()}
     manifest = {'format':1,'librime':LOCK['librime']['commit'],'files':entries}
     (dest/'manifest.json').write_text(json.dumps(manifest,sort_keys=True,indent=2)+'\n')
@@ -170,6 +174,7 @@ if __name__ == '__main__':
     inputs = [pathlib.Path(__file__).resolve(), ROOT/'LICENSE', ROOT/'NOTICE', ROOT/'OfficialPlugins/NOTICE', ROOT/'platforms/ios/dependencies.lock.json']
     inputs += list((ANDROID/'native').glob('*'))
     inputs += [schema_source(name) for name in SCHEMAS]
+    inputs += [ROOT/'rime-data/lua/rimes_wubi_autocommit.lua',ROOT/'rime-data/licenses/rime-wubi-SOURCE.md']
     inputs += [ANDROID/'resources/nine-key-syllables.json',ANDROID/'resources/chord-profile.json',
                ANDROID/'resources/rimes_android_supplement.dict.yaml',
                ANDROID/'core/src/main/java/org/scholay/rimes/core/ChordData.java']

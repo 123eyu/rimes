@@ -9,14 +9,17 @@ struct CandidateLayout {
     let contentSize: CGSize
     let height: CGFloat
     static func rowHeight(landscape: Bool) -> CGFloat { ceil(UIFont.systemFont(ofSize: landscape ? 18 : 20).lineHeight) + 6 }
-    static func measure(_ texts: [String], width: CGFloat, expanded: Bool, landscape: Bool, controlInsets: UIEdgeInsets = .zero, reservedRows: Set<Int> = [0]) -> CandidateLayout {
+    static func commentFont(landscape: Bool) -> UIFont { .systemFont(ofSize: landscape ? 12 : 13) }
+    static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool, controlInsets: UIEdgeInsets = .zero, reservedRows: Set<Int> = [0]) -> CandidateLayout {
         let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
         let rowHeight = rowHeight(landscape: landscape)
         let available = max(1, width)
         func insets(_ row: Int) -> UIEdgeInsets { expanded && reservedRows.contains(row) ? controlInsets : .zero }
         var row = 0, x = insets(0).left, frames: [CGRect] = []
-        for text in texts {
-            let natural = max(32, ceil((text as NSString).size(withAttributes: [.font: font]).width) + 12)
+        for (index, text) in texts.enumerated() {
+            let comment = comments.indices.contains(index) ? comments[index] : ""
+            let annotationWidth = comment.isEmpty ? 0 : 4 + (comment as NSString).size(withAttributes: [.font: commentFont(landscape: landscape)]).width
+            let natural = max(32, ceil((text as NSString).size(withAttributes: [.font: font]).width + annotationWidth) + 12)
             if expanded && x > insets(row).left && x + natural > available - insets(row).right {
                 row += 1; x = insets(row).left
             }
@@ -40,6 +43,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
     private let content = UIView()
     private(set) var buttons: [CandidateButton] = []
     private var texts: [String] = []
+    private var comments: [String] = []
     private var context = ""
     private lazy var hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
     private var selectionPoint: CGPoint?
@@ -78,11 +82,12 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
     }
     required init?(coder: NSCoder) { fatalError() }
     deinit { selectionTimer?.invalidate() }
-    func update(_ values: [String], context: String = "") {
+    func update(_ values: [String], comments: [String] = [], context: String = "") {
         if context != self.context { cancelSelection(); self.context = context }
-        guard values != texts else { return }
+        guard values != texts || comments != self.comments else { return }
         cancelSelection()
         texts = values
+        self.comments = comments
         // Keep idle buttons across compositions instead of constructing sixty
         // UIKit controls on every key. A button under a finger is retired so its
         // eventual release cannot select a different word at the reused index.
@@ -95,6 +100,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
             }
             let button = buttons[index]
             if button.currentTitle != text { button.setTitle(text, for: .normal); button.accessibilityLabel = text }
+            button.comment = comments.indices.contains(index) ? comments[index] : ""
         }
         setNeedsLayout()
     }
@@ -117,7 +123,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         // A collapsed strip always has one row; measuring every candidate here
         // repeats text shaping during each host sizing/layout callback.
         guard expanded else { return texts.isEmpty ? 0 : CandidateLayout.rowHeight(landscape: landscape) }
-        return CandidateLayout.measure(texts, width: width, expanded: true, landscape: landscape, controlInsets: reservedInsets).height
+        return CandidateLayout.measure(texts, comments: comments, width: width, expanded: true, landscape: landscape, controlInsets: reservedInsets).height
     }
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -136,12 +142,12 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
     }
     private func maximumMatrixOffset(width: CGFloat) -> CGFloat {
         let pitch = CandidateLayout.rowHeight(landscape: landscape) + 4
-        let plain = CandidateLayout.measure(texts, width: width, expanded: true, landscape: landscape)
+        let plain = CandidateLayout.measure(texts, comments: comments, width: width, expanded: true, landscape: landscape)
         var offset = max(0, ceil((plain.contentSize.height - bounds.height) / pitch) * pitch)
         // Fix the scroll range for this geometry. A live content-size clamp can
         // otherwise bounce between two reflows and make the last words unreachable.
         while true {
-            let end = CandidateLayout.measure(texts, width: width, expanded: true, landscape: landscape,
+            let end = CandidateLayout.measure(texts, comments: comments, width: width, expanded: true, landscape: landscape,
                 controlInsets: reservedInsets, reservedRows: reservedRows(at: offset))
             if end.contentSize.height <= offset + bounds.height { return offset }
             offset += pitch
@@ -156,7 +162,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         scroll.frame = CGRect(x: expanded ? 0 : insets.left, y: 0, width: width, height: bounds.height)
         if expanded && recalculateExtent { matrixMaximumOffset = maximumMatrixOffset(width: width) }
         var offset = CGPoint(x: expanded ? 0 : max(0, scroll.contentOffset.x), y: expanded ? min(matrixMaximumOffset, max(0, scroll.contentOffset.y)) : 0)
-        let layout = CandidateLayout.measure(texts, width: width, expanded: expanded, landscape: landscape,
+        let layout = CandidateLayout.measure(texts, comments: comments, width: width, expanded: expanded, landscape: landscape,
             controlInsets: insets, reservedRows: reservedRows(at: offset.y))
         offset.x = min(offset.x, max(0, layout.contentSize.width - scroll.bounds.width))
         laidOutReservedRows = reservedRows(at: offset.y)
@@ -169,6 +175,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         expandButton.symbol(expanded ? "chevron.down" : "chevron.up", label: expanded ? L("收起候选", "Collapse candidates") : L("展开候选", "Expand candidates"))
         for (button, frame) in zip(buttons, layout.frames) {
             button.titleLabel?.font = showsChineseMarks ? .chineseMarks(ofSize: landscape ? 18 : 20) : .systemFont(ofSize: landscape ? 18 : 20)
+            button.commentLabel.font = CandidateLayout.commentFont(landscape: landscape)
             button.frame = frame
         }
         if offset != scroll.contentOffset { scroll.contentOffset = offset }
@@ -276,10 +283,22 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
 
 /// Candidates read as text, with a transient touch highlight and no keycap base.
 final class CandidateButton: UIButton {
+    let commentLabel = UILabel()
+    var comment = "" {
+        didSet {
+            guard comment != oldValue else { return }
+            commentLabel.text = comment; commentLabel.isHidden = comment.isEmpty
+            accessibilityValue = comment.isEmpty ? nil : comment
+            setNeedsLayout()
+        }
+    }
     var isDragTarget = false { didSet { if oldValue != isDragTarget { updateHighlight(); setNeedsLayout() } } }
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear; layer.cornerRadius = 4
+        commentLabel.font = CandidateLayout.commentFont(landscape: false)
+        commentLabel.lineBreakMode = .byTruncatingTail; commentLabel.isHidden = true
+        commentLabel.isUserInteractionEnabled = false; addSubview(commentLabel)
         titleLabel?.textAlignment = .center; titleLabel?.adjustsFontSizeToFitWidth = false
         titleLabel?.lineBreakMode = .byTruncatingTail
         setTitleColor(.label, for: .normal)
@@ -297,15 +316,25 @@ final class CandidateButton: UIButton {
         setTitleColor(isDragTarget ? KeyboardPalette.contrastingInk(on: accent) : .label, for: .normal)
         setTitleColor(KeyboardPalette.contrastingInk(on: accent), for: .highlighted)
         imageView?.tintColor = isHighlighted ? KeyboardPalette.contrastingInk(on: accent) : .label
+        commentLabel.textColor = isHighlighted || isDragTarget ? KeyboardPalette.contrastingInk(on: accent) : .secondaryLabel
     }
     func symbol(_ name: String, label: String) {
         setImage(UIImage(systemName: name), for: .normal); accessibilityLabel = label
     }
     override func layoutSubviews() {
         super.layoutSubviews()
+        titleLabel?.transform = .identity
         let textHeight = min(bounds.height, ceil(titleLabel?.font.lineHeight ?? 0))
         titleLabel?.bounds = CGRect(x: 0, y: 0, width: max(0, bounds.width - 12), height: textHeight)
         titleLabel?.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        if !comment.isEmpty {
+            let available = max(0, bounds.width - 12)
+            let titleWidth = min(available, ceil(titleLabel?.sizeThatFits(.init(width: .greatestFiniteMagnitude, height: bounds.height)).width ?? 0))
+            let commentWidth = min(max(0, available - titleWidth - 4), ceil(commentLabel.intrinsicContentSize.width))
+            let left = (bounds.width - titleWidth - 4 - commentWidth) / 2
+            titleLabel?.frame = CGRect(x: left, y: (bounds.height - textHeight) / 2, width: titleWidth, height: textHeight)
+            commentLabel.frame = CGRect(x: left + titleWidth + 4, y: 0, width: commentWidth, height: bounds.height)
+        }
         let scale = isDragTarget ? min(1.08, (bounds.width - 2) / max(1, bounds.width - 12)) : 1
         titleLabel?.transform = CGAffineTransform(scaleX: scale, y: scale)
         if let imageView, let image = imageView.image {

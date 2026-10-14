@@ -115,6 +115,9 @@ jobs:
           adb -s emulator-5554 shell am instrument -w -r -e mode scheme-import -e archive /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/scheme-import-emulator.log
           grep -Fq 'PASS real JNI import' .native/scheme-import-emulator.log
           grep -Fq 'INSTRUMENTATION_CODE: -1' .native/scheme-import-emulator.log
+          adb -s emulator-5554 shell am instrument -w -r -e mode wubi org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/wubi-emulator.log
+          grep -Fq 'PASS Wubi packaged JNI' .native/wubi-emulator.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/wubi-emulator.log
       - name: Upload development APK and reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -130,6 +133,7 @@ jobs:
             platforms/android/.native/engine-contract.log
             platforms/android/.native/emulator.log
             platforms/android/.native/scheme-import-emulator.log
+            platforms/android/.native/wubi-emulator.log
           retention-days: 14
           if-no-files-found: warn
       # No publishing, production signing keys, device install or macOS release gate.

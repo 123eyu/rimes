@@ -16,7 +16,7 @@ namespace rimes::windows::workbench {
 namespace {
 
 constexpr const wchar_t* kSchemas[] = {L"rime_ice", L"double_pinyin",
-                                       L"double_pinyin_flypy", L"wubi86",
+                                       L"double_pinyin_flypy", L"wubi86", L"lingxi_wubi",
                                        L"english", L"my_combo"};
 
 RECT DipToPx(const ui::DipRect& r, unsigned dpi) {
@@ -61,7 +61,7 @@ SettingsUiHost::~SettingsUiHost() {
 void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   draft_.imported_schema = config.imported_scheme ? Wide(config.schema) : L"";
   draft_.schema_index = 0;
-  for (int i = 0; i < 6; ++i) {
+  for (int i = 0; i < ui::kSettingsSchemeCount; ++i) {
     if (config.schema == Utf8(std::wstring(kSchemas[i]))) draft_.schema_index = i;
   }
   draft_.theme = callbacks_.load_theme ? callbacks_.load_theme()
@@ -519,7 +519,9 @@ void SettingsUiHost::Relayout() {
   Place(combo_translation_, translation_dropdown, dpi_, behavior);
   Place(check_close_after_, layout_.close_after_check, dpi_, behavior);
   const bool schemes = draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0;
-  Place(schemes_button_, {layout_.body.left, layout_.body.top + 170, layout_.body.left + 225, layout_.body.top + 204}, dpi_, schemes);
+  const float schemes_top = layout_.scheme_cards.empty()
+      ? layout_.body.top + 170 : layout_.scheme_cards.back().bottom + 20;
+  Place(schemes_button_, {layout_.body.left, schemes_top, layout_.body.left + 225, schemes_top + 34}, dpi_, schemes);
   Place(imported_label_, {layout_.body.left, layout_.body.top, layout_.body.right, layout_.body.top + 100}, dpi_, schemes && !draft_.imported_schema.empty());
   SendMessageW(schemes_button_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   SendMessageW(imported_label_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
@@ -702,7 +704,7 @@ void SettingsUiHost::ActivateHit(int hit) {
     draft_.subpage = hit - 500;
     draft_.focus = static_cast<int>(draft_.page);
     Relayout();
-  } else if (hit >= 100 && hit < 106 &&
+  } else if (hit >= 100 && hit < 100 + ui::kSettingsSchemeCount &&
              draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0 && draft_.imported_schema.empty()) {
     draft_.schema_index = hit - 100;
     draft_.focus = hit;
@@ -1011,10 +1013,10 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
           return 0;
         }
         if (self->draft_.page == ui::SettingsPage::kInput &&
-            self->draft_.subpage == 0 && focus >= 100 && focus < 106) {
+            self->draft_.subpage == 0 && focus >= 100 && focus < 100 + ui::kSettingsSchemeCount) {
           int idx = focus - 100;
-          if (wparam == VK_RIGHT || wparam == VK_DOWN) idx = (idx + 1) % 6;
-          else idx = (idx + 5) % 6;
+          if (wparam == VK_RIGHT || wparam == VK_DOWN) idx = (idx + 1) % ui::kSettingsSchemeCount;
+          else idx = (idx + ui::kSettingsSchemeCount - 1) % ui::kSettingsSchemeCount;
           focus = 100 + idx;
           InvalidateRect(hwnd, nullptr, FALSE);
           return 0;

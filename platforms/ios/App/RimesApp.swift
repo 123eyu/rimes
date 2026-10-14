@@ -114,7 +114,7 @@ struct EngineCheckView: View {
     private let engine = MobileEngine()
     var body: some View {
         Form {
-            Picker("Scheme", selection: $scheme) { ForEach([InputScheme.pinyin,.ziranma,.wubi86]) { Text($0.title).tag($0) } }
+            Picker("Scheme", selection: $scheme) { ForEach([InputScheme.pinyin,.ziranma,.wubi86,.lingxiWubi]) { Text($0.title).tag($0) } }
             TextField("Code",text:$text).textInputAutocapitalization(.never).autocorrectionDisabled()
             Button(L("检查候选", "Check candidates")) {
                 guard engine.select(schema: scheme.schemaID) else { candidates = ["Engine unavailable"]; return }
