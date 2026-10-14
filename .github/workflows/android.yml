@@ -85,7 +85,15 @@ jobs:
           emulator_pid=$!
           cleanup_emulator() {
             result=$?
-            if [[ "$result" != 0 ]]; then tail -n 100 .native/emulator.log; fi
+            if [[ "$result" != 0 ]]; then
+              tail -n 100 .native/emulator.log
+              # This disposable emulator contains only public test fixtures.
+              # Preserve Java assertions and native crashes before stopping it.
+              adb -s emulator-5554 logcat -b crash -d > .native/instrumentation-crash.log 2>&1 || true
+              adb -s emulator-5554 logcat -d -v threadtime 'RIMES-WubiContract:I' 'AndroidRuntime:E' 'DEBUG:F' '*:S' > .native/instrumentation-logcat.log 2>&1 || true
+              tail -n 160 .native/instrumentation-crash.log
+              tail -n 100 .native/instrumentation-logcat.log
+            fi
             adb -s emulator-5554 emu kill || true
             return "$result"
           }
@@ -134,6 +142,8 @@ jobs:
             platforms/android/.native/emulator.log
             platforms/android/.native/scheme-import-emulator.log
             platforms/android/.native/wubi-emulator.log
+            platforms/android/.native/instrumentation-crash.log
+            platforms/android/.native/instrumentation-logcat.log
           retention-days: 14
           if-no-files-found: warn
       # No publishing, production signing keys, device install or macOS release gate.
