@@ -7,6 +7,8 @@
 
 全拼、双拼、声筆、五筆、英語の方案に対応し、速記で使う並打入力と、カスタム方案の読み込みにも対応します。はじめて使う人向けに、インストールパッケージは librime と辞書を**同梱**し、すぐ使えます。
 
+5つのプラットフォームに **五筆 86** と **Lingxi Wubi** を内蔵しています。五筆 86 は `z` に続けて全拼を入力して文字を検索でき、候補の括弧内に五筆コードを表示します。Lingxi Wubi は切り替えなしで五筆と全拼を検索し、完全一致の五筆を優先します。両方案とも4打鍵で候補が一意なら自動確定し、重複コードと全拼検索では候補選択を維持します。[五筆ガイド](docs/wubi.md)を参照してください。
+
 > **RIMES** は本プロジェクトのアーキテクチャ名です。公開上の製品名は、英語では **Lingxi IME**、簡体字中国語では **灵犀输入法**、繁体字中国語では **靈犀輸入法** です。iOS App Store ではすでにこれらの製品名を使用しています。
 
 ## デモ動画
@@ -34,7 +36,7 @@
 
 | 機能 | ショートカット | 内容 | 操作 | 保存 | 境界 |
 |---|---|---|---|---|---|
-| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、英語 | — | — | — |
+| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、Lingxi Wubi、英語 | — | — | — |
 | バッファ | `⌘⇧B` | 確定前のテキスト | 先に RIMES へ切り替え、取り込んで分割して送る | — | ほかへ切り替えたあとはシステムクリップボードのみ。IMK は使わない |
 | Capsule バー | `⌘⇧V` | 直前のコピー。ノート、画像、PDF、スキル、パスワード | クリックで選択、ダブルクリックまたは Return で貼り付け。`⌘S` で保存 | この Mac のみ | 貼り付けにはアクセシビリティが必要。未許可ならクリップボードへ入れるだけ |
 | Mailbox | `⌘⇧M` | AI の会話、メモ、確認待ちのプッシュ | 新しい会話。最初の Return で生成を始める | モデルはその会話だけに結び付く | CLI はそれぞれの既定モデル |
@@ -79,7 +81,7 @@
 
 ## インストール
 
-公開版は [macOS 1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1)、[Android 1.1.1](https://github.com/scholay/rimes/releases/tag/android-v1.1.1)、[Windows 1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1)、[iOS App Store 1.1.0](https://apps.apple.com/us/app/lingxi-ime/id6814620242) です。macOS は署名・公証済み、Android は長期署名鍵を使用し、Windows EXE は未署名です。iOS は [TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)も提供し、インストール可能なビルドは TestFlight に表示されます。Linux は現在、入力スキームのデータプレビューを公開しています。最新ソースとの差分は[パッケージ監査](validation/release-refresh-20261007.md)を参照してください。ソースからローカルビルドも可能です。
+[1.1.4 リリース](https://github.com/scholay/rimes/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/rimes.git

@@ -7,7 +7,7 @@
 
 支持全拼、双拼、声笔、五笔 86、灵犀五笔、英文方案；支持速录行业的并击式键入方案、支持自定义导入。面向新手用户，本项目安装包**自包含** librime 与词库，开箱即用。
 
-五端内置 **五笔 86** 与 **灵犀五笔**：五笔 86 输入 `z` 后可用全拼查字（如 `zni`），候选括号提示五笔码；灵犀五笔无需切换，直接输入五笔码或全拼，同码时完整五笔匹配优先。详见[五笔输入](docs/wubi.md)。
+五端内置 **五笔 86** 与 **灵犀五笔**：五笔 86 输入 `z` 后可用全拼查字（如 `zni`），候选括号提示五笔码；灵犀五笔无需切换，直接输入五笔码或全拼，同码时完整五笔匹配优先。两套方案均支持四码唯一自动上屏，重码和拼音查字保留候选。详见[五笔输入](docs/wubi.md)。
 
 > **RIMES** 是本项目的架构名称。对外产品名为 **灵犀输入法**（简体中文）、**靈犀輸入法**（繁体中文）和 **Lingxi IME**（英文）；iOS App Store 已采用这些产品名。
 
@@ -102,17 +102,17 @@
 
 ## 安装
 
-[1.1.3 全平台发布页](https://github.com/scholay/rimes/releases/tag/v1.1.3)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
+[1.1.4 全平台发布页](https://github.com/scholay/rimes/releases/tag/v1.1.4)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
 
 | 平台 | 版本与安装入口 |
 |---|---|
-| macOS | [1.1.3 PKG](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-1.1.3.pkg)，Apple Silicon／Intel，已签名和公证 |
-| Android | [1.1.3 APK](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Android-1.1.3.apk)，版本码 17，沿用长期签名 |
-| Windows | [1.1.3 EXE](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Windows-1.1.3-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
-| Linux | [1.1.3 DEB](https://github.com/scholay/rimes/releases/download/v1.1.3/fcitx5-rimes_1.1.3_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
+| macOS | [1.1.4 PKG](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-1.1.4.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.1.4 APK](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Android-1.1.4.apk)，版本码 18，沿用长期签名 |
+| Windows | [1.1.4 EXE](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.1.4 DEB](https://github.com/scholay/rimes/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
 | iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。公开可安装版本以 Apple 页面为准 |
 
-本轮构建、导入测试与安装验收范围见[1.1.3 发布记录](docs/releases/1.1.3.md)。
+本轮构建、导入测试与安装验收范围见[1.1.4 发布记录](docs/releases/1.1.4.md)。
 
 macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 RIMES，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/rimes/issues/90)。
 

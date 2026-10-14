@@ -4,6 +4,35 @@
 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。
 每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/rimes/releases)。
 
+## [v1.1.4](https://github.com/scholay/rimes/releases/tag/v1.1.4) — 2026-10-14
+
+### 合并的 PR
+
+- #136
+- #129
+
+### 新功能
+
+- **wubi:** add cross-platform mixed input and unique four-key commit (206fa9f)
+
+### 修复
+
+- **packaging:** include reviewed Lingxi Wubi payload in previews (8132ae9)
+- **windows:** verify retained host categories during uninstall (0ddc0ab)
+- **windows:** support sandboxed and UI-less input hosts (a78bba8)
+- **ios:** stop hidden keyboard rendering and animations (349c912)
+
+### 文档
+
+- publish 1.1.3 downloads and verification records (fc724ca)
+
+### 维护
+
+- **android:** mount candidate fixture in a native row (b1a21e5)
+- **android:** retain actionable Wubi instrumentation failures (6c6a57b)
+- update scheme count and isolate synthetic Windows host timing (f3a68c2)
+- **windows:** reopen settings after saving scheme selection (64c1db4)
+
 ## [v1.1.3](https://github.com/scholay/rimes/releases/tag/v1.1.3) — 2026-10-13
 
 ### 合并的 PR

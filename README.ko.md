@@ -7,6 +7,8 @@
 
 완전 병음, 이중 병음, 성필(声笔), 오필, 영어 방안을 지원하고, 속기의 병격 입력과 사용자 방안 가져오기도 지원합니다. 처음 쓰는 사람을 위해 설치 패키지는 librime과 사전을 **함께 담아** 바로 쓸 수 있습니다.
 
+다섯 플랫폼 모두 **오필 86**과 **Lingxi Wubi**를 제공합니다. 오필 86에서는 `z` 다음에 완전 병음을 입력해 글자를 찾을 수 있으며, 후보 옆 괄호에 오필 코드를 표시합니다. Lingxi Wubi는 모드 전환 없이 오필과 병음을 검색하고 정확히 일치하는 오필을 우선합니다. 두 방안 모두 네 글자 오필 코드의 후보가 하나뿐이면 자동 확정하며, 중복 코드와 병음 검색에서는 후보 선택을 유지합니다. [오필 안내](docs/wubi.md)를 참고하세요.
+
 > **RIMES**는 이 프로젝트의 아키텍처 이름입니다. 대외 제품명은 영어 **Lingxi IME**, 중국어 간체 **灵犀输入法**, 중국어 번체 **靈犀輸入法**입니다. iOS App Store에서도 이미 이 제품명을 사용하고 있습니다.
 
 ## 시연 영상
@@ -34,7 +36,7 @@
 
 | 기능 | 단축키 | 내용 | 조작 | 저장 | 경계 |
 |---|---|---|---|---|---|
-| 입력 방안 | — | Rime Ice 완전 병음, 자연마, 소학, 오필 86, 영어 | — | — | — |
+| 입력 방안 | — | Rime Ice 완전 병음, 자연마, 소학, 오필 86, Lingxi Wubi, 영어 | — | — | — |
 | 버퍼 | `⌘⇧B` | 확정 전의 텍스트 | 먼저 RIMES로 전환한 뒤 잡아 나누어 전달 | — | 다른 입력기로 옮긴 뒤에는 시스템 클립보드만 쓰고 IMK는 쓰지 않음 |
 | Capsule 막대 | `⌘⇧V` | 최근 복사. 노트, 이미지, PDF, 스킬, 비밀번호 | 클릭은 선택, 더블 클릭 또는 Return은 붙여넣기. `⌘S`로 보관 | 이 Mac에만 | 붙여넣기에는 손쉬운 사용 권한이 필요. 없으면 클립보드에만 넣음 |
 | Mailbox | `⌘⇧M` | AI 대화, 메모, 검토 대기 알림 | 새 대화. 첫 Return에 생성 시작 | 모델은 그 대화에만 묶임 | CLI는 각자 기본 모델 |
@@ -79,7 +81,7 @@
 
 ## 설치
 
-공개 버전은 [macOS 1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1), [Android 1.1.1](https://github.com/scholay/rimes/releases/tag/android-v1.1.1), [Windows 1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1), [iOS App Store 1.1.0](https://apps.apple.com/us/app/lingxi-ime/id6814620242)입니다. macOS 패키지는 서명 및 공증되었고 Android는 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)도 제공하며 설치 가능한 빌드는 TestFlight에서 확인할 수 있습니다. Linux는 현재 입력 스키마 데이터 미리보기를 공개합니다. 최신 소스와의 차이는 [패키지 점검 기록](validation/release-refresh-20261007.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
+[1.1.4 릴리스](https://github.com/scholay/rimes/releases/tag/v1.1.4)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 amd64 / Fcitx5)를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.1.4 검증 기록](docs/releases/1.1.4.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/rimes.git
