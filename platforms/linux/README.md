@@ -9,7 +9,7 @@ Linux 现在有两层，互相独立：
    规格见 [buffer/SPEC.md](buffer/SPEC.md) 与 [capsule/SPEC.md](capsule/SPEC.md)，
    真机清单见各自 `MANUAL-TEST.md` 与 [ime/MANUAL-TEST.md](ime/MANUAL-TEST.md)。
    Mailbox 尚未移植。
-2. **下面的 Data / Input-Schemes Preview** — 仍把同一批 55 个审核文件装进用户已有的
+2. **下面的 Data / Input-Schemes Preview** — 仍把同一批 57 个审核文件装进用户已有的
    Fcitx5 Rime 或 IBus Rime。数据包保持原样，不依赖上面的 addon。
 
 IBus 自己的 RIMES 引擎尚未开始；需要什么见 IME README。
@@ -141,7 +141,7 @@ tmp_root=$(mktemp -d)
 ```
 
 输出包括 `.tar.gz` 和对应的 `.sha256`。打包脚本必须先调用统一的
-`scripts/platform-preview/preview.py stage`，只收录 policy 审核通过的 55 文件最小
+`scripts/platform-preview/preview.py stage`，只收录 policy 审核通过的 57 文件最小
 依赖闭包；`rime_ai.example.json` 和旧 AI Lua 明确排除。归档内另有覆盖每个 payload
 文件的 `data/PAYLOAD-MANIFEST.tsv`，安装前会自动校验。找不到 Python、统一 staging
 工具或 policy 校验失败时，构建会 fail-closed，不会退回复制整个 `rime-data`。
