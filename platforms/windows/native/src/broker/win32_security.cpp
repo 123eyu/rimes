@@ -80,6 +80,7 @@ std::wstring FormatWindowsError(DWORD error_code) {
 }
 
 UserSecurityContext::~UserSecurityContext() {
+  if (input_descriptor_ != nullptr) LocalFree(input_descriptor_);
   if (descriptor_ != nullptr) {
     LocalFree(descriptor_);
   }
@@ -158,6 +159,21 @@ bool UserSecurityContext::Initialize(std::wstring* error) {
   attributes_.nLength = sizeof(attributes_);
   attributes_.lpSecurityDescriptor = descriptor_;
   attributes_.bInheritHandle = FALSE;
+
+  // AppContainers perform both the user and restricted-package access check.
+  // 0x12008b = FILE_GENERIC_READ | FILE_WRITE_DATA: read metadata, synchronize
+  // and data I/O, never CREATE_PIPE_INSTANCE, WRITE_DAC or WRITE_OWNER.
+  // The low label applies to this input endpoint
+  // alone, not the desktop pipe, lifetime mutex or maintenance event.
+  const std::wstring input_sddl = L"O:" + sid_string_ + L"D:P(A;;GA;;;" +
+      sid_string_ + L")(A;;0x12008b;;;AC)S:(ML;;NW;;;LW)";
+  if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
+          input_sddl.c_str(), SDDL_REVISION_1, &input_descriptor_, nullptr)) {
+    if (error) *error = L"creating input endpoint security failed: " +
+                        FormatWindowsError(GetLastError());
+    return false;
+  }
+  input_attributes_ = {sizeof(SECURITY_ATTRIBUTES), input_descriptor_, FALSE};
 
   std::wostringstream suffix;
   suffix << L".v2.session-" << session_id_ << L".user-" << std::hex

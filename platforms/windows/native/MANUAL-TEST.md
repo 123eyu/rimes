@@ -30,16 +30,27 @@ Mark each row pass / fail / n/a. Attach host, DPI, and schema.
 - [ ] `RimesTsfTestHost.exe` (plain Win32 EDIT): `nihao` then Space → `你好`;
       inline dotted preedit; candidate window under the caret
 - [ ] Notepad
+- [ ] Windows taskbar search (`Win+S`) and Start menu search: open, type `nihao`,
+      select/commit `你好`, clear, reopen, and repeat after switching input methods
+- [ ] Windows Settings search and File Explorer address/search boxes
 - [ ] WordPad
 - [ ] Microsoft Edge address bar and a contenteditable page
 - [ ] Chrome or Firefox text field
 - [ ] An Electron app (VS Code / Cursor / Slack)
+- [ ] QQ / WeChat chat editor (draft only; do not send)
 - [ ] Microsoft Word
 - [ ] Excel formula bar
 - [ ] Outlook compose
 - [ ] Windows Terminal / PowerShell (expect limited or no composition)
 - [ ] UWP / WinUI text box if available
 - [ ] Elevated Notepad vs unelevated Broker (UIPI): keys must fail open
+
+For each tested host record app version, x86/x64, OS build, installed IME
+version/signature and schema, then results for preedit, Space/number selection,
+page navigation, Backspace, Escape, Shift switching and focus changes. Mark
+unavailable/blocked hosts explicitly; automated fixture results are separate.
+For a host that renders candidates itself, confirm no duplicate popup and no
+stale candidate callback can commit into another field. Never send test drafts.
 
 ## Composition and candidates
 
@@ -80,7 +91,9 @@ Mark each row pass / fail / n/a. Attach host, DPI, and schema.
 
 ## Broker robustness
 
-- [ ] First activation with no Broker running starts `RimesBroker.exe`
+- [ ] First activation in a desktop host with no Broker running starts `RimesBroker.exe`
+- [ ] After login with autostart enabled, AppContainer hosts connect to the
+      already-running Broker; with no Broker, keys fail open without a launch
 - [ ] Logoff / logon starts the Broker via the HKCU Run value `RimesBroker`
 - [ ] Kill `RimesBroker.exe` while focused in a host; the next key fail-opens,
       then composition works again after reconnect

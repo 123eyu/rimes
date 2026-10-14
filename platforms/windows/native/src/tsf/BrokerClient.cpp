@@ -30,6 +30,7 @@
 #include "ModuleState.h"
 #include "key_routing.hpp"
 #include "broker_launch.hpp"
+#include "input_pipe.hpp"
 
 namespace rimes::windows::tsf {
 namespace {
@@ -1184,6 +1185,9 @@ class NamedPipeBrokerClient final : public BrokerClient {
         LogDiagnosticStage(DiagnosticStage::kConnectEndpointBuildFailed);
         return;
       }
+      bool sandboxed = false;
+      if (!ReadAppContainer(&sandboxed)) return;
+      if (sandboxed) endpoint += L".input";
       if (stopping_.load(std::memory_order_acquire)) {
         LogDiagnosticStage(DiagnosticStage::kConnectCancelledAfterEndpoint);
         return;
@@ -1196,7 +1200,10 @@ class NamedPipeBrokerClient final : public BrokerClient {
       HANDLE pipe = INVALID_HANDLE_VALUE;
       while (!stopping_.load(std::memory_order_acquire) &&
              RemainingWait(deadline) > 0) {
-        pipe = CreateFileW(endpoint.c_str(), GENERIC_READ | GENERIC_WRITE, 0,
+        const DWORD access = sandboxed
+            ? FILE_READ_DATA | FILE_WRITE_DATA | READ_CONTROL | SYNCHRONIZE
+            : GENERIC_READ | GENERIC_WRITE;
+        pipe = CreateFileW(endpoint.c_str(), access, 0,
                            nullptr, OPEN_EXISTING, flags, nullptr);
         if (pipe != INVALID_HANDLE_VALUE) {
           break;
@@ -1213,7 +1220,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
           continue;
         }
         if (open_error == ERROR_FILE_NOT_FOUND) {
-          if (!launched_broker) {
+          if (!sandboxed && !launched_broker) {
             launched_broker = LaunchBrokerProcess();
             if (launched_broker) {
               deadline = GetTickCount64() + kLaunchConnectBudgetMillis;
@@ -1244,9 +1251,13 @@ class NamedPipeBrokerClient final : public BrokerClient {
 
       DWORD server_process_id = 0;
       ServerIdentityFailure identity_failure = ServerIdentityFailure::kNone;
-      if (!VerifyServerIdentity(candidate_pipe.get(), current_session_id,
-                                current_identity, &server_process_id,
-                                &identity_failure)) {
+      const bool verified = sandboxed
+          ? VerifyInputPipe(candidate_pipe.get(), current_identity.sid.data(),
+                            current_session_id, &server_process_id)
+          : VerifyServerIdentity(candidate_pipe.get(), current_session_id,
+                                 current_identity, &server_process_id,
+                                 &identity_failure);
+      if (!verified) {
         DiagnosticStage diagnostic_stage =
             DiagnosticStage::kConnectServerPidQueryFailed;
         switch (identity_failure) {

@@ -21,6 +21,8 @@ HRESULT STDMETHODCALLTYPE FakeThreadMgr::QueryInterface(REFIID interface_id,
     *object = static_cast<ITfThreadMgr*>(this);
   } else if (InlineIsEqualGUID(interface_id, IID_ITfKeystrokeMgr)) {
     *object = static_cast<ITfKeystrokeMgr*>(this);
+  } else if (ui_enabled && interface_id == IID_ITfUIElementMgr) {
+    *object = static_cast<ITfUIElementMgr*>(this);
   } else {
     return E_NOINTERFACE;
   }
@@ -57,7 +59,49 @@ FakeThreadMgr::EnumDocumentMgrs(IEnumTfDocumentMgrs**) {
   return NotImpl();
 }
 FakeThreadMgr::~FakeThreadMgr() {
+  if (ui_element) ui_element->Release();
   if (focus_) focus_->Release();
+}
+
+HRESULT FakeThreadMgr::BeginUIElement(ITfUIElement* element, BOOL* show, DWORD* id) {
+  if (!element || !show || !id) return E_POINTER;
+  if (ui_fail_begin) return E_FAIL;
+  if (ui_element) return E_UNEXPECTED;
+  ++ui_begin;
+  ui_element = element;
+  element->AddRef();
+  *id = 42;
+  *show = ui_show;
+  if (on_ui_begin) on_ui_begin();
+  return S_OK;
+}
+HRESULT FakeThreadMgr::UpdateUIElement(DWORD id) {
+  if (id != 42 || !ui_element) return E_INVALIDARG;
+  ++ui_update;
+  ITfCandidateListUIElement* candidates = nullptr;
+  if (SUCCEEDED(ui_element->QueryInterface(IID_ITfCandidateListUIElement,
+                                           reinterpret_cast<void**>(&candidates)))) {
+    if (ui_update == 1) candidates->GetUpdatedFlags(&ui_first_flags);
+    candidates->Release();
+  }
+  if (on_ui_update) on_ui_update();
+  return S_OK;
+}
+HRESULT FakeThreadMgr::EndUIElement(DWORD id) {
+  if (id != 42 || !ui_element) return E_INVALIDARG;
+  ++ui_end;
+  auto* element = ui_element;
+  ui_element = nullptr;
+  element->Release();
+  return S_OK;
+}
+HRESULT FakeThreadMgr::GetUIElement(DWORD id, ITfUIElement** out) {
+  if (!out) return E_POINTER;
+  *out = nullptr;
+  if (id != 42 || !ui_element) return E_INVALIDARG;
+  *out = ui_element;
+  (*out)->AddRef();
+  return S_OK;
 }
 HRESULT STDMETHODCALLTYPE FakeThreadMgr::GetFocus(ITfDocumentMgr** focus) {
   if (!focus) return E_POINTER;

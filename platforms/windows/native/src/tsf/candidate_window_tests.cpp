@@ -7,6 +7,12 @@
 #include "Guids.h"
 
 namespace {
+bool ime_show = false, ime_change = false, ime_hide = false;
+void CALLBACK OnImeEvent(HWINEVENTHOOK, DWORD event, HWND, LONG, LONG, DWORD, DWORD) {
+  if (event == EVENT_OBJECT_IME_SHOW) ime_show = true;
+  if (event == EVENT_OBJECT_IME_CHANGE) ime_change = true;
+  if (event == EVENT_OBJECT_IME_HIDE) ime_hide = true;
+}
 void Check(bool value, const char* description) {
   if (!value) {
     std::cerr << "FAIL: " << description << '\n';
@@ -20,6 +26,13 @@ int main() {
   SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
   const HWND foreground = GetForegroundWindow();
   CandidateWindow candidate;
+  const auto hook = SetWinEventHook(EVENT_OBJECT_IME_SHOW, EVENT_OBJECT_IME_CHANGE,
+      nullptr, OnImeEvent, GetCurrentProcessId(), GetCurrentThreadId(), WINEVENT_OUTOFCONTEXT);
+  Check(hook != nullptr, "observe only this test's IME light-dismiss events");
+  HWND owner = CreateWindowExW(WS_EX_NOACTIVATE, L"STATIC", L"", WS_POPUP,
+      0, 0, 20, 20, nullptr, nullptr, GetModuleHandleW(nullptr), nullptr);
+  Check(owner != nullptr, "isolated host owner created");
+  candidate.SetOwner(owner);
   int selected = 0;
   std::size_t expected_index = 0;
   candidate.SetSelect([&](std::size_t index) {
@@ -36,6 +49,7 @@ int main() {
   DWORD process = 0;
   if (popup) GetWindowThreadProcessId(popup, &process);
   Check(popup && process == GetCurrentProcessId(), "test owns its isolated popup");
+  Check(GetWindow(popup, GW_OWNER) == owner, "candidate is owned by its input host");
   Check(GetForegroundWindow() == foreground, "candidate does not activate the host");
   const unsigned dpi = GetDpiForWindow(popup);
   const auto px = [dpi](int dip) { return MulDiv(dip, static_cast<int>(dpi), 96); };
@@ -107,5 +121,18 @@ int main() {
   SendMessageW(popup, WM_LBUTTONUP, 0, matrix_click);
   Check(selected == 2, "second matrix row keeps its flattened mouse index");
   Check(GetForegroundWindow() == foreground, "click ownership preserves no-activation");
+  DestroyWindow(owner);
+  Check(!candidate.IsVisible() && !candidate.snapshot().visible,
+        "owner destruction retires the candidate HWND and snapshot");
+  candidate.Update(snapshot);
+  Check(candidate.IsVisible(), "next context can recreate its candidate window");
+  candidate.Hide();
+  MSG message{};
+  while (PeekMessageW(&message, nullptr, 0, 0, PM_REMOVE)) {
+    TranslateMessage(&message);
+    DispatchMessageW(&message);
+  }
+  Check(ime_show && ime_change && ime_hide, "show/change/hide notify light-dismiss hosts");
+  UnhookWinEvent(hook);
   std::cout << "Candidate region, click ownership and no-activation passed\n";
 }

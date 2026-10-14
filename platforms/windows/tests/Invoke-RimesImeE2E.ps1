@@ -9,7 +9,8 @@ param(
 
     [string]$ArtifactDirectory,
     [string]$WorkDirectory,
-    [switch]$ProbeDesktop
+    [switch]$ProbeDesktop,
+    [switch]$AppContainer
 )
 
 Set-StrictMode -Version 3.0
@@ -207,6 +208,11 @@ try {
         }
         throw "RimesTsfE2E.exe exited with code $e2eExit"
     }
+    if ($AppContainer) {
+        & (Join-Path $artifactRoot 'RimesAppContainerLauncher.exe') (Join-Path $artifactRoot 'RimesSandboxProbe.exe')
+        if ($LASTEXITCODE -ne 0) { throw "AppContainer input probe failed: exit=$LASTEXITCODE" }
+        Write-Host 'PASS: capability-free AppContainer TSF/Broker Chinese input and endpoint isolation'
+    }
     # Exercise the real maintenance shutdown on the test-only endpoint. A
     # retained lifetime handle prevents a cached TSF from opening another
     # engine; the UI exits normally and librime flushes/closes its userdb.
@@ -241,6 +247,7 @@ Write-RimesJson -Path (Join-Path $workRoot 'e2e-result.json') -Object ([ordered]
     Endpoint = $testEndpoint
     IsolatedFromDailyBroker = $true
     GracefulMaintenanceShutdown = $gracefulShutdown
+    AppContainerInputPassed = [bool]$AppContainer
     DesktopProbe = $probe
 })
 

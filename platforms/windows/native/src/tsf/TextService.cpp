@@ -666,12 +666,10 @@ void TextService::SelectCandidate(std::size_t index) noexcept {
         context, static_cast<ITfTextInputProcessorEx*>(this),
         [this, context, valid, revision, epoch, selection](TfEditCookie cookie) {
           RefreshBrokerConnection();
-          DWORD process = 0;
-          GetWindowThreadProcessId(GetForegroundWindow(), &process);
           if (!valid || !valid->load() || context != active_context_ ||
               last_state_.revision != revision ||
               candidate_epoch_ != epoch ||
-              process != GetCurrentProcessId() || !AllowedContext(context, cookie))
+              !IsFocusedContext() || !AllowedContext(context, cookie))
             return TF_E_DISCONNECTED;
           const auto applied = CommitCandidate(context, *selection, cookie);
           if (FAILED(applied)) {
@@ -747,7 +745,8 @@ bool TextService::HandleCandidateKey(BrokerKeyPhase phase, ITfContext* context,
                                      WPARAM key) noexcept {
   if (phase != BrokerKeyPhase::kTestKeyDown && phase != BrokerKeyPhase::kKeyDown)
     return false;
-  if (candidate_navigation_.empty() || !candidate_window_.snapshot().visible)
+  if (candidate_navigation_.empty() ||
+      (!candidate_ui_ && !candidate_window_.snapshot().visible))
     return false;
   for (int modifier : {VK_SHIFT, VK_CONTROL, VK_MENU, VK_LWIN, VK_RWIN})
     if (GetKeyState(modifier) & 0x8000) return false;
@@ -776,7 +775,7 @@ bool TextService::HandleCandidateKey(BrokerKeyPhase phase, ITfContext* context,
     UpdateCandidateWindow(context, last_state_);
   } catch (...) {
     candidate_navigation_.Reset({});
-    candidate_window_.Hide();
+    EndCandidateUI();
   }
   return true;
 }
@@ -871,6 +870,8 @@ HRESULT STDMETHODCALLTYPE TextService::ActivateEx(ITfThreadMgr* thread_manager,
   keystroke_manager_ = keystroke_manager;
   client_id_ = client_id;
   activation_flags_ = flags;
+  thread_manager_->QueryInterface(IID_ITfUIElementMgr,
+                                  reinterpret_cast<void**>(&ui_manager_));
   key_event_sink_advised_ = true;
   ITfSource* source = nullptr;
   if (SUCCEEDED(thread_manager_->QueryInterface(
@@ -911,6 +912,7 @@ HRESULT STDMETHODCALLTYPE TextService::ActivateEx(ITfThreadMgr* thread_manager,
 HRESULT STDMETHODCALLTYPE TextService::Deactivate() {
   LogDiagnosticStage(DiagnosticStage::kDeactivateEntered);
   RevokeContext();
+  if (ui_manager_) std::exchange(ui_manager_, nullptr)->Release();
   if (thread_manager_ && thread_sink_cookie_ != TF_INVALID_COOKIE) {
     ITfSource* source = nullptr;
     if (SUCCEEDED(thread_manager_->QueryInterface(
@@ -980,7 +982,7 @@ HRESULT STDMETHODCALLTYPE TextService::OnCompositionTerminated(
     RevokeContext();
   }
   if (!ending_composition_) {
-    candidate_window_.Hide();
+    EndCandidateUI();
   }
   return S_OK;
 }
@@ -1207,11 +1209,128 @@ HRESULT TextService::EndComposition(ITfContext* context) noexcept {
   return result;
 }
 
+void TextService::EndCandidateUI() noexcept {
+  auto* element = std::exchange(candidate_ui_, nullptr);
+  const auto id = std::exchange(candidate_ui_id_, TF_INVALID_UIELEMENTID);
+  if (element) {
+    auto* manager = ui_manager_;
+    if (manager) manager->AddRef();
+    element->Detach();
+    if (manager && id != TF_INVALID_UIELEMENTID) manager->EndUIElement(id);
+    if (manager) manager->Release();
+    element->Release();
+  }
+  candidate_window_.Hide();
+}
+
+bool TextService::IsFocusedContext() const noexcept {
+  BOOL focused = FALSE;
+  if (!thread_manager_ || FAILED(thread_manager_->IsThreadFocus(&focused)) || !focused)
+    return false;
+  ITfDocumentMgr* document = nullptr;
+  ITfContext* context = nullptr;
+  IUnknown* identity = nullptr;
+  if (SUCCEEDED(thread_manager_->GetFocus(&document)) && document &&
+      SUCCEEDED(document->GetTop(&context)) && context)
+    context->QueryInterface(IID_IUnknown, reinterpret_cast<void**>(&identity));
+  const bool same = identity && identity == context_identity_;
+  if (identity) identity->Release();
+  if (context) context->Release();
+  if (document) document->Release();
+  return same;
+}
+
+HRESULT TextService::CandidateUIAction(CandidateUIElement::Action action, UINT index) {
+  if (!active_context_ || !candidate_ui_ || !edit_valid_ || !edit_valid_->load())
+    return TF_E_DISCONNECTED;
+  if (!IsFocusedContext()) return TF_E_DISCONNECTED;
+  if (action == CandidateUIElement::Action::kAbort) {
+    RevokeContext();
+    return S_OK;
+  }
+  if (action == CandidateUIElement::Action::kFinalize) {
+    SelectCandidate(index);
+    return S_OK;
+  }
+  // The UI-less list exposes the same flattened rows as our own panel.
+  // Moving across preview rows also advances the authoritative engine page.
+  if (!candidate_navigation_.AtVisibleIndex(index)) return E_INVALIDARG;
+  if (!candidate_navigation_.SelectVisibleIndex(index,
+          [this](int delta) { return StepCandidatePage(delta); })) {
+    candidate_navigation_.Reset(last_state_);
+    ++candidate_epoch_;
+    if (active_context_) UpdateCandidateWindow(active_context_, last_state_);
+    return E_FAIL;
+  }
+  ++candidate_epoch_;
+  UpdateCandidateWindow(active_context_, last_state_);
+  return S_OK;
+}
+
+void TextService::PublishCandidateUI(ITfContext* context,
+                                     const CandidateSnapshot& snapshot) {
+  if (!ui_manager_) {
+    // Never draw an unnegotiated panel in a host that requested UI-less mode.
+    if ((activation_flags_ & TF_TMAE_UIELEMENTENABLEDONLY) == 0)
+      candidate_window_.Update(snapshot);
+    return;
+  }
+  if (candidate_ui_) {
+    auto* element = candidate_ui_;
+    auto* manager = ui_manager_;
+    const auto id = candidate_ui_id_;
+    element->AddRef();
+    manager->AddRef();
+    try {
+      element->Update(snapshot);
+      if (candidate_ui_ == element && id != TF_INVALID_UIELEMENTID)
+        manager->UpdateUIElement(id);
+    } catch (...) {
+      if (candidate_ui_ == element) EndCandidateUI();
+    }
+    manager->Release();
+    element->Release();
+    return;
+  }
+  ITfDocumentMgr* document = nullptr;
+  if (FAILED(context->GetDocumentMgr(&document)) || !document) return;
+  CandidateUIElement* element = nullptr;
+  try {
+    element = new CandidateUIElement(document, &candidate_window_,
+        [this](CandidateUIElement::Action action, UINT index) {
+          return CandidateUIAction(action, index);
+        });
+  } catch (...) { document->Release(); throw; }
+  document->Release();
+  candidate_ui_ = element;
+  element->AddRef(); // Begin/Update may synchronously revoke the context.
+  auto* manager = ui_manager_;
+  manager->AddRef();
+  try {
+    element->Update(snapshot);
+    element->InitialFlags();
+    BOOL show = TRUE;
+    DWORD id = TF_INVALID_UIELEMENTID;
+    const auto result = manager->BeginUIElement(element, &show, &id);
+    if (SUCCEEDED(result) && id != TF_INVALID_UIELEMENTID) {
+      if (candidate_ui_ == element) {
+        candidate_ui_id_ = id;
+        element->Show(show);
+        if (candidate_ui_ == element) manager->UpdateUIElement(id);
+      } else manager->EndUIElement(id);
+    } else if (candidate_ui_ == element) EndCandidateUI();
+  } catch (...) {
+    if (candidate_ui_ == element) EndCandidateUI();
+  }
+  manager->Release();
+  element->Release();
+}
+
 void TextService::UpdateCandidateWindow(
     ITfContext* context, const BrokerInputState& state, TfEditCookie cookie) noexcept {
   if (!state.candidates_visible || state.candidates.empty() ||
       (activation_flags_ & TF_TMAE_SECUREMODE) != 0) {
-    candidate_window_.Hide();
+    EndCandidateUI();
     return;
   }
   try {
@@ -1226,18 +1345,16 @@ void TextService::UpdateCandidateWindow(
     // all-zero rectangle. That is unknown geometry, not a caret at the screen
     // origin: reusing the previous placement keeps the popup next to the input
     // field, and suppressing it beats showing it at the work-area corner.
-    const RECT previous = capture_active_ ? RECT{} : candidate_window_.snapshot().caret_rect;
+    const RECT previous = capture_active_ ? RECT{} : candidate_ui_
+        ? candidate_ui_->Snapshot().caret_rect : candidate_window_.snapshot().caret_rect;
     ScreenRect resolved{};
-    if (!ResolveCandidateCaret({queried.left, queried.top, queried.right,
+    const bool has_caret = ResolveCandidateCaret({queried.left, queried.top, queried.right,
                                 queried.bottom},
                                {previous.left, previous.top, previous.right,
                                 previous.bottom},
-                               &resolved)) {
-      candidate_window_.Hide();
-      return;
-    }
-    snapshot.caret_rect = {resolved.left, resolved.top, resolved.right,
-                           resolved.bottom};
+                               &resolved);
+    if (has_caret) snapshot.caret_rect = {resolved.left, resolved.top, resolved.right,
+                                         resolved.bottom};
     auto append = [&](const BrokerInputState& page) {
       for (std::size_t index = 0; index < page.candidates.size(); ++index) {
         const auto& candidate = page.candidates[index];
@@ -1259,9 +1376,20 @@ void TextService::UpdateCandidateWindow(
         append(page);
       }
     }
-    candidate_window_.Update(snapshot);
+    HWND owner = nullptr;
+    ITfContextView* view = nullptr;
+    if (SUCCEEDED(context->GetActiveView(&view)) && view) {
+      if (FAILED(view->GetWnd(&owner))) owner = nullptr;
+      view->Release();
+    }
+    if (!owner) owner = GetFocus();
+    candidate_window_.SetOwner(owner);
+    // The host's own UI does not require a Win32 caret rectangle.
+    if (ui_manager_) PublishCandidateUI(context, snapshot);
+    else if (has_caret) PublishCandidateUI(context, snapshot);
+    else candidate_window_.Hide();
   } catch (...) {
-    candidate_window_.Hide();
+    EndCandidateUI();
   }
 }
 
@@ -1385,7 +1513,7 @@ bool TextService::BindContext(ITfContext* context) noexcept {
 void TextService::RevokeContext() noexcept {
   if (edit_valid_) edit_valid_->store(false);
   capture_active_ = false;
-  candidate_window_.Hide();
+  EndCandidateUI();
   last_state_ = {};
   candidate_navigation_.Reset({});
   candidate_owned_keys_.reset();
@@ -1545,7 +1673,7 @@ void TextService::SetCapture(bool enabled) {
     }
     old->Release();
   }
-  candidate_window_.Hide();
+  EndCandidateUI();
   last_state_ = {};
   candidate_navigation_.Reset({});
   ++candidate_epoch_;

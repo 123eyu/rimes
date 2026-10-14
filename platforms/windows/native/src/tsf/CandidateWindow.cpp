@@ -112,7 +112,10 @@ void CandidateWindow::Hide() noexcept {
   if (window_ && GetCapture() == window_) ReleaseCapture();
   hit_pills_.clear();
   PublishSnapshot(snapshot_);
-  if (window_ != nullptr) ShowWindow(window_, SW_HIDE);
+  if (window_ != nullptr && IsWindowVisible(window_)) {
+    NotifyWinEvent(EVENT_OBJECT_IME_HIDE, window_, OBJID_CLIENT, CHILDID_SELF);
+    ShowWindow(window_, SW_HIDE);
+  }
 }
 
 bool CandidateWindow::EnsureWindow() noexcept {
@@ -136,7 +139,7 @@ bool CandidateWindow::EnsureWindow() noexcept {
                                 WS_EX_NOACTIVATE | WS_EX_NOINHERITLAYOUT |
                                 WS_EX_LAYERED,
                             kCandidateWindowClass, L"", WS_POPUP, 0, 0, 0, 0,
-                            nullptr, nullptr, instance, this);
+                            owner_, nullptr, instance, this);
   if (window_ != nullptr) {
     SetLayeredWindowAttributes(window_, 0, 255, LWA_ALPHA);
   }
@@ -264,8 +267,11 @@ void CandidateWindow::LayoutAndShow(
   };
   HRGN region = rounded_region(layout.strip, metrics.strip_radius_dip);
   if (region && !SetWindowRgn(window_, region, FALSE)) DeleteObject(region);
+  const bool was_visible = IsWindowVisible(window_) != FALSE;
   SetWindowPos(window_, HWND_TOPMOST, origin.x, origin.y, width, height,
                SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  NotifyWinEvent(was_visible ? EVENT_OBJECT_IME_CHANGE : EVENT_OBJECT_IME_SHOW,
+                 window_, OBJID_CLIENT, CHILDID_SELF);
   InvalidateRect(window_, nullptr, TRUE);
 }
 
@@ -425,6 +431,18 @@ LRESULT CALLBACK CandidateWindow::WindowProcedure(HWND window, UINT message,
   }
 
   switch (message) {
+    case WM_DESTROY:
+      if (self) self->Hide();
+      break;
+    case WM_NCDESTROY:
+      // Windows destroys owned popups with their host window. Do not retain
+      // a stale/recycled HWND when the next document starts composing.
+      if (self) {
+        self->window_ = nullptr;
+        self->owner_ = nullptr;
+      }
+      SetWindowLongPtrW(window, GWLP_USERDATA, 0);
+      break;
     case WM_PAINT: {
       PAINTSTRUCT paint{};
       const HDC device = BeginPaint(window, &paint);

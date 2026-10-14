@@ -25,7 +25,8 @@ class BrokerConnection final {
  public:
   BrokerConnection(DWORD broker_session_id, engine::RimeEngine* engine,
                    workbench::Runtime* runtime = nullptr,
-                   std::function<bool()> open_settings = {}) noexcept;
+                   std::function<bool()> open_settings = {},
+                   bool input_only = false) noexcept;
   ~BrokerConnection();
 
   BrokerConnection(const BrokerConnection&) = delete;
@@ -80,6 +81,7 @@ class BrokerConnection final {
   bool modifier_snapshots_ = false;
   bool key_routing_ = false;
   workbench::Runtime* runtime_;
+  workbench::Runtime* settings_;
   std::function<bool()> open_settings_;
   DWORD peer_process_ = 0;
   std::uint64_t next_session_id_ = 1;

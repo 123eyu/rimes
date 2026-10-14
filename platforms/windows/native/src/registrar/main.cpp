@@ -4,6 +4,7 @@
 #include <oleauto.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdint>
 #include <cwchar>
 #include <iomanip>
@@ -34,6 +35,11 @@ constexpr wchar_t kThreadingModel[] = L"Apartment";
 // for the Windows input-method/language-bar indicator instead of the mascot.
 constexpr ULONG kLanguageProfileIconIndex = 1;
 
+// These categories are backed by UIElement negotiation, owned candidate
+// windows/light-dismiss events and the authenticated sandbox input endpoint.
+const std::array<const GUID*, 2> kHostCategories{
+    &GUID_TFCAT_TIPCAP_UIELEMENTENABLED, &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT};
+
 enum class Command {
   kMetadata,
   kDiagnose,
@@ -62,6 +68,7 @@ struct RegistrationDelta {
   bool profile_created = false;
   bool category_created = false;
   bool display_created = false;
+  std::array<bool, 2> host_created{};
 };
 
 class ScopedCoInitialize final {
@@ -742,6 +749,16 @@ bool LoadClassFactory() {
   return true;
 }
 
+bool ReadHostCategories(ITfCategoryMgr* categories, std::array<bool, 2>* present) {
+  for (std::size_t i = 0; i < kHostCategories.size(); ++i) {
+    ComPtr<IEnumGUID> values;
+    const auto result = categories->EnumItemsInCategory(*kHostCategories[i], values.Put());
+    if (FAILED(result) || !EnumContainsGuid(values.Get(), kTextServiceClsid, &(*present)[i]))
+      return false;
+  }
+  return true;
+}
+
 // Read-only host-eligibility report. A successful basic COM registration does
 // not prove eligibility in immersive/UI-less hosts, or validate a signature.
 // Never "repair" this by claiming categories the service does not implement.
@@ -822,6 +839,9 @@ bool RollBackRegistration(const std::wstring& dll_path,
                           ITfCategoryMgr* categories,
                           const RegistrationDelta& delta) {
   bool success = true;
+  for (std::size_t i = 0; i < kHostCategories.size(); ++i)
+    if (delta.host_created[i] && FAILED(categories->UnregisterCategory(
+            kTextServiceClsid, *kHostCategories[i], kTextServiceClsid))) success = false;
   if (delta.display_created) {
     if (FAILED(categories->UnregisterCategory(
             kTextServiceClsid, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
@@ -874,6 +894,8 @@ bool RegisterTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
+  std::array<bool, 2> host_exists{};
+  if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
       !IsKeyboardCategoryRegistered(categories.Get(), &category_exists) ||
@@ -933,6 +955,17 @@ bool RegisterTsf(const std::wstring& dll_path) {
       goto rollback;
     }
     delta.display_created = true;
+  }
+
+  for (std::size_t i = 0; i < kHostCategories.size(); ++i) {
+    if (host_exists[i]) continue;
+    result = categories->RegisterCategory(kTextServiceClsid, *kHostCategories[i],
+                                          kTextServiceClsid);
+    if (FAILED(result)) {
+      PrintHResultFailure("RegisterCategory(host capability)", result);
+      goto rollback;
+    }
+    delta.host_created[i] = true;
   }
 
   // Verification is part of the registration transaction.  If loading the
@@ -1006,6 +1039,8 @@ bool UnregisterTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
+  std::array<bool, 2> host_exists{};
+  if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
       !IsKeyboardCategoryRegistered(categories.Get(), &category_exists) ||
@@ -1014,11 +1049,14 @@ bool UnregisterTsf(const std::wstring& dll_path) {
   }
 
   if (!com_state.class_key_exists &&
-      (processor_exists || profile_exists || category_exists || display_exists)) {
+      (processor_exists || profile_exists || category_exists || display_exists || host_exists[0] || host_exists[1])) {
     std::cerr << "Cannot prove ownership of shared TSF state without its COM path; repair the installation first.\n";
     return false;
   }
   bool success = true;
+  for (std::size_t i = 0; i < kHostCategories.size(); ++i)
+    if (host_exists[i] && FAILED(categories->UnregisterCategory(
+            kTextServiceClsid, *kHostCategories[i], kTextServiceClsid))) success = false;
   if (display_exists) {
     const auto result = categories->UnregisterCategory(
         kTextServiceClsid, GUID_TFCAT_DISPLAYATTRIBUTEPROVIDER,
@@ -1083,6 +1121,8 @@ bool VerifyTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
+  std::array<bool, 2> host_exists{};
+  if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
       !IsKeyboardCategoryRegistered(categories.Get(), &category_exists) ||
@@ -1090,7 +1130,7 @@ bool VerifyTsf(const std::wstring& dll_path) {
     return false;
   }
   if (!processor_exists || !profile_exists || !category_exists ||
-      !display_exists) {
+      !display_exists || !host_exists[0] || !host_exists[1]) {
     std::cerr << "TSF registration is incomplete: processor="
               << (processor_exists ? "present" : "missing")
               << ", language-profile="
@@ -1098,7 +1138,8 @@ bool VerifyTsf(const std::wstring& dll_path) {
               << ", keyboard-category="
               << (category_exists ? "present" : "missing")
               << ", display-category="
-              << (display_exists ? "present" : "missing") << ".\n";
+              << (display_exists ? "present" : "missing")
+              << ", ui-element=" << host_exists[0] << ", immersive=" << host_exists[1] << ".\n";
     return false;
   }
   if (!LoadClassFactory()) {
@@ -1125,6 +1166,8 @@ bool VerifyTsfAbsent() {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
+  std::array<bool, 2> host_exists{};
+  if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
       !IsKeyboardCategoryRegistered(categories.Get(), &category_exists) ||
@@ -1138,14 +1181,14 @@ bool VerifyTsfAbsent() {
   }
   if (!other_view_state.class_key_exists &&
       (processor_exists || profile_exists || category_exists ||
-       display_exists)) {
+       display_exists || host_exists[0] || host_exists[1])) {
     std::cerr << "Shared TSF registration remains without either COM "
                  "architecture.\n";
     return false;
   }
   if (other_view_state.class_key_exists &&
       (!processor_exists || !profile_exists || !category_exists ||
-       !display_exists)) {
+       !display_exists || !host_exists[0] || !host_exists[1])) {
     std::cerr << "The other COM architecture remains, but its shared TSF "
                  "registration is incomplete.\n";
     return false;

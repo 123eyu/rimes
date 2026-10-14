@@ -93,6 +93,29 @@ class CandidateNavigation {
   }
 
   struct Selection { std::uint32_t page_id; std::size_t index; };
+  template <typename Step>
+  bool SelectVisibleIndex(std::size_t index, Step&& step) {
+    for (auto row = base(); row < end(); ++row) {
+      if (index < pages_[row].candidates.size()) {
+        // Host UI selection can cross preview rows. Keep the engine on the
+        // selected row so later keyboard navigation starts from the same page.
+        while (row_ != row) {
+          const int delta = row < row_ ? -1 : 1;
+          const auto next = step(delta);
+          const auto target = delta < 0 ? row_ - 1 : row_ + 1;
+          if (!next || next->candidates.empty() || target >= pages_.size() ||
+              PageId(*next) != PageId(pages_[target])) return false;
+          row_ = target;
+          pages_[row_] = *next;
+        }
+        if (index >= pages_[row_].candidates.size()) return false;
+        column_ = index;
+        return true;
+      }
+      index -= pages_[row].candidates.size();
+    }
+    return false;
+  }
   std::optional<Selection> AtVisibleIndex(std::size_t index) const {
     for (auto row = base(); row < end(); ++row) {
       if (index < pages_[row].candidates.size())

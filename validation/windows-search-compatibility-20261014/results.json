@@ -1,0 +1,75 @@
+{
+  "issue": 133,
+  "date": "2026-10-14",
+  "base": "a5f0c55",
+  "os": "Windows 11 Pro 22631",
+  "localOnly": true,
+  "builds": [
+    {
+      "architecture": "x64",
+      "configuration": "Release",
+      "build": "passed",
+      "ctestPassed": 28,
+      "ctestTotal": 28,
+      "typingPassed": true,
+      "appContainerInputPassed": true,
+      "gracefulMaintenanceShutdown": true,
+      "isolatedFromDailyBroker": true,
+      "librimeTag": "1.17.0",
+      "librimeSha256": "7478c7caa4ff6b37de86daba1f7ce4a994a4f5ba24872a820fb2b3a9b01fed15",
+      "binarySha256": {
+        "RimesTsf.dll": "b5b3116af1c6722c07cdf101df7e6cfad53acd2e79876521563e9a34cdf7fdd6",
+        "RimesBroker.exe": "84827ef90552846f3b6edad451a8eb4a70953be39bd0e718d41d495a13e2ff14",
+        "RimesRegistrar.exe": "a6471f024c562ac58c5e71d4c2dd146f8dff986bb6a27019e8aa029ada13a178",
+        "RimesSandboxProbe.exe": "8f6e943124726a21b5255ff7f29de1f9447da63a63b3ce9c1499cc7efe7aeb30",
+        "RimesAppContainerLauncher.exe": "e3233592050ae7e8d0959a9ba8aa3c10b7e0982cf6ebfe7fbb05a2c9fa098328"
+      }
+    },
+    {
+      "architecture": "x86",
+      "configuration": "Release",
+      "build": "passed",
+      "ctestPassed": 28,
+      "ctestTotal": 28,
+      "typingPassed": true,
+      "appContainerInputPassed": true,
+      "gracefulMaintenanceShutdown": true,
+      "isolatedFromDailyBroker": true,
+      "librimeTag": "1.17.0",
+      "librimeSha256": "af235c26c06152ce09ceb8fe9d9ab9fba7ab43ce30aa952b40174d806f5cc3d9",
+      "binarySha256": {
+        "RimesTsf.dll": "a5d52aae9589099dfa90c4f1fde833b7249836c40b59c5cfbedb2c5f614dc40d",
+        "RimesBroker.exe": "b9a2e7f4e65e2b19bf185d15c3dedda2365b3af4d0f9ca14126718e42010c531",
+        "RimesRegistrar.exe": "98d6df02f8b7702a177ca7d05b2071da26010d8bb48634a8b46de720316734ab",
+        "RimesSandboxProbe.exe": "3715e006e77a8db82c87054503eb0f411decd986b009271e00d3e0ae4526dfb2",
+        "RimesAppContainerLauncher.exe": "af4b97bf4de47f041790c810ec3556705a44a47cbf4fa4d60ffbd2c4ed25c88c"
+      }
+    }
+  ],
+  "registration": {
+    "status": "passed",
+    "checks": [
+      "x64 register expectedFailure=False",
+      "x86 register expectedFailure=False",
+      "x86 unregister expectedFailure=True",
+      "x86 unregister expectedFailure=False",
+      "x86 verify-absent expectedFailure=False",
+      "x64 verify expectedFailure=False",
+      "x64 unregister expectedFailure=False",
+      "x64 verify-absent expectedFailure=False",
+      "x64 register expectedFailure=False",
+      "x86 register expectedFailure=False",
+      "x86 unregister expectedFailure=False",
+      "x64 unregister expectedFailure=False",
+      "x64 verify-absent expectedFailure=False",
+      "x86 verify-absent expectedFailure=False",
+      "x86 unregister expectedFailure=False",
+      "x64 unregister expectedFailure=False"
+    ],
+    "productionIdentityPreserved": true
+  },
+  "realSearchAcceptance": "blocked-by-desktop-tool-policy",
+  "otherRealAppAcceptance": "not-run",
+  "productionInstallUpdated": false,
+  "remoteCI": "not-run"
+}

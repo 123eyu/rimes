@@ -29,6 +29,36 @@ The in-process TSF DLL stays small:
 
 TSF still must not load `librime` or do network I/O. Broker failure fail-opens.
 
+## Sandboxed and UI-less hosts
+
+The development source for [#133](https://github.com/scholay/rimes/issues/133)
+adds `IMMERSIVESUPPORT` and `UIELEMENTENABLED` registration. Candidate UI uses
+TSF Begin/Update/End negotiation: a host can render the list itself and suppress
+the popup, including when no Win32 caret is available. Host selection/finalize
+uses the same context and revision guards as mouse selection. Native popups
+are owned by the input window and emit IME show/change/hide events.
+
+AppContainer clients use a separate `.input` pipe. Its package ACE grants
+`FILE_GENERIC_READ | FILE_WRITE_DATA`, without pipe-instance creation or ACL
+modification; only this endpoint has a low mandatory label. The Broker still
+authenticates the actual client SID, session and PID. The sandbox client checks
+the pipe's explicit owner and kernel-reported server session/PID, since it
+cannot query the desktop process token. The endpoint exposes ordinary Rime
+sessions and candidate guards; it has no Buffer target, settings command, AI
+or delivery controls. Engine settings are read from the Broker normally.
+
+The Broker must already be running (normally through installed autostart) for
+sandbox input. Desktop hosts retain first-use launch; sandbox clients do not
+launch an external process. Secure input remains fail-open with no Broker use.
+Integrated search suggestions and tray/input-mode compartments are separate
+features and are not advertised by this change.
+
+`Invoke-RimesImeE2E.ps1 -AppContainer` adds a real capability-free AppContainer
+process to the isolated TSF/Broker/Rime test. Its TSF document host is a fixture;
+passing it does not establish compatibility with SearchHost or every app.
+See the [local validation record](../../../validation/windows-search-compatibility-20261014/README.md)
+and the [host checklist](MANUAL-TEST.md) for the remaining desktop acceptance.
+
 Installation and host acceptance are recorded in the
 [1.1.0 delivery report](../../../validation/release-1.1.0/delivery.md).
 The [1.0.0 preparation checklist](RELEASE-1.0.0.md) remains historical context.
