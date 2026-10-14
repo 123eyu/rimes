@@ -5,7 +5,9 @@
 致敬伟大的开源精神，本项目中文编码逻辑基于 [RIME 输入法引擎](https://rime.im/)。
 这是一个支持多操作系统的输入法项目，用三个首创的插槽式平台来承接用户的个性化需求: 1. 输入法显式缓冲区（buffer） 2. 管理剪切板历史、截屏、个人知识库的记忆胶囊(capsule) 3. 接收外部信息的对话窗口(mailbox)。
 
-支持全拼、双拼、声笔、五笔、英文方案；支持速录行业的并击式键入方案、支持自定义导入。面向新手用户，本项目安装包**自包含** librime 与词库，开箱即用。
+支持全拼、双拼、声笔、五笔 86、灵犀五笔、英文方案；支持速录行业的并击式键入方案、支持自定义导入。面向新手用户，本项目安装包**自包含** librime 与词库，开箱即用。
+
+五端内置 **五笔 86** 与 **灵犀五笔**：五笔 86 输入 `z` 后可用全拼查字（如 `zni`），候选括号提示五笔码；灵犀五笔无需切换，直接输入五笔码或全拼，同码时完整五笔匹配优先。详见[五笔输入](docs/wubi.md)。
 
 > **RIMES** 是本项目的架构名称。对外产品名为 **灵犀输入法**（简体中文）、**靈犀輸入法**（繁体中文）和 **Lingxi IME**（英文）；iOS App Store 已采用这些产品名。
 
@@ -42,7 +44,7 @@
 
 | 能力 | 快捷键 | 内容 | 操作 | 存放 | 边界 |
 |---|---|---|---|---|---|
-| 输入方案 | — | 雾凇全拼、自然码、小鹤、五笔 86、英文 | — | — | — |
+| 输入方案 | — | 雾凇全拼、自然码、小鹤、五笔 86、灵犀五笔、英文 | — | — | — |
 | 缓冲工作台 | `⌘⇧B` | 上屏前的文本 | 先切到 RIMES，再捕获、分块投递 | — | 切走后只走系统剪贴板，不走 IMK |
 | Capsule 底栏 | `⌘⇧V` | 最近复制；笔记、图片、PDF、技能、密码 | 单击选择，双击或 Return 粘贴。`⌘S` 收录 | 只在本机 | 粘贴需辅助功能；未授权则只进剪贴板 |
 | Mailbox | `⌘⇧M` | AI 会话、备注、待审核推送 | 新建对话；首次 Return 才生成 | 模型只绑定该会话 | CLI 用默认模型 |
@@ -108,7 +110,7 @@
 | Android | [1.1.3 APK](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Android-1.1.3.apk)，版本码 17，沿用长期签名 |
 | Windows | [1.1.3 EXE](https://github.com/scholay/rimes/releases/download/v1.1.3/RIMES-Windows-1.1.3-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
 | Linux | [1.1.3 DEB](https://github.com/scholay/rimes/releases/download/v1.1.3/fcitx5-rimes_1.1.3_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
-| iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。1.1.3（56）已提交商店和外部测试审核；审核通过前，公开可安装版本仍以 Apple 页面为准 |
+| iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。公开可安装版本以 Apple 页面为准 |
 
 本轮构建、导入测试与安装验收范围见[1.1.3 发布记录](docs/releases/1.1.3.md)。
 

@@ -60,7 +60,7 @@ final class KeyboardAppearancePanel extends ScrollView {
         qwerty.setSelected(layout.equals("qwerty")); nine.setSelected(layout.equals("nineKey"));
         chord.setSelected(layout.equals("orthogonal")); split.setSelected(layout.equals("splitOrthogonal"));
         for(KeyButton button:new KeyButton[]{petsTab,keysTab,close,qwerty,nine,chord,split}) button.theme(theme);
-        for(int i=0;i<schemas.size();i++) { schemas.get(i).theme(theme); schemas.get(i).setSelected(schema.equals(new String[]{"rimes_pinyin","rimes_ziranma","rimes_wubi"}[i])); }
+        for(int i=0;i<schemas.size();i++) { schemas.get(i).theme(theme); schemas.get(i).setSelected(schema.equals(new String[]{"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"}[i])); }
         for(KeyButton key:actions) key.theme(theme);
         note.setTextColor(theme.palette(getContext()).ink);
         note.setText("轻点宠物轮换皮肤与键盘配色；长按选择。当前："+theme.title+"。宠物图示为静态。");
@@ -71,7 +71,7 @@ final class KeyboardAppearancePanel extends ScrollView {
     void schemes(String selected,Consumer<String> choose) {
         schema=selected;
         if(!schemas.isEmpty()) return;
-        String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi"},names={"拼音","自然码","五笔"};
+        String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"},names={"拼音","自然码","五笔","灵犀五笔"};
         for(int i=0;i<ids.length;i++) { final String id=ids[i]; KeyButton key=button(schemaRow,names[i],() -> choose.accept(id)); key.setContentDescription("中文方案 "+names[i]); schemas.add(key); }
     }
     void action(String title,String description,Runnable perform) {

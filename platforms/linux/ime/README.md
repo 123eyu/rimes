@@ -28,7 +28,7 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
   A replacement reports a locked-directory error until the owner finishes
   exiting. The lock file remains on disk; the OS releases ownership on exit.
 - Isolated user directory: `$XDG_DATA_HOME/rimes` (not `…/fcitx5/rime`)
-- Shared data: `$prefix/share/rimes/data` (policy-staged 55-file closure)
+- Shared data: `$prefix/share/rimes/data` (policy-staged 57-file closure)
 - Default Buffer workbench (`Ctrl+Shift+B` / `Super+Shift+B`): Rime commits
   stage as blocks, Return tap/hold and the paper plane send through the same
   `commitText` → `commitString` path

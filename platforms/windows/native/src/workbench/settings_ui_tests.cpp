@@ -87,6 +87,7 @@ bool SettingsPrecedesBuffer(const FixtureWindows& windows) {
 constexpr UINT kFixturePosition = WM_APP + 1;
 constexpr UINT kFixtureSettingsClose = WM_APP + 2;
 constexpr UINT kFixtureSettingsCloseBarrier = WM_APP + 3;
+constexpr UINT kFixtureStopForegroundTimer = WM_APP + 4;
 struct NativePositionRequest {
   FixtureWindows windows;
   HWND insert_after = HWND_TOP;
@@ -108,6 +109,17 @@ struct NativeSettingsCloseRequest {
 };
 LRESULT CALLBACK FixturePositionProcedure(HWND window, UINT message,
                                           WPARAM wparam, LPARAM lparam) {
+  if (message == kFixtureStopForegroundTimer) {
+    const auto buffer = reinterpret_cast<HWND>(lparam);
+    if (!buffer || GetWindowThreadProcessId(buffer, nullptr) != GetCurrentThreadId())
+      return FALSE;
+    const BOOL stopped = KillTimer(buffer, 1);
+    // KillTimer does not remove an already queued WM_TIMER. Drain only this
+    // fixture's timer messages on its owning UI thread before rebinding.
+    MSG pending{};
+    while (PeekMessageW(&pending, buffer, WM_TIMER, WM_TIMER, PM_REMOVE)) {}
+    return stopped;
+  }
   if (message == kFixtureSettingsClose) {
     auto* request = reinterpret_cast<NativeSettingsCloseRequest*>(lparam);
     if (!request) return FALSE;
@@ -828,7 +840,7 @@ void TestCodexConnectorSelector() {
 }
 
 void TestPluginManagementAndChordSelection() {
-  Check(std::wstring(ui::kSettingsSchemeTitles[5]) == L"isaac2026",
+  Check(std::wstring(ui::kSettingsSchemeTitles[6]) == L"isaac2026",
         "chord scheme uses its current product name");
   int changes = 0;
   std::string saved_schema;
@@ -895,9 +907,17 @@ void TestPluginManagementAndChordSelection() {
             !IsWindowVisible(toggle),
         "plugin controls leave other pages clear");
   layout = Layout(window, draft);
-  Check(layout.scheme_cards.size() == 6, "chording is the sixth input schema");
-  Click(window, layout.scheme_cards[5]);
+  Check(layout.scheme_cards.size() == 7, "Wubi mixing and chording have separate scheme choices");
+  Click(window, layout.scheme_cards[4]);
   Click(window, layout.save);
+  Check(saved_schema == "lingxi_wubi", "scheme control saves Lingxi Wubi identity");
+  // Saving intentionally closes the real settings window; reopen before
+  // exercising the next selection instead of sending messages to a dead HWND.
+  host.Open(nullptr);
+  const HWND reopened = host.hwnd();
+  layout = Layout(reopened, draft);
+  Click(reopened, layout.scheme_cards[6]);
+  Click(reopened, layout.save);
   Check(saved_schema == "my_combo", "schema control saves chording identity");
   host.Close(false);
 }
@@ -983,6 +1003,16 @@ void TestSettingsPreserveRuntimeAndStreaming() {
 
     const auto peer = GetCurrentProcessId() + 1;
     const auto target = runtime.Register(peer, 9001, 9001);
+    runtime.Focus(target);
+    runtime.Bind(peer);
+    // This fixture intentionally has no real foreground host. First prove
+    // that the production timer revokes the synthetic peer, then isolate the
+    // settings/stream lifetime checks from that unrelated 25 ms timer race.
+    WaitUntil([&] { return !runtime.Capturing(target); },
+              "production foreground timer revokes the synthetic host");
+    Check(SendMessageW(position_driver.load(), kFixtureStopForegroundTimer, 0,
+                       reinterpret_cast<LPARAM>(windows().buffer)) != FALSE,
+          "owned UI driver isolates synthetic host from the foreground timer");
     runtime.Focus(target);
     runtime.Bind(peer);
     runtime.Paste("Fixture source.");
@@ -1109,6 +1139,15 @@ void TestBufferBehaviorControls() {
   const HWND close_after = GetDlgItem(window, 412);
   Check(schemes && close_after && schemes != close_after && IsWindowEnabled(schemes),
         "scheme manager and Buffer close-after-send have distinct native controls");
+  RECT import_bounds{};
+  GetWindowRect(schemes, &import_bounds);
+  MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&import_bounds), 2);
+  const auto scheme_layout = Layout(window, ui::SettingsDraft{});
+  const float dpi_scale = static_cast<float>(GetDpiForWindow(window)) / 96.0f;
+  Check(!scheme_layout.scheme_cards.empty() &&
+        import_bounds.top >= scheme_layout.scheme_cards.back().bottom * dpi_scale &&
+        import_bounds.bottom < scheme_layout.save.top * dpi_scale,
+        "scheme import button clears all scheme rows and the save footer");
   SendMessageW(schemes, BM_CLICK, 0, 0);
   Check(scheme_opens == 1, "scheme manager button dispatches its own callback");
   host.OpenPage(nullptr, ui::SettingsPage::kBuffer, 1, false);

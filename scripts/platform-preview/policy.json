@@ -7,6 +7,7 @@
     "double_pinyin",
     "double_pinyin_flypy",
     "wubi86",
+    "lingxi_wubi",
     "english"
   ],
   "optionalExtensionSchemas": [
@@ -21,6 +22,7 @@
     "rime_ice.schema.yaml",
     "stream_input_local.schema.yaml",
     "wubi86.schema.yaml",
+    "lingxi_wubi.schema.yaml",
     "english.schema.yaml"
   ],
   "include": [
@@ -60,6 +62,7 @@
     "lua/number_translator.lua",
     "lua/pin_cand_filter.lua",
     "lua/reduce_english_filter.lua",
+    "lua/rimes_wubi_autocommit.lua",
     "lua/search.lua",
     "lua/select_character.lua",
     "lua/unicode.lua",
@@ -78,7 +81,8 @@
     "symbols_caps_v.yaml",
     "symbols_v.yaml",
     "wubi86.dict.yaml",
-    "wubi86.schema.yaml"
+    "wubi86.schema.yaml",
+    "lingxi_wubi.schema.yaml"
   ],
   "supplementalFiles": [
     "grammar.yaml",
@@ -154,6 +158,11 @@
     "opencc/s2t.json"
   ],
   "provenanceGroups": {
+    "rimes-wubi-autocommit": {
+      "license": "Apache-2.0",
+      "source": "https://github.com/scholay/rimes",
+      "files": ["lua/rimes_wubi_autocommit.lua"]
+    },
     "rimes-authored": {
       "license": "MIT",
       "source": "https://github.com/scholay/rimes",
@@ -218,7 +227,8 @@
       "files": [
         "licenses/rime-wubi-LICENSE",
         "wubi86.dict.yaml",
-        "wubi86.schema.yaml"
+        "wubi86.schema.yaml",
+        "lingxi_wubi.schema.yaml"
       ]
     },
     "rime-easy-en": {

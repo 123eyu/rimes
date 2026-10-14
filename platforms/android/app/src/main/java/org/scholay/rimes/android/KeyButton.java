@@ -28,6 +28,17 @@ final class KeyButton extends Button {
     private float frameX,frameY,frameWidth=-1,frameHeight=-1;
     private boolean nativeTouchActive;
     private long nativeDownTime=-1;
+    private String candidateLabel="",candidateComment="";
+    private static final float COMMENT_SCALE=0.65f;
+    /** TextView measures the small annotation; painting uses the same two font sizes. */
+    void candidate(String text,String comment) {
+        if(candidateLabel.equals(text) && candidateComment.equals(comment) && getText().length()>0) return;
+        candidateLabel=text; candidateComment=comment;
+        if(comment.isEmpty()) { setText(text); return; }
+        android.text.SpannableString label=new android.text.SpannableString(text+" "+comment);
+        label.setSpan(new android.text.style.RelativeSizeSpan(COMMENT_SCALE),text.length(),label.length(),android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        setText(label);
+    }
     KeyButton(Context context) {
         super(context);
         setAllCaps(false); setMinWidth(0); setMinimumWidth(0); setMinHeight(0); setMinimumHeight(0);
@@ -171,6 +182,21 @@ final class KeyButton extends Button {
         float centreY=y+height/2+(plain || shortcut?0:pressed?(compact?0.75f:1.5f):(compact?-0.25f:-0.5f))*density;
         float textWidth=textPaint.measureText(text),availableWidth=Math.max(1,plain || shortcut?width-getPaddingLeft()-getPaddingRight():width-2*dx-2*density);
         Paint.FontMetrics metrics=textPaint.getFontMetrics(); float availableHeight=Math.max(1,height-2*dy);
+        if(plain && !candidateComment.isEmpty()) {
+            float mainWidth=textPaint.measureText(candidateLabel);
+            textPaint.setTextSize(originalSize*COMMENT_SCALE);
+            float commentWidth=textPaint.measureText(" "+candidateComment);
+            float scale=Math.min(1,Math.min(availableWidth/Math.max(1,mainWidth+commentWidth),availableHeight/(metrics.descent-metrics.ascent)));
+            float left=x+(width-(mainWidth+commentWidth)*scale)/2;
+            textPaint.setTextSize(originalSize*scale); metrics=textPaint.getFontMetrics();
+            textPaint.setColor(getCurrentTextColor());
+            canvas.drawText(candidateLabel,left,centreY-(metrics.ascent+metrics.descent)/2,textPaint);
+            textPaint.setTextSize(originalSize*scale*COMMENT_SCALE); metrics=textPaint.getFontMetrics();
+            if(!pressed) textPaint.setAlpha(Math.round(android.graphics.Color.alpha(getCurrentTextColor())*0.72f));
+            canvas.drawText(" "+candidateComment,left+mainWidth*scale,centreY-(metrics.ascent+metrics.descent)/2,textPaint);
+            textPaint.setTextSize(originalSize); textPaint.setColor(getCurrentTextColor());
+            canvas.restoreToCount(saved); return;
+        }
         if(icon!=null) {
             float glyphSize=Math.max(1,Math.min(iconSize*density,Math.min(availableWidth,availableHeight-2*density)));
             float gap=iconWithText && !text.isEmpty()?3*density:0;

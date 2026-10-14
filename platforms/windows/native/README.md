@@ -305,7 +305,7 @@ python ..\scripts\prepare-native-data.py verify C:\RimesTest\shared
 python -m unittest discover -s ..\tests -p test_native_data.py
 ```
 
-Use a new output directory. The tool copies only the reviewed 55-file RIMES
+Use a new output directory. The tool copies only the reviewed 57-file RIMES
 closure, the dictionaries referenced by `s2t.json`, and OpenCC's license. The
 standard configuration adds four files (59 total, plus the manifest). It refuses
 missing dependencies, unsafe paths, symlinks and existing output; verification

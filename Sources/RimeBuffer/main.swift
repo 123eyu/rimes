@@ -1972,6 +1972,9 @@ func runEngineSmokeTest() -> Bool {
         return false
     }
 
+    guard runWubiEngineSmokeTest(engine: engine, session: session),
+          engine.selectSchema("rime_ice", session: session) else { return false }
+
     // The consciousness-stream module uses a hidden schema plus the atomic
     // set-input/copy-candidates bridge. It must decode without committing or
     // sharing bridge-owned candidate memory with the ordinary IMK session.
@@ -2690,6 +2693,8 @@ func runSchemaListStoreSmokeTest() -> Bool {
          "double_pinyin_flypy", .chinese),
         (.init(encoding: .wubi86, keyingMode: .sequential),
          "wubi86", .wubi86),
+        (.init(encoding: .lingxiWubi, keyingMode: .sequential),
+         "lingxi_wubi", .wubi86),
         (.init(encoding: .fullPinyin, keyingMode: .chord),
          "my_combo", .chinese),
         (.init(encoding: .fullPinyin, keyingMode: .mutual),
@@ -3136,6 +3141,7 @@ func runSchemaListStoreSmokeTest() -> Bool {
         ("double_pinyin_flypy", .init(encoding: .xiaoheDoublePinyin,
                                       keyingMode: .sequential)),
         ("wubi86", .init(encoding: .wubi86, keyingMode: .sequential)),
+        ("lingxi_wubi", .init(encoding: .lingxiWubi, keyingMode: .sequential)),
         ("english", .init(encoding: .english, keyingMode: .sequential)),
     ]
     for (schemaID, configuration) in canonicalProfiles {

@@ -174,7 +174,7 @@ int wmain(int argc, wchar_t** argv) {
   auto session = engine.CreateSession(&error);
   if (!session) return 1;
   for (const auto* schema : {"rime_ice", "double_pinyin", "double_pinyin_flypy",
-                             "wubi86", "english", "my_combo"}) {
+                             "wubi86", "lingxi_wubi", "english", "my_combo"}) {
     if (!engine.Configure(session, schema, false, false, false, &error)) return 1;
     for (const char digit : std::string("0123456789")) {
       EngineSnapshot idle;
@@ -193,11 +193,18 @@ int wmain(int argc, wchar_t** argv) {
     const char* keys;
     bool traditional;
     const char* expected;
+    const char* hint = "";
   };
   const std::vector<Case> cases = {{"rime_ice", "nihao", false, "你好"},
                                    {"double_pinyin", "ni", false, "你"},
                                    {"double_pinyin_flypy", "ni", false, "你"},
                                    {"wubi86", "wq", false, "你"},
+                                   {"wubi86", "zni", false, "你", "wq"},
+                                   {"wubi86", "znihao", false, "你好", "wqvb"},
+                                   {"lingxi_wubi", "wq", false, "你"},
+                                   {"lingxi_wubi", "nihao", false, "你好", "wqvb"},
+                                   {"lingxi_wubi", "zni", false, "你", "wq"},
+                                   {"lingxi_wubi", "han", true, "漢"},
                                    {"english", "hello", false, "hello"},
                                    {"rime_ice", "han", true, "漢"},
                                    {"wubi86", "ic", true, "漢"}};
@@ -215,7 +222,14 @@ int wmain(int argc, wchar_t** argv) {
     }
     bool found = committed.find(item.expected) != std::string::npos;
     for (const auto& candidate : snapshot.candidates)
-      if (candidate.text == item.expected) found = true;
+      if (candidate.text == item.expected) {
+        found = true;
+        if (*item.hint) {
+          found = candidate.comment.size() > 2 && candidate.comment.front() == '(' &&
+                  candidate.comment.back() == ')' && candidate.comment.find(item.hint) != std::string::npos;
+        }
+        break;
+      }
     if (!found) {
       std::cerr << "Product candidate assertion failed: " << item.schema
                 << " traditional=" << item.traditional
@@ -224,6 +238,21 @@ int wmain(int argc, wchar_t** argv) {
     }
     std::cout << "Product scheme passed: " << item.schema
               << " traditional=" << item.traditional << '\n';
+  }
+  for (const auto* schema : {"wubi86", "lingxi_wubi"}) {
+    for (const auto* code : {"voni", "wqiy", "zfiao", "fiao"}) {
+      if (std::string(code) == "fiao" && std::string(schema) == "wubi86") continue;
+      if (!engine.Configure(session, schema, false, false, false, &error)) return 1;
+      EngineSnapshot state; int typed = 0;
+      for (const char* key = code; *key; ++key) {
+        if (!engine.ProcessKey(session, *key, 0, &state, &error)) return 1;
+        const std::string expected = std::string(code) == "voni" && ++typed == 4 ? "灵犀" : "";
+        if (state.commit_text != expected) {
+          std::cerr << "Four-key unique commit failed: " << schema << '/' << code << '\n';
+          return 1;
+        }
+      }
+    }
   }
   for (const unsigned count : {1U, 5U, 9U}) {
     if (!engine.Configure(session, "rime_ice", false, false, false, &error, count)) return 1;
@@ -347,7 +376,7 @@ int wmain(int argc, wchar_t** argv) {
   // ascii_composer returns kNoop for both Shift phases even when release
   // commits existing raw input. A successful process_key call alone cannot
   // prove that the resulting text was collected promptly.
-  for (const auto* schema : {"rime_ice", "double_pinyin", "double_pinyin_flypy", "wubi86", "english"}) {
+  for (const auto* schema : {"rime_ice", "double_pinyin", "double_pinyin_flypy", "wubi86", "lingxi_wubi", "english"}) {
     if (!engine.Configure(session, schema, false, false, false, &error)) return 1;
     const std::string code = std::string(schema) == "wubi86" ? "wq" : "ni";
     EngineSnapshot before;

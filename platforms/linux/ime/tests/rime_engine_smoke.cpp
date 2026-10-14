@@ -207,6 +207,44 @@ int main(int argc, char** argv) {
     }
     std::cout << "ok: Escape cancels\n";
 
+    struct WubiCase { const char* schema; const char* code; const char* text; const char* hint; };
+    for (const auto& item : {WubiCase{"wubi86", "wq", "你", ""},
+                            WubiCase{"wubi86", "zni", "你", "wq"},
+                            WubiCase{"wubi86", "znihao", "你好", "wqvb"},
+                            WubiCase{"lingxi_wubi", "wq", "你", ""},
+                            WubiCase{"lingxi_wubi", "nihao", "你好", "wqvb"},
+                            WubiCase{"lingxi_wubi", "zni", "你", "wq"}}) {
+        if (!engine.SelectSchema(session, item.schema, &error)) Die("Wubi schema selection: " + error);
+        TypeAscii(engine, session, item.code, &snapshot);
+        int found = -1;
+        for (std::size_t i = 0; i < snapshot.candidates.size(); ++i) {
+            const auto& candidate = snapshot.candidates[i];
+            if (candidate.text != item.text) continue;
+            found = static_cast<int>(i);
+            if (*item.hint && (candidate.comment.size() < 3 || candidate.comment.front() != '(' ||
+                candidate.comment.back() != ')' || candidate.comment.find(item.hint) == std::string::npos))
+                Die("Wubi code hint: " + candidate.comment);
+            break;
+        }
+        if (found < 0 || (std::string(item.code) == "wq" && found != 0)) Die("Wubi candidate/order");
+        if (!engine.SelectCandidate(session, found, &snapshot, &error) || snapshot.commit_text != item.text)
+            Die("Wubi commit must contain only candidate text");
+        std::cout << "ok: Wubi " << item.schema << '/' << item.code << '\n';
+    }
+
+    for (const auto* schema : {"wubi86", "lingxi_wubi"}) {
+        for (const auto* code : {"voni", "wqiy", "zfiao", "fiao"}) {
+            if (std::string(code) == "fiao" && std::string(schema) == "wubi86") continue;
+            if (!engine.SelectSchema(session, schema, &error)) Die("Wubi schema: " + error);
+            engine.ClearComposition(session, &snapshot, &error);
+            int typed = 0;
+            for (const char* key = code; *key; ++key) {
+                TypeAscii(engine, session, std::string(1, *key), &snapshot); ++typed;
+                const std::string expected = std::string(code) == "voni" && typed == 4 ? "灵犀" : "";
+                if (snapshot.commit_text != expected) Die("Four-key unique commit: " + std::string(schema) + '/' + code);
+            }
+        }
+    }
     engine.DestroySession(session, &error);
 
     // Later fcitx5 starts can still run a short rebuild. Dropping build/

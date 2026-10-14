@@ -9,8 +9,22 @@
 
 namespace fcitx {
 
-RimesCandidateWord::RimesCandidateWord(RimesIme* ime, int index, Text text)
-    : CandidateWord(std::move(text)), ime_(ime), index_(index) {}
+RimesCandidateWord::RimesCandidateWord(RimesIme* ime, int index, Text text,
+                                     const std::string& comment)
+    : CandidateWord(), ime_(ime), index_(index) {
+#ifdef RIMES_FCITX_HAS_CANDIDATE_COMMENT
+    // Native comment text lets compatible panels apply their smaller annotation
+    // font. Keep the candidate text separate for accessibility and selection.
+    setComment(Text(comment, TextFormatFlag::DontCommit));
+#else
+    // Older distro panels have no annotation API. Preserve readable code hints.
+    if (!comment.empty()) {
+        text.append(" ", TextFormatFlag::DontCommit);
+        text.append(comment, TextFormatFlag::DontCommit);
+    }
+#endif
+    setText(std::move(text));
+}
 
 void RimesCandidateWord::select(InputContext* inputContext) const {
     if (ime_ == nullptr || inputContext == nullptr) {
@@ -43,12 +57,8 @@ RimesCandidateList::RimesCandidateList(RimesIme* ime,
         }
         labels_.emplace_back(std::move(label));
         Text word(candidate.text);
-        if (!candidate.comment.empty()) {
-            word.append(" ");
-            word.append(candidate.comment, TextFormatFlag::DontCommit);
-        }
         words_.emplace_back(std::make_unique<RimesCandidateWord>(
-            ime_, static_cast<int>(index), std::move(word)));
+            ime_, static_cast<int>(index), std::move(word), candidate.comment));
     }
 }
 

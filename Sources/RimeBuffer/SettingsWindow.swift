@@ -3028,7 +3028,10 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 detail = "小鹤双拼方案"
                 symbol = "bird"
             case .wubi86:
-                detail = "86 版五笔字型"
+                detail = "86 版五笔 · z 引导全拼查字"
+                symbol = "square.grid.3x3"
+            case .lingxiWubi:
+                detail = "五笔与全拼混输 · 拼音候选提示五笔码"
                 symbol = "square.grid.3x3"
             case .english:
                 detail = "英文候选与补全"

@@ -97,7 +97,10 @@ from [`rime/rime-wubi`](https://github.com/rime/rime-wubi) at revision
 `152a0d3f3efe40cae216d1e3b338242446848d07` and are distributed under the GNU
 Lesser General Public License version 3. The dictionary is verbatim; RIMES
 modifies the schema to use the already bundled Rime Ice dictionary for pinyin
-reverse lookup and the bundled default punctuation preset. The exact source,
+reverse lookup and the bundled default punctuation preset. The derived
+`lingxi_wubi.schema.yaml` adds simultaneous Wubi/Pinyin lookup. Mobile Wubi
+schemas are generated from these sources with the bundled `pinyin_simp`
+dictionary; all Wubi schema adaptations retain LGPL-3.0-only. The exact source,
 modification boundary, checksum, and license text are included as
 `rime-data/licenses/rime-wubi-SOURCE.md` and
 `rime-data/licenses/rime-wubi-LICENSE`.

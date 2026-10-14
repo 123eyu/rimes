@@ -11,16 +11,20 @@
 The dictionary is redistributed verbatim. Its SHA-256 at import is
 `f833d86b72341fe82e069a425b6625f29ef85f1bc0f34f6fb7975fe514888b5a`.
 
-RIMES modifies the schema, as marked in its header, to reuse the already
-bundled `rime_ice` dictionary for the `z`-prefixed pinyin reverse lookup and
-to use RIMES's bundled `default` punctuation preset. This removes the
-upstream `pinyin_simp` runtime dependency without changing the Wubi 86 code
-table. The upstream schema SHA-256 is
-`cdb5aac1a9aa071552d5fdffdfe5a6618b429b19358b8b1e003130e835d5a166`;
-the modified RIMES schema SHA-256 is
-`cfc987d641ff625b89de9903202e464841019d12e533168c300d4cb51b17431c`.
-The corresponding source is the plain-text `wubi86.schema.yaml` shipped beside
-the dictionary.
+RIMES modifies `wubi86.schema.yaml` to reuse the bundled `rime_ice`
+dictionary for full-pinyin reverse lookup after `z`, and displays the original
+Wubi codes in parentheses. `lingxi_wubi.schema.yaml` additionally tags ordinary
+alphabetic input for simultaneous Wubi and full-pinyin lookup, following the
+upstream `wubi_pinyin` convention. Complete Wubi matches retain priority; `z`
+explicitly requests pinyin lookup in either scheme. The Wubi dictionary and
+learning database identity remain `wubi86`.
+
+The corresponding source schemas are shipped beside the dictionary. Mobile
+schemas are generated from them by `platforms/ios/scripts/prepare-data.py`,
+preserving the existing `rimes_wubi` identity and using the bundled
+`pinyin_simp` dictionary / `rimes_pinyin` prism. These schema adaptations retain
+the upstream LGPL-3.0-only license. The original Wubi schema SHA-256 is
+`cdb5aac1a9aa071552d5fdffdfe5a6618b429b19358b8b1e003130e835d5a166`.
 
 The upstream attribution records that the dictionary is derived from
 ibus-table work by Yu Yuwei and from the original Wubi work by Wang Yongmin;

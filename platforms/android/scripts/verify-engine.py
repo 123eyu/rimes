@@ -19,12 +19,13 @@ for name,digest in manifest['files'].items():
     assert '..' not in name and not name.startswith('/')
     assert hashlib.sha256((data/name).read_bytes()).hexdigest()==digest,name
 assert not list(data.rglob('*.dict.yaml')), 'Raw dictionaries must not trigger on-device compilation'
-for schema in ('rimes_pinyin','rimes_pinyin9','rimes_ziranma','rimes_wubi'):
+assert (data/'lua/rimes_wubi_autocommit.lua').read_bytes()==(ROOT.parents[1]/'rime-data/lua/rimes_wubi_autocommit.lua').read_bytes()
+for schema in ('rimes_pinyin','rimes_pinyin9','rimes_ziranma','rimes_wubi','lingxi_wubi'):
     for suffix in ('','_private'):
         text=(data/'build'/(schema+suffix+'.schema.yaml')).read_text()
         assert 'page_size: 9' in text
         assert ('enable_user_dict: false' if suffix else 'enable_user_dict: true') in text
-        if schema!='rimes_wubi': assert 'dictionary: pinyin_simp' in text, 'Preserve the existing Pinyin user dictionary identity'
+        if schema not in ('rimes_wubi','lingxi_wubi'): assert 'dictionary: pinyin_simp' in text, 'Preserve the existing Pinyin user dictionary identity'
 assert (data/'build/pinyin_simp.table.bin').is_file()
 syllables=json.loads((data/'nine-key-syllables.json').read_text())
 assert len(syllables)>400 and 'ni' in syllables and 'hao' in syllables

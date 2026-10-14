@@ -4,5 +4,6 @@ schema_list:
   - schema: rimes_pinyin9
   - schema: rimes_ziranma
   - schema: rimes_wubi
+  - schema: lingxi_wubi
 menu:
   page_size: 9
