@@ -147,6 +147,9 @@ jobs:
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/translation/**
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesE2EBroker.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRegistrar.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRecoveryRegistrar.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRecoveryTsf.dll
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesRecoveryCategoryFixture.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfE2E.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesSandboxProbe.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesAppContainerLauncher.exe
@@ -182,6 +185,22 @@ jobs:
         with:
           name: RIMES-Windows-IME-UNSIGNED-x86-${{ github.sha }}
           path: platforms/windows/native/out/build/windows-x86/Release
+      - name: Test isolated cross-architecture registrar recovery
+        shell: powershell
+        run: |
+          ./platforms/windows/tests/Test-RegistrarRecovery.ps1 `
+            -ArtifactX64 platforms/windows/native/out/build/windows-x64/Release `
+            -ArtifactX86 platforms/windows/native/out/build/windows-x86/Release `
+            -ReportDirectory "$env:RUNNER_TEMP/rimes-registrar-recovery"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+      - name: Upload registrar recovery diagnostics
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: RIMES-Windows-registrar-recovery-${{ github.sha }}
+          path: ${{ runner.temp }}/rimes-registrar-recovery/result.json
+          if-no-files-found: warn
+          retention-days: 14
       - name: Build and verify complete EXE
         shell: powershell
         env:

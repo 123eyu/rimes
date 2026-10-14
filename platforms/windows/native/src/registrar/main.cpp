@@ -1188,7 +1188,7 @@ bool VerifyTsfAbsent() {
   }
   if (other_view_state.class_key_exists &&
       (!processor_exists || !profile_exists || !category_exists ||
-       !display_exists)) {
+       !display_exists || !host_exists[0] || !host_exists[1])) {
     std::cerr << "The other COM architecture remains, but its shared TSF "
                  "registration is incomplete.\n";
     return false;

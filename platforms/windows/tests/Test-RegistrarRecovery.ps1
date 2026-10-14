@@ -40,6 +40,7 @@ foreach($arch in @('x64','x86')){
     $bin=if($arch -eq 'x64'){$ArtifactX64}else{$ArtifactX86}
     New-Item -ItemType Directory -Path "$ReportDirectory\$arch" | Out-Null
     Copy-Item -LiteralPath "$bin\RimesRecoveryRegistrar.exe" -Destination "$ReportDirectory\$arch\RimesRecoveryRegistrar.exe"
+    Copy-Item -LiteralPath "$bin\RimesRecoveryCategoryFixture.exe" -Destination "$ReportDirectory\$arch\RimesRecoveryCategoryFixture.exe"
     Copy-Item -LiteralPath "$bin\RimesRecoveryTsf.dll" -Destination "$ReportDirectory\$arch\RimesTsf.dll"
     $metadata=& "$ReportDirectory\$arch\RimesRecoveryRegistrar.exe" metadata | ConvertFrom-Json
     if($LASTEXITCODE -or $metadata.textService.clsid -ne $testClsid -or $metadata.architecture -ne $arch){throw 'Test binary identity or architecture mismatch'}
@@ -52,6 +53,15 @@ try {
     Native x86 unregister "$ReportDirectory\x86\RimesTsf.dll"
     Native x86 verify-absent "$ReportDirectory\x86\RimesTsf.dll"
     Native x64 verify "$ReportDirectory\x64\RimesTsf.dll"
+    foreach($category in @('uiElement','immersive')){
+        & "$ReportDirectory\x64\RimesRecoveryCategoryFixture.exe" $category
+        if($LASTEXITCODE -ne 0){throw "Could not remove isolated test category $category"}
+        $script:checks+="removed test category $category"
+        Native x86 verify-absent "$ReportDirectory\x86\RimesTsf.dll" $true
+        Native x64 verify "$ReportDirectory\x64\RimesTsf.dll" $true
+        Native x64 register "$ReportDirectory\x64\RimesTsf.dll"
+        Native x86 verify-absent "$ReportDirectory\x86\RimesTsf.dll"
+    }
     Native x64 unregister "$ReportDirectory\x64\RimesTsf.dll"
     Native x64 verify-absent "$ReportDirectory\x64\RimesTsf.dll"
     Move-Item -LiteralPath "$ReportDirectory\x86\retained.dll" -Destination "$ReportDirectory\x86\RimesTsf.dll"
