@@ -6,7 +6,7 @@ Version=@PROJECT_VERSION@
 Library=rimes
 Type=SharedLibrary
 OnDemand=True
-Configurable=False
+Configurable=True
 
 [Addon/Dependencies]
 0=core

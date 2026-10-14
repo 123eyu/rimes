@@ -332,10 +332,14 @@ void Runtime::CancelOpeningPlacement() {
   opening_at_ = 0;
   opening_caret_.reset();
 }
+void Runtime::SetImportedSchema(std::string schema) {
+  std::lock_guard lock(mutex_); imported_schema_ = std::move(schema);
+}
 Settings Runtime::Configuration() {
   std::lock_guard lock(mutex_);
   auto effective = settings_;
   if (effective.schema == official::kChordSchema && plugins_.Grant(official::kChord).empty()) effective.schema = "rime_ice";
+  if (!imported_schema_.empty()) { effective.schema = imported_schema_; effective.imported_scheme = true; }
   return effective;
 }
 bool Runtime::Configure(Settings value, const std::wstring& key,
@@ -347,6 +351,7 @@ bool Runtime::Configure(Settings value, const std::wstring& key,
           "Settings file is unreadable. Preserve it and resolve before saving.";
     return false;
   }
+  if (!imported_schema_.empty()) value.schema = settings_.schema;
   value.revision = settings_.revision + 1;
   if (!SaveSettings(value, error)) return false;
   if (replace_key && !SaveSecret(key, value.base_url, error)) {

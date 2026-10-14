@@ -26,6 +26,7 @@ struct SettingsUiCallbacks {
   std::function<std::vector<PluginView>()> plugins;
   std::function<bool(const std::string&, const std::string&, std::string*)> manage_plugin;
   std::function<std::string()> plugin_status;
+  std::function<bool()> open_schemes;
 };
 
 // Production and visual-preview share this host. Preview passes fixture
@@ -82,6 +83,7 @@ class SettingsUiHost {
   HWND edit_key_ = nullptr;
   HWND edit_lang_ = nullptr;
   HWND combo_auto_send_ = nullptr, check_close_after_ = nullptr, combo_translation_ = nullptr;
+  HWND schemes_button_ = nullptr, imported_label_ = nullptr;
   HWND check_ascii_ = nullptr;
   HWND check_trad_ = nullptr;
   HWND check_punct_ = nullptr;

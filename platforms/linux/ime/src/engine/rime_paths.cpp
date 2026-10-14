@@ -1,4 +1,5 @@
 #include "rime_paths.hpp"
+#include "scheme_import.hpp"
 
 #include <cstdlib>
 #include <system_error>
@@ -40,6 +41,12 @@ bool LooksLikeSharedData(const std::filesystem::path& path) noexcept {
     return std::filesystem::is_regular_file(path / "default.yaml", error);
 }
 
+std::filesystem::path SchemeLibraryRoot() {
+    auto data = XdgDir("XDG_DATA_HOME", ".local/share");
+    if (data.empty()) throw std::runtime_error("无法确定用户方案目录");
+    return data / "rimes" / "schemes";
+}
+
 EnginePaths ResolveEnginePaths(const std::filesystem::path& install_shared_dir) {
     EnginePaths paths;
     if (auto shared = EnvPath("RIMES_SHARED_DIR"); !shared.empty()) {
@@ -59,6 +66,14 @@ EnginePaths ResolveEnginePaths(const std::filesystem::path& install_shared_dir) 
     } else {
         const auto state = XdgDir("XDG_STATE_HOME", ".local/state");
         paths.log_dir = state.empty() ? paths.user_data_dir / "log" : state / "rimes" / "log";
+    }
+    // Explicit test/development roots remain independent of the user's library.
+    if (EnvPath("RIMES_SHARED_DIR").empty() && EnvPath("RIMES_USER_DIR").empty()) {
+        if (auto selected = rimes::schemes::Library(SchemeLibraryRoot()).Active()) {
+            paths.shared_data_dir = selected->resources;
+            paths.user_data_dir = selected->user;
+            paths.imported_schema = selected->schema;
+        }
     }
     return paths;
 }

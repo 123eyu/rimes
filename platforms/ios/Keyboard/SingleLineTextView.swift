@@ -104,7 +104,10 @@ final class SingleLineTextView: UIScrollView {
         return blockFrames.indices.min { abs(blockFrames[$0].midX - x) < abs(blockFrames[$1].midX - x) }
     }
     /// UTF-16 caret position, shown only for the input role.
-    var caretLocation: Int? { didSet { if caretLocation != oldValue { restartBlink() }; setNeedsLayout() } }
+    var caretLocation: Int? { didSet {
+        guard caretLocation != oldValue else { return }
+        restartBlink(); setNeedsLayout()
+    } }
     override init(frame: CGRect) {
         super.init(frame: frame)
         label.numberOfLines = 1; label.lineBreakMode = .byClipping
@@ -144,6 +147,7 @@ final class SingleLineTextView: UIScrollView {
     }
     private func restartBlink() {
         caret.layer.removeAnimation(forKey: "blink")
+        guard caretLocation != nil else { return }
         let blink = CAKeyframeAnimation(keyPath: "opacity")
         blink.values = [1, 1, 0, 0]; blink.keyTimes = [0, 0.5, 0.55, 1]
         blink.duration = 1.0; blink.repeatCount = .infinity; blink.beginTime = CACurrentMediaTime() + 0.5
@@ -166,6 +170,17 @@ final class SingleLineTextView: UIScrollView {
     private(set) var blockFrames: [CGRect] = []
     override func layoutSubviews() {
         super.layoutSubviews()
+        // A closed Buffer has no row width yet. Insetting that empty rectangle
+        // produces CGRect.null; rounding it makes CoreGraphics report NaNs on
+        // every key. Do not shape text or create a path until a viewport exists.
+        let visibleWidth = bounds.width - trailingAccessoryWidth
+        guard visibleWidth.isFinite, visibleWidth > 2 * Self.clipInset,
+              bounds.height.isFinite, bounds.height > 2 * Self.clipInset,
+              contentOffset.x.isFinite else {
+            canvasClip.path = CGMutablePath()
+            caret.isHidden = true; blockFrames = []
+            return
+        }
         let width = ceil(label.sizeThatFits(CGSize(width: CGFloat.greatestFiniteMagnitude, height: bounds.height)).width)
         label.frame = CGRect(x: Self.inset, y: 0, width: width, height: bounds.height)
         contentSize = CGSize(width: max(bounds.width, width + 2 * Self.inset + trailingAccessoryWidth), height: bounds.height)
@@ -179,7 +194,7 @@ final class SingleLineTextView: UIScrollView {
         dots.instanceTransform = CATransform3DMakeTranslation(size * 1.8, 0, 0)
         CATransaction.begin(); CATransaction.setDisableActions(true)
         // The visible window, in canvas coordinates, moves with the scroll position.
-        let window = CGRect(x: contentOffset.x, y: 0, width: max(0, bounds.width - trailingAccessoryWidth), height: bounds.height).insetBy(dx: Self.clipInset, dy: Self.clipInset)
+        let window = CGRect(x: contentOffset.x, y: 0, width: visibleWidth, height: bounds.height).insetBy(dx: Self.clipInset, dy: Self.clipInset)
         canvasClip.frame = canvas.bounds
         canvasClip.path = UIBezierPath(roundedRect: window, cornerRadius: max(0, layer.cornerRadius - Self.clipInset)).cgPath
         CATransaction.commit()
@@ -188,7 +203,7 @@ final class SingleLineTextView: UIScrollView {
         placeholderLabel.font = font
         placeholderLabel.frame = CGRect(x: Self.inset + 4, y: 0, width: max(0, bounds.width - 2 * Self.inset - 4 - trailingAccessoryWidth), height: bounds.height)
         layoutBlocks(in: attributed)
-        let lineHeight = min(bounds.height - 8, ceil((attributed.length > 0 ? (attributed.attribute(.font, at: 0, effectiveRange: nil) as? UIFont) : nil)?.lineHeight ?? font.lineHeight) + 2)
+        let lineHeight = max(0, min(bounds.height - 8, ceil((attributed.length > 0 ? (attributed.attribute(.font, at: 0, effectiveRange: nil) as? UIFont) : nil)?.lineHeight ?? font.lineHeight) + 2))
         if role == .input, let caretLocation {
             caret.isHidden = false
             caret.frame = CGRect(x: x(at: caretLocation, in: attributed) - 1, y: (bounds.height - lineHeight) / 2, width: 2, height: lineHeight)

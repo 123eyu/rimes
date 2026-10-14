@@ -29,6 +29,7 @@ struct RimeSchemeImportReview: Sendable {
     fileprivate let packagePrefix: String
     fileprivate let permittedPaths: [String]
     fileprivate let normalizedConfigurations: [String: Data]
+    fileprivate var stagingSHA256: String? = nil
 }
 
 struct RimeSchemeStagedPackage: Sendable {
@@ -49,38 +50,119 @@ enum RimeSchemeImportError: LocalizedError {
 /// Main-app archive inspection and staging. Deployment and atomic publication belong to
 /// the installer; keyboard processes never compile an unreviewed archive during first use.
 enum RimeSchemeImportService {
-    private static let maximumArchiveSize = 64 * 1_024 * 1_024
-    private static let maximumFileSize: UInt64 = 32 * 1_024 * 1_024
-    private static let maximumExpandedSize: UInt64 = 128 * 1_024 * 1_024
-    private static let maximumEntries = 512
+    private static let maximumArchiveSize = 256 * 1_024 * 1_024
+    private static let maximumFileSize: UInt64 = 128 * 1_024 * 1_024
+    private static let maximumExpandedSize: UInt64 = 512 * 1_024 * 1_024
+    private static let maximumEntries = 4_096
     private static let maximumConfigurationSize = 512 * 1_024
     private static let globalFiles: Set<String> = ["default.custom.yaml", "installation.yaml", "user.yaml",
         "hamster.yaml", "hamster.custom.yaml", "weasel.yaml", "weasel.custom.yaml", "squirrel.yaml", "squirrel.custom.yaml",
         "trime.yaml", "trime.custom.yaml", "ibus_rime.yaml", "ibus_rime.custom.yaml"]
 
     static func inspect(url: URL) throws -> RimeSchemeImportReview {
-        guard url.pathExtension.lowercased() == "zip" else { throw invalid("请选择包含 Rime 方案和词典的 ZIP 文件。") }
+        let kind = url.pathExtension.lowercased()
+        guard ["zip", "txt", "tsv"].contains(kind) else { throw invalid("请选择 Rime ZIP，或带编码的 UTF-8 TXT / TSV 词库。") }
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }
         let data = try file.read(upToCount: maximumArchiveSize + 1) ?? Data()
-        return try inspect(data: data, sourceName: url.deletingPathExtension().lastPathComponent)
+        let name = url.deletingPathExtension().lastPathComponent
+        return kind == "zip" ? try inspect(data: data, sourceName: name) : try inspectTextDictionary(data: data, sourceName: name)
+    }
+
+    /// A coded text table is data, not a scheme. Give it a deterministic, local
+    /// table-translator wrapper; never infer pronunciations for unencoded words.
+    static func inspectTextDictionary(data: Data, sourceName: String) throws -> RimeSchemeImportReview {
+        guard data.count <= maximumConfigurationSize * 256,
+              var text = String(data: data, encoding: .utf8) else { throw invalid("文本词库须为 UTF-8，且不超过 128 MB。") }
+        if text.hasPrefix("\u{FEFF}") { text.removeFirst() }
+        let digest = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        let id = "text_" + digest.prefix(16)
+        var rows = [String](), alphabet = Set<Character>()
+        let permitted = Set("abcdefghijklmnopqrstuvwxyz0123456789;'.,-/=")
+        for (index, raw) in text.components(separatedBy: .newlines).enumerated() {
+            if raw.isEmpty || raw.hasPrefix("#") { continue }
+            let parts = raw.components(separatedBy: "\t")
+            guard (2...3).contains(parts.count), !parts[0].isEmpty, parts[0].utf8.count <= 4096,
+                  !parts[0].unicodeScalars.contains(where: { CharacterSet.controlCharacters.contains($0) }),
+                  !parts[1].isEmpty, parts[1].count <= 256,
+                  parts[1].allSatisfy({ permitted.contains($0) || $0 == " " }),
+                  parts[1].contains(where: { permitted.contains($0) }),
+                  parts.count == 2 || (UInt32(parts[2]) != nil) else {
+                throw invalid("第 \(index + 1) 行格式不符：每行使用“词条⇥小写字母/数字编码⇥可选整数权重”。纯汉字词表须先补充编码。")
+            }
+            alphabet.formUnion(parts[1].filter { $0 != " " })
+            rows.append(parts.joined(separator: "\t"))
+        }
+        guard !rows.isEmpty else { throw invalid("文本词库没有带编码的有效词条。") }
+        let quote: (String) -> String = { "'" + $0.replacingOccurrences(of: "'", with: "''") + "'" }
+        let title = String(sourceName.prefix(120))
+        let schema = """
+        schema:
+          schema_id: \(id)
+          name: \(quote(title))
+          version: '1'
+        engine:
+          processors: [ascii_composer, recognizer, key_binder, speller, punctuator, selector, navigator, express_editor]
+          segmentors: [ascii_segmentor, abc_segmentor, punct_segmentor, fallback_segmentor]
+          translators: [punct_translator, table_translator]
+        speller:
+          alphabet: \(quote(String(alphabet.sorted())))
+          delimiter: " "
+        translator:
+          dictionary: \(id)
+          enable_sentence: false
+          enable_user_dict: true
+          enable_completion: true
+        menu:
+          page_size: 9
+        """
+        let dictionary = "---\nname: \(id)\nversion: '1'\nsort: by_weight\n...\n" + rows.joined(separator: "\n") + "\n"
+        let archive = try Archive(accessMode: .create)
+        for (path, content) in [("\(id).schema.yaml", schema), ("\(id).dict.yaml", dictionary)] {
+            let bytes = Data(content.utf8)
+            try archive.addEntry(with: path, type: .file, uncompressedSize: Int64(bytes.count), compressionMethod: .none) { offset, count in
+                bytes.subdata(in: Int(offset)..<Int(offset) + count)
+            }
+        }
+        guard let bytes = archive.data else { throw invalid("无法准备文本词库。") }
+        var review = try inspect(data: bytes, sourceName: title)
+        // The diagnostic identity belongs to the original input, not its generated wrapper.
+        review = .init(sourceName: review.sourceName, archiveSHA256: digest, schemes: review.schemes,
+            fileCount: review.fileCount, expandedBytes: review.expandedBytes,
+            warnings: review.warnings + ["已为带编码的文本词库生成独立码表方案；原文件未修改。"],
+            unsupportedFeatures: review.unsupportedFeatures, archiveData: bytes, packagePrefix: review.packagePrefix,
+            permittedPaths: review.permittedPaths, normalizedConfigurations: review.normalizedConfigurations,
+            stagingSHA256: Self.digest(bytes))
+        return review
     }
 
     static func inspect(data: Data, sourceName: String) throws -> RimeSchemeImportReview {
         let archive = try CheckedArchive(data)
-        let allSchemas = archive.entries.filter { $0.type == .file && $0.path.hasSuffix(".schema.yaml") }
-        guard !allSchemas.isEmpty, allSchemas.count <= 32 else { throw invalid("压缩包须包含 1–32 个 .schema.yaml 方案文件。") }
-        let parents = Set(allSchemas.map { ($0.path as NSString).deletingLastPathComponent })
-        guard parents.count == 1, let parent = parents.first else {
-            throw invalid("压缩包存在多个方案根目录，请将同一套方案的 schema 放在同一目录后重新导入。")
+        guard !archive.entries.contains(where: { $0.type == .file && $0.path.lowercased().hasSuffix(".gram") }) else {
+            throw invalid("这个 ZIP 包含 .gram 语言模型。五端统一导入暂不支持模型，请选择上游提供的基础方案包。")
         }
+        // Finder/GitHub ZIPs often also carry AppleDouble metadata, compiled schemas
+        // and example subtrees. Discover source roots before counting schemas.
+        let sourceSchemas = archive.entries.filter {
+            $0.type == .file && $0.path.hasSuffix(".schema.yaml") && !ignoredSourcePath($0.path)
+        }
+        let parents = Set(sourceSchemas.map { ($0.path as NSString).deletingLastPathComponent })
+        let outermost = parents.filter { parent in
+            !parents.contains { other in other != parent && (other.isEmpty || parent.hasPrefix(other + "/")) }
+        }
+        guard outermost.count == 1, let parent = outermost.first else {
+            throw invalid(sourceSchemas.isEmpty ? "压缩包中没有 Rime 源方案（.schema.yaml）。" :
+                "压缩包包含多套独立的方案目录，无法确定要导入哪一套；请选择上游提供的单套方案 ZIP。")
+        }
+        let rootSchemas = sourceSchemas.filter { ($0.path as NSString).deletingLastPathComponent == parent }
+        guard rootSchemas.count <= 32 else { throw invalid("一套方案最多包含 32 个 .schema.yaml 文件。") }
         let prefix = parent.isEmpty ? "" : parent + "/"
         var permitted = [String](), entriesByPath = [String: Entry]()
         for entry in archive.entries where entry.type == .file && entry.path.hasPrefix(prefix) {
             let relative = String(entry.path.dropFirst(prefix.count))
-            if allowedResource(relative) {
+            if !ignoredSourcePath(relative), allowedResource(relative) {
                 permitted.append(relative); entriesByPath[relative] = entry
             }
         }
@@ -152,57 +234,57 @@ enum RimeSchemeImportService {
             }
             try checkUserDictionaryReferences(effective, path: path, paths: paths)
         }
-        let preferred = configurationNodes["default.yaml"]?["schema_list"]?.array().compactMap { $0["schema"]?.string } ?? []
+        // Read upstream selection intent, without installing its global preferences.
+        var preferred = configurationNodes["default.yaml"]?["schema_list"]?.array().compactMap { $0["schema"]?.string } ?? []
+        if let custom = archive.entries.first(where: { $0.path == prefix + "default.custom.yaml" }) {
+            let node = try yaml(archive.contents(custom, limit: maximumConfigurationSize), path: "default.custom.yaml")
+            if let list = node["patch"]?["schema_list"]?.array() { preferred = list.compactMap { $0["schema"]?.string } }
+        }
+        if let manifest = configurationNodes["rimes-package.yaml"]?["rimes_package"] {
+            guard manifest["format"]?.string == "1" else { throw invalid("方案包清单版本不受支持，请更新灵犀输入法后再导入。") }
+            if let ids = manifest["recommended_schemes"]?.array(of: String.self) { preferred = ids }
+        }
         var candidates = [RimeSchemeCandidate]()
         for id in schemas.keys.sorted() {
             guard let node = schemas[id] else { continue }
-            let name = node["schema"]?["name"]?.string ?? id
+            var effective = configurationFields(node)
+            if let patch = configurationNodes[id + ".custom.yaml"]?["patch"] {
+                applyConfigurationPatch(patch, to: &effective)
+            }
+            let name = effective["schema/name"] ?? id
             guard !name.isEmpty, name.count <= 120 else { throw invalid("方案名称须为 1–120 个字符：\(id)。") }
-            let dependencies = node["schema"]?["dependencies"]?.array(of: String.self) ?? []
+            let dependencies = effective.keys.filter { $0.hasPrefix("schema/dependencies/@") }.sorted().compactMap { effective[$0] }
             var issues = [String](), notes = [String]()
             for dependency in dependencies {
                 if !validID(dependency) || schemas[dependency] == nil { issues.append("缺少依赖方案 \(dependency).schema.yaml。") }
             }
-            let patch = configurationNodes[id + ".custom.yaml"]
-            if let overridden = patch?["patch"]?["schema/schema_id"]?.string, overridden != id {
-                issues.append("自定义补丁不能更改 schema_id。")
-            }
-            for inspected in [node, patch].compactMap({ $0 }) {
-                for (key, value) in scalarFields(inspected) {
-                    if key == "dictionary" || key.hasSuffix("/dictionary") {
-                        guard !value.isEmpty else { continue }
-                        guard validResourceID(value) else { throw invalid("词典引用标识不合法：\(id)。") }
-                        if dictionaryHeaders[value] == nil {
-                            if key.hasPrefix("translator/") || inspected["translator"]?["dictionary"]?.string == value {
-                                issues.append("缺少主词典 \(value).dict.yaml。")
-                            } else { notes.append("辅助配置引用未随包提供的词典 \(value)；部署后需验证对应反查功能。") }
-                        } else {
-                            try checkDictionary(value, headers: dictionaryHeaders, stack: [], checked: &issues)
+            if effective["schema/schema_id"] != id { issues.append("自定义补丁不能更改 schema_id。") }
+            // Inspect the effective values, not both an overridden base dictionary and
+            // its replacement. Native deployment remains the final configuration compiler.
+            for (key, value) in effective.sorted(by: { $0.key < $1.key }) {
+                let leaf = key.split(separator: "/").last.map(String.init) ?? key
+                if leaf == "dictionary", !value.isEmpty {
+                    guard validResourceID(value) else { throw invalid("词典引用标识不合法：\(id)。") }
+                    if dictionaryHeaders[value] == nil {
+                        if key == "translator/dictionary" { issues.append("缺少主词典 \(value).dict.yaml。") }
+                        else { notes.append("辅助配置引用未随包提供的词典 \(value)；部署后需验证对应反查功能。") }
+                    } else { try checkDictionary(value, headers: dictionaryHeaders, stack: [], checked: &issues) }
+                }
+                if leaf == "import_preset", !value.isEmpty {
+                    guard validID(value) else { throw invalid("预设引用标识不合法：\(id)。") }
+                    if value != "default", !paths.contains(value + ".yaml") { issues.append("缺少预设 \(value).yaml。") }
+                }
+                if value.hasPrefix("lua_"), value.contains("@") {
+                    let parts = value.split(separator: "@", omittingEmptySubsequences: false)
+                    if parts.count > 1, parts[1].hasPrefix("*") {
+                        let members = parts[1].dropFirst().split(separator: "*", omittingEmptySubsequences: false).map(String.init)
+                        guard let module = members.first, !module.isEmpty,
+                              members.dropFirst().allSatisfy({ validID($0) && !$0.contains(".") && !$0.contains("-") }) else {
+                            throw invalid("Lua 组件引用不合法：\(value)。")
                         }
-                    }
-                    if key == "import_preset" || key.hasSuffix("/import_preset") {
-                        guard validID(value) else { throw invalid("预设引用标识不合法：\(id)。") }
-                        if value != "default", !paths.contains(value + ".yaml") { issues.append("缺少预设 \(value).yaml。") }
-                    }
-                    if key == "prism" || key.hasSuffix("/prism") {
-                        if !value.isEmpty, !validID(value) { throw invalid("词典缓存／用户词典标识不合法：\(id)。") }
-                    }
-                    if key == "opencc_config" || key.hasSuffix("/opencc_config") {
-                        if !value.isEmpty { try checkRelativePath(value) }
-                    }
-                    if key == "__include" || key == "__patch" || key.hasSuffix("/__include") || key.hasSuffix("/__patch") {
-                        try checkReference(value, paths: paths)
-                    }
-                    if value.hasPrefix("lua_"), value.contains("@") {
-                        let parts = value.split(separator: "@", omittingEmptySubsequences: false)
-                        if parts.count > 1, parts[1].hasPrefix("*") {
-                            let module = String(parts[1].dropFirst())
-                            let modulePath = try luaPath(module)
-                            if !paths.contains(modulePath) { issues.append("缺少 Lua 组件 \(modulePath)。") }
-                        } else if !paths.contains("rime.lua") {
-                            issues.append("旧式 Lua 组件 \(value) 需要包内 rime.lua。")
-                        }
-                    }
+                        let modulePath = try luaPath(module)
+                        if !hasLuaModule(modulePath, paths: paths) { issues.append("缺少 Lua 组件 \(modulePath)。") }
+                    } else if !paths.contains("rime.lua") { issues.append("旧式 Lua 组件 \(value) 需要包内 rime.lua。") }
                 }
             }
             candidates.append(.init(id: id, name: name, dependencies: dependencies, warnings: unique(notes),
@@ -212,22 +294,18 @@ enum RimeSchemeImportService {
             guard entry.uncompressedSize <= 1_024 * 1_024 else { throw invalid("Lua 文件 \(path) 超过 1 MB。") }
             let data = try archive.contents(entry, limit: 1_024 * 1_024)
             guard let text = String(data: data, encoding: .utf8) else { throw invalid("Lua 文件不是 UTF-8：\(path)。") }
-            let lines = text.split(separator: "\n").map(String.init)
-            for line in lines {
-                let active = line.trimmingCharacters(in: .whitespaces)
-                guard !active.hasPrefix("--") else { continue }
-                for module in matches(#"\brequire\s*(?:\(\s*)?["']([^"']+)["']"#, line)
-                    + matches(#"\bpcall\s*\(\s*require\s*,\s*["']([^"']+)["']"#, line) {
-                    let dependency = try luaPath(module)
-                    if !paths.contains(dependency) {
-                        if active.contains("pcall") || ["utf8", "math", "string", "table", "coroutine"].contains(module) {
-                            warnings.append("\(path) 的可选模块 \(module) 未随包提供，将使用脚本已有降级路径。")
-                        } else { throw invalid("Lua 必需模块缺失：\(path) → \(dependency)。") }
-                    }
+            let tokens = luaTokens(text)
+            for dependency in luaRequires(tokens) {
+                let modulePath = try luaPath(dependency.module)
+                if !hasLuaModule(modulePath, paths: paths), !["utf8", "math", "string", "table", "coroutine"].contains(dependency.module) {
+                    if dependency.optional {
+                        warnings.append("\(path) 的可选模块 \(dependency.module) 未随包提供，将使用脚本已有降级路径。")
+                    } else { throw invalid("Lua 必需模块缺失：\(path) → \(modulePath)。") }
                 }
-                if active.contains("os.execute") || active.contains("io.popen") || active.contains("package.loadlib") {
-                    unsupported.append("\(path)：桌面程序启动／系统命令不在 iOS 键盘中执行；相关工具不可用，输入处理器仍保留。")
-                }
+            }
+            let code = tokens.filter { !$0.literal }.map(\.value).joined(separator: " ")
+            if ["os . execute", "io . popen", "package . loadlib"].contains(where: code.contains) {
+                unsupported.append("\(path)：桌面程序启动／系统命令不在 iOS 键盘中执行；相关工具不可用，输入处理器仍保留。")
             }
         }
         // OpenCC assets may include unused legacy configs; report absent files without dropping
@@ -268,15 +346,17 @@ enum RimeSchemeImportService {
         }
         var dependencyOrder = [String](), visited = Set<String>()
         func visit(_ id: String, ancestors: Set<String>) throws {
-            guard !ancestors.contains(id), ancestors.count < 32 else { throw invalid("方案依赖存在循环或超过 32 层：\(id)。") }
-            guard !visited.contains(id) else { return }
+            // schema/dependencies is a build set, not recursive dictionary inclusion.
+            // Rime permits reciprocal reverse-lookup schemas and compiles each once.
+            guard !ancestors.contains(id), !visited.contains(id) else { return }
+            guard ancestors.count < 32 else { throw invalid("方案依赖超过 32 层：\(id)。") }
             guard let candidate = byID[id] else { throw invalid("缺少依赖方案 \(id)。") }
             guard candidate.blockingIssues.isEmpty else { throw invalid("依赖方案 \(id)：" + candidate.blockingIssues.joined(separator: "\n")) }
             for dependency in candidate.dependencies { try visit(dependency, ancestors: ancestors.union([id])) }
             visited.insert(id); dependencyOrder.append(id)
         }
         for id in selectedSchemaIDs { try visit(id, ancestors: []) }
-        guard digest(review.archiveData) == review.archiveSHA256 else { throw invalid("归档在检查后发生变化，请重新检查。") }
+        guard digest(review.archiveData) == (review.stagingSHA256 ?? review.archiveSHA256) else { throw invalid("归档在检查后发生变化，请重新检查。") }
         let archive = try CheckedArchive(review.archiveData)
         let id = UUID().uuidString
         let manager = FileManager.default
@@ -344,7 +424,9 @@ enum RimeSchemeImportService {
         if !path.contains("/") {
             return lower.hasSuffix(".yaml") || lower.hasSuffix(".txt") || lower == "rime.lua"
         }
-        if lower.hasPrefix("lua/") { return lower.hasSuffix(".lua") || lower.hasSuffix(".txt") || lower.hasSuffix(".json") }
+        if lower.hasPrefix("lua/") {
+            return lower.hasSuffix(".lua") || lower.hasSuffix(".txt") || lower.hasSuffix(".json") || lower.hasSuffix(".reverse.bin")
+        }
         if lower.hasPrefix("opencc/") {
             return [".json", ".txt", ".ocd", ".ocd2", ".lua"].contains { lower.hasSuffix($0) }
         }
@@ -370,11 +452,106 @@ enum RimeSchemeImportService {
     }
 
     private static func checkReference(_ value: String, paths: Set<String>) throws {
-        guard !value.hasPrefix("/"), !value.contains(".."), !value.contains("\\") else { throw invalid("配置引用不能指向方案目录之外。") }
-        if let colon = value.firstIndex(of: ":") {
-            let name = String(value[..<colon])
-            guard validID(name), paths.contains(name + ".yaml") else { throw invalid("缺少外部配置引用 \(name).yaml。") }
+        let reference = value.hasSuffix("?") ? String(value.dropLast()) : value
+        guard !reference.contains("\\"), !reference.split(separator: "/").contains(".."),
+              !reference.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else {
+            throw invalid("配置引用不能指向方案目录之外。")
         }
+        // `/punctuator` and `:/punctuator` refer to YAML nodes in the current
+        // resource. Only the part before ':' is a filesystem resource identifier.
+        if let colon = reference.firstIndex(of: ":") {
+            let name = String(reference[..<colon])
+            guard !name.isEmpty else { return }
+            let resource = name.hasSuffix(".yaml") ? String(name.dropLast(5)) : name
+            guard validResourceID(resource) else { throw invalid("配置资源引用不合法：\(name)。") }
+            if !value.hasSuffix("?"), !paths.contains(resource + ".yaml") {
+                throw invalid("缺少外部配置引用 \(resource).yaml。")
+            }
+        }
+    }
+
+    private static func ignoredSourcePath(_ path: String) -> Bool {
+        path.split(separator: "/").contains { component in
+            let value = component.lowercased()
+            return value.hasPrefix(".") || value == "__macosx" || value == "build" || value == "sync" || value.contains(".userdb")
+        }
+    }
+
+    private static func hasLuaModule(_ path: String, paths: Set<String>) -> Bool {
+        paths.contains(path) || paths.contains(String(path.dropLast(4)) + "/init.lua")
+    }
+
+    private struct LuaToken { let value: String; let literal: Bool }
+
+    /// A lexical scan, never evaluation: ignore comments and quoted source snippets.
+    /// Keep literal arguments so `require`, `require(...)` and pcall can be identified
+    /// without treating an unrelated pcall on the same line as an optional import.
+    private static func luaTokens(_ text: String) -> [LuaToken] {
+        let chars = Array(text.unicodeScalars)
+        var index = 0, tokens = [LuaToken]()
+        func longBracket(_ start: Int) -> (end: Int, value: String)? {
+            guard start < chars.count, chars[start] == "[" else { return nil }
+            var open = start + 1
+            while open < chars.count, chars[open] == "=" { open += 1 }
+            guard open < chars.count, chars[open] == "[" else { return nil }
+            let equals = open - start - 1
+            var cursor = open + 1
+            while cursor < chars.count {
+                if chars[cursor] == "]" {
+                    var close = cursor + 1
+                    while close < chars.count, chars[close] == "=" { close += 1 }
+                    if close < chars.count, close - cursor - 1 == equals, chars[close] == "]" {
+                        return (close + 1, String(String.UnicodeScalarView(chars[(open + 1)..<cursor])))
+                    }
+                }
+                cursor += 1
+            }
+            return (chars.count, "") // syntax validity is the engine's responsibility
+        }
+        while index < chars.count {
+            let char = chars[index]
+            if CharacterSet.whitespacesAndNewlines.contains(char) { index += 1; continue }
+            if char == "-", index + 1 < chars.count, chars[index + 1] == "-" {
+                if let block = longBracket(index + 2) { index = block.end }
+                else { while index < chars.count, chars[index] != "\n" { index += 1 } }
+                continue
+            }
+            if char == "'" || char == "\"" {
+                index += 1
+                var value = String.UnicodeScalarView()
+                var escaped = false
+                while index < chars.count, chars[index] != char {
+                    if chars[index] == "\\", index + 1 < chars.count {
+                        escaped = true
+                        index += 1 // escaped/dynamic module names are checked by the actual Lua runtime
+                    }
+                    value.append(chars[index]); index += 1
+                }
+                if index < chars.count { index += 1 }
+                tokens.append(.init(value: escaped ? "<escaped-string>" : String(value), literal: !escaped)); continue
+            }
+            if let block = longBracket(index) {
+                tokens.append(.init(value: block.value, literal: true)); index = block.end; continue
+            }
+            if CharacterSet.letters.contains(char) || char == "_" {
+                let start = index; index += 1
+                while index < chars.count, CharacterSet.alphanumerics.contains(chars[index]) || chars[index] == "_" { index += 1 }
+                tokens.append(.init(value: String(String.UnicodeScalarView(chars[start..<index])), literal: false))
+            } else { tokens.append(.init(value: String(char), literal: false)); index += 1 }
+        }
+        return tokens
+    }
+
+    private static func luaRequires(_ tokens: [LuaToken]) -> [(module: String, optional: Bool)] {
+        var result = [(module: String, optional: Bool)]()
+        for i in tokens.indices where !tokens[i].literal && tokens[i].value == "require" {
+            if i > 0, [".", ":"].contains(tokens[i - 1].value) { continue }
+            var next = i + 1
+            let optional = i >= 2 && tokens[i - 1].value == "(" && tokens[i - 2].value == "pcall" && !tokens[i - 2].literal
+            if next < tokens.count, tokens[next].value == (optional ? "," : "("), !tokens[next].literal { next += 1 }
+            if next < tokens.count, tokens[next].literal { result.append((tokens[next].value, optional)) }
+        }
+        return result
     }
 
     private static func luaPath(_ module: String) throws -> String {
@@ -541,7 +718,8 @@ enum RimeSchemeImportService {
                     guard let key = pair.key.string, !key.contains("/") else { continue }
                     walk(pair.value, path: path.isEmpty ? key : path + "/" + key)
                 }
-            case .sequence: break
+            case .sequence(let values):
+                for (index, value) in values.enumerated() { walk(value, path: path + "/@" + String(index)) }
             }
         }
         walk(root, path: "")
@@ -566,6 +744,17 @@ enum RimeSchemeImportService {
     }
     private static func applyConfigurationPatch(_ patch: Node, to fields: inout [String: String]) {
         func apply(_ node: Node, path: String, merge: Bool) {
+            if merge, case .sequence(let values) = node {
+                let indices = fields.keys.compactMap { key -> Int? in
+                    guard key.hasPrefix(path + "/@") else { return nil }
+                    return Int(key.dropFirst(path.count + 2).split(separator: "/").first ?? "")
+                }
+                let offset = (indices.max() ?? -1) + 1
+                for (index, value) in values.enumerated() {
+                    apply(value, path: path + "/@" + String(offset + index), merge: false)
+                }
+                return
+            }
             if merge, case .mapping(let values) = node {
                 edit(values, prefix: path, merge: true)
                 return
@@ -600,6 +789,13 @@ enum RimeSchemeImportService {
         guard !path.isEmpty, path.utf8.count <= 1_024, !path.hasPrefix("/"), !path.contains("\\"), !path.contains(":"),
               !parts.contains(".."), !parts.contains("."), !parts.dropLast().contains(""),
               !path.unicodeScalars.contains(where: CharacterSet.controlCharacters.contains) else { throw invalid("归档包含不安全的资源路径。") }
+        for part in parts where !part.isEmpty {
+            let base = part.split(separator: ".", omittingEmptySubsequences: false).first?.lowercased() ?? ""
+            let reserved = ["con", "aux", "nul", "prn"].contains(base) || base.range(of: "^(com|lpt)[1-9]$", options: .regularExpression) != nil
+            guard part.utf8.count <= 255, !part.hasSuffix("."), !part.hasSuffix(" "), !reserved else {
+                throw invalid("资源路径不能在五端通用：\(part)。")
+            }
+        }
     }
     private static func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
     private static func unique(_ values: [String]) -> [String] { var seen = Set<String>(); return values.filter { seen.insert($0).inserted } }
@@ -614,7 +810,7 @@ enum RimeSchemeImportService {
             archive = try Archive(data: data, accessMode: .read)
             var result = [Entry](), paths = Set<String>(), size: UInt64 = 0
             for entry in archive {
-                guard result.count < maximumEntries else { throw invalid("ZIP 超过 512 项。") }
+                guard result.count < maximumEntries else { throw invalid("ZIP 超过 4096 项。") }
                 try checkRelativePath(entry.path)
                 let normalized = entry.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")).precomposedStringWithCanonicalMapping.lowercased()
                 guard paths.insert(normalized).inserted else { throw invalid("ZIP 资源路径重复。") }
@@ -639,25 +835,29 @@ enum RimeSchemeImportService {
             return data
         }
         func dictionaryHeader(_ entry: Entry) throws -> Data {
-            struct HeaderComplete: Error {}
+            let progress = Progress()
             var header = Data(), completed = false
             do {
-                _ = try archive.extract(entry, bufferSize: 16_384) { chunk in
+                _ = try archive.extract(entry, bufferSize: 16_384, progress: progress) { chunk in
                     guard header.count <= maximumConfigurationSize - chunk.count else { throw invalid("词典头超过 512 KB：\(entry.path)。") }
                     header.append(chunk)
                     if let range = header.range(of: Data("\n...".utf8)),
                        header.count > range.upperBound,
                        [UInt8(9), UInt8(10), UInt8(13), UInt8(32)].contains(header[range.upperBound]) {
                         header = header.subdata(in: 0..<range.lowerBound)
-                        completed = true; throw HeaderComplete()
+                        completed = true
+                        progress.cancel()
                     }
                 }
-            } catch is HeaderComplete { /* Body remains unread until staging checks full CRC. */ }
+            } catch Archive.ArchiveError.cancelledOperation where completed {
+                // Use ZIPFoundation's cancellation contract for both stored and
+                // deflated entries. Staging still checks the complete body CRC.
+            }
             if !completed, header.contains(9) { throw invalid("词典缺少 YAML 结束标记：\(entry.path)。") }
             return header
         }
         static func directoryCount(_ data: Data) throws -> Int {
-            guard (22...maximumArchiveSize).contains(data.count) else { throw invalid("ZIP 为空、损坏或超过 64 MB。") }
+            guard (22...maximumArchiveSize).contains(data.count) else { throw invalid("ZIP 为空、损坏或超过 256 MB。") }
             func u16(_ n: Int) -> Int { Int(data[n]) | Int(data[n + 1]) << 8 }
             func u32(_ n: Int) -> UInt64 { UInt64(u16(n)) | UInt64(u16(n + 2)) << 16 }
             guard let end = stride(from: data.count - 22, through: max(0, data.count - 65_557), by: -1).first(where: {
@@ -666,7 +866,7 @@ enum RimeSchemeImportService {
             let count = u16(end + 10), length = u32(end + 12), offset = u32(end + 16)
             guard u16(end + 4) == 0, u16(end + 6) == 0, u16(end + 8) == count, count <= maximumEntries,
                   offset != 0xffffffff, length != 0xffffffff, offset + length == UInt64(end) else {
-                throw invalid("不支持分卷、ZIP64、超过 512 项或目录异常的 ZIP。")
+                throw invalid("不支持分卷、ZIP64、超过 4096 项或目录异常的 ZIP。")
             }
             var cursor = Int(offset)
             for _ in 0..<count {

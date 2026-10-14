@@ -1,0 +1,1 @@
+../../platforms/ios/App/RimeSchemeImportService.swift

@@ -23,6 +23,9 @@ Usage:
 
 Default prefix is $HOME/.local. System-wide install:
   sudo RIMES_IME_PREFIX=/usr install.sh
+An already-built tree can use --skip-build with the same configured prefix.
+Uninstall: uninstall.sh [--prefix DIR] [--dry-run]
+Debian/Ubuntu users should normally install the release .deb with apt instead.
 EOF
 }
 
@@ -30,10 +33,12 @@ SKIP_BUILD=0
 while (($# > 0)); do
     case "$1" in
         --prefix)
+            (($# >= 2)) && [[ -n "$2" && "$2" != --* ]] || { echo "--prefix requires a directory" >&2; exit 2; }
             PREFIX=$2
             shift 2
             ;;
         --build-dir)
+            (($# >= 2)) && [[ -n "$2" && "$2" != --* ]] || { echo "--build-dir requires a directory" >&2; exit 2; }
             BUILD_DIR=$2
             shift 2
             ;;
@@ -57,20 +62,24 @@ if (( SKIP_BUILD == 0 )); then
         "$SCRIPT_DIR/build.sh"
 fi
 
-DESTDIR="${DESTDIR:-}"
-cmake --install "$BUILD_DIR" --prefix "$PREFIX"
+WORK_DIR=$(mktemp -d /tmp/rimes-ime-install.XXXXXX)
+trap 'rm -rf "$WORK_DIR"' EXIT
 
 if [[ -z "$STAGE_DIR" ]]; then
-    STAGE_DIR=$(mktemp -d /tmp/rimes-ime-stage.XXXXXX)
-    trap 'rm -rf "$STAGE_DIR"' EXIT
+    STAGE_DIR="$WORK_DIR/data"
     python3 "$REPO_ROOT/scripts/platform-preview/preview.py" stage \
         --repo-root "$REPO_ROOT" \
         --output-dir "$STAGE_DIR"
 fi
 
-DATA_DEST="${DESTDIR}${PREFIX}/share/rimes/data"
+# Stage CMake and data together before changing the live prefix. The persistent
+# ownership manifest includes both sets, and survives deletion of the build tree.
+DESTDIR="$WORK_DIR/root" cmake --install "$BUILD_DIR" --prefix "$PREFIX"
+DATA_DEST="$WORK_DIR/root${PREFIX}/share/rimes/data"
 mkdir -p "$DATA_DEST"
 cp -a "$STAGE_DIR"/. "$DATA_DEST/"
+python3 "$SCRIPT_DIR/install_state.py" install --prefix "$PREFIX" \
+    --stage "$WORK_DIR/root" --build-dir "$BUILD_DIR"
 
 cat <<EOF
 Installed the RIMES Fcitx5 addon, Buffer workbench, and Capsule rail.
@@ -80,6 +89,8 @@ Installed the RIMES Fcitx5 addon, Buffer workbench, and Capsule rail.
   capsule: $PREFIX/libexec/rimes/rimes-capsule and $PREFIX/bin/rimes-capsule
   ctl:     $PREFIX/bin/rimes-buffer-ctl and $PREFIX/bin/rimes-capsule-ctl
   data:    $PREFIX/share/rimes/data
+  receipt: $PREFIX/share/rimes/ime-install-manifest.json
+Uninstall with: $SCRIPT_DIR/uninstall.sh --prefix "$PREFIX"
 Restart Fcitx5 (fcitx5 -r) and add "RIMES" in the input method list.
 Toggle Buffer with Ctrl+Shift+B and Capsule with Ctrl+Shift+V while RIMES is current.
 User schema/state lives in \$XDG_DATA_HOME/rimes, isolated from fcitx5-rime.

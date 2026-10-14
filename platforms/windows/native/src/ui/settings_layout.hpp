@@ -73,6 +73,7 @@ struct SettingsDraft {
   SettingsPage page = SettingsPage::kInput;
   int subpage = 0;
   int schema_index = 0;
+  std::wstring imported_schema;
   int theme_index = 0;
   int theme_detail = -1;
   // Keyboard focus: -1 none, 0..4 sidebar, 100+ scheme, 200+ theme.
@@ -196,7 +197,7 @@ struct SettingsLayout {
                   height_dip - 38.0f};
 
   const float gap = static_cast<float>(m.choice_gap_dip);
-  if (draft.page == SettingsPage::kInput && draft.subpage == 0) {
+  if (draft.page == SettingsPage::kInput && draft.subpage == 0 && draft.imported_schema.empty()) {
     const int columns = 3;
     const float card_h = static_cast<float>(m.choice_card_height_dip);
     const float card_w = (body_w - gap * (columns - 1)) / columns;

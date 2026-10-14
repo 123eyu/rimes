@@ -16,101 +16,58 @@ The tooling lives in [`scripts/input-schemes/`](../../scripts/input-schemes).
 
 ## How RIMES imports a scheme
 
-Only the iOS app imports third-party schemes today. Its importer is the contract every
-package is built against.
+The five frontends now expose the same **original ZIP / coded UTF-8 TXT or TSV** import contract.
+See [the portable import guide](../../docs/portable-scheme-import.md) for current limits,
+runtime requirements, and validation boundaries.
 
-| Platform | Import path | State |
+| Platform | Import path | Activation |
 |---|---|---|
-| iOS | Settings › “Rime 方案包与导入”: pick a ZIP, review, deploy, test, enable | The contract. [`RimeSchemeImportService.swift`](../../platforms/ios/App/RimeSchemeImportService.swift) |
-| macOS | None in the app. The F4 scheme list is reset to the five built-in schemes at startup | Packages are not consumed |
-| Android | None. Setup states that external scheme import is not available yet | Packages are not consumed |
-| Windows, Linux | No import in the app; both ship the built-in data set | Packages are not consumed |
+| iOS | Settings › Rime 方案包与导入 | Review, deploy, enable; reopen the keyboard |
+| macOS | Settings › 输入法 › 导入与管理方案 | Deploy, enable, restart the IME while retaining learning data |
+| Android | App settings › Rime 方案包与导入 | Deploy in a separate process, enable, reopen the keyboard |
+| Windows | Settings › 输入法 › 导入与管理方案 | Deploy, enable, save Buffer and restart RIMES |
+| Linux (RIMES Fcitx5 addon) | Fcitx5 input-method configuration or the 方案管理 desktop entry (`rimes-schemes`) | Deploy, enable, restart Fcitx5 |
 
-A package is a plain Rime data directory in a ZIP, so the same file will serve the other
-platforms when they gain an import path. Nothing in it is iOS-specific.
+The ZIP may have an outer repository directory. Standard `.schema.yaml`, source
+`.dict.yaml`, `.custom.yaml`, nested dictionaries, Lua modules and OpenCC resources stay
+in their original relative locations. Do not import another device's `build/`, `sync/`
+or user database. The source archive is not rewritten. Deployment happens in isolation;
+only a successfully compiled and loaded package can be enabled. Removal retains learning
+records. The old Linux **data preview** installer is separate from the Fcitx5 addon.
 
-The importer deploys a package as **both** the shared and the user data directory, with only
-the `default`, `lua` and `deployer` modules. Two consequences shape the format:
-
-- A package must be self-contained. Presets (`default`, `key_bindings`, `punctuation`,
-  `symbols`), dependency schemes and their dictionaries, the `essay` vocabulary, and OpenCC
-  configurations with their dictionaries all have to be inside it. The iOS engine ships no
-  OpenCC data of its own.
-- There is no octagram or predict plugin. Language models (`*.gram`) are not carried, and
-  Lua runs in a restricted runtime with a per-call budget.
+A source package must include its required dependencies. Current mobile engines do not
+include octagram/predict; ZIPs containing `.gram` models are diagnosed instead of silently
+dropping the model and calling the complete package supported. Keyboard layouts and
+frontend-specific Lua/native APIs are not portable merely because the scheme uses Rime.
 
 ## Package format, version 1
 
-```
-rimes-scheme-<id>-<yyyymmdd>.<commit7>.zip
-├── <schema_id>.schema.yaml        1–32, all at the archive root
-├── *.dict.yaml                    at the root; no subdirectories
-├── default.yaml                   schema_list = the recommended schemes of this package
-├── key_bindings.yaml  punctuation.yaml  symbols.yaml  …  presets the schemes reference
-├── essay.txt  custom_phrase.txt  …                     text tables the schemes reference
-├── rime.lua  lua/**               .lua, .txt, .json
-├── opencc/**                      .json, .txt, .ocd, .ocd2, .lua
-├── LICENSE-<owner>-<repo>.txt     one per upstream component that has a license file
-└── rimes-package.yaml             manifest: id, version, components, licenses, modifications
-```
+An optional `rimes-package.yaml` with `rimes_package.format: 1` supplies recommendations
+and provenance. Original upstream ZIPs without a manifest are accepted too. A recommended
+schema may depend on auxiliary schemas, but those dependencies do not become user-visible
+choices automatically. The catalog builder still records every upstream component, license
+and modification in its manifest.
 
-`rimes-package.yaml` records, for every file, which upstream repository and commit it came
-from and under which license, and lists every change made to an upstream file. The importer
-does not read it yet; it is there for people and for a future “about this package” screen.
+Current import limits: ZIP 256 MiB, one resource 128 MiB, total expanded 512 MiB, 4,096
+entries, 32 schemas, compression ratio at most 100×, configuration 512 KiB, Lua source 1 MiB,
+and deployed data 512 MiB. File paths must also be representable on Windows; links,
+traversal, case/Unicode-normalization collisions and reserved device names are rejected.
 
-Limits, all enforced by the importer and by `scheme_lint.py`:
+## Earlier catalog builds
 
-| Limit | Value |
-|---|---|
-| Archive size | 64 MB, no ZIP64, no encryption, no symbolic links |
-| One file, expanded | 32 MB, and at most 100× its compressed size |
-| All files, expanded | 128 MB |
-| Entries | 512 |
-| Schemes | 32, in one directory |
-| One configuration file (`*.yaml` other than dictionaries) | 512 KB, one document, depth 64, 40,000 nodes |
-| One Lua file | 1 MB, UTF-8 |
-| Deployed data (sources plus compiled tables) | 512 MB |
+`index.json` and its `verifiedWithImporter` values are **historical evidence for the
+recorded importer/runtime**, not a declaration that every record has passed on all five
+frontends. Keep those hashes and results until the packages are actually reverified.
 
-Never in a package: `default.custom.yaml`, `installation.yaml`, `user.yaml`, other
-frontends' settings (`squirrel`, `weasel`, `hamster`, `trime`, `ibus_rime`), `build/`,
-`sync/`, `*.userdb*`. The importer drops them anyway.
-
-Because `default.yaml` is part of every package, do not unzip one over an existing desktop
-Rime user directory: it would replace that directory's own `default.yaml`.
-
-## What the importer rejects that Rime accepts
-
-Running the importer over real upstream repositories shows it is stricter than librime in
-ten places. Stock `luna_pinyin`, `rime-ice` and `rime-combo-pinyin` are all rejected as
-published. The builder edits the affected files so the package imports, and records each
-edit in the manifest. Each of these could instead be relaxed in the importer; until then the
-edits are what makes the catalog usable.
-
-| Upstream construct | Importer | What the builder does |
-|---|---|---|
-| Optional reference to a file that is absent, `__patch: grammar:/hant?` (stock `luna_pinyin`) | Rejects the archive | Adds a placeholder file with the referenced node empty, so the patch is a no-op |
-| Schemes that depend on each other (`luna_pinyin` ↔ `stroke`) | Staging fails | Removes the edge pointing back at a scheme that is deployed anyway |
-| `__include: rime_ice.schema.yaml:/` (suffix spelled out) | Rejects the archive | Rewrites to `rime_ice.schema:/` |
-| Local reference written `/split_canonicalize` or `:/key_binder/custom_bindings?` | Rejects the archive | Rewrites to the bare path |
-| Resource ids in subdirectories, `import_tables: [cn_dicts/base]`, `user_dict: en_dicts/cn_en` | Rejects the archive | Moves the file to the root as `cn_dicts_base…` and rewrites the references |
-| Duplicate keys in one mapping | Rejects the archive | Removes the earlier one when Rime's reading (last wins) is unchanged; leaves duplicated `__patch`/`__include` alone |
-| Lua component `lua_x@*module*field` | Rejects the archive | Generates `lua/rimes_shims/…lua` returning that field and passes the original spelling as the name space |
-| A dictionary over 32 MB | Rejects the archive | Splits it at a line boundary into `name.partN` tables and extends `import_tables` |
-| An import table upstream leaves to the user (`*_custom`, `*user*`) | Blocks the scheme | Adds an empty table |
-| `require` in a Lua block comment (the sample `rime.lua` of librime-lua) | Rejects the archive for a missing module | Prefixes those lines with `--` inside the comment |
-
-One more is left alone because fixing it means editing executable code: the importer's
-`require` scan also matches the word inside a string literal. `expe:find("require") or
-expe:find("dofile")` in the current 星猫键道 calculator script is read as a module named
-`) or expe:find(`, and the archive is rejected.
-
-The table describes the importer whose SHA-256 is recorded as `verifiedWithImporter` in
-`index.json`. When the importer changes, run `verify` again: it names every package on which
-`scheme_lint.py` and the importer disagree, and the lint is then the one to correct.
-
-What packaging cannot fix is reported as a failed status instead: malformed YAML, a required
-dictionary or Lua module that upstream does not publish, a Lua script that exceeds the
-restricted runtime's budget, and anything that needs a custom librime build.
+The older builder/linter targets shipped iOS importers with tighter limits and applies
+compatibility transformations: placeholder optional references, flattened dictionaries,
+large-table splitting and Lua shims. It remains available for those old clients. New
+clients accept standard optional/local/`.yaml` references, reciprocal schema dependencies,
+dictionary subdirectories, `*module*member`, `module/init.lua`, and ordinary Lua comments
+and quoted examples directly. Prefer an original complete upstream ZIP when validating the
+new importer; do not use a repaired catalog package as proof that the original is accepted.
+Malformed YAML, missing required sources, unsupported native components and exceeded Lua
+budgets still need a clear diagnostic. A successful compile alone is not input acceptance.
 
 ## Catalog
 

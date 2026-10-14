@@ -9,6 +9,7 @@ struct EnginePaths {
     std::filesystem::path shared_data_dir;
     std::filesystem::path user_data_dir;
     std::filesystem::path log_dir;
+    std::string imported_schema;
 };
 
 // Resolves isolated RIMES directories. Environment overrides win:
@@ -16,6 +17,8 @@ struct EnginePaths {
 // User data defaults to $XDG_DATA_HOME/rimes — never ~/.local/share/fcitx5/rime
 // — so stock fcitx5-rime and this frontend do not share LevelDB locks.
 EnginePaths ResolveEnginePaths(const std::filesystem::path& install_shared_dir = {});
+
+std::filesystem::path SchemeLibraryRoot();
 
 bool EnsureDirectory(const std::filesystem::path& path, std::string* error) noexcept;
 

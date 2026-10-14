@@ -3,6 +3,25 @@ import ZIPFoundation
 @testable import RIMES
 
 final class RimeSchemeImportTests: XCTestCase {
+    func testCodedTextDictionaryStagesWithOriginalIdentity() throws {
+        let data = Data("\u{FEFF}# public fixture\n你好\tnihao\t100\n世界\tshijie\n".utf8)
+        let review = try RimeSchemeImportService.inspectTextDictionary(data: data, sourceName: "个人词库")
+        XCTAssertEqual(review.schemes.count, 1)
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: review.schemes.map(\.id), destinationRoot: destination)
+        XCTAssertEqual(staged.sourceDigest, review.archiveSHA256)
+        XCTAssertTrue(try String(contentsOf: staged.rootURL.appendingPathComponent(staged.schemaIDs[0] + ".dict.yaml")).contains("你好\tnihao\t100"))
+        for invalid in ["只有文字", "字\t拼音", "字\tabc\t-1", "字\tABC"] {
+            XCTAssertThrowsError(try RimeSchemeImportService.inspectTextDictionary(data: Data(invalid.utf8), sourceName: "bad"))
+        }
+    }
+
+    func testEscapedLuaModuleNamesAreLeftToNativeValidation() throws {
+        var files = fixture
+        files["lua/demo/topup.lua"] = Data(#"local x = require('demo.\116opup'); return {}"#.utf8)
+        XCTAssertNoThrow(try RimeSchemeImportService.inspect(data: archive(files), sourceName: "Lua escaped module"))
+    }
     func testInspectsSchemeIdentitySeparatelyFromFrontendLayout() throws {
         var files = fixture
         files["hamster.yaml"] = Data("keyboards: [{name: xingmao, rows: []}]".utf8)
@@ -253,16 +272,146 @@ final class RimeSchemeImportTests: XCTestCase {
 
     func testDeploymentDependencyOrderDoesNotExposeAuxiliarySchemasAsSelected() throws {
         var files = fixture
-        files["demo.schema.yaml"] = Data(schema.replacingOccurrences(of: "name: 测试音形", with: "name: 测试音形\n  dependencies: [aux]").utf8)
-        files["aux.schema.yaml"] = Data("schema: {schema_id: aux, name: 辅助}\ntranslator: {dictionary: demo}\n".utf8)
+        files["demo.schema.yaml"] = Data(schema.replacingOccurrences(of: "name: 测试音形", with: "name: 测试音形\n  dependencies: [helper]").utf8)
+        files["helper.schema.yaml"] = Data("schema: {schema_id: helper, name: 辅助}\ntranslator: {dictionary: demo}\n".utf8)
         let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "方案依赖")
         let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
         let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
         XCTAssertEqual(staged.schemaIDs, ["demo"])
-        XCTAssertEqual(staged.deploymentSchemaIDs, ["aux", "demo"])
-        files["aux.schema.yaml"] = Data("schema: {schema_id: aux, name: 辅助, dependencies: [demo]}\ntranslator: {dictionary: demo}\n".utf8)
+        XCTAssertEqual(staged.deploymentSchemaIDs, ["helper", "demo"])
+        files["helper.schema.yaml"] = Data("schema: {schema_id: helper, name: 辅助, dependencies: [demo]}\ntranslator: {dictionary: demo}\n".utf8)
         let cyclic = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "依赖循环")
-        XCTAssertThrowsError(try RimeSchemeImportService.stage(review: cyclic, selectedSchemaIDs: ["demo"], destinationRoot: destination))
+        let reciprocal = try RimeSchemeImportService.stage(review: cyclic, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        XCTAssertEqual(reciprocal.deploymentSchemaIDs, ["helper", "demo"])
+        XCTAssertEqual(reciprocal.schemaIDs, ["demo"])
+    }
+
+    func testUpstreamArchiveIgnoresFinderMetadataAndCompiledSchemasDuringRootDiscovery() throws {
+        var files = Dictionary(uniqueKeysWithValues: fixture.map { ("release/source/" + $0.key, $0.value) })
+        files["__MACOSX/release/source/._demo.schema.yaml"] = Data([0, 1, 2])
+        files["release/source/build/demo.schema.yaml"] = Data("compiled: true".utf8)
+        files["release/source/examples/other.schema.yaml"] = Data("example: true".utf8)
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "上游原包")
+        XCTAssertEqual(review.schemes.map(\.id), ["demo"])
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: staged.rootURL.appendingPathComponent("demo.schema.yaml").path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staged.rootURL.appendingPathComponent("build").path))
+        files["independent/other.schema.yaml"] = Data("schema: {schema_id: other}".utf8)
+        XCTAssertThrowsError(try RimeSchemeImportService.inspect(data: archive(files), sourceName: "多套独立根目录"))
+    }
+
+    func testRimeReferenceSpellingsRemainUnmodifiedAndOptionalReferencesDoNotBlock() throws {
+        for reference in ["/punctuator", ":/punctuator", "symbols.yaml:/punctuator", "absent:/punctuator?"] {
+            var files = fixture
+            files["symbols.yaml"] = Data("punctuator: {symbols: {}}".utf8)
+            let original = Data((schema + "\nextra: {__include: '\(reference)'}\n").utf8)
+            files["demo.schema.yaml"] = original
+            let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: reference)
+            let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+            let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+            XCTAssertEqual(try Data(contentsOf: staged.rootURL.appendingPathComponent("demo.schema.yaml")), original)
+        }
+        for reference in ["../outside:/x?", "/outside:/x?", "C:\\outside:/x?", "symbols:/../../x"] {
+            var files = fixture
+            files["demo.schema.yaml"] = Data((schema + "\nextra: {__include: '\(reference)'}\n").utf8)
+            XCTAssertThrowsError(try RimeSchemeImportService.inspect(data: archive(files), sourceName: reference))
+        }
+    }
+
+    func testCustomPatchReplacesMissingBaseDictionaryAndDependenciesBeforeChecking() throws {
+        var files = fixture
+        files["demo.schema.yaml"] = Data(schema.replacingOccurrences(of: "dictionary: demo", with: "dictionary: unshipped")
+            .replacingOccurrences(of: "name: 测试音形", with: "name: 测试音形\n  dependencies: [unshipped]").utf8)
+        files["demo.custom.yaml"] = Data("patch: {translator/dictionary: demo, schema/dependencies: [], schema/name: 补丁名称}\n".utf8)
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "覆盖配置")
+        XCTAssertEqual(review.schemes[0].name, "补丁名称")
+        XCTAssertEqual(review.schemes[0].dependencies, [])
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        files["demo.custom.yaml"] = Data("patch: {translator: {dictionary: missing}}\n".utf8)
+        let bad = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "真实缺失")
+        XCTAssertTrue(bad.schemes[0].blockingIssues.contains { $0.contains("missing.dict.yaml") })
+    }
+
+    func testLuaLexerSkipsQuotedExamplesAndLongCommentsButFindsRealImports() throws {
+        var files = fixture
+        files["lua/demo/topup.lua"] = Data(#"""
+        --[==[ require('unused.block') ]==]
+        local example = "require('unused.string')"
+        local long = [=[require('unused.long')]=]
+        -- require('unused.line')
+        local optional = pcall(require, 'optional.lib')
+        local core = require [[demo.core]]
+        return function() return 2 end
+        """#.utf8)
+        files["lua/demo/core/init.lua"] = Data("return {}".utf8)
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "标准 Lua")
+        XCTAssertTrue(review.warnings.contains { $0.contains("optional.lib") })
+        XCTAssertFalse(review.warnings.contains { $0.contains("unused") })
+        files["lua/demo/topup.lua"] = Data("pcall(print, 'safe'); local m = require('required.lib')".utf8)
+        XCTAssertThrowsError(try RimeSchemeImportService.inspect(data: archive(files), sourceName: "同行必需依赖"))
+    }
+
+    func testLuaComponentMemberSyntaxAndInitModulesArePreserved() throws {
+        var files = fixture
+        let source = schema.replacingOccurrences(of: "*demo/topup", with: "*demo.module*processor")
+        files["demo.schema.yaml"] = Data(source.utf8)
+        files["lua/demo/module/init.lua"] = Data("return {processor = function() return 2 end}".utf8)
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "Lua 子组件")
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        files.removeValue(forKey: "lua/demo/module/init.lua")
+        let missing = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "缺失子组件")
+        XCTAssertTrue(missing.schemes[0].blockingIssues.contains { $0.contains("demo/module.lua") })
+    }
+
+    func testManifestVersionAndGlobalSelectionIntentWithoutOverwritingPreferences() throws {
+        var files = fixture
+        files["default.yaml"] = Data("schema_list: []\n".utf8)
+        files["default.custom.yaml"] = Data("patch: {schema_list: [{schema: demo}], menu/page_size: 9}\n".utf8)
+        var review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "用户方案包")
+        XCTAssertTrue(review.schemes[0].recommended)
+        files["rimes-package.yaml"] = Data("rimes_package: {format: 1, recommended_schemes: []}\n".utf8)
+        review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "显式清单")
+        XCTAssertFalse(review.schemes[0].recommended)
+        files["rimes-package.yaml"] = Data("rimes_package: {format: 2}\n".utf8)
+        XCTAssertThrowsError(try RimeSchemeImportService.inspect(data: archive(files), sourceName: "未来版本"))
+    }
+
+    func testLargeSourceDictionaryDoesNotRequireSplittingAt32MB() throws {
+        var files = fixture
+        var dictionary = Data("---\nname: demo\nversion: '1'\n...\n".utf8)
+        dictionary.append(Data(repeating: 32, count: 33 * 1_024 * 1_024))
+        files["demo.dict.yaml"] = dictionary
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "大词典")
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        let size = try staged.rootURL.appendingPathComponent("demo.dict.yaml").resourceValues(forKeys: [.fileSizeKey]).fileSize
+        XCTAssertEqual(size, dictionary.count)
+    }
+
+    func testCompressedDictionaryHeaderCanStopBeforeTheBodyEnds() throws {
+        var files = fixture
+        let rows = (0..<8_000).map { "词条\($0)\taa\t\($0 + 1)" }.joined(separator: "\n")
+        let dictionary = Data(("---\nname: demo\nversion: '1'\n...\n" + rows + "\n").utf8)
+        files["demo.dict.yaml"] = dictionary
+        let review = try RimeSchemeImportService.inspect(data: archive(files, compressed: true), sourceName: "压缩词典")
+        XCTAssertEqual(review.schemes[0].blockingIssues, [])
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        XCTAssertEqual(try Data(contentsOf: staged.rootURL.appendingPathComponent("demo.dict.yaml")), dictionary)
+    }
+
+    func testLuaReverseLookupDataIsStagedButCompiledSchemaCachesAreNot() throws {
+        var files = fixture
+        let bytes = Data([0x52, 0x49, 0x4d, 0x45])
+        files["lua/data/charset.reverse.bin"] = bytes
+        files["build/demo.table.bin"] = bytes
+        let review = try RimeSchemeImportService.inspect(data: archive(files), sourceName: "字符集数据")
+        let destination = temporaryDirectory(); defer { try? FileManager.default.removeItem(at: destination) }
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: destination)
+        XCTAssertEqual(try Data(contentsOf: staged.rootURL.appendingPathComponent("lua/data/charset.reverse.bin")), bytes)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: staged.rootURL.appendingPathComponent("build/demo.table.bin").path))
     }
 
     private var schema: String {
@@ -280,6 +429,14 @@ final class RimeSchemeImportTests: XCTestCase {
           alphabet: abcdefghijklmnopqrstuvwxyz
         """
     }
+    func testPortablePathsAndUnavailableModelsAreDiagnosed() throws {
+        for path in ["CON.txt", "dir/aux.yaml", "word . ", "model.gram"] {
+            var files = fixture
+            files[path] = Data("fixture".utf8)
+            XCTAssertThrowsError(try RimeSchemeImportService.inspect(data: archive(files), sourceName: "portable"), path)
+        }
+    }
+
     private var fixture: [String: Data] {
         ["demo.schema.yaml": Data(schema.utf8),
          "demo.dict.yaml": Data("---\nname: demo\nversion: '1'\n...\n示例\taa\n".utf8),

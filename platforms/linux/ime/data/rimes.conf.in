@@ -4,4 +4,4 @@ Icon=rimes
 Label=RIMES
 LangCode=zh_CN
 Addon=rimes
-Configurable=False
+Configurable=True

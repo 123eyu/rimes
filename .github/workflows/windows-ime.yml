@@ -8,6 +8,8 @@ on:
     branches: [main]
     paths:
       - 'platforms/windows/**'
+      - 'Shared/SchemeImport/**'
+      - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
       - 'scripts/prepare-official-plugins.py'
@@ -23,6 +25,8 @@ on:
     branches: [main]
     paths:
       - 'platforms/windows/**'
+      - 'Shared/SchemeImport/**'
+      - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
       - 'scripts/prepare-official-plugins.py'
@@ -35,6 +39,15 @@ on:
       - 'rime-data/**'
       - 'scripts/platform-preview/**'
   workflow_dispatch:
+    inputs:
+      package_preview:
+        description: Build a complete EXE after both architectures and typing tests pass
+        type: boolean
+        default: false
+      package_version:
+        description: Package version matching native/VERSION, with optional -preview.N
+        type: string
+        default: ''
 
 permissions:
   contents: read
@@ -63,6 +76,9 @@ jobs:
       - name: Prepare pinned official plugin sources
         working-directory: ${{ github.workspace }}
         run: python scripts/prepare-official-plugins.py
+
+      - name: Freeze package source bytes
+        run: python platforms/windows/scripts/freeze-source.py
 
       - name: Test native shared-data staging
         shell: pwsh
@@ -135,9 +151,52 @@ jobs:
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesSandboxProbe.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesAppContainerLauncher.exe
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesTsfTestHost.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesProductProbe.exe
+            platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/build-identity.json
             platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/rimes-windows-registration.json
           if-no-files-found: error
           retention-days: 14
+
+  package:
+    name: Complete Windows installer
+    needs: [build-and-test, e2e-typing]
+    runs-on: windows-2022
+    timeout-minutes: 30
+    steps:
+      - name: Checkout package source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: true
+          persist-credentials: false
+      - name: Prepare pinned official plugin sources
+        run: python scripts/prepare-official-plugins.py
+      - name: Verify package source identity
+        run: python platforms/windows/scripts/freeze-source.py
+      - name: Download x64 binaries
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: RIMES-Windows-IME-UNSIGNED-x64-${{ github.sha }}
+          path: platforms/windows/native/out/build/windows-x64/Release
+      - name: Download x86 binaries
+        uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16 # v4.1.8
+        with:
+          name: RIMES-Windows-IME-UNSIGNED-x86-${{ github.sha }}
+          path: platforms/windows/native/out/build/windows-x86/Release
+      - name: Build and verify complete EXE
+        shell: powershell
+        env:
+          PACKAGE_VERSION: ${{ inputs.package_version }}
+        run: |
+          $version = $env:PACKAGE_VERSION
+          if (-not $version) { $version = (Get-Content platforms/windows/native/VERSION -Raw).Trim() }
+          ./platforms/windows/scripts/New-RimesCiPackage.ps1 -Version $version -OutputDirectory "$env:RUNNER_TEMP/rimes-complete-package"
+      - name: Upload installable package and checksums
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: RIMES-Windows-release-${{ github.sha }}
+          path: ${{ runner.temp }}/rimes-complete-package/delivery/*
+          if-no-files-found: error
+          retention-days: 30
           compression-level: 6
 
   e2e-typing:

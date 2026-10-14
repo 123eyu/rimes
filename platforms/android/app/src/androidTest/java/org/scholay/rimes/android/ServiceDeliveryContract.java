@@ -89,12 +89,87 @@ final class ServiceDeliveryContract {
             contract.clearPostedEngineResult(instrumentation);
             contract.clearRunningPlugin(instrumentation);
             contract.pendingDeleteRemainsOrdered(instrumentation);
+            contract.importedSessionBoundary(instrumentation,false);
+            contract.importedSessionBoundary(instrumentation,true);
+            for(boolean reset:new boolean[]{false,true})
+                for(boolean nine:new boolean[]{false,true}) contract.importedLayoutFallback(instrumentation,reset,nine);
         } catch(Throwable error) { throw new AssertionError("Service settings contract failed",error); }
         return contract.checks;
     }
 
     private void check(boolean condition,String label) {
         checks++; if(!condition) throw new AssertionError(label);
+    }
+
+    private void importedSessionBoundary(Instrumentation instrumentation,boolean privateMode) throws Exception {
+        AtomicReference<Fixture> reference=new AtomicReference<>();
+        RecordingEngine engine=new RecordingEngine("");engine.allowInitialize=privateMode;
+        java.io.File temporary=java.nio.file.Files.createTempDirectory(context.getCacheDir().toPath(),"import-private-fixture").toFile();
+        try {
+            onMain(instrumentation,() -> {
+                Fixture fixture=new Fixture(false);reference.set(fixture);
+                set(fixture.service,"engine",engine);set(fixture.service,"ready",true);set(fixture.service,"session",1L);
+                set(fixture.service,"importedEngineActive",true);
+                set(fixture.service,"importedScheme",new RimeSchemeStore.Selection("fixture","demo","Demo",temporary));
+                set(fixture.service,"builtinResources",new java.io.File(temporary,"builtin"));
+                set(fixture.service,"builtinUser",new java.io.File(temporary,"builtin-user"));
+                if(privateMode) set(fixture.service,"privateImportedUser",temporary);
+                invoke(fixture.service,"endTarget",new Class<?>[0]);
+            });
+            engineIdle(instrumentation);
+            check(engine.destroyed.get()==1 && engine.creates.get()==0,"field end destroys only its owned session");
+            check(engine.initializations.get()==(privateMode?1:0),"ordinary field end keeps dictionaries loaded; private field closes its environment");
+            check(temporary.exists()!=privateMode,"only private temporary data is removed at the field boundary");
+        } finally {
+            onMain(instrumentation,() -> {if(reference.get()!=null) reference.get().close();});
+            engineIdle(instrumentation);
+            org.scholay.rimes.core.RimeSchemeArchive.remove(temporary);
+        }
+    }
+
+    private void importedLayoutFallback(Instrumentation instrumentation,boolean reset,boolean nine) throws Exception {
+        AtomicReference<Fixture> reference=new AtomicReference<>();
+        RecordingEngine engine=new RecordingEngine("");engine.allowInitialize=true;
+        String original=nine?"demo_t9":"demo",optional=nine?"demo":"demo_t9";
+        engine.rejectedSchema=optional;
+        java.io.File resources=java.nio.file.Files.createTempDirectory(context.getCacheDir().toPath(),"import-layout-fixture").toFile();
+        try {
+            java.io.File build=new java.io.File(resources,"build");java.nio.file.Files.createDirectories(build.toPath());
+            for(String id:new String[]{"demo","demo_t9"}) {
+                String yaml="schema:\n  schema_id: "+id+"\nengine:\n  translators: [script_translator]\ntranslator:\n  dictionary: words\nspeller:\n  alphabet: abcdefghijklmnopqrstuvwxyz23456789\n  delimiter: \"'\"\n  algebra:\n    - erase/^xx$/\n";
+                if(id.endsWith("_t9")) yaml+="    - xlit/abcdefghijklmnopqrstuvwxyz/22233344455566677778889999/\n";
+                java.nio.file.Files.write(new java.io.File(build,id+".schema.yaml").toPath(),yaml.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+            }
+            onMain(instrumentation,() -> {
+                Fixture fixture=new Fixture(false);reference.set(fixture);
+                RimeSchemeStore.Selection imported=new RimeSchemeStore.Selection("fixture",original,"Demo",resources);
+                imported.layouts=org.scholay.rimes.core.ImportedKeyboardLayouts.read(resources,original);
+                set(fixture.service,"importedScheme",imported);
+                set(fixture.service,"engine",engine);set(fixture.service,"ready",true);set(fixture.service,"session",1L);
+                set(fixture.service,"layout",nine?"qwerty":"nineKey");
+                if(reset) invoke(fixture.service,"resetEngine",new Class<?>[0]);
+                else invoke(fixture.service,"settleAndSwitch",new Class<?>[]{Runnable.class},(Runnable)() -> {});
+            });
+            engineIdle(instrumentation);
+            onMain(instrumentation,() -> {
+                Fixture fixture=reference.get();
+                check(engine.selections.get()==2 && original.equals(engine.selected),"unavailable optional variant returns to the activated schema");
+                check(!(Boolean)get(fixture.service,"failed") && (Boolean)get(fixture.service,"ready"),"fallback preserves a usable engine");
+                check((Boolean)invoke(fixture.service,"nineKeyEngine",new Class<?>[0])==nine,"visible layout follows the schema that actually loaded");
+                engine.rejectedSchema=null;
+                invoke(fixture.service,"chooseLayout",new Class<?>[]{String.class},nine?"qwerty":"nineKey");
+            });
+            engineIdle(instrumentation);
+            onMain(instrumentation,() -> {
+                Fixture fixture=reference.get();
+                check(engine.selections.get()==3 && optional.equals(engine.selected),"tapping the saved but unloaded layout retries its optional schema");
+                check((Boolean)invoke(fixture.service,"nineKeyEngine",new Class<?>[0])!=nine,"successful retry updates the visible layout");
+            });
+        } finally {
+            onMain(instrumentation,() -> {if(reference.get()!=null) reference.get().close();});
+            engineIdle(instrumentation);
+            org.scholay.rimes.core.RimeSchemeArchive.remove(resources);
+        }
     }
 
     private void rejectThenRetry(boolean plugin,boolean all) throws Exception {
@@ -600,6 +675,7 @@ final class ServiceDeliveryContract {
             check(service.getCurrentInputConnection()==connection,"public framework bind installs the exact fake connection");
             set(service,"target",connection); set(service,"selection",7); set(service,"selectionStart",7);
             set(service,"preferences",preferences); set(service,"settings",settings); set(service,"pluginExecutor",executor);
+            set(service,"schemeStore",new RimeSchemeStore(new java.io.File(pluginContext.getFilesDir(),"scheme-library")));
             set(service,"cometSettings",new OpenAiSettings(preferences));
             preferences.registerOnSharedPreferenceChangeListener((SharedPreferences.OnSharedPreferenceChangeListener)get(service,"preferenceListener"));
             invoke(service,"restoreSettings",new Class<?>[0]);
@@ -684,19 +760,25 @@ final class ServiceDeliveryContract {
     private static final class RecordingEngine implements RimeEngine {
         final AtomicInteger snapshots=new AtomicInteger(),clears=new AtomicInteger(),selections=new AtomicInteger();
         final AtomicInteger creates=new AtomicInteger(),destroyed=new AtomicInteger(),keys=new AtomicInteger();
+        final AtomicInteger initializations=new AtomicInteger();
+        boolean allowInitialize;
         final List<Integer> processed=new ArrayList<>();
         final ArrayDeque<Integer> plannedKeys=new ArrayDeque<>();
         final ArrayDeque<Snapshot> plannedResults=new ArrayDeque<>();
         volatile Snapshot current;
         volatile String selected="";
+        String rejectedSchema;
         RecordingEngine(String raw) { current=new Snapshot(true,raw,raw,raw.length(),"",new String[0],new String[0],0,0,true); }
         synchronized void plan(int key,Snapshot result) { plannedKeys.add(key); plannedResults.add(result); }
         private void offMain() { if(Looper.myLooper()==Looper.getMainLooper()) throw new AssertionError("engine policy operation ran on main"); }
-        public void initialize(String system,String user) { throw new AssertionError("fixture cannot initialize a native engine"); }
+        public void initialize(String system,String user) {
+            offMain();initializations.incrementAndGet();
+            if(!allowInitialize) throw new AssertionError("fixture cannot initialize a native engine");
+        }
         // Explicitly synthetic session IDs let the real service reset its worker state; no JNI is loaded.
         public long createSession() { offMain(); current=Snapshot.EMPTY; return 100+creates.incrementAndGet(); }
         public void destroySession(long session) { offMain(); destroyed.incrementAndGet(); }
-        public boolean selectSchema(long session,String schema) { offMain(); selected=schema; selections.incrementAndGet(); return true; }
+        public boolean selectSchema(long session,String schema) { offMain(); selections.incrementAndGet(); if(schema.equals(rejectedSchema)) return false; selected=schema; return true; }
         public synchronized Snapshot processKey(long session,int key) {
             offMain();
             if(plannedKeys.isEmpty() || plannedKeys.remove()!=key) throw new AssertionError("fixture received an unplanned engine key");

@@ -178,7 +178,8 @@ bool NormalizeDllPath(const std::filesystem::path& path, std::wstring* output,
 }
 
 bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
-                        std::string* output, std::string* error) noexcept {
+                        std::string* output, std::string* error,
+                        const char* field, bool optional_comment = false) noexcept {
   try {
     if (value == nullptr) {
       output->clear();
@@ -193,7 +194,13 @@ bool CopyBoundedCString(const char* value, std::size_t maximum_bytes,
         static_cast<std::size_t>(static_cast<const char*>(terminator) - value);
     output->assign(value, length);
     if (!detail::IsValidUtf8(*output)) {
-      SetError(error, "librime returned invalid UTF-8");
+      if (optional_comment) {
+        // A Lua reverse-lookup annotation is display metadata. An invalid
+        // comment must not disable otherwise valid composition or candidates.
+        output->clear();
+        return true;
+      }
+      SetError(error, std::string("librime returned invalid UTF-8 in ") + field);
       return false;
     }
     return true;
@@ -302,8 +309,9 @@ class RimeEngine::Impl final {
       traits.distribution_code_name = "rimes";
       traits.distribution_version = "0.1.0";
       traits.app_name = "rime.rimes.windows";
-      traits.modules = nullptr;
-      traits.min_log_level = 3;
+      static const char* import_modules[] = {"default", "lua", "deployer", nullptr};
+      traits.modules = options.skip_maintenance ? import_modules : nullptr;
+      traits.min_log_level = options.skip_maintenance ? 2 : 3;
       traits.log_dir = log_dir_.empty() ? nullptr : log_dir_.c_str();
       traits.prebuilt_data_dir = nullptr;
       traits.staging_dir = nullptr;
@@ -312,7 +320,7 @@ class RimeEngine::Impl final {
       api_->initialize(&traits);
       initialized_ = true;
 
-      if (!RunMaintenanceLocked(options.full_maintenance_check, error)) {
+      if (!options.skip_maintenance && !RunMaintenanceLocked(options.full_maintenance_check, error)) {
         StopLocked();
         return false;
       }
@@ -501,6 +509,29 @@ class RimeEngine::Impl final {
     }
   }
 
+  bool DeployDefaultConfiguration(std::string* error) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      if (!healthy_ || !api_ || !api_->deploy_config_file ||
+          !api_->deploy_config_file("default.yaml", "config_version")) {
+        SetError(error, "librime could not compile default.yaml"); return false;
+      }
+      return true;
+    } catch (...) { SetError(error, "exception while compiling default.yaml"); return false; }
+  }
+
+  bool DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      const auto encoded = path.u8string();
+      const std::string filename(encoded.begin(), encoded.end());
+      if (!healthy_ || !api_ || !api_->deploy_schema || !api_->deploy_schema(filename.c_str())) {
+        SetError(error, "librime could not compile the schema"); return false;
+      }
+      return true;
+    } catch (...) { SetError(error, "exception while compiling a schema"); return false; }
+  }
+
   bool Configure(SessionId session, const std::string& schema, bool ascii,
                  bool traditional, bool punctuation,
                  std::string* error, unsigned candidate_count) noexcept {
@@ -606,7 +637,7 @@ class RimeEngine::Impl final {
     abi::InitializeVersionedStruct(&commit);
     if (api_->get_commit(session, &commit) != 0) {
       const bool copied = CopyBoundedCString(
-          commit.text, core::kMaxCommitTextBytes, &commit_text, error);
+          commit.text, core::kMaxCommitTextBytes, &commit_text, error, "commit");
       api_->free_commit(&commit);
       if (!copied) {
         return false;
@@ -649,7 +680,7 @@ class RimeEngine::Impl final {
       if (copied) {
         copied =
             CopyBoundedCString(context.composition.preedit,
-                               core::kMaxCompositionBytes, &composition, error);
+                               core::kMaxCompositionBytes, &composition, error, "preedit");
       }
       if (copied && static_cast<std::size_t>(context.composition.length) >
                         composition.size()) {
@@ -683,7 +714,7 @@ class RimeEngine::Impl final {
       if (copied && count > 0 && context.menu.select_keys != nullptr) {
         copied =
             CopyBoundedCString(context.menu.select_keys,
-                               kMaximumSelectKeysBytes, &select_keys, error);
+                               kMaximumSelectKeysBytes, &select_keys, error, "candidate keys");
       }
       const std::vector<std::string_view> scalar_labels =
           copied ? SplitUtf8Scalars(select_keys)
@@ -693,10 +724,10 @@ class RimeEngine::Impl final {
         OwnedCandidate& candidate = candidates[static_cast<std::size_t>(index)];
         copied = CopyBoundedCString(context.menu.candidates[index].text,
                                     core::kMaxCandidateTextBytes,
-                                    &candidate.text, error) &&
+                                    &candidate.text, error, "candidate text") &&
                  CopyBoundedCString(context.menu.candidates[index].comment,
                                     core::kMaxCandidateCommentBytes,
-                                    &candidate.comment, error);
+                                    &candidate.comment, error, "candidate comment", true);
         if (!copied) {
           break;
         }
@@ -705,7 +736,7 @@ class RimeEngine::Impl final {
             context.select_labels[index] != nullptr) {
           copied = CopyBoundedCString(context.select_labels[index],
                                       core::kMaxCandidateLabelBytes,
-                                      &candidate.label, error);
+                                      &candidate.label, error, "candidate label");
         } else if (static_cast<std::size_t>(index) < scalar_labels.size()) {
           candidate.label.assign(
               scalar_labels[static_cast<std::size_t>(index)]);
@@ -782,6 +813,14 @@ class RimeEngine::Impl final {
 RimeEngine::RimeEngine() : impl_(std::make_unique<Impl>()) {}
 
 RimeEngine::~RimeEngine() { Stop(); }
+
+bool RimeEngine::DeploySchema(const std::filesystem::path& path, std::string* error) noexcept {
+  return impl_->DeploySchema(path, error);
+}
+
+bool RimeEngine::DeployDefaultConfiguration(std::string* error) noexcept {
+  return impl_->DeployDefaultConfiguration(error);
+}
 
 bool RimeEngine::Start(const RimeEngineOptions& options,
                        std::string* error) noexcept {

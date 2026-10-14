@@ -1,0 +1,44 @@
+#!/usr/bin/env bash
+# This test installs/removes a system package. Run only on a disposable Linux runner.
+set -euo pipefail
+[[ "${RIMES_DEB_TEST_DISPOSABLE:-}" == 1 ]] || {
+    echo "error: requires a disposable runner and RIMES_DEB_TEST_DISPOSABLE=1" >&2
+    exit 1
+}
+[[ $# == 1 && -f "$1" ]] || { echo "Usage: deb_lifecycle.sh /path/to/package.deb" >&2; exit 2; }
+DEB=$(realpath "$1")
+if dpkg-query -W -f='${db:Status-Status}' fcitx5-rimes 2>/dev/null | grep -qx installed; then
+    echo "error: refusing to replace an existing fcitx5-rimes installation" >&2
+    exit 1
+fi
+[[ "$(dpkg-deb -f "$DEB" Package)" == fcitx5-rimes ]]
+VERSION=$(dpkg-deb -f "$DEB" Version)
+(cd "$(dirname "$DEB")" && sha256sum -c "$(basename "$DEB").sha256")
+WORK=$(mktemp -d)
+trap 'rm -rf "$WORK"' EXIT
+DATA="$WORK/user-data/rimes"
+mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule"
+printf '%s\n' 'keep learned dictionary' > "$DATA/rime_ice.userdb/CURRENT"
+printf '%s\n' 'keep imported learning' > "$DATA/schemes/learning/custom.userdb/CURRENT"
+printf '%s\n' 'keep notes' > "$DATA/capsule/note.md"
+(cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
+
+sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
+[[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
+mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
+[[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
+[[ -f /usr/share/rimes/data/default.yaml ]]
+for program in /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule; do
+    ldd "$program" > "$WORK/ldd.txt"
+    if grep -q 'not found' "$WORK/ldd.txt"; then
+        cat "$WORK/ldd.txt" >&2
+        exit 1
+    fi
+done
+sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install --reinstall -y "$DEB"
+sudo env XDG_DATA_HOME="$WORK/user-data" apt-get remove -y fcitx5-rimes
+for file in "${FILES[@]}"; do
+    [[ ! -f "$file" && ! -L "$file" ]] || { echo "Package file survived removal: $file" >&2; exit 1; }
+done
+(cd "$DATA" && sha256sum -c "$WORK/user-data.sha256")
+echo "deb install/reinstall/remove passed; user dictionaries, learning and notes preserved."

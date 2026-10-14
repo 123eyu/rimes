@@ -111,9 +111,16 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
                 rimes_lua_clear_error();
                 RimeSessionId session = rime_get_api()->create_session();
                 BOOL valid = session && rime_get_api()->select_schema(session, schema.UTF8String);
+                if (valid) {
+                    rime_get_api()->set_option(session, "ascii_mode", false);
+                    for (const char *sample : {"a", "nihao", "1234567890"}) {
+                        for (const char *key = sample; *key; ++key) rime_get_api()->process_key(session, *key, 0);
+                        rime_get_api()->clear_composition(session);
+                    }
+                }
+                if (session) rime_get_api()->destroy_session(session);
                 NSString *luaError = [NSString stringWithUTF8String:rimes_lua_last_error() ?: ""];
                 if (!valid || luaError.length) [failures addObject:[NSString stringWithFormat:@"%@: %@", schema, luaError.length ? luaError : @"无法加载已部署方案"]];
-                if (session) rime_get_api()->destroy_session(session);
             }
         } catch (const std::exception &exception) {
             [failures addObject:[NSString stringWithUTF8String:exception.what()] ?: @"Rime validation failed"];

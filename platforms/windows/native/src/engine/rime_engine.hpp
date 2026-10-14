@@ -22,6 +22,7 @@ struct RimeEngineOptions {
   // Deployment must not open a learned-word database merely for a smoke
   // session: LevelDB otherwise rotates its journal and manifest on upgrade.
   bool verify_input_session = true;
+  bool skip_maintenance = false;
 };
 
 // Broker-only librime owner. This class must never be linked into RimesTsf.dll:
@@ -48,6 +49,9 @@ class RimeEngine final {
   // started, not necessarily an error. A started/in-progress thread is always
   // joined before this method returns.
   bool RunMaintenance(bool full_check, std::string* error = nullptr) noexcept;
+
+  bool DeploySchema(const std::filesystem::path& schema, std::string* error = nullptr) noexcept;
+  bool DeployDefaultConfiguration(std::string* error = nullptr) noexcept;
 
   SessionId CreateSession(std::string* error = nullptr) noexcept;
   bool DestroySession(SessionId session, std::string* error = nullptr) noexcept;

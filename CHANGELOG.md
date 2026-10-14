@@ -4,6 +4,101 @@
 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。
 每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/rimes/releases)。
 
+## [v1.1.3](https://github.com/scholay/rimes/releases/tag/v1.1.3) — 2026-10-13
+
+### 合并的 PR
+
+- #126
+- #125
+- #124
+- #120
+- #114
+- #107
+- #101
+
+### 新功能
+
+- **linux:** add safe uninstall and versioned Debian release packages (21e5078)
+- unify source scheme imports across five platforms (e81557d)
+- **windows:** connect Buffer to local Codex CLI (c11876c)
+
+### 修复
+
+- **android:** support imported layouts and small dictionaries on device (d12b0fd)
+- resolve packaged scheme import verification failures (f0cc8d9)
+- **android:** retry an imported layout after fallback (d9b6e69)
+- complete imported workspace deployment and layout fallback (831e590)
+- **windows:** preserve input when optional scheme annotations are malformed (460a880)
+- **android:** pair imported T9 layouts and retain warm dictionaries (c7d4fb8)
+- **windows:** identify imported engine text failures without logging input (ce34428)
+- **windows:** separate scheme import and Buffer setting commands (d5a9928)
+- **windows:** align Buffer delivery, translation and settings (a5f0c55)
+- **ios:** clear host composition before deactivating keyboard (5db23ee)
+- **ci:** prepare librime data for candidate pagination smoke (613797a)
+- **ios:** stop height recovery when the keyboard loses focus (9cf1ceb)
+- **release:** recognize previously delivered patches during history reconciliation (7681dd0)
+- **schemes:** preserve verified Wanxiang portable packaging (23d1434)
+- **release:** allow independent iOS patch versions (107c60b)
+- **ios:** support imported nine-key layouts and recover host height (2ab62c7)
+- **ios:** answer the host's provisional keyboard height on first load (36017c0)
+- **windows:** align Buffer shortcuts and input lifecycle (bbf67b6)
+- **macos:** paginate all compact candidates with configurable count (1a554d4)
+- **windows:** correct matrix paging and input test isolation (5189012)
+- **windows:** align candidate navigation and tray icon with macOS (991ab1b)
+- **windows:** verify final original-user uninstall cleanup (6466aea)
+- **windows:** separate registrar diagnostics from uninstall results (820dd2e)
+- **windows:** make Buffer disposable during IME maintenance (ab483af)
+- **windows:** preserve uninstall recovery and isolate regression tests (77e3571)
+- **windows:** preserve idle keypad input and stage bug acceptance (b118502)
+- **windows:** guard setup handoff and signed bootstrapper (9ba4f21)
+- **macos:** align the Buffer to the input box on its first opening (3232e64)
+- **macos:** register the input source system-wide at install (5396279)
+- **macos:** stop the installer watchdog from killing RIMES during activation (087bcf4)
+- **ios:** show effective layout after scheme import (5c94abc)
+- **android:** simplify Buffer controls and translate automatically (23f1c75)
+- **windows:** integrate preview.5 bug fixes and Buffer geometry (e56851b)
+- **windows:** separate machine installation from original-user setup (31a63cd)
+- **windows:** defer Buffer restoration until Settings closes (9fd1e72)
+- **windows:** constrain native Buffer placement beneath Settings (122febd)
+- **windows:** keep settings above the retained Buffer (0478e08)
+- **windows:** retain TSF while display enumerators escape (be34f80)
+- **windows:** keep settings independent of topmost Buffer (2dafbda)
+- **windows:** isolate TSF from host MSVC runtime (a8054cc)
+- **windows:** retain verified caret when TSF geometry is unavailable (eb10c66)
+
+### 文档
+
+- record iOS build 54 convergence and lifecycle regression (bc5e43d)
+- record final iOS and CI convergence validation (1fbf2ca)
+- record branch convergence and accepted Windows fixes (506acdb)
+- **readme:** update star benefits and add QQ group (504b3a2)
+- **windows:** align evidence checksums with repository line endings (7c890e8)
+- **windows:** record native placement and close validation (98ace07)
+- **windows:** record verified Settings overlap follow-up (f33b483)
+- **windows:** credit PR105 and record round-two validation (adf0654)
+- **release:** publish verified macOS and Android download records (439e093)
+- preserve exact package identities and remaining release gates (ab248ed)
+- record staged macOS and Windows upgrade checks (d986d1f)
+- record Android 1.1.1 public delivery (f17e07e)
+
+### 维护
+
+- **android:** retain instrumentation status in raw test results (3fbca89)
+- **android:** provision import fixtures without root access (ab8386e)
+- verify packaged macOS imports and locate Android platform tools (954c05e)
+- prepare 1.1.3 installers with verified portable scheme imports (2ea94e3)
+- **windows:** build complete installers with scheme import verification (1b39d88)
+- **schemes:** cover common input families and native confirmation (a105024)
+- **ios:** publish current cold-start fixes as build 55 (ea733ed)
+- **ios:** wait for streamed answer completion on slow runners (fbf1d4c)
+- pin verified Windows plugin integration and record test handoff (6fa92f8)
+- **plugins:** expect the current Codex package version (e545b79)
+- **android:** verify pet controls and isolate upgrade checks (f94e1a9)
+
+### 其他
+
+- **windows:** prepare 1.1.1 community fixes (ca00424)
+
 ## [v1.1.1](https://github.com/scholay/rimes/releases/tag/v1.1.1) — 2026-10-07
 
 ### 合并的 PR

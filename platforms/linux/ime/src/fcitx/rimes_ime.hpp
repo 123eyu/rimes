@@ -3,6 +3,8 @@
 #include <atomic>
 #include <memory>
 
+#include <fcitx-config/configuration.h>
+#include <fcitx-config/option.h>
 #include <fcitx-utils/eventdispatcher.h>
 #include <fcitx-utils/handlertable.h>
 #include <fcitx/addonfactory.h>
@@ -19,6 +21,8 @@
 
 namespace fcitx {
 
+FCITX_CONFIGURATION(RimesConfiguration,
+    ExternalOption schemes{this, "Schemes", "导入与管理输入方案", "rimes-schemes"};)
 class RimesState;
 
 class RimesIme final : public InputMethodEngineV2 {
@@ -32,6 +36,9 @@ public:
     void reset(const InputMethodEntry& entry, InputContextEvent& event) override;
     std::string subMode(const InputMethodEntry& entry, InputContext& inputContext) override;
 
+    const Configuration* getConfig() const override { return &config_; }
+    const Configuration* getConfigForInputMethod(const InputMethodEntry&) const override { return &config_; }
+    const std::string& initialSchema() const { return imported_schema_; }
     Instance* instance() { return instance_; }
     rimes::linuxime::RimeEngine& engine() { return engine_; }
     FactoryFor<RimesState>& factory() { return factory_; }
@@ -48,6 +55,8 @@ private:
     void HandleDeployReady();
     void OnDeployReady();
 
+    RimesConfiguration config_;
+    std::string imported_schema_;
     Instance* instance_;
     rimes::linuxime::RimeEngine engine_;
     FactoryFor<RimesState> factory_;

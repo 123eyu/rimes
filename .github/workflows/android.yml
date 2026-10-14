@@ -3,10 +3,10 @@ name: Android checks
 on:
   pull_request:
     branches: [main]
-    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
+    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'scripts/input-schemes/repair-rime-table.py', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
   push:
     branches: [main]
-    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
+    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'scripts/input-schemes/repair-rime-table.py', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
   workflow_dispatch:
 
 permissions:
@@ -19,7 +19,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     defaults:
       run:
         working-directory: platforms/android
@@ -65,6 +65,56 @@ jobs:
         run: python3 resources/dictionary/verify-dictionary.py --check --apk app/build/outputs/apk/debug/app-debug.apk
       - name: Verify APK 16 KB alignment
         run: "$ANDROID_HOME/build-tools/36.0.0/zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk"
+      - name: Verify original scheme import on Android emulator
+        timeout-minutes: 18
+        run: |
+          set -euo pipefail
+          sdkmanager="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          "$sdkmanager" 'platform-tools' 'emulator' 'system-images;android-35;google_apis;x86_64'
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
+          # The command-line tools and emulator do not share the runner's
+          # default AVD lookup path. Give both the same disposable location.
+          export ANDROID_USER_HOME="$RUNNER_TEMP/rimes-android"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          sudo chmod 666 /dev/kvm
+          echo no | "$ANDROID_HOME/cmdline-tools/latest/bin/avdmanager" create avd --name rimes-import --path "$ANDROID_AVD_HOME/rimes-import.avd" --package 'system-images;android-35;google_apis;x86_64'
+          test -f "$ANDROID_AVD_HOME/rimes-import.ini"
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fxq rimes-import
+          "$ANDROID_HOME/emulator/emulator" -avd rimes-import -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > .native/emulator.log 2>&1 &
+          emulator_pid=$!
+          cleanup_emulator() {
+            result=$?
+            if [[ "$result" != 0 ]]; then tail -n 100 .native/emulator.log; fi
+            adb -s emulator-5554 emu kill || true
+            return "$result"
+          }
+          trap cleanup_emulator EXIT
+          for attempt in $(seq 1 90); do
+            kill -0 "$emulator_pid"
+            [[ "$(adb -s emulator-5554 get-state 2>/dev/null || true)" == device ]] && break
+            sleep 2
+          done
+          test "$(adb -s emulator-5554 get-state)" = device
+          for attempt in $(seq 1 90); do
+            [[ "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" == 1 ]] && break
+            sleep 2
+          done
+          test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
+          adb -s emulator-5554 install -t app/build/outputs/apk/debug/app-debug.apk
+          adb -s emulator-5554 install -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          python3 ../../scripts/input-schemes/fetch_fixture.py .native/wanxiang-original.zip
+          adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug mkdir -p cache
+          # Stream the unchanged archive as the debuggable app's own UID;
+          # this also works on images without an adb-root service.
+          adb -s emulator-5554 shell -T 'run-as org.scholay.rimes.android.debug tee cache/wanxiang-original.zip >/dev/null' < .native/wanxiang-original.zip
+          expected_hash=$(sha256sum .native/wanxiang-original.zip | cut -d ' ' -f 1)
+          device_hash=$(adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug sha256sum cache/wanxiang-original.zip | cut -d ' ' -f 1)
+          test "$expected_hash" = "$device_hash"
+          # Raw results retain the final instrumentation code as well as stream output.
+          adb -s emulator-5554 shell am instrument -w -r -e mode scheme-import -e archive /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/scheme-import-emulator.log
+          grep -Fq 'PASS real JNI import' .native/scheme-import-emulator.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/scheme-import-emulator.log
       - name: Upload development APK and reports
         if: always()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -78,6 +128,8 @@ jobs:
             platforms/android/app/build/generated/rime/build-receipt.json
             platforms/android/app/build/generated/rime/assets/rime/manifest.json
             platforms/android/.native/engine-contract.log
+            platforms/android/.native/emulator.log
+            platforms/android/.native/scheme-import-emulator.log
           retention-days: 14
           if-no-files-found: warn
       # No publishing, production signing keys, device install or macOS release gate.

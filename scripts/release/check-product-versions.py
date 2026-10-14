@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check the four product anchors without modifying, building or publishing."""
+"""Check product anchors without modifying, building or publishing."""
 import argparse
 import json
 import plistlib
@@ -39,9 +39,17 @@ def check(root, android=None, windows=None, require_all=False):
             'Generated Xcode project marketing version drift')
     require(set(re.findall(r'CURRENT_PROJECT_VERSION = ([^;]+);', project)) == {build[0]},
             'Generated Xcode project build number drift')
+    linux = root / 'platforms/linux/ime'
+    linux_cmake = (linux / 'CMakeLists.txt').read_text()
+    require('file(READ "${CMAKE_CURRENT_SOURCE_DIR}/../../../VERSION" RIMES_PRODUCT_VERSION)' in linux_cmake
+            and 'project(RIMESLinuxIme VERSION ${RIMES_PRODUCT_VERSION}' in linux_cmake,
+            'Linux CMake must consume repository VERSION')
+    require('< "$REPO_ROOT/VERSION"' in (linux / 'scripts/package-deb.sh').read_text(),
+            'Linux deb must consume repository VERSION')
+    require(not (linux / 'VERSION').exists(), 'Linux must not keep an independent VERSION anchor')
     result = {'target': version, 'macos': {'version': version},
               'ios': {'version': ios_version, 'build': int(build[0])},
-              'linux': 'excluded; unchanged'}
+              'linux': {'version': version, 'releaseChannel': 'v*'}}
     if android:
         base = android / 'platforms/android'
         android_version = (base / 'VERSION').read_text().strip()

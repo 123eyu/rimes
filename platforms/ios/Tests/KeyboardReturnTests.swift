@@ -333,7 +333,11 @@ import RimesCore
     }
 
     func testNativeThemeUsesDotIncludingLegacySelection() throws {
+        let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 100, height: 100))
+        window.rootViewController = UIViewController(); window.makeKeyAndVisible()
+        defer { window.isHidden = true }
         let indicator = StatusLight(frame: CGRect(x: 0, y: 0, width: 40, height: 40))
+        window.rootViewController!.view.addSubview(indicator)
         for skin: StatusSkin in [.apple, .light] {
             indicator.skin = skin; indicator.layoutIfNeeded()
             let dot = try XCTUnwrap(indicator.layer.sublayers?.first { $0.name == "status.dot" })

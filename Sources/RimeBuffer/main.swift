@@ -4,6 +4,10 @@ import Carbon
 import Darwin
 import CRimeBridge
 
+if let status = MacRimeSchemeLibrary.deploymentCommand(CommandLine.arguments) {
+    exit(status)
+}
+
 // OpenSSH invokes this same executable as a narrowly scoped SSH_ASKPASS
 // helper. Handle that request before any smoke, installer, AppKit, or IMK
 // startup so the helper can return the saved password and terminate without
@@ -454,6 +458,7 @@ if StandaloneRimeCommandRules.requiresIsolatedUserDir(
         || CommandLine.arguments.contains("candidate-pagination-smoke")
         || CommandLine.arguments.contains("user-lexicon-bridge-smoke")
         || CommandLine.arguments.contains("external-schema-engine-smoke")
+        || CommandLine.arguments.contains("scheme-import-smoke")
         || CommandLine.arguments.contains("chord-keymap-engine-smoke")
         || CommandLine.arguments.contains("chord-ziranma-engine-smoke")
         || CommandLine.arguments.contains("yoyo-engine-smoke")),
@@ -649,6 +654,9 @@ if CommandLine.arguments.contains("global-hotkey-registration-smoke") {
     }
     defaults.removePersistentDomain(forName: suite)
     exit(installed ? 0 : 1)
+}
+if CommandLine.arguments.contains("scheme-import-smoke") {
+    exit(MacRimeSchemeLibrary.importSmoke(arguments: CommandLine.arguments) ? 0 : 1)
 }
 if CommandLine.arguments.contains("external-schema-engine-smoke") {
     exit(runExternalSchemaEngineSmokeTest() ? 0 : 1)
@@ -1425,6 +1433,7 @@ IMELog.reset("=== \(ProductIdentity.displayName) IME launch ===")
 let startupSchemaListURL = startupRimeUserDir.appendingPathComponent(
     "default.custom.yaml"
 )
+if MacRimeSchemeLibrary.shared.runtimePackage == nil {
 // Recreate only the active custom schema from the durable snapshot. Updating
 // the app or reseeding Rime data must never overwrite the user's keymap source.
 let startupChordProfile = ChordKeymapStore.shared.activeProfile
@@ -1468,6 +1477,7 @@ if SchemaListStore.enabledIDs(at: startupSchemaListURL)
         )
     }
 }
+}
 let connectionName = (Bundle.main.infoDictionary?["InputMethodConnectionName"] as? String)
     ?? "\(RimesIdentity.productName)_1_Connection"
 
@@ -1491,7 +1501,7 @@ _ = globalHotKeyController.setRuntimeEnabledForInputSource(
 )
 // Warm the engine so the first keystroke isn't slow / so failures surface early.
 _ = rimeEngine.start()
-if ChordExtensionStore.shared.isEnabled,
+if MacRimeSchemeLibrary.shared.runtimePackage == nil, ChordExtensionStore.shared.isEnabled,
    !ChordKeymapStore.shared.activeProfile.isBuiltIn {
     if ChordKeymapActivationCoordinator.verify(ChordKeymapStore.shared.activeProfile, engine: rimeEngine) {
         ChordKeymapActivationCoordinator.shared.clearRecoveryMessage()

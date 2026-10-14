@@ -80,6 +80,7 @@ bool BBRimeGetOption(uint64_t session, const char* option);
 void BBRimeSetOption(uint64_t session, const char* option, bool value);
 bool BBRimeSelectSchema(uint64_t session, const char* schemaId);
 bool BBRimeDeploy(void);
+bool BBRimeDeploySchemaFile(const char* path);
 
 // Atomically replace a private session's raw input, highlight each current-page
 // choice, copy its complete commit preview into caller-owned fixed-stride

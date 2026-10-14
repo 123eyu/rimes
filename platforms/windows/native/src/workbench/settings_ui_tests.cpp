@@ -1097,16 +1097,26 @@ void TestSettingsPreserveRuntimeAndStreaming() {
 
 void TestBufferBehaviorControls() {
   workbench::Settings saved; int saves = 0;
+  int scheme_opens = 0;
   workbench::SettingsUiCallbacks callbacks;
   callbacks.load = [] { workbench::Settings s; s.close_after_send = false; return s; };
   callbacks.save = [&](workbench::Settings value, const std::wstring&, bool, std::string*) { saved = value; ++saves; return true; };
+  callbacks.open_schemes = [&] { ++scheme_opens; return true; };
   workbench::SettingsUiHost host(callbacks);
-  host.OpenPage(nullptr, ui::SettingsPage::kBuffer, 1, false);
+  host.OpenPage(nullptr, ui::SettingsPage::kInput, 0, false);
   const HWND window = host.hwnd();
+  const HWND schemes = GetDlgItem(window, 415);
+  const HWND close_after = GetDlgItem(window, 412);
+  Check(schemes && close_after && schemes != close_after && IsWindowEnabled(schemes),
+        "scheme manager and Buffer close-after-send have distinct native controls");
+  SendMessageW(schemes, BM_CLICK, 0, 0);
+  Check(scheme_opens == 1, "scheme manager button dispatches its own callback");
+  host.OpenPage(nullptr, ui::SettingsPage::kBuffer, 1, false);
   Check(window && GetDlgItem(window, 413) && GetDlgItem(window, 414), "Buffer behavior exposes real controls");
   SendMessageW(GetDlgItem(window, 413), CB_SETCURSEL, 4, 0);
   SendMessageW(GetDlgItem(window, 414), CB_SETCURSEL, 1, 0);
   SendMessageW(window, WM_COMMAND, MAKEWPARAM(412, BN_CLICKED), reinterpret_cast<LPARAM>(GetDlgItem(window, 412)));
+  Check(scheme_opens == 1, "Buffer close-after-send does not dispatch the scheme manager");
   host.Close(true);
   Check(saves == 1 && saved.auto_send_seconds == 5 && saved.close_after_send && saved.translation_provider == "ai",
         "Buffer behavior controls persist their values");

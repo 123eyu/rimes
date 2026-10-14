@@ -308,9 +308,21 @@ final class StatusLight: UIView {
         mascotView.frame = square
         CATransaction.commit()
     }
-    override func didMoveToWindow() { super.didMoveToWindow(); if window != nil { apply(animated: false) } }
+    override var isHidden: Bool { didSet { if isHidden != oldValue { apply(animated: false) } } }
+    override func didMoveToWindow() { super.didMoveToWindow(); apply(animated: false) }
     func set(_ next: State) { guard next != state else { return }; state = next; apply(animated: true) }
+    private func suspendAnimations() {
+        mascotWork?.cancel(); mascotWork = nil; mascotToken = UUID()
+        dot.removeAllAnimations(); notoHalo.removeAllAnimations(); notoView.layer.removeAllAnimations()
+        crab.show(nil, color: .clear, motion: false)
+        for pet in pets.values { pet.show(nil, color: .clear, motion: false) }
+        notoView.stopAnimating(); notoView.image = nil; notoAnimated = nil; notoLoaded = nil
+        mascotView.stopAnimating(); mascotView.animationImages = nil; mascotView.image = nil; mascotClips = [:]
+    }
     private func apply(animated: Bool) {
+        // UIKit may retain a hidden keyboard. Its status light must not keep
+        // scheduling mascot clips or hold decoded frames until process exit.
+        guard window != nil, !isHidden else { suspendAnimations(); return }
         let color = state.color.resolvedColor(with: traitCollection)
         let motion = !UIAccessibility.isReduceMotionEnabled
         accessibilityLabel = skin.title + " · " + state.label
@@ -392,7 +404,7 @@ final class StatusLight: UIView {
         let clip = NotoPet.image("rhino-" + name); mascotClips[name] = clip; return clip
     }
     private func runMascot(_ steps: [MascotStep], index: Int, token: UUID) {
-        guard token == mascotToken, !steps.isEmpty, window != nil else { return }
+        guard token == mascotToken, !steps.isEmpty, window != nil, !isHidden else { return }
         let duration: Double
         switch steps[index % steps.count] {
         case let .play(name, times, reversed):

@@ -85,6 +85,8 @@ function(rimes_use_unicode_console_entrypoint target)
     endif()
 endfunction()
 
+add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/../../../Shared/SchemeImport" "scheme-import")
+
 set(rimes_core_sources
     src/core/broker_protocol.cpp
 )
@@ -124,10 +126,11 @@ add_library(RimesWorkbench STATIC
     src/workbench/window.cpp
     src/workbench/buffer_anchor.cpp
 )
-target_link_libraries(RimesWorkbench PUBLIC RimesCore winhttp bcrypt advapi32 user32 d2d1 dwrite shell32 wtsapi32 ole32 oleaut32 uuid comctl32 gdi32 dwmapi)
+target_link_libraries(RimesWorkbench PUBLIC RimesCore RimesSchemeImport comdlg32 winhttp bcrypt advapi32 user32 d2d1 dwrite shell32 wtsapi32 ole32 oleaut32 uuid comctl32 gdi32 dwmapi)
 rimes_harden_target(RimesWorkbench)
 
 add_executable(RimesBroker
+    src/schemes/scheme_manager.cpp
     src/broker/autostart.cpp
     src/broker/broker_connection.cpp
     src/broker/broker_options.cpp
@@ -317,7 +320,7 @@ if(RIMES_BUILD_TESTS)
     rimes_harden_target(RimesOfficialPluginTests)
     add_test(NAME RimesOfficialPlugins COMMAND RimesOfficialPluginTests)
     add_executable(RimesProviderProbe src/workbench/provider_probe.cpp src/workbench/provider.cpp src/workbench/codex_cli.cpp src/workbench/local_translation.cpp src/workbench/model.cpp)
-    target_link_libraries(RimesProviderProbe PRIVATE RimesCore winhttp advapi32)
+    target_link_libraries(RimesProviderProbe PRIVATE RimesCore RimesSchemeImport winhttp advapi32)
     rimes_harden_target(RimesProviderProbe)
     rimes_use_unicode_console_entrypoint(RimesProviderProbe)
     add_executable(RimesSseTests src/workbench/sse_tests.cpp)
@@ -430,7 +433,7 @@ if(RIMES_BUILD_TESTS)
         src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
         src/workbench/model.cpp
     )
-    target_link_libraries(RimesSettingsTests PRIVATE RimesCore winhttp advapi32)
+    target_link_libraries(RimesSettingsTests PRIVATE RimesCore RimesSchemeImport winhttp advapi32)
     rimes_harden_target(RimesSettingsTests)
     add_test(NAME RimesSettings COMMAND RimesSettingsTests)
 
@@ -508,7 +511,7 @@ if(RIMES_BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/src/tsf"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/workbench"
     )
-    target_link_libraries(RimesVisualPreview PRIVATE windowscodecs comctl32
+    target_link_libraries(RimesVisualPreview PRIVATE RimesSchemeImport windowscodecs comctl32
         RimesCore
         dwmapi
         d2d1

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Pinned Android-only librime build. Never modifies iOS resources or its build cache."""
-import argparse, hashlib, json, os, pathlib, platform, shutil, subprocess, tarfile, urllib.request
+import argparse, hashlib, importlib.util, json, os, pathlib, platform, shutil, subprocess, sys, tarfile, urllib.request
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 ANDROID = ROOT / 'platforms/android'
 WORK = ANDROID / '.native'
@@ -49,11 +49,20 @@ def bootstrap(cache):
                 actual = subprocess.check_output(['git','-C',str(src/'deps'/dep),'rev-parse','HEAD'],text=True).strip()
                 if actual != revision: raise RuntimeError('Submodule revision mismatch: '+dep)
         stamp.write_text(fingerprint)
+    run(sys.executable, ROOT/'scripts/input-schemes/repair-rime-table.py', src)
     archive = WORK/'boost.tar.bz2'
     if cache and not archive.exists(): shutil.copy2(cache/'boost.tar.bz2', archive)
     download(LOCK['boost']['url'], archive, LOCK['boost']['sha256'])
     if not (WORK/'boost_1_86_0/boost/version.hpp').exists():
         with tarfile.open(archive) as tar: tar.extractall(WORK, filter='data')
+    # Use the same pinned Lua interpreter and capability boundary as iOS. Each
+    # platform keeps its own source/build cache; no host Lua or ambient plugins.
+    policy = ROOT/'platforms/ios/scripts/prepare-lua.py'
+    spec = importlib.util.spec_from_file_location('rimes_lua_policy', policy)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.prepare(WORK)
+    os.environ['RIME_PLUGINS'] = 'lua'
     return src
 
 def build(src, abi, sdk):
@@ -83,7 +92,7 @@ def build(src, abi, sdk):
         stamp.write_text(fingerprint)
     flags = [f'-DBoost_INCLUDE_DIR={WORK/"boost_1_86_0"}', f'-DBOOST_ROOT={WORK/"boost_1_86_0"}', '-DBoost_NO_BOOST_CMAKE=ON',
              f'-DYamlCpp_NEW_API={prefix/"include"}',f'-DCMAKE_PREFIX_PATH={prefix}', '-DBUILD_STATIC=ON', '-DBUILD_TEST=OFF',
-             '-DENABLE_LOGGING=OFF','-DENABLE_EXTERNAL_PLUGINS=OFF','-DENABLE_TIMESTAMP=OFF']
+             '-DENABLE_LOGGING=OFF','-DENABLE_EXTERNAL_PLUGINS=OFF','-DBUILD_MERGED_PLUGINS=ON','-DENABLE_TIMESTAMP=OFF']
     for package, library in [('YamlCpp','yaml-cpp'),('LevelDb','leveldb'),('Marisa','marisa'),('Opencc','opencc')]:
         flags += [f'-D{package}_INCLUDE_PATH={prefix/"include"}',f'-D{package}_LIBRARY={prefix/"lib"/f"lib{library}.a"}']
     folder = WORK/abi/'rime'
@@ -166,6 +175,8 @@ if __name__ == '__main__':
                ANDROID/'core/src/main/java/org/scholay/rimes/core/ChordData.java']
     inputs += [ROOT/'platforms/ios/Resources/EngineData/default.yaml']
     inputs += list((ROOT/'platforms/ios/Licenses').glob('*'))
+    inputs += [ROOT/'platforms/ios/scripts/prepare-lua.py', ROOT/'scripts/input-schemes/repair-rime-table.py']
+    inputs += list((ROOT/'platforms/ios/scripts/lua-sandbox').glob('*'))
     receipt = {'inputs':{str(p.relative_to(ROOT)):sha(p) for p in sorted(inputs) if p.is_file()},
                'libraries':{abi:sha(ANDROID/'app/build/generated/rime/jniLibs'/abi/'librimes_jni.so') for abi in args.abis},
                'ndk':NDK,'cmake':CMAKE}

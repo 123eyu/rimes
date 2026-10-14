@@ -2549,6 +2549,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func inputPage(subpageID: String) -> NSView {
+        let importButton = SettingsPointingButton(title: "导入与管理 Rime 方案 / 文本词库…", target: self, action: #selector(openSchemeManager))
         let openDirBtn = SettingsPointingButton(
             title: "打开配置目录",
             target: self,
@@ -2559,6 +2560,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         switch subpageID {
         case "dictionaries":
             return contentColumn([
+                importButton,
                 sectionLabel("已安装词库"),
                 lexiconCard(kind: .chinese,
                             title: "雾凇拼音",
@@ -2574,17 +2576,24 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 openDirBtn,
             ])
         default:
+            if let imported = MacRimeSchemeLibrary.shared.runtimePackage {
+                return contentColumn([sectionLabel("当前使用：\(imported.name)"),
+                    caption("从方案管理切换包或恢复内置方案；各方案包的学习词库独立保存。"), importButton])
+            }
             let chordStatus = chordSchemaStatusView()
             let recovery = caption(ChordKeymapActivationCoordinator.shared.recoveryMessage ?? "")
             recovery.textColor = .systemRed
             recovery.isHidden = ChordKeymapActivationCoordinator.shared.recoveryMessage == nil
             return contentColumn([
+                importButton,
                 chordStatus,
                 recovery,
                 inputEncodingSelectionView(),
             ])
         }
     }
+
+    @objc private func openSchemeManager() { MacRimeSchemeManager.shared.show() }
 
     private func inputModeCard(title: String,
                                detail: String,

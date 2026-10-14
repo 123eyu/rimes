@@ -37,7 +37,7 @@ struct RimeSchemesView: View {
             }
             Section {
                 if packages.isEmpty {
-                    Text("还没有安装的方案包。先检查一份 ZIP，确认兼容性后再部署。")
+                    Text("还没有安装的方案包。可以导入 Rime ZIP 或带编码的 UTF-8 文本词库。")
                         .font(.subheadline).foregroundStyle(.secondary)
                 }
                 ForEach(packages, id: \.id) { package in
@@ -66,7 +66,7 @@ struct RimeSchemesView: View {
             } header: { Text("已安装的方案") }
             Section {
                 Button { importing = true } label: {
-                    Label("从 ZIP 检查方案包", systemImage: "square.and.arrow.down")
+                    Label("导入方案或文本词库", systemImage: "square.and.arrow.down")
                 }
                 .disabled(inspecting || deploying)
                 .accessibilityIdentifier("rimeSchemes.import")
@@ -77,7 +77,7 @@ struct RimeSchemesView: View {
                     }
                 }
             } footer: {
-                Text("方案决定编码与候选；键位布局决定按键摆放。星猫的方案标识是 xmjd6，包内的 xingmao 是附带键盘布局。")
+                Text("支持上游 Rime ZIP，以及每行“词条⇥编码⇥可选权重”的 UTF-8 TXT / TSV。保留词典子目录、Lua 和 OpenCC；其他输入法的键盘布局不覆盖当前键位。")
             }
             if !message.isEmpty {
                 Section { Label(message, systemImage: "checkmark.circle").font(.subheadline).foregroundStyle(.secondary) }
@@ -92,7 +92,7 @@ struct RimeSchemesView: View {
         } message: { package in
             Text("将移除包内的 \(package.schemas.count) 个输入方案。若正在使用其中的方案，下次唤起键盘时恢复原来的内置输入方式。已学习的用户词库会保留。")
         }
-        .fileImporter(isPresented: $importing, allowedContentTypes: [.zip], allowsMultipleSelection: false) { result in
+        .fileImporter(isPresented: $importing, allowedContentTypes: [.zip, .plainText, .tabSeparatedText], allowsMultipleSelection: false) { result in
             switch result {
             case .success(let urls): if let url = urls.first { inspect(url) }
             case .failure(let failure): error = failure.localizedDescription

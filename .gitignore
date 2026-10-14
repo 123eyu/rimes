@@ -109,3 +109,6 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 /platforms/windows/native/src/workbench/official_features.hpp
 /platforms/windows/native/src/workbench/official_plugin_catalog.generated.hpp
 /platforms/windows/native/resources/my_combo.schema.yaml
+
+# Locally built Linux Rime/Lua runtime
+platforms/linux/ime/.engine/

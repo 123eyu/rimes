@@ -5,6 +5,51 @@ import RimesCore
 @testable import RIMES
 
 @MainActor final class ImportedSchemeRuntimeTests: XCTestCase {
+    func testCodedTextDictionaryDeploysAndCommits() async throws {
+        let review = try RimeSchemeImportService.inspectTextDictionary(data: Data("你好\tnihao\t100\n".utf8), sourceName: "词库.tsv")
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = RimeSchemeStore(root: root)
+        let id = try XCTUnwrap(review.schemes.first?.id)
+        let package = try await RimeSchemeInstaller.install(review: review, selectedSchemaIDs: [id], store: store) { _ in }
+        defer { removeUserData(for: package) }
+        let engine = MobileEngine()
+        XCTAssertTrue(engine.selectImported(.init(packageID: package.id, schemaID: id), store: store))
+        var result = EngineSnapshot()
+        for key in "nihao".utf8 { result = engine.process(key: Int32(key)) }
+        XCTAssertTrue(result.candidates.contains("你好"))
+        XCTAssertEqual(engine.process(key: 32).commit, "你好")
+        engine.clear()
+    }
+
+    /// The upstream release ZIP, not the previously repacked portable fixture.
+    func testOriginalWanxiangReleaseImportsWithoutRepacking() async throws {
+        let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        let archive = documents.appendingPathComponent("wanxiang-upstream.zip")
+        guard FileManager.default.fileExists(atPath: archive.path) else {
+            throw XCTSkip("Original Wanxiang release ZIP not provisioned on this test device.")
+        }
+        let review = try RimeSchemeImportService.inspect(url: archive)
+        XCTAssertEqual(review.archiveSHA256, "abd00fd2b4135453e53b81d8ac893301e808fdb52290ea72977714dfc67400a2")
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = RimeSchemeStore(root: root)
+        let package = try await RimeSchemeInstaller.install(review: review,
+            selectedSchemaIDs: ["wanxiang", "wanxiang_t9"], store: store) { _ in }
+        defer { removeUserData(for: package) }
+        XCTAssertNil(store.load().active)
+        let engine = MobileEngine()
+        for (schema, keys) in [("wanxiang", "nihao"), ("wanxiang_t9", "64426")] {
+            XCTAssertTrue(engine.selectImported(.init(packageID: package.id, schemaID: schema), store: store))
+            var result = EngineSnapshot()
+            for key in keys.unicodeScalars { result = engine.process(key: Int32(key.value)) }
+            let index = try XCTUnwrap(result.candidates.firstIndex(of: "你好"), "\(schema): \(result.candidates)")
+            XCTAssertEqual(engine.candidate(index).commit, "你好")
+            engine.clear()
+        }
+        XCTAssertTrue(engine.select(schema: "rimes_pinyin"))
+    }
+
     /// Optional pinned-artifact acceptance. Provision only the task-owned simulator's Documents folder.
     func testPinnedWanxiangDeliveryPackageUsesQwertyWithNineKeyPreference() async throws {
         let documents = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
@@ -249,26 +294,34 @@ import RimesCore
         XCTAssertNil(store.load().active)
     }
 
-    func testMissingOrCyclicSchemaDependenciesCannotPublishPackage() async throws {
-        for definitions: [(String, [String])] in [
-            [("fixture_primary", ["missing_auxiliary"])],
-            [("fixture_primary", ["fixture_auxiliary"]), ("fixture_auxiliary", ["fixture_primary"])]
-        ] {
-            let root = temporaryRoot()
-            defer { try? FileManager.default.removeItem(at: root) }
-            let store = RimeSchemeStore(root: root)
-            let review = try dependencyReview(definitions)
-            do {
-                _ = try await RimeSchemeInstaller.install(review: review, selectedSchemaIDs: ["fixture_primary"], store: store) { _ in }
-                XCTFail("Missing or cyclic dependencies must fail before publication.")
-            } catch {
-                XCTAssertTrue(error.localizedDescription.contains("依赖") || error.localizedDescription.contains("循环"), error.localizedDescription)
-            }
-            XCTAssertTrue(store.load().packages.isEmpty)
-            XCTAssertNil(store.load().active)
-            let staging = (try? FileManager.default.contentsOfDirectory(atPath: store.stagingRoot.path)) ?? []
-            XCTAssertTrue(staging.isEmpty, "Failed deployments must not leave staged packages.")
-        }
+    func testMissingSchemaDependenciesCannotPublishPackage() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = RimeSchemeStore(root: root)
+        let review = try dependencyReview([("fixture_primary", ["missing_auxiliary"])])
+        do {
+            _ = try await RimeSchemeInstaller.install(review: review, selectedSchemaIDs: ["fixture_primary"], store: store) { _ in }
+            XCTFail("Missing dependencies must fail before publication.")
+        } catch { XCTAssertTrue(error.localizedDescription.contains("依赖"), error.localizedDescription) }
+        XCTAssertTrue(store.load().packages.isEmpty)
+        XCTAssertNil(store.load().active)
+        XCTAssertTrue(((try? FileManager.default.contentsOfDirectory(atPath: store.stagingRoot.path)) ?? []).isEmpty)
+    }
+
+    func testReciprocalReverseLookupSchemasDeployOnceAndProduceCandidates() async throws {
+        let root = temporaryRoot()
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = RimeSchemeStore(root: root)
+        let review = try dependencyReview([("fixture_primary", ["fixture_auxiliary"]), ("fixture_auxiliary", ["fixture_primary"])])
+        let package = try await RimeSchemeInstaller.install(review: review, selectedSchemaIDs: ["fixture_primary"], store: store) { _ in }
+        defer { removeUserData(for: package) }
+        XCTAssertEqual(package.schemas.map(\.id), ["fixture_primary"])
+        XCTAssertNil(store.load().active)
+        let engine = MobileEngine()
+        XCTAssertTrue(engine.selectImported(.init(packageID: package.id, schemaID: "fixture_primary"), store: store))
+        XCTAssertTrue(engine.process(key: 97).candidates.contains("测试"))
+        engine.clear()
+        XCTAssertTrue(engine.select(schema: "rimes_pinyin"))
     }
 
     func testInvalidImportedSelectionFallsBackToOriginalChordGeometry() {
