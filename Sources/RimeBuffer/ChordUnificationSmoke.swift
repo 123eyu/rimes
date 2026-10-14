@@ -62,7 +62,7 @@ func runChordUnificationSmokeTest() -> Bool {
                   "unified downgrade spelling or migration marker missing")
 
         let profiles = InputConfigurationResolver.profiles
-        try check(profiles.count == 6
+        try check(profiles.count == InputEncoding.allCases.count + 1
                     && Set(profiles.map(\.schemaID)).count == profiles.count
                     && profiles.filter { $0.configuration.keyingMode == .chord }.count == 1
                     && !profiles.contains { $0.configuration.keyingMode == .mutual }

@@ -87,6 +87,7 @@ bool SettingsPrecedesBuffer(const FixtureWindows& windows) {
 constexpr UINT kFixturePosition = WM_APP + 1;
 constexpr UINT kFixtureSettingsClose = WM_APP + 2;
 constexpr UINT kFixtureSettingsCloseBarrier = WM_APP + 3;
+constexpr UINT kFixtureStopForegroundTimer = WM_APP + 4;
 struct NativePositionRequest {
   FixtureWindows windows;
   HWND insert_after = HWND_TOP;
@@ -108,6 +109,17 @@ struct NativeSettingsCloseRequest {
 };
 LRESULT CALLBACK FixturePositionProcedure(HWND window, UINT message,
                                           WPARAM wparam, LPARAM lparam) {
+  if (message == kFixtureStopForegroundTimer) {
+    const auto buffer = reinterpret_cast<HWND>(lparam);
+    if (!buffer || GetWindowThreadProcessId(buffer, nullptr) != GetCurrentThreadId())
+      return FALSE;
+    const BOOL stopped = KillTimer(buffer, 1);
+    // KillTimer does not remove an already queued WM_TIMER. Drain only this
+    // fixture's timer messages on its owning UI thread before rebinding.
+    MSG pending{};
+    while (PeekMessageW(&pending, buffer, WM_TIMER, WM_TIMER, PM_REMOVE)) {}
+    return stopped;
+  }
   if (message == kFixtureSettingsClose) {
     auto* request = reinterpret_cast<NativeSettingsCloseRequest*>(lparam);
     if (!request) return FALSE;
@@ -991,6 +1003,16 @@ void TestSettingsPreserveRuntimeAndStreaming() {
 
     const auto peer = GetCurrentProcessId() + 1;
     const auto target = runtime.Register(peer, 9001, 9001);
+    runtime.Focus(target);
+    runtime.Bind(peer);
+    // This fixture intentionally has no real foreground host. First prove
+    // that the production timer revokes the synthetic peer, then isolate the
+    // settings/stream lifetime checks from that unrelated 25 ms timer race.
+    WaitUntil([&] { return !runtime.Capturing(target); },
+              "production foreground timer revokes the synthetic host");
+    Check(SendMessageW(position_driver.load(), kFixtureStopForegroundTimer, 0,
+                       reinterpret_cast<LPARAM>(windows().buffer)) != FALSE,
+          "owned UI driver isolates synthetic host from the foreground timer");
     runtime.Focus(target);
     runtime.Bind(peer);
     runtime.Paste("Fixture source.");
