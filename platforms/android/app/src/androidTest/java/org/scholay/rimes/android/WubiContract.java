@@ -89,6 +89,11 @@ final class WubiContract {
                     KeyButton button=new KeyButton(context); button.plain(true);
                     button.setAutoSizeTextTypeWithDefaults(0); button.setTextSize(20);
                     int height=Math.round(40*context.getResources().getDisplayMetrics().density);
+                    // Match the real candidate strip: a TextView that has been measured
+                    // needs its parent's LayoutParams when a new annotation relayouts it.
+                    android.widget.LinearLayout row=new android.widget.LinearLayout(context);
+                    row.addView(button,new android.widget.LinearLayout.LayoutParams(
+                            android.view.ViewGroup.LayoutParams.WRAP_CONTENT,height));
                     int unrestricted=View.MeasureSpec.makeMeasureSpec(0,View.MeasureSpec.UNSPECIFIED);
                     int fixedHeight=View.MeasureSpec.makeMeasureSpec(height,View.MeasureSpec.EXACTLY);
                     button.candidate("你好",""); button.measure(unrestricted,fixedHeight);
