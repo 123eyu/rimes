@@ -899,8 +899,13 @@ void TestPluginManagementAndChordSelection() {
   Click(window, layout.scheme_cards[4]);
   Click(window, layout.save);
   Check(saved_schema == "lingxi_wubi", "scheme control saves Lingxi Wubi identity");
-  Click(window, layout.scheme_cards[6]);
-  Click(window, layout.save);
+  // Saving intentionally closes the real settings window; reopen before
+  // exercising the next selection instead of sending messages to a dead HWND.
+  host.Open(nullptr);
+  const HWND reopened = host.hwnd();
+  layout = Layout(reopened, draft);
+  Click(reopened, layout.scheme_cards[6]);
+  Click(reopened, layout.save);
   Check(saved_schema == "my_combo", "schema control saves chording identity");
   host.Close(false);
 }
