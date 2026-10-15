@@ -1,3 +1,4 @@
+#include "../core/product_brand.hpp"
 #include "rimes_version.hpp"
 #include "window.hpp"
 
@@ -241,7 +242,7 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   paint.hover = hover;
   paint.pressed = static_cast<int>(pressed_hit);
   paint.empty_hint = paint.capturing ? L"等待输入"
-      : L"先点击宿主输入框，再点击这里开始输入（需选中 RIMES）";
+      : rimes::branding::Text(L"先点击宿主输入框，再点击这里开始输入（需选中 {brand}）").c_str();
   for (const auto& block : state["source_blocks"])
     paint.source_blocks.push_back(
         {Wide(block.value("text", std::string())), false});
@@ -281,7 +282,7 @@ void Window::EnsureSettings() {
       return false;
     }
     if (result == HotkeyUpdate::kSaveFailed) return false;
-    wcscpy_s(tray.szTip, L"RIMES 输入法与 Buffer");
+    wcscpy_s(tray.szTip, rimes::branding::Text(L"{brand} 输入法与 Buffer").c_str());
     Shell_NotifyIconW(NIM_MODIFY, &tray);
     RefreshTrayIcon();
     InvalidateRect(window, nullptr, FALSE);
@@ -302,7 +303,7 @@ void Window::EnsureSettings() {
     if (!destroying && window)
       PostMessageW(window, kUpdateBufferZOrder, 0, 0);
   };
-  cb.about_text = std::wstring(L"RIMES Windows ") + kProductVersionWide + L"\nCommit: " + Wide(RIMES_BUILD_COMMIT) +
+  cb.about_text = std::wstring(rimes::branding::Text(L"{brand} Windows ").c_str()) + kProductVersionWide + L"\nCommit: " + Wide(RIMES_BUILD_COMMIT) +
                   L"\n协议 v2\n词库：%APPDATA%\\RIMES\n设置与日志：%LOCALAPPDATA%"
                   L"\\RIMES";
   settings = std::make_unique<SettingsUiHost>(std::move(cb));
@@ -1171,12 +1172,12 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
                                                &error);
             }
             if (!error.empty())
-              MessageBoxW(hwnd, error.c_str(), L"RIMES", MB_OK);
+              MessageBoxW(hwnd, error.c_str(), rimes::branding::Text(L"{brand}").c_str(), MB_OK);
             break;
           }
           case kAbout: {
             const auto about_text =
-                std::wstring(L"RIMES Windows ") + kProductVersionWide + L"\nCommit: " + Wide(RIMES_BUILD_COMMIT) +
+                std::wstring(rimes::branding::Text(L"{brand} Windows ").c_str()) + kProductVersionWide + L"\nCommit: " + Wide(RIMES_BUILD_COMMIT) +
                 L"\n协议 v2\n词库：%APPDATA%\\RIMES\n设置与日志：%LOCALAPPDATA%"
                 L"\\RIMES";
             MessageBoxW(hwnd, about_text.c_str(), L"版本与诊断", MB_OK);
@@ -1292,7 +1293,7 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
                   CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
   HWND window = CreateWindowExW(
       WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST, wc.lpszClassName,
-      L"RIMES Buffer", WS_POPUP | WS_THICKFRAME,
+      rimes::branding::Text(L"{brand} Buffer").c_str(), WS_POPUP | WS_THICKFRAME,
       area.left + ((area.right - area.left) - MulDiv(680, dpi, 96)) / 2,
       area.bottom - MulDiv(120 + 73, dpi, 96), MulDiv(680, dpi, 96),
       MulDiv(73, dpi, 96), nullptr, nullptr, wc.hInstance, &ui);
@@ -1320,9 +1321,9 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   ui.tray.uCallbackMessage = kTray;
   ui.tray.hIcon =
       ui.product_icon ? ui.product_icon : LoadIconW(nullptr, IDI_APPLICATION);
-  wcscpy_s(ui.tray.szTip, L"RIMES 输入法与 Buffer");
+  wcscpy_s(ui.tray.szTip, rimes::branding::Text(L"{brand} 输入法与 Buffer").c_str());
   if (!ui.buffer_hotkey->Registered())
-    wcscpy_s(ui.tray.szTip, L"RIMES · Buffer 快捷键不可用，请使用托盘");
+    wcscpy_s(ui.tray.szTip, rimes::branding::Text(L"{brand} · Buffer 快捷键不可用，请使用托盘").c_str());
   ui.AddTrayIcon();
   if (!ui.buffer_hotkey->Registered()) {
     const auto notice = BufferHotkeyTitle(config) +

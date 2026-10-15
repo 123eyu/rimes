@@ -1,4 +1,4 @@
-# RIMES
+# XSIME
 
 [![中文](.github/readme/labels/zh.svg)](README.md) [![English](.github/readme/labels/en.svg)](README.en.md) [![日本語](.github/readme/labels/ja.svg)](README.ja.md) [![한국어](.github/readme/labels/ko.svg)](README.ko.md) [![Español](.github/readme/labels/es.svg)](README.es.md)
 
@@ -7,9 +7,9 @@
 
 완전 병음, 이중 병음, 성필(声笔), 오필, 영어 방안을 지원하고, 속기의 병격 입력과 사용자 방안 가져오기도 지원합니다. 처음 쓰는 사람을 위해 설치 패키지는 librime과 사전을 **함께 담아** 바로 쓸 수 있습니다.
 
-다섯 플랫폼 모두 **오필 86**과 **Lingxi Wubi**를 제공합니다. 오필 86에서는 `z` 다음에 완전 병음을 입력해 글자를 찾을 수 있으며, 후보 옆 괄호에 오필 코드를 표시합니다. Lingxi Wubi는 모드 전환 없이 오필과 병음을 검색하고 정확히 일치하는 오필을 우선합니다. 두 방안 모두 네 글자 오필 코드의 후보가 하나뿐이면 자동 확정하며, 중복 코드와 병음 검색에서는 후보 선택을 유지합니다. [오필 안내](docs/wubi.md)를 참고하세요.
+다섯 플랫폼 모두 **오필 86**과 **XSIME Wubi**를 제공합니다. 오필 86에서는 `z` 다음에 완전 병음을 입력해 글자를 찾을 수 있으며, 후보 옆 괄호에 오필 코드를 표시합니다. XSIME Wubi는 모드 전환 없이 오필과 병음을 검색하고 정확히 일치하는 오필을 우선합니다. 두 방안 모두 네 글자 오필 코드의 후보가 하나뿐이면 자동 확정하며, 중복 코드와 병음 검색에서는 후보 선택을 유지합니다. [오필 안내](docs/wubi.md)를 참고하세요.
 
-> **RIMES**는 이 프로젝트의 아키텍처 이름입니다. 대외 제품명은 영어 **Lingxi IME**, 중국어 간체 **灵犀输入法**, 중국어 번체 **靈犀輸入法**입니다. iOS App Store에서도 이미 이 제품명을 사용하고 있습니다.
+> 제품·프로젝트·아키텍처 이름은 **XSIME**, 중국어 간체는 **犀术IME**, 번체는 **犀術IME**입니다(이전 RIMES / Lingxi IME). 기존 앱, 스토어 정보와 등록 정보는 별도로 순차 변경합니다. [명명 및 호환성 정책](BRANDING.md)을 참고하세요.
 
 ## 시연 영상
 
@@ -26,22 +26,22 @@
 
 ## 주요 기능에 대해
 
-> 설치를 마치고 그래픽 로그인 세션에 들어가면, 한 번의 백그라운드 작업이 `open -g`로 같은 RIMES 프로세스를 띄웁니다. 그래서 Buffer, Clipboard History, Mailbox, Capsule의 전역 단축키는 어떤 입력기에서나 쓸 수 있습니다.
+> 설치를 마치고 그래픽 로그인 세션에 들어가면, 한 번의 백그라운드 작업이 `open -g`로 같은 XSIME 프로세스를 띄웁니다. 그래서 Buffer, Clipboard History, Mailbox, Capsule의 전역 단축키는 어떤 입력기에서나 쓸 수 있습니다.
 >
 > 배포 패키지는 시스템 payload를 바꾸기 전에 이 Mac의 일반 계정을 모두 점검합니다. postinstall이 물러나게 할 수 있는 현재 GUI 사용자의 개발판을 빼고, 같은 ID의 개발판 앱이나 작업이 있거나 home을 안전하게 확인할 수 없으면 바로 실패합니다. postinstall이 개발판을 물러나게 하고 다시 점검한 뒤에야, 되돌릴 수 있는 트랜잭션으로 시스템 작업을 갱신합니다. 로그인 guard는 나중에 나타난 개발판 흔적만 방어적으로 막습니다. 두 작업 모두 `KeepAlive`를 두지 않으며, 두 번째 UI/IME 서비스도 시작하지 않습니다.
 >
-> Mailbox와 Capsule은 키보드 포커스를 보통의 방식으로 받는 관리 창입니다. 다른 입력기에서 단축키나 Mailbox 알림으로 열면, RIMES가 먼저 자신을 현재 입력기로 바꾼 다음 엽니다. 닫을 때 되돌리지 않으며, 이후에 직접 다른 입력기로 바꿔도 그 선택은 취소되지 않습니다. 그때는 아래에 적힌 대로 기능이 제한됩니다.
+> Mailbox와 Capsule은 키보드 포커스를 보통의 방식으로 받는 관리 창입니다. 다른 입력기에서 단축키나 Mailbox 알림으로 열면, XSIME가 먼저 자신을 현재 입력기로 바꾼 다음 엽니다. 닫을 때 되돌리지 않으며, 이후에 직접 다른 입력기로 바꿔도 그 선택은 취소되지 않습니다. 그때는 아래에 적힌 대로 기능이 제한됩니다.
 >
 > 이 기능들은 다른 입력기의 IMK 클라이언트에 접근하지 않고, 그 조합 중인 문자열을 읽거나 확정하거나 취소하지 않습니다. 넣는 키는 Capsule을 활성화할 때의 선택적 `⌘V` 한 번뿐입니다(아래 Capsule 막대 참고). 설정의 단축키도 입력기를 넘어 쓸 수 있습니다. Mailbox와 Capsule 페이지는 설정과 상태만 보여 주고, 실제 대화와 내용은 각자 창에 둡니다.
 
 | 기능 | 단축키 | 내용 | 조작 | 저장 | 경계 |
 |---|---|---|---|---|---|
-| 입력 방안 | — | Rime Ice 완전 병음, 자연마, 소학, 오필 86, Lingxi Wubi, 영어 | — | — | — |
-| 버퍼 | `⌘⇧B` | 확정 전의 텍스트 | 먼저 RIMES로 전환한 뒤 잡아 나누어 전달 | — | 다른 입력기로 옮긴 뒤에는 시스템 클립보드만 쓰고 IMK는 쓰지 않음 |
+| 입력 방안 | — | Rime Ice 완전 병음, 자연마, 소학, 오필 86, XSIME Wubi, 영어 | — | — | — |
+| 버퍼 | `⌘⇧B` | 확정 전의 텍스트 | 먼저 XSIME로 전환한 뒤 잡아 나누어 전달 | — | 다른 입력기로 옮긴 뒤에는 시스템 클립보드만 쓰고 IMK는 쓰지 않음 |
 | Capsule 막대 | `⌘⇧V` | 최근 복사. 노트, 이미지, PDF, 스킬, 비밀번호 | 클릭은 선택, 더블 클릭 또는 Return은 붙여넣기. `⌘S`로 보관 | 이 Mac에만 | 붙여넣기에는 손쉬운 사용 권한이 필요. 없으면 클립보드에만 넣음 |
 | Mailbox | `⌘⇧M` | AI 대화, 메모, 검토 대기 알림 | 새 대화. 첫 Return에 생성 시작 | 모델은 그 대화에만 묶임 | CLI는 각자 기본 모델 |
 | Capsule 관리 | 톱니 또는 붓 | 다섯 종류. 미리보기와 복사 | 네 번의 병격 뒤에 비밀번호를 봄. 최대 15초 | iCloud는 선택. 비밀번호와 키는 이 Mac에 남김 | 암호는 로컬 요약만 저장 |
-| 설정 | `⌘⇧S` | 단축키, 상태, 동기화, 보안 | 현재 입력기가 RIMES일 때만 열림 | — | Mailbox / Capsule 창을 안에 넣지 않음 |
+| 설정 | `⌘⇧S` | 단축키, 상태, 동기화, 보안 | 현재 입력기가 XSIME일 때만 열림 | — | Mailbox / Capsule 창을 안에 넣지 않음 |
 
 실시간 번역, AI 생성, 의식의 흐름 입력은 버퍼 플러그인입니다. 병격은 내장 확장입니다. 버전과 ID는 아래 목록을 보십시오.
 
@@ -58,18 +58,18 @@
 
 | 플러그인 | ID | 버전 | 기본 설치 | 기본 상태 |
 |---|---|---:|---|---|
-| ChatGPT | `builtin.codex-cli` | 1.1 | RIMES에 포함 | 사용 |
-| Claude | `builtin.claude-code-cli` | 1.1 | RIMES에 포함 | 사용 |
-| AI API | `builtin.openai-compatible` | 1.0 | RIMES에 포함 | 사용 |
-| Reference | `builtin.scholay` | 0.1 | RIMES에 포함 | 사용 |
-| Polisher | `builtin.polisher` | 0.1 | RIMES에 포함 | 사용 |
-| LaTeX | `builtin.latex` | 0.1 | RIMES에 포함 | 사용 |
-| 실시간 번역 | `builtin.apple-translation` | 2.2 | RIMES에 포함 | 사용 |
-| 의식의 흐름 입력 | `builtin.stream-input` | 1.4 | RIMES에 포함 | 사용 |
-| 전자 음악 | `builtin.music` | 0.2.3 | RIMES에 포함 | 사용 |
-| 모스 부호 | `builtin.morse` | 0.1.0 | RIMES에 포함 | 사용 |
+| ChatGPT | `builtin.codex-cli` | 1.1 | XSIME에 포함 | 사용 |
+| Claude | `builtin.claude-code-cli` | 1.1 | XSIME에 포함 | 사용 |
+| AI API | `builtin.openai-compatible` | 1.0 | XSIME에 포함 | 사용 |
+| Reference | `builtin.scholay` | 0.1 | XSIME에 포함 | 사용 |
+| Polisher | `builtin.polisher` | 0.1 | XSIME에 포함 | 사용 |
+| LaTeX | `builtin.latex` | 0.1 | XSIME에 포함 | 사용 |
+| 실시간 번역 | `builtin.apple-translation` | 2.2 | XSIME에 포함 | 사용 |
+| 의식의 흐름 입력 | `builtin.stream-input` | 1.4 | XSIME에 포함 | 사용 |
+| 전자 음악 | `builtin.music` | 0.2.3 | XSIME에 포함 | 사용 |
+| 모스 부호 | `builtin.morse` | 0.1.0 | XSIME에 포함 | 사용 |
 
-표의 플러그인은 모두 RIMES에 포함되며, 새로 설치하면 기본적으로 켜집니다.
+표의 플러그인은 모두 XSIME에 포함되며, 새로 설치하면 기본적으로 켜집니다.
 
 ## 내장 확장
 
@@ -81,11 +81,11 @@
 
 ## 설치
 
-[1.1.4 릴리스](https://github.com/scholay/rimes/releases/tag/v1.1.4)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 amd64 / Fcitx5)를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.1.4 검증 기록](docs/releases/1.1.4.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
+[1.1.4 릴리스](https://github.com/scholay/xsime/releases/tag/v1.1.4)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 amd64 / Fcitx5)를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.1.4 검증 기록](docs/releases/1.1.4.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/rimes.git
-cd rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git
+cd xsime
 ```
 
 | 플랫폼 | 진행 | 빌드 |
@@ -115,7 +115,7 @@ cd rimes
 
 ## 자동 업데이트
 
-정식으로 서명되어 설치된 RIMES는 [`scholay/rimes`](https://github.com/scholay/rimes)의 GitHub Release를 확인합니다. 서명되지 않은 `vX.Y.Z-preview.N`은 이 경로에 들어가지 않습니다.
+정식으로 서명되어 설치된 XSIME는 [`scholay/xsime`](https://github.com/scholay/xsime)의 GitHub Release를 확인합니다. 서명되지 않은 `vX.Y.Z-preview.N`은 이 경로에 들어가지 않습니다.
 
 릴리스 입구는 하나이고, 버전 번호는 tag에서만 옵니다. 절차는 [RELEASE.md](RELEASE.md), 변경은 [CHANGELOG.md](CHANGELOG.md)를 보십시오.
 
@@ -126,13 +126,13 @@ cd rimes
 ./scripts/release.sh platform minor     # 유지보수용 Windows/Linux 데이터 미리보기 (macOS를 막지 않음)
 ```
 
-모든 Release는 `scholay/rimes`에 올라갑니다. macOS `vX.Y.Z`는 정식판입니다. `vX.Y.Z-preview.N`은 서명되지 않은 Pre-release이며 자동 업데이트에 들어가지 않습니다. Windows/Linux `platform-preview-vX.Y.Z`는 항상 Pre-release입니다.
+모든 Release는 `scholay/xsime`에 올라갑니다. macOS `vX.Y.Z`는 정식판입니다. `vX.Y.Z-preview.N`은 서명되지 않은 Pre-release이며 자동 업데이트에 들어가지 않습니다. Windows/Linux `platform-preview-vX.Y.Z`는 항상 Pre-release입니다.
 
 ## 링크
 
 - [RIME 입력기 엔진](https://rime.im/) — 이 프로젝트의 중국어 입력은 RIME을 기반으로 합니다.
 - [Linux.do](https://linux.do/u/leowangling/preferences/account) — 진정성 있고 친절하며 단결되고 전문적인 커뮤니티 Linux.do와 그 구성원들에게 감사합니다.
-- [iRime](https://github.com/jimmy54/iRime) — RIMES에 대한 안내와 소개에, iRime 작성자에게 감사합니다.
+- [iRime](https://github.com/jimmy54/iRime) — XSIME에 대한 안내와 소개에, iRime 작성자에게 감사합니다.
 
 ## 기여자
 
@@ -144,12 +144,12 @@ cd rimes
 
 ## 알려진 문제
 
-- **Linux: 배포가 끝나기 전에 Fcitx5를 끝내면 프로세스가 몇 분 동안 남을 수 있다.** 처음이거나 백그라운드의 librime 배포는 도중에 취소할 수 없고, 사전이 클수록 더 두드러집니다. [#43](https://github.com/scholay/rimes/issues/43)을 보십시오.
-- **Linux: Buffer 도구 막대를 드래그한 직후 다른 입력칸을 누르면 캡처가 켜진 채로 남을 수 있다.** 지금은 X11의 Firefox에서만 재현됩니다. 손을 뗀 뒤 약 10밀리초 안에 같은 창의 다른 입력칸을 누를 때입니다. 한 번 더 누르거나 Esc로 돌아옵니다. [#44](https://github.com/scholay/rimes/issues/44)를 보십시오.
+- **Linux: 배포가 끝나기 전에 Fcitx5를 끝내면 프로세스가 몇 분 동안 남을 수 있다.** 처음이거나 백그라운드의 librime 배포는 도중에 취소할 수 없고, 사전이 클수록 더 두드러집니다. [#43](https://github.com/scholay/xsime/issues/43)을 보십시오.
+- **Linux: Buffer 도구 막대를 드래그한 직후 다른 입력칸을 누르면 캡처가 켜진 채로 남을 수 있다.** 지금은 X11의 Firefox에서만 재현됩니다. 손을 뗀 뒤 약 10밀리초 안에 같은 창의 다른 입력칸을 누를 때입니다. 한 번 더 누르거나 Esc로 돌아옵니다. [#44](https://github.com/scholay/xsime/issues/44)를 보십시오.
 
 ## 라이선스와 제3자
 
-RIMES 자체 코드는 [Apache License 2.0](LICENSE)을 따릅니다. 적용 범위와 기존 MIT 허가는 [LICENSING.md](LICENSING.md)를 참고하십시오. 핵심 유지관리자는 [学术海](https://pm.scholay.com)입니다.
+XSIME 자체 코드는 [Apache License 2.0](LICENSE)을 따릅니다. 적용 범위와 기존 MIT 허가는 [LICENSING.md](LICENSING.md)를 참고하십시오. 핵심 유지관리자는 [学术海](https://pm.scholay.com)입니다.
 
 중국어 입력은 [Rime 입력 엔진(librime)](https://github.com/rime/librime)을 사용합니다. 출처 정보는 [NOTICE](NOTICE), 권장 표시 예시는 [ATTRIBUTION.md](ATTRIBUTION.md)에 있습니다. 표시 권고는 추가 라이선스 조건이 아닙니다.
 

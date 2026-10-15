@@ -73,7 +73,7 @@ import RimesCore
         XCTAssertEqual(rows.count, 8)
         XCTAssertTrue(rows.allSatisfy { $0.count == 8 && $0.hasSuffix("⬜") })
         XCTAssertTrue(text.contains("⌨️2️⃣⏺️3️⃣8️⃣"))
-        XCTAssertTrue(text.hasSuffix("https://github.com/scholay/rimes"))
+        XCTAssertTrue(text.hasSuffix("https://github.com/scholay/xsime"))
         let large = TypingStatsText.matrix(.init(characters: 123456789, average: nil, peak: nil, codeLength: nil, keysPerSecond: nil))
         XCTAssertTrue(large.split(separator: "\n").filter { $0.hasPrefix("⬜") }.allSatisfy { $0.count == 8 })
         XCTAssertTrue(large.contains("↪️6️⃣7️⃣8️⃣9️⃣"))

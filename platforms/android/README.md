@@ -1,6 +1,6 @@
-# RIMES Android
+# XSIME Android
 
-**[1.1.2](https://github.com/scholay/rimes/releases/tag/android-v1.1.2)** is the current release of the native Java Android input method for daily Chinese input and
+**[1.1.2](https://github.com/scholay/xsime/releases/tag/android-v1.1.2)** is the current release of the native Java Android input method for daily Chinese input and
 local dictionary learning. Minimum Android 8.0 / API 26; development package
 `org.scholay.rimes.android.debug`; release identity `org.scholay.rimes.android`.
 The public release uses build code **16**, signed with the existing production key.
@@ -10,7 +10,7 @@ Current evidence and remaining acceptance are in [VALIDATION.md](VALIDATION.md).
 
 ## Main app settings
 
-Open **RIMES** from the launcher (**RIMES Dev** for a debug build), or the system input-method settings entry.
+Open **XSIME** from the launcher (**XSIME Dev** for a debug build), or the system input-method settings entry.
 The home follows the iOS grouped navigation: welcome, getting started, typing,
 and data/privacy. Try typing has its own page; trial text is never restored.
 Settings include the default Chinese scheme, standard and chord layouts, an
@@ -52,7 +52,7 @@ implemented in this Android revision.
   Ordinary keys also retire held touch streams and queued native clicks; a late
   pointer cannot acquire a different key after the target or mode has changed.
   Android hosts may finish and retain the already displayed preedit in the *old*
-  editor before disconnecting it. RIMES never replays it into the next editor.
+  editor before disconnecting it. XSIME never replays it into the next editor.
 
 ## Keyboard layouts and appearance
 
@@ -264,7 +264,7 @@ maintenance/deployment or dictionary compiler invocation. Official plugin packag
 are separately verified against the bundled catalog before installation.
 
 CometAPI may reject an endpoint with `403 / region_restricted` for a network
-location it does not serve. RIMES shows a region-specific error and preserves the
+location it does not serve. XSIME shows a region-specific error and preserves the
 source; contact the provider to confirm service availability. The October 3
 phone run initially received this response. After the maintainer changed the
 phone's network, real quick-question, polish and translation replies succeeded.
@@ -325,7 +325,7 @@ ABI/engine evidence, not Android emulator UI or 16 KB runtime acceptance.
 
 `testhost` is a separate, offline validation app with native, password, private and
 WebView fields. It is never included in the keyboard APK. Its instrumentation
-clicks the actual RIMES buttons and checks actual host text; it does not inject
+clicks the actual XSIME buttons and checks actual host text; it does not inject
 text through an automation keyboard. While visible it keeps its own window awake,
 without changing the device timeout. Close other UiAutomation sessions before use.
 Run JNI instrumentation with another enabled IME selected, then force-stop the
@@ -388,7 +388,7 @@ that activity's transient task. It uses UiAutomation's shell launch to avoid OEM
 background-activity restrictions and fails if the host is not created in 15 seconds.
 If an OEM replaces password input with a secure
 keyboard, record that result separately and pass `-e skipPassword true` to run the
-remaining contract. A skipped password case is not a RIMES password UI pass.
+remaining contract. A skipped password case is not a XSIME password UI pass.
 The Android workflow builds/checks both ABIs and resources; it does not publish,
 install on a physical phone, or participate in macOS release jobs.
 
@@ -402,7 +402,7 @@ keystroke-to-visible-frame latency, and repeated short runs are not soak evidenc
 The engine benchmark uses four private schemas and a fresh synthetic user
 directory, never the user's dictionary. It records resource preparation, library
 load, initialization, first use, warm worker/JNI snapshot and serial queue/round-trip
-p50/p95/max, and process-level memory. Switch away from RIMES before starting it:
+p50/p95/max, and process-level memory. Switch away from XSIME before starting it:
 its process-wide librime singleton cannot be cold if the IME service initialized
 it. Choose an already enabled alternative IME for `RIMES_ANDROID_BENCHMARK_IME`.
 

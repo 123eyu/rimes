@@ -1,3 +1,4 @@
+#include "../../product_brand.hpp"
 #include "buffer_protocol.hpp"
 #include "capsule_click.hpp"
 #include "capsule_clipboard.hpp"
@@ -489,7 +490,7 @@ button.rimes-action {
 
 void BuildUi(App* app) {
     app->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(app->window), "RIMES Capsule");
+    gtk_window_set_title(GTK_WINDOW(app->window), rimes::branding::Title(" Capsule").c_str());
     gtk_window_set_icon_name(GTK_WINDOW(app->window), "rimes");
     gtk_window_set_default_size(GTK_WINDOW(app->window), kWindowWidth, kWindowHeight);
     gtk_widget_set_size_request(app->window, kWindowWidth, kWindowHeight);

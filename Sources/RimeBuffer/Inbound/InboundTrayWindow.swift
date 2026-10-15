@@ -92,7 +92,7 @@ final class MailboxWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        win.title = "RIMES Mailbox"
+        win.title = "\(ProductBrand.name) Mailbox"
         win.isReleasedWhenClosed = false
         win.contentMinSize = MailboxUI.minimumSize
         win.appearance = RimeUI.appKitAppearance

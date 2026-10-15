@@ -399,7 +399,7 @@ class Assembly:
                     f"---\nname: {table}\nversion: \"0\"\nsort: by_weight\n...\n"
                 )
                 self.items[table + ".dict.yaml"] = Item(
-                    text.encode("utf-8"), Origin("scholay/rimes", "generated", table + ".dict.yaml", "Apache-2.0"),
+                    text.encode("utf-8"), Origin("scholay/xsime", "generated", table + ".dict.yaml", "Apache-2.0"),
                     ["generated empty table for an import upstream leaves to the user"])
         vocabulary = lint.scalar(lint.child(header, "vocabulary"))
         preset = lint.scalar(lint.child(header, "use_preset_vocabulary"))
@@ -439,7 +439,7 @@ class Assembly:
                 "# file optionally; it is absent here, so the referenced nodes are left empty.\n"
                 + yaml.safe_dump(document or {"placeholder": True}, allow_unicode=True, default_flow_style=False)
             )
-            self.items[relative] = Item(text.encode("utf-8"), Origin("scholay/rimes", "generated", relative, "Apache-2.0"),
+            self.items[relative] = Item(text.encode("utf-8"), Origin("scholay/xsime", "generated", relative, "Apache-2.0"),
                                         ["generated placeholder for an optional upstream reference"])
 
     def _add_lua_data(self) -> None:
@@ -782,7 +782,7 @@ def shim_lua_submodules(items: dict[str, Item]) -> None:
                         f"-- spelling *{module}{fields}, which the importer cannot parse.\n"
                         f"return require(\"{module}\")" + "".join(f".{name}" for name in names) + "\n"
                     )
-                    items[path] = Item(body.encode("utf-8"), Origin("scholay/rimes", "generated", path, "Apache-2.0"),
+                    items[path] = Item(body.encode("utf-8"), Origin("scholay/xsime", "generated", path, "Apache-2.0"),
                                        ["generated module returning one field of an upstream Lua module"])
                 changed = f"{component}@*{shim}@{name_space if name_space is not None else '*' + module + fields}"
                 source = text[node.start_mark.index:node.end_mark.index]
@@ -985,7 +985,7 @@ def adapt_wanxiang_portable(items: dict[str, Item]) -> None:
     readme = "README-RIMES.txt"
     items[readme] = Item(
         (CATALOG_DIR / "wanxiang-portable.txt").read_bytes(),
-        Origin("scholay/rimes", "generated", readme, "Apache-2.0"),
+        Origin("scholay/xsime", "generated", readme, "Apache-2.0"),
         ["added mobile import instructions and explicit feature limitations"],
     )
 
@@ -1069,7 +1069,7 @@ def build_package(entry: dict, sources: dict, output: Path) -> dict:
             assembly.items[name] = Item(found[1], Origin(repo, tree.revision, found[0], tree.license))
     assembly.items[MANIFEST_NAME] = Item(
         manifest_text(entry, version, recommended, assembly.items, licenses).encode("utf-8"),
-        Origin("scholay/rimes", "generated", MANIFEST_NAME, "Apache-2.0"),
+        Origin("scholay/xsime", "generated", MANIFEST_NAME, "Apache-2.0"),
     )
 
     files = {relative: item.data for relative, item in assembly.items.items()}

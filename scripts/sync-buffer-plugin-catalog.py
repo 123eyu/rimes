@@ -305,7 +305,7 @@ def render_readme_section(entries: list[dict[str, Any]], language: str) -> str:
         ]
         for entry in entries:
             installation = (
-                "随 RIMES 预装"
+                "随 XSIME 预装"
                 if entry["defaultInstalled"]
                 else "设置中按需下载"
             )
@@ -334,7 +334,7 @@ def render_readme_section(entries: list[dict[str, Any]], language: str) -> str:
     ]
     for entry in entries:
         installation = (
-            "Bundled with RIMES"
+            "Bundled with XSIME"
             if entry["defaultInstalled"]
             else "On demand in Settings"
         )

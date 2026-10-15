@@ -1,6 +1,6 @@
-# RIMES Native Windows Foundation
+# XSIME Native Windows Foundation
 
-Current Windows release: **[1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1)**. Download the EXE installer for a data-preserving upgrade, including discoverable Settings and system uninstall entries. See the [release notes](RELEASE-1.1.1.md); package verification and actual desktop acceptance are recorded separately in the release BUILD-INFO.json.
+Current Windows release: **[1.1.1](https://github.com/scholay/xsime/releases/tag/windows-v1.1.1)**. Download the EXE installer for a data-preserving upgrade, including discoverable Settings and system uninstall entries. See the [release notes](RELEASE-1.1.1.md); package verification and actual desktop acceptance are recorded separately in the release BUILD-INFO.json.
 
 The published 1.1.1 package includes damaged-install recovery, candidate settings
 and caret-placement fixes. Its BUILD-INFO.json distinguishes automated checks,
@@ -31,7 +31,7 @@ TSF still must not load `librime` or do network I/O. Broker failure fail-opens.
 
 ## Sandboxed and UI-less hosts
 
-The development source for [#133](https://github.com/scholay/rimes/issues/133)
+The development source for [#133](https://github.com/scholay/xsime/issues/133)
 adds `IMMERSIVESUPPORT` and `UIELEMENTENABLED` registration. Candidate UI uses
 TSF Begin/Update/End negotiation: a host can render the list itself and suppress
 the popup, including when no Win32 caret is available. Host selection/finalize
@@ -81,7 +81,7 @@ API. Other target languages can use the configured AI connector. See the
 [resource licenses](../translation/NOTICE.md) and
 [implementation/acceptance record](../../../validation/windows-buffer-parity-20261012/implementation.md).
 
-Where the TSF host cooperates, typing matches the macOS RIMES controller:
+Where the TSF host cooperates, typing matches the macOS XSIME controller:
 
 - Latin keys while composing stay inside the engine.
 - Space commits the highlighted candidate.
@@ -232,7 +232,7 @@ icon wiring, available build artifacts, and compiled registrar metadata:
 ..\scripts\Debug-RimesWindows.ps1 -Architecture x86 -Configuration Release
 ```
 
-On Windows, add `-Registered` to inspect the current RIMES language-profile
+On Windows, add `-Registered` to inspect the current XSIME language-profile
 registration, including its `IconFile` and zero-based `IconIndex`. Add `-Json`
 when another script or CI job needs machine-readable results. The helper is
 read-only and does not register, unregister, restart, or modify user data.
@@ -305,7 +305,7 @@ python ..\scripts\prepare-native-data.py verify C:\RimesTest\shared
 python -m unittest discover -s ..\tests -p test_native_data.py
 ```
 
-Use a new output directory. The tool copies only the reviewed 57-file RIMES
+Use a new output directory. The tool copies only the reviewed 57-file XSIME
 closure, the dictionaries referenced by `s2t.json`, and OpenCC's license. The
 standard configuration adds four files (59 total, plus the manifest). It refuses
 missing dependencies, unsafe paths, symlinks and existing output; verification

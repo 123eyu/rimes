@@ -2303,7 +2303,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
 
         let selectedSubpage = route.subpages.first { $0.id == navigation.selectedSubpage() }
         let heading = route.id == SettingsCoreRoute.rimes.id
-            ? (selectedSubpage?.id.rawValue == "about" ? "关于 RIMES" : selectedSubpage?.title ?? "RIMES")
+            ? (selectedSubpage?.id.rawValue == "about" ? "关于 \(ProductBrand.name)" : selectedSubpage?.title ?? "\(ProductBrand.name)")
             : route.title
         let headingTitle = NSTextField(labelWithString: heading)
         headingTitle.font = .systemFont(ofSize: 20, weight: .bold)
@@ -2483,7 +2483,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         hero.identifier = .init("settings.rimes.hero")
         hero.translatesAutoresizingMaskIntoConstraints = false
         let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String
-        let credit = caption("\(version.map { "RIMES \($0) · " } ?? "")学术海 · librime")
+        let credit = caption("\(version.map { "\(ProductBrand.name) \($0) · " } ?? "")学术海 · librime")
         let column = contentColumn([hero, spacer(4), credit])
         let preferredWidth = hero.widthAnchor.constraint(equalToConstant: 650)
         preferredWidth.priority = .defaultHigh
@@ -2502,7 +2502,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         switch subpageID {
         case "website":
             (title, summary, action, destination) = (
-                "pm.scholay.com", "访问 RIMES 官网，了解产品与项目动态。", "打开官网",
+                "pm.scholay.com", "访问 \(ProductBrand.name) 官网，了解产品与项目动态。", "打开官网",
                 "https://pm.scholay.com")
         case "contact":
             (title, summary, action, destination) = (
@@ -2510,16 +2510,16 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 "mailto:pm@scholay.com")
         case "source":
             (title, summary, action, destination) = (
-                "scholay / rimes", "查看源码、提交问题或参与改进。", "查看源码",
-                "https://github.com/scholay/rimes")
+                "scholay / xsime", "查看源码、提交问题或参与改进。", "查看源码",
+                "https://github.com/scholay/xsime")
         case "readme":
             (title, summary, action, destination) = (
-                "从这里了解 RIMES", "输入法、Buffer、Capsule 与 Mailbox 的功能和安装说明。", "阅读 README",
-                "https://github.com/scholay/rimes/blob/main/README.md")
+                "从这里了解 \(ProductBrand.name)", "输入法、Buffer、Capsule 与 Mailbox 的功能和安装说明。", "阅读 README",
+                "https://github.com/scholay/xsime/blob/main/README.md")
         default:
             (title, summary, action, destination) = (
-                "Apache License 2.0", "查看 RIMES 的开源许可原文。", "查看完整许可",
-                "https://github.com/scholay/rimes/blob/main/LICENSE")
+                "Apache License 2.0", "查看 \(ProductBrand.name) 的开源许可原文。", "查看完整许可",
+                "https://github.com/scholay/xsime/blob/main/LICENSE")
         }
 
         let heading = NSTextField(labelWithString: title)
@@ -3292,7 +3292,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         let page = contentColumn([
             settingsRow(
                 title: "允许收录剪贴板内容",
-                detail: "RIMES 运行时后台收录；安全输入、锁屏和休眠期间不会读取。",
+                detail: "\(ProductBrand.name) 运行时后台收录；安全输入、锁屏和休眠期间不会读取。",
                 symbolName: "clipboard",
                 control: clipboardHistoryCheck
             ),
@@ -4637,7 +4637,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                                              action: #selector(refreshPermissionsPage))
         let reset = SettingsPointingButton(title: "重置辅助功能…", target: self,
                                            action: #selector(resetAccessibilityRecordTapped))
-        reset.toolTip = "仅重置 RIMES 的辅助功能授权；执行前会确认"
+        reset.toolTip = "仅重置 \(ProductBrand.name) 的辅助功能授权；执行前会确认"
         let identity = SystemPermissionAudit.identity()
         refresh.toolTip = "\(identity.bundleIdentifier)\n\(identity.bundlePath)"
         if let authority = SystemPermissionAudit.signingAuthority() {
@@ -4664,15 +4664,15 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
 
     @MainActor @objc private func resetAccessibilityRecordTapped() {
         let alert = NSAlert()
-        alert.messageText = "仅重置 RIMES 的辅助功能授权？"
-        alert.informativeText = "这不会修复屏幕录制权限，也不会清除其他权限。重置后需要重新允许 RIMES 使用辅助功能。"
+        alert.messageText = "仅重置 \(ProductBrand.name) 的辅助功能授权？"
+        alert.informativeText = "这不会修复屏幕录制权限，也不会清除其他权限。重置后需要重新允许 \(ProductBrand.name) 使用辅助功能。"
         alert.addButton(withTitle: "取消"); alert.addButton(withTitle: "重置辅助功能")
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         let cleared = SystemPermissionAudit.resetAccessibilityRecord()
         // Only ask after the record is gone; asking first is what produced
         // nothing at all.
         if cleared { CapturePermissionGuide.shared.show(.accessibility) }
-        else { info("未能重置辅助功能授权。请到系统设置手动检查 RIMES 条目。") }
+        else { info("未能重置辅助功能授权。请到系统设置手动检查 \(ProductBrand.name) 条目。") }
         reload()
     }
 

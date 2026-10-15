@@ -250,7 +250,7 @@ private struct CustomKeyboardLayoutEditor: View {
             Button("取消", role: .cancel) { }
         } message: { Text("可以用撤销恢复重置前的修改。") }
         .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json,
-                      defaultFilename: draft.name.isEmpty ? "RIMES-layout" : draft.name) { result in
+                      defaultFilename: draft.name.isEmpty ? "XSIME-layout" : draft.name) { result in
             switch result {
             case .success: message = "布局已导出。"
             case .failure(let failure): error = failure.localizedDescription

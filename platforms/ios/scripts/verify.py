@@ -18,7 +18,8 @@ assert {str(p.relative_to(data)) for p in data.rglob('*.lua')} == {'lua/rimes_wu
 assert (data/'lua/rimes_wubi_autocommit.lua').read_bytes() == (root/'rime-data/lua/rimes_wubi_autocommit.lua').read_bytes()
 assert not any(p.suffix == '.dylib' or 'yoyo' in p.name or 'flypy' in p.name for p in data.rglob('*'))
 for name in ['App/Info.plist','Keyboard/Info.plist']:
-    p=plistlib.loads((ios/name).read_bytes()); assert p['CFBundleLocalizations']==['en','zh-Hans']
+    p=plistlib.loads((ios/name).read_bytes())
+    assert p['CFBundleLocalizations']==['en','zh-Hans','zh-Hant'], f'{name}: unexpected supported localizations'
     assert p['CFBundleShortVersionString']=='$(MARKETING_VERSION)'
     assert p['CFBundleVersion']=='$(CURRENT_PROJECT_VERSION)'
 for name in ['App/RIMES.entitlements','Keyboard/RIMESKeyboard.entitlements']:

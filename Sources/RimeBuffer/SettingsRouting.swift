@@ -38,7 +38,7 @@ enum SettingsCoreRoute: String, CaseIterable, Codable {
 
     var title: String {
         switch self {
-        case .rimes: return "RIMES"
+        case .rimes: return ProductBrand.name
         case .inputMethod: return "输入法"
         case .appearance: return "外观"
         case .buffer: return "Buffer"
@@ -91,7 +91,7 @@ enum CoreSettingsSubpages {
         switch route {
         case .rimes:
             values = [
-                ("about", "RIMES"), ("website", "官网"), ("contact", "邮箱"),
+                ("about", ProductBrand.name), ("website", "官网"), ("contact", "邮箱"),
                 ("source", "开源项目"), ("readme", "README"), ("license", "License"),
             ]
         case .inputMethod:
@@ -531,7 +531,7 @@ func runSettingsRoutingSmokeTest() -> Bool {
         guard catalog.coreRoutes.map(\.id) == SettingsCoreRoute.allCases.map(\.id),
               catalog.coreRoutes.map(\.title)
                 == [
-                    "RIMES",
+                    ProductBrand.name,
                     "输入法",
                     "外观",
                     "Buffer",

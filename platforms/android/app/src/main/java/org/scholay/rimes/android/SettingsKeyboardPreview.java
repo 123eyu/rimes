@@ -30,7 +30,7 @@ final class SettingsKeyboardPreview extends View {
         chordKeys=chord?ChordLayout.keys(WIDTH-8,split):java.util.Collections.emptyList();
         for(KeyboardIcon icon:new KeyboardIcon[]{KeyboardIcon.CHEVRON_RIGHT,KeyboardIcon.DELETE,KeyboardIcon.SHIFT,KeyboardIcon.SMILE}) icons.put(icon,icon.drawable(context));
         paint.setTypeface(Typeface.create("sans-serif",Typeface.NORMAL));
-        setContentDescription("RIMES "+layout+" · "+theme.title); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        setContentDescription(context.getString(R.string.app_name)+" "+layout+" · "+theme.title); setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
         setLayoutDirection(LAYOUT_DIRECTION_LTR);
     }
     private float logicalHeight() { return CANDIDATES+(chord?ChordLayout.height(WIDTH,split):KeyboardLayout.height(false))+8; }

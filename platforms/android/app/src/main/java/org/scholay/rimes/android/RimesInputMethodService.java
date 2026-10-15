@@ -133,7 +133,7 @@ public final class RimesInputMethodService extends InputMethodService {
     }
     private long session;
     private static final String[] SCHEMAS={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"};
-    private static final String[] NAMES={"拼音","自然码","五笔","灵犀五笔"};
+    private static final String[] NAMES={"拼音","自然码","五笔","犀术五笔"};
 
     @Override public void onCreate() {
         super.onCreate();
@@ -1019,7 +1019,7 @@ public final class RimesInputMethodService extends InputMethodService {
         }
         if(state.status==PluginSession.Status.RUNNING) return activePlugin.equals("translate")?"本机词典查译中…":"Mock 生成中…";
         if(state.status==PluginSession.Status.ERROR) return state.message;
-        if(!"translate".equals(activePlugin) && !aiMockEnabled) return "AI Mock 已关闭 · 在 RIMES 主应用中启用";
+        if(!"translate".equals(activePlugin) && !aiMockEnabled) return "AI Mock 已关闭 · 在 犀术IME 主应用中启用";
         return activePlugin.equals("translate")?"本机中英词典 · 输入后自动翻译":"OpenAI 格式 Mock · 点执行生成";
     }
     private void runOrCancelPlugin() {

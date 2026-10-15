@@ -1,10 +1,10 @@
-# RIMES Windows Data / Input-Schemes Preview
+# XSIME Windows Data / Input-Schemes Preview
 
-原生灵犀输入法开发与日用安装请从 [Windows 接手指南](DEVELOPMENT-HANDOFF.md)、[TSF/Broker 开发说明](native/README.md) 和 [EXE 安装器说明](installer/README.md) 进入。下文仅介绍较早的 Weasel 词库预览通道。
+原生犀术IME开发与日用安装请从 [Windows 接手指南](DEVELOPMENT-HANDOFF.md)、[TSF/Broker 开发说明](native/README.md) 和 [EXE 安装器说明](installer/README.md) 进入。下文仅介绍较早的 Weasel 词库预览通道。
 
-This is an **experimental data preview for the official Weasel input method**. It packages RIMES's current Rime schemas, dictionaries, OpenCC data, and Lua modules so Windows users can try the input schemes with Weasel.
+This is an **experimental data preview for the official Weasel input method**. It packages XSIME's current Rime schemas, dictionaries, OpenCC data, and Lua modules so Windows users can try the input schemes with Weasel.
 
-It is deliberately **not advertised as a native Windows build of RIMES**. The package does not contain a TSF input-method DLL, RIMES Buffer, the workbench, AI/translation/OCR features, settings UI, or any RIMES executable. All key handling, composition, candidate UI, and text delivery come from Weasel.
+It is deliberately **not advertised as a native Windows build of XSIME**. The package does not contain a TSF input-method DLL, XSIME Buffer, the workbench, AI/translation/OCR features, settings UI, or any XSIME executable. All key handling, composition, candidate UI, and text delivery come from Weasel.
 
 ## Requirements
 
@@ -54,7 +54,7 @@ Uninstall removes only files recorded as created by this package and restores ve
 - The scripts never copy, open, merge, or delete an active Rime user database. Existing Weasel learning data remains where it is and is opened only by Weasel.
 - Package hashes are checked against `payload-manifest.json` before any destination write. Copies and backups are hashed again during file transactions.
 - A failed install rolls back files from verified backups. A failed uninstall restores its pre-uninstall transaction snapshot.
-- Install, installed-state verification, and uninstall hold exclusive crash-cleaned locks for both the state root and Rime destination. Do not edit managed schema files, run Weasel Deploy, or start another configuration transaction while install/uninstall is running: these locks serialize RIMES scripts, not arbitrary external writers.
+- Install, installed-state verification, and uninstall hold exclusive crash-cleaned locks for both the state root and Rime destination. Do not edit managed schema files, run Weasel Deploy, or start another configuration transaction while install/uninstall is running: these locks serialize XSIME scripts, not arbitrary external writers.
 
 As with any input-method configuration preview, back up important custom schemas independently before opting into `-BackupConflicts`.
 
@@ -92,10 +92,10 @@ The command writes the ZIP and a sibling `.sha256` file under `platforms/windows
 
 ## Known limitations
 
-- No Windows machine has yet validated typing behavior, Lua plugin availability, deployment time, application compatibility, or the isaac2026 chord timing in this Weasel data preview. This must therefore be published as an untested preview, not a stable cross-platform RIMES release.
-- RIMES's macOS buffer/workbench behavior is not reproduced by Weasel.
+- No Windows machine has yet validated typing behavior, Lua plugin availability, deployment time, application compatibility, or the isaac2026 chord timing in this Weasel data preview. This must therefore be published as an untested preview, not a stable cross-platform XSIME release.
+- XSIME's macOS buffer/workbench behavior is not reproduced by Weasel.
 - The package supplies the `my_combo` Rime chord schema, including literal `v`
-  behavior. RIMES's cross-batch mutual-pairing logic lives in the macOS Swift
+  behavior. XSIME's cross-batch mutual-pairing logic lives in the macOS Swift
   frontend and is not included in this data preview.
 - Weasel owns candidate rendering and application compatibility; visual behavior will differ from macOS.
 - This package does not install or update Weasel and does not change its user-directory registry setting.

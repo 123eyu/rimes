@@ -26,6 +26,14 @@ private struct GitHubAsset: Codable {
 }
 
 private enum UpdateNetworkRules {
+    // Repository identity survives renames. Keep aliases explicit, never accept
+    // arbitrary redirects or look-alike repositories under the same owner.
+    static let repositoryID = "1327328463"
+    static let releaseAPI = "https://api.github.com/repositories/\(repositoryID)/releases/latest"
+    static func repositoryAliases(owner: String, repository: String) -> [String] {
+        guard owner == "scholay", ["rimes", "xsime"].contains(repository) else { return [] }
+        return ["rimes", "xsime"]
+    }
     static func stableVersionComponents(_ version: String) -> [Int]? {
         let components = version.split(separator: ".", omittingEmptySubsequences: false)
         guard components.count == 3 else { return nil }
@@ -73,8 +81,10 @@ private enum UpdateNetworkRules {
     static func isExactReleaseAPIURL(_ url: URL,
                                      owner: String,
                                      repository: String) -> Bool {
-        let expected = "https://api.github.com/repos/\(owner)/\(repository)/releases/latest"
-        return isSafeHTTPSURL(url) && url.absoluteString == expected
+        let aliases = repositoryAliases(owner: owner, repository: repository)
+        guard !aliases.isEmpty, isSafeHTTPSURL(url) else { return false }
+        let expected = aliases.map { "https://api.github.com/repos/\(owner)/\($0)/releases/latest" }
+        return (expected + [releaseAPI]).contains(url.absoluteString)
     }
 
     static func isExactReleaseAssetURL(_ url: URL,
@@ -84,8 +94,10 @@ private enum UpdateNetworkRules {
         guard let packageName = expectedPackageName(version: version) else {
             return false
         }
-        let expected = "https://github.com/\(owner)/\(repository)/releases/download/v\(version)/\(packageName)"
-        return isSafeHTTPSURL(url) && url.absoluteString == expected
+        let expected = repositoryAliases(owner: owner, repository: repository).map {
+            "https://github.com/\(owner)/\($0)/releases/download/v\(version)/\(packageName)"
+        }
+        return isSafeHTTPSURL(url) && expected.contains(url.absoluteString)
     }
 
     static func isAllowedFinalPackageURL(_ url: URL) -> Bool {
@@ -243,7 +255,7 @@ final class UpdateManager {
 
     // Source of truth for the repo; matches .github/workflows and README.
     private let githubOwner = "scholay"
-    private let githubRepo = "rimes"
+    private let githubRepo = "xsime"
 
     private(set) var status: UpdateStatus = .idle
     /// Invoked on the main thread whenever `status` changes, so the status-bar
@@ -350,7 +362,7 @@ final class UpdateManager {
             return
         }
         if isBusy {
-            showAlert(title: "更新进行中", message: "RIMES 正在检查、下载或打开安装器。")
+            showAlert(title: "更新进行中", message: "\(ProductBrand.name) 正在检查、下载或打开安装器。")
             return
         }
         checkForUpdates { [weak self] in
@@ -378,7 +390,7 @@ final class UpdateManager {
 
     private func checkForUpdates(completion: @escaping () -> Void) {
         setStatus(.checking)
-        let urlString = "https://api.github.com/repos/\(githubOwner)/\(githubRepo)/releases/latest"
+        let urlString = UpdateNetworkRules.releaseAPI
         guard let url = URL(string: urlString),
               UpdateNetworkRules.isExactReleaseAPIURL(url,
                                                        owner: githubOwner,
@@ -581,7 +593,7 @@ final class UpdateManager {
         guard case let .readyToInstall(version, package) = status else { return }
         let alert = NSAlert()
         alert.messageText = "更新到 \(ProductIdentity.displayName) v\(version)？"
-        alert.informativeText = "RIMES 将再次验证安装包，然后打开 macOS 系统安装器。只有系统安装器会在您授权后更新输入法。"
+        alert.informativeText = "\(ProductBrand.name) 将再次验证安装包，然后打开 macOS 系统安装器。只有系统安装器会在您授权后更新输入法。"
         alert.addButton(withTitle: "打开系统安装器")
         alert.addButton(withTitle: "稍后")
         alert.window.appearance = RimeUI.appKitAppearance
@@ -689,22 +701,22 @@ final class UpdateManager {
         IMELog.write("update: trust check pkgutil=\(toolSummary(signature)) spctl=\(toolSummary(assessment))")
 
         guard !signature.timedOut, !assessment.timedOut else {
-            return "macOS 安装包验证工具 pkgutil 或 spctl 超时。RIMES 已按安全默认拒绝打开安装包；请从官方 Releases 页重新下载或获取帮助。"
+            return "macOS 安装包验证工具 pkgutil 或 spctl 超时。\(ProductBrand.name) 已按安全默认拒绝打开安装包；请从官方 Releases 页重新下载或获取帮助。"
         }
         guard signature.launched, assessment.launched,
               signature.terminationStatus != nil,
               assessment.terminationStatus != nil else {
-            return "无法调用 macOS 系统验证工具 pkgutil 和 spctl，RIMES 已按安全默认拒绝打开安装包。请前往官方 Releases 页获取帮助。"
+            return "无法调用 macOS 系统验证工具 pkgutil 和 spctl，\(ProductBrand.name) 已按安全默认拒绝打开安装包。请前往官方 Releases 页获取帮助。"
         }
         guard signature.terminationStatus == 0, assessment.terminationStatus == 0 else {
-            return "安装包未同时通过 macOS 签名检查和安全策略评估。它可能是本地开发包、旧版未签名 Release，或已损坏。RIMES 不会降级或绕过检查；请从官方 Releases 页下载最新签名安装包。"
+            return "安装包未同时通过 macOS 签名检查和安全策略评估。它可能是本地开发包、旧版未签名 Release，或已损坏。\(ProductBrand.name) 不会降级或绕过检查；请从官方 Releases 页下载最新签名安装包。"
         }
         guard let expectedTeamIdentifier else {
-            return "当前 RIMES 不是可验证的正式签名构建（例如本地开发或 ad-hoc 构建），无法将更新包绑定到同一签名团队。RIMES 已按安全默认拒绝打开；请从官方 Releases 页手动安装最新签名版本。"
+            return "当前 \(ProductBrand.name) 不是可验证的正式签名构建（例如本地开发或 ad-hoc 构建），无法将更新包绑定到同一签名团队。\(ProductBrand.name) 已按安全默认拒绝打开；请从官方 Releases 页手动安装最新签名版本。"
         }
         guard packageInstallerTeamMatches(signature.output,
                                           expectedTeamIdentifier: expectedTeamIdentifier) else {
-            return "安装包的 Developer ID Installer 签名团队与当前 RIMES 不一致，已拒绝打开。RIMES 不会降级或绕过同团队校验；请前往官方 Releases 页核实。"
+            return "安装包的 Developer ID Installer 签名团队与当前 \(ProductBrand.name) 不一致，已拒绝打开。\(ProductBrand.name) 不会降级或绕过同团队校验；请前往官方 Releases 页核实。"
         }
         if let metadataFailure = packageMetadataFailure(at: package,
                                                         expectedVersion: version) {
@@ -1065,6 +1077,36 @@ final class UpdateManager {
 /// both product and component metadata must match the requested Release.
 func runUpdatePackageMetadataSmokeTest() -> Bool {
     print("== RIMES update package metadata smoke test ==")
+    for (language, expected) in [("zh-Hans", "犀术IME"), ("zh-Hant", "犀術IME"),
+                                  ("zh-TW", "犀術IME"), ("zh-HK", "犀術IME"),
+                                  ("en", "XSIME"), ("ja", "XSIME")] {
+        guard ProductBrand.name(language: language) == expected else {
+            print("FAILED: localized product name"); return false
+        }
+    }
+    let acceptedAPIs = [UpdateNetworkRules.releaseAPI,
+        "https://api.github.com/repos/scholay/rimes/releases/latest",
+        "https://api.github.com/repos/scholay/xsime/releases/latest"]
+    let rejectedAPIs = [
+        "https://api.github.com/repositories/1327328464/releases/latest",
+        "https://api.github.com/repos/attacker/xsime/releases/latest",
+        "https://api.github.com/repos/scholay/xsime-fork/releases/latest",
+        "http://api.github.com/repos/scholay/xsime/releases/latest",
+        "https://api.github.com/repos/scholay/xsime/releases/latest?override=true",
+        "https://api.github.com/repos/scholay/xsime/releases/latest#fragment"]
+    for raw in acceptedAPIs + rejectedAPIs {
+        guard UpdateNetworkRules.isExactReleaseAPIURL(URL(string: raw)!, owner: "scholay", repository: "xsime") == acceptedAPIs.contains(raw) else {
+            print("FAILED: update repository API allowlist"); return false
+        }
+    }
+    for repo in ["rimes", "xsime", "xsime-fork"] {
+        let url = URL(string: "https://github.com/scholay/\(repo)/releases/download/v1.2.3/RIMES-1.2.3.pkg")!
+        guard UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "scholay", repository: "xsime", version: "1.2.3") == (repo != "xsime-fork"),
+              !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "attacker", repository: "xsime", version: "1.2.3"),
+              !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "scholay", repository: "xsime", version: "1.2.4") else {
+            print("FAILED: update repository asset allowlist"); return false
+        }
+    }
     let distribution = Data("""
     <?xml version="1.0"?>
     <installer-gui-script>

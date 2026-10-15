@@ -88,7 +88,7 @@ public final class SetupActivity extends Activity {
         page=destination; render();
     }
     private String t(String chinese,String english) {
-        return getResources().getConfiguration().getLocales().get(0).getLanguage().equals("zh")?chinese:english;
+        return (getResources().getConfiguration().getLocales().get(0).getLanguage().equals("zh")?chinese:english).replace("RIMES", getString(R.string.app_name));
     }
     private int dp(float value) { return Math.round(value*getResources().getDisplayMetrics().density); }
     private LinearLayout column() {
@@ -206,7 +206,7 @@ public final class SetupActivity extends Activity {
     }
     private String schemeName(String id) {
         if(id.equals("rimes_ziranma")) return t("自然码双拼","Natural Code");
-        if(id.equals("lingxi_wubi")) return t("灵犀五笔","Lingxi Wubi");
+        if(id.equals("lingxi_wubi")) return t("犀术五笔","XSIME Wubi");
         if(id.equals("rimes_wubi")) return t("五笔 86","Wubi 86"); return t("全拼 · Pinyin","Pinyin");
     }
     private String layoutName(String id) {
@@ -220,7 +220,7 @@ public final class SetupActivity extends Activity {
         logo.setBackground(shape(0xFFFFFFFF,16)); logo.setClipToOutline(true); logo.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         LinearLayout.LayoutParams logoParams=new LinearLayout.LayoutParams(dp(72),dp(72)); logoParams.setMarginEnd(dp(16)); hero.addView(logo,logoParams);
         LinearLayout identity=column();
-        TextView brand=text("RIMES",32,ink,true); brand.setTypeface(Typeface.create("sans-serif-rounded",Typeface.BOLD)); identity.addView(brand);
+        TextView brand=text(getString(R.string.app_name),32,ink,true); brand.setTypeface(Typeface.create("sans-serif-rounded",Typeface.BOLD)); identity.addView(brand);
         String[] lines={t("世界对智者太过挑剔","The world is too hard on the wise."),t("好奇的人需要朋友","Curious minds need friends.")};
         for(int i=0;i<lines.length;i++) {
             TextView line=text(lines[i],13,secondary,false); line.setSingleLine(true);
@@ -246,7 +246,7 @@ public final class SetupActivity extends Activity {
         String version;
         try { version=getPackageManager().getPackageInfo(getPackageName(),0).versionName; }
         catch(android.content.pm.PackageManager.NameNotFoundException error) { version=t("开发版","Development"); }
-        note("RIMES  "+version);
+        note(getString(R.string.app_name)+"  "+version);
         contactLink("pm.scholay.com","https://pm.scholay.com",false);
         contactLink("pm@scholay.com","mailto:pm@scholay.com",true);
     }
@@ -268,7 +268,7 @@ public final class SetupActivity extends Activity {
         boolean enabled=manager.getEnabledInputMethodList().stream().anyMatch(method -> method.getPackageName().equals(getPackageName()));
         String chosen=Settings.Secure.getString(getContentResolver(),Settings.Secure.DEFAULT_INPUT_METHOD);
         row(status,KeyboardIcon.KEYBOARD,t("RIMES 键盘","RIMES keyboard"),null,enabled?t("已启用","Enabled"):t("待启用","Not enabled"),"settings.setup.status",null);
-        row(status,KeyboardIcon.CHECK,t("当前输入法","Current input method"),null,chosen!=null && chosen.startsWith(getPackageName()+"/")?"RIMES":t("其他键盘","Another keyboard"),"settings.setup.selected",null);
+        row(status,KeyboardIcon.CHECK,t("当前输入法","Current input method"),null,chosen!=null && chosen.startsWith(getPackageName()+"/")?getString(R.string.app_name):t("其他键盘","Another keyboard"),"settings.setup.selected",null);
         LinearLayout steps=group(t("开始使用","Get started"));
         row(steps,KeyboardIcon.SETTINGS,t("1. 启用键盘","1. Enable keyboard"),t("打开系统输入法设置，启用 RIMES。","Open system input settings and enable RIMES."),null,"settings.setup.enable",() -> startActivity(new Intent(Settings.ACTION_INPUT_METHOD_SETTINGS)));
         row(steps,KeyboardIcon.GLOBE,t("2. 选择键盘","2. Choose keyboard"),t("在输入法列表中选择 RIMES。","Choose RIMES in the keyboard picker."),null,"settings.setup.choose",manager::showInputMethodPicker);

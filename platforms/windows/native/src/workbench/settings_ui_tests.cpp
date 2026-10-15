@@ -910,7 +910,7 @@ void TestPluginManagementAndChordSelection() {
   Check(layout.scheme_cards.size() == 7, "Wubi mixing and chording have separate scheme choices");
   Click(window, layout.scheme_cards[4]);
   Click(window, layout.save);
-  Check(saved_schema == "lingxi_wubi", "scheme control saves Lingxi Wubi identity");
+  Check(saved_schema == "lingxi_wubi", "scheme control saves XSIME Wubi identity");
   // Saving intentionally closes the real settings window; reopen before
   // exercising the next selection instead of sending messages to a dead HWND.
   host.Open(nullptr);

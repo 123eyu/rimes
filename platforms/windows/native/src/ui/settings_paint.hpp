@@ -1,3 +1,4 @@
+#include "../core/product_brand.hpp"
 #pragma once
 
 #include <Windows.h>
@@ -375,7 +376,7 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
     SelectObject(dc, fonts.body); SetTextColor(dc, ToColorRef(p.text_secondary));
     if (draft.subpage == 1) {
       RECT note = px(layout.body);
-      DrawTextW(dc, L"下载安装后默认停用，启用后即可使用。\n\n卸载保留配置、密钥和词库。停用并击后恢复普通全拼，重新启用可继续使用原方案选择。\n\n你可以在这里查看、安装和管理 RIMES 官方插件。", -1, &note, DT_LEFT | DT_WORDBREAK);
+      DrawTextW(dc, rimes::branding::Text(L"下载安装后默认停用，启用后即可使用。\n\n卸载保留配置、密钥和词库。停用并击后恢复普通全拼，重新启用可继续使用原方案选择。\n\n你可以在这里查看、安装和管理 {brand} 官方插件。").c_str(), -1, &note, DT_LEFT | DT_WORDBREAK);
     }
   } else {
     SelectObject(dc, fonts.body);

@@ -16,7 +16,7 @@ concurrency:
 jobs:
   windows-package:
     name: Build and test Windows preview
-    if: github.repository == 'scholay/rimes'
+    if: github.repository == 'scholay/xsime'
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -30,8 +30,8 @@ jobs:
       - name: Resolve preview version
         shell: pwsh
         run: |
-          if ($env:GITHUB_REPOSITORY -ne 'scholay/rimes' -or $env:GITHUB_REF_TYPE -ne 'tag') {
-            throw "Platform previews may only come from a scholay/rimes tag"
+          if ($env:GITHUB_REPOSITORY -ne 'scholay/xsime' -or $env:GITHUB_REF_TYPE -ne 'tag') {
+            throw "Platform previews may only come from a scholay/xsime tag"
           }
           $match = [regex]::Match($env:GITHUB_REF_NAME, '^platform-preview-v(?<version>(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*))$')
           if (-not $match.Success) { throw "Invalid platform preview tag: $env:GITHUB_REF_NAME" }
@@ -71,7 +71,7 @@ jobs:
 
   linux-package:
     name: Build and test Linux preview
-    if: github.repository == 'scholay/rimes'
+    if: github.repository == 'scholay/xsime'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -86,8 +86,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          [[ "$GITHUB_REPOSITORY" == "scholay/rimes" && "$GITHUB_REF_TYPE" == "tag" ]] || {
-            echo "Platform previews may only come from a scholay/rimes tag" >&2
+          [[ "$GITHUB_REPOSITORY" == "scholay/xsime" && "$GITHUB_REF_TYPE" == "tag" ]] || {
+            echo "Platform previews may only come from a scholay/xsime tag" >&2
             exit 1
           }
           version="${GITHUB_REF_NAME#platform-preview-v}"
@@ -127,7 +127,7 @@ jobs:
 
   macos-regression:
     name: Keep the macOS target healthy
-    if: github.repository == 'scholay/rimes'
+    if: github.repository == 'scholay/xsime'
     # macOS 15 currently defaults to Xcode 16.4 / Swift 6.1, which is required
     # by the pinned GRDB 7.11.1 dependency. This remains an unmodified build of
     # the existing macOS target; the preview contributes no AppKit/IMK source.
@@ -153,7 +153,7 @@ jobs:
 
   release:
     name: Publish prerelease
-    if: github.repository == 'scholay/rimes' && startsWith(github.ref, 'refs/tags/platform-preview-v')
+    if: github.repository == 'scholay/xsime' && startsWith(github.ref, 'refs/tags/platform-preview-v')
     needs: [windows-package, linux-package, macos-regression]
     runs-on: ubuntu-latest
     permissions:
@@ -183,7 +183,7 @@ jobs:
       - name: Create GitHub prerelease
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         shell: bash
         run: |
           set -euo pipefail

@@ -1,8 +1,8 @@
-# RIMES Fcitx5 input method (Linux)
+# XSIME Fcitx5 input method (Linux)
 
-This is a real RIMES frontend for [Fcitx5](https://fcitx-im.org/): a C++ addon
+This is a real XSIME frontend for [Fcitx5](https://fcitx-im.org/): a C++ addon
 that links `librime` (with `librime-lua` and OpenCC) and deploys the reviewed
-RIMES `rime-data` set. It lives next to the existing
+XSIME `rime-data` set. It lives next to the existing
 [Linux data preview](../README.md), which still installs into stock
 `fcitx5-rime` / `ibus-rime` and is unchanged.
 
@@ -23,7 +23,7 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
   Fcitx5 stays responsive and keys pass through until librime is ready
   (`subMode` shows `Deploying`). The maintenance thread notifies the Fcitx5
   event loop when deploy finishes — status leaves `Deploying` without a restart.
-- A process-lifetime user-directory lock prevents two RIMES instances from
+- A process-lifetime user-directory lock prevents two XSIME instances from
   deploying or opening user dictionaries in the same directory concurrently.
   A replacement reports a locked-directory error until the owner finishes
   exiting. The lock file remains on disk; the OS releases ownership on exit.
@@ -44,7 +44,7 @@ IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 
 ## Importing source schemes
 
-Open the RIMES configuration entry in Fcitx5, or launch `rimes-schemes` from the
+Open the XSIME configuration entry in Fcitx5, or launch `rimes-schemes` from the
 application menu. Review a ZIP or coded UTF-8 TXT/TSV, compile, then explicitly enable
 a scheme and restart Fcitx5. Restore built-ins before removing an active package.
 Learning data stays in `$XDG_DATA_HOME/rimes/schemes/learning` when a package is removed.
@@ -53,9 +53,9 @@ See [the shared format and verification guide](../../../docs/portable-scheme-imp
 ## Maintenance limits
 
 Stopping Fcitx5 during a librime rebuild can still wait for that rebuild to
-finish ([#43](https://github.com/scholay/rimes/issues/43)). Do not start a
+finish ([#43](https://github.com/scholay/xsime/issues/43)). Do not start a
 second instance against the same user directory while waiting. The lock
-prevents concurrent RIMES writers; it does not coordinate stock fcitx5-rime,
+prevents concurrent XSIME writers; it does not coordinate stock fcitx5-rime,
 IBus, or external deploy tools. A bounded shutdown requires deployment
 process isolation rather than detaching a thread that still uses librime.
 
@@ -64,7 +64,7 @@ is pending. Once the IME receives `drag_end`, the next activation retires
 capture without a grace period. The GTK workbench normally detects physical
 release by polling every 50 ms; a click before the IME receives that message
 can still consume the pending drag. The 0–10 ms physical-release case in
-[#44](https://github.com/scholay/rimes/issues/44) still needs X11/xfwm/Firefox
+[#44](https://github.com/scholay/xsime/issues/44) still needs X11/xfwm/Firefox
 acceptance. The Fcitx regression covers command receipt, not physical pointer
 release. See the timing matrix in [`../buffer/MANUAL-TEST.md`](../buffer/MANUAL-TEST.md).
 
@@ -96,7 +96,7 @@ Release `.deb` packages include this private Rime/Lua build with a distinct libr
 ## Install and upgrade (Debian / Ubuntu: recommended)
 
 Use the `fcitx5-rimes_<version>_amd64.deb` and matching `.sha256` attached to
-the project's [GitHub Release](https://github.com/scholay/rimes/releases).
+the project's [GitHub Release](https://github.com/scholay/xsime/releases).
 Older releases may not have a deb; until a release with this asset is
 published, build one locally using the packaging instructions below.
 The release workflow builds on Ubuntu 24.04 amd64. Other Debian/Ubuntu
@@ -113,7 +113,7 @@ sudo apt install ./fcitx5-rimes_<version>_amd64.deb
 fcitx5 -r
 ```
 
-Then add **RIMES** in Fcitx5 configuration. Upgrade by downloading the next
+Then add **XSIME** in Fcitx5 configuration. Upgrade by downloading the next
 release and running the same `apt install` command. A downloaded deb does
 not configure an apt repository or automatic updates.
 
@@ -124,7 +124,7 @@ sudo apt remove fcitx5-rimes
 fcitx5 -r
 ```
 
-Remove RIMES from the Fcitx5 input-method list as well. User dictionaries,
+Remove XSIME from the Fcitx5 input-method list as well. User dictionaries,
 learning records, imported schemes and Capsule notes remain in
 `${XDG_DATA_HOME:-$HOME/.local/share}/rimes`. Do not delete this directory
 when removing the application. If a source installation already exists,
@@ -147,7 +147,7 @@ source install, use `sudo platforms/linux/ime/scripts/install.sh --prefix /usr`.
 `--build-dir DIR` / `RIMES_IME_BUILD_DIR` selects a non-default build tree;
 `--prefix DIR` / `RIMES_IME_PREFIX` selects the installation prefix.
 
-Then add **RIMES** in Fcitx5 configuration. Restart the compositor/session if
+Then add **XSIME** in Fcitx5 configuration. Restart the compositor/session if
 the new input method does not appear.
 
 The installer stages and records the addon, companion programs, Fcitx5
@@ -159,7 +159,7 @@ directory while the input method is installed.
 
 ### Uninstall a source installation
 
-Switch to another input method, remove RIMES from Fcitx5 configuration, then:
+Switch to another input method, remove XSIME from Fcitx5 configuration, then:
 
 ```bash
 platforms/linux/ime/scripts/uninstall.sh --dry-run
@@ -188,7 +188,7 @@ platforms/linux/ime/scripts/uninstall.sh --build-dir platforms/linux/ime/build -
 platforms/linux/ime/scripts/uninstall.sh --build-dir platforms/linux/ime/build
 ```
 
-This fallback restricts the original `install_manifest.txt` to known RIMES
+This fallback restricts the original `install_manifest.txt` to known XSIME
 program/resource paths and checks shared data against that source version.
 Old installers did not record program hashes, so the fallback cannot detect
 edits to those program files. Missing files are harmless; changed shared data

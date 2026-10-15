@@ -143,7 +143,7 @@ public final class RimeSchemeArchive {
             }
             Map<String,Object> manifest=map(configs.getOrDefault("rimes-package.yaml",Collections.emptyMap()).get("rimes_package"));
             if(!manifest.isEmpty()) {
-                if(!"1".equals(text(manifest.get("format")))) throw bad("方案包清单版本不受支持，请更新灵犀输入法");
+                if(!"1".equals(text(manifest.get("format")))) throw bad("方案包清单版本不受支持，请更新犀术IME");
                 if(manifest.containsKey("recommended_schemes")) preferred=strings(manifest.get("recommended_schemes"));
             }
             List<Scheme> schemes=new ArrayList<>();

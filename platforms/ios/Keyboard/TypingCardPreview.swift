@@ -97,7 +97,7 @@ final class TypingCardPreview: UIView {
         style(secondary, isImage ? L("保存到 App", "Save to app") : L("复制文字", "Copy text"), icon: isImage ? "square.and.arrow.down" : "doc.on.doc")
         primary.isEnabled = !isImage || (fullAccess && !saving); secondary.isEnabled = fullAccess
         message.text = isImage
-            ? (fullAccess ? L("保存到相册后，可在聊天中选择照片发送。", "Save to Photos, then choose the image in your chat.") : L("开启 RIMES 完全访问后，可保存图片。", "Enable Full Access for RIMES to save images."))
+            ? (fullAccess ? L("保存到相册后，可在聊天中选择照片发送。", "Save to Photos, then choose the image in your chat.") : L("开启 \(ProductBrand.name) 完全访问后，可保存图片。", "Enable Full Access for \(ProductBrand.name) to save images."))
             : L("文字追加到输入框后，可编辑再发送。", "Insert into the field, then edit or send when ready.")
     }
     private func style(_ button: UIButton, _ title: String, icon: String, prominent: Bool = false) {

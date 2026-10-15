@@ -73,7 +73,7 @@ HRESULT STDMETHODCALLTYPE DisplayAttributeInfo::GetDescription(BSTR* description
   if (description == nullptr) {
     return E_POINTER;
   }
-  *description = SysAllocString(L"RIMES composition");
+  *description = SysAllocString(L"XSIME composition");
   return *description != nullptr ? S_OK : E_OUTOFMEMORY;
 }
 

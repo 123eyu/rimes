@@ -61,12 +61,12 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: RIMES
+        CFBundleDisplayName: XSIME
         CFBundleDevelopmentRegion: en
-        NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. RIMES does not read your photos.
+        NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. XSIME does not read your photos.
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleLocalizations: [en, zh-Hans]
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant]
         RIMESAppGroup: $(RIMES_APP_GROUP)
         RIMESKeychainGroup: $(AppIdentifierPrefix)org.scholay.rimes.ios.shared
         UILaunchScreen: {}
@@ -106,11 +106,11 @@ targets:
     info:
       path: Keyboard/Info.plist
       properties:
-        CFBundleDisplayName: RIMES
+        CFBundleDisplayName: XSIME
         CFBundleShortVersionString: $(MARKETING_VERSION)
-        NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. RIMES does not read your photos.
+        NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. XSIME does not read your photos.
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
-        CFBundleLocalizations: [en, zh-Hans]
+        CFBundleLocalizations: [en, zh-Hans, zh-Hant]
         RIMESAppGroup: $(RIMES_APP_GROUP)
         RIMESKeychainGroup: $(AppIdentifierPrefix)org.scholay.rimes.ios.shared
         NSExtension:

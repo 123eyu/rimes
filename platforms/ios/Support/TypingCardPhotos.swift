@@ -5,7 +5,7 @@ enum TypingCardPhotoError: LocalizedError {
     case denied, restricted, failed
     var errorDescription: String? {
         switch self {
-        case .denied: return L("未获得相册添加权限。请在系统设置 → RIMES → 照片中允许添加照片后重试。", "Photo access was denied. Allow adding photos in Settings → RIMES → Photos, then try again.")
+        case .denied: return L("未获得相册添加权限。请在系统设置 → \(ProductBrand.name) → 照片中允许添加照片后重试。", "Photo access was denied. Allow adding photos in Settings → \(ProductBrand.name) → Photos, then try again.")
         case .restricted: return L("设备限制了相册权限，图片未保存。", "Photo access is restricted on this device. The image was not saved.")
         case .failed: return L("图片未能保存到相册，请重试。", "Could not save the image to Photos. Try again.")
         }
@@ -20,7 +20,7 @@ struct TypingCardPhotos {
         try await PHPhotoLibrary.shared().performChanges {
             let options = PHAssetResourceCreationOptions()
             options.uniformTypeIdentifier = UTType.png.identifier
-            options.originalFilename = "RIMES-typing-card.png"
+            options.originalFilename = "XSIME-typing-card.png"
             PHAssetCreationRequest.forAsset().addResource(with: .photo, data: png, options: options)
         }
     }

@@ -238,7 +238,7 @@ scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg --install-g
 
 已安装并运行的正式签名 RIMES：
 
-- **启动时 + 每小时** 静默查询 `scholay/rimes` 的最新 Release；
+- **启动时 + 每小时** 静默查询 `scholay/xsime` 的最新 Release；
 - 只接受严格 `vX.Y.Z` 下唯一的 `RIMES-X.Y.Z.pkg`，并在后台下载；
 - 下载完成后，输入法菜单中的更新项变为「安装 RIMES vX…」；
 - 下载后和用户确认后各验证一次：GitHub HTTPS/精确资产路径、普通文件/大小上限、

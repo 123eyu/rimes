@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>RIMES</string>
+	<string>XSIME</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
@@ -16,6 +16,7 @@
 	<array>
 		<string>en</string>
 		<string>zh-Hans</string>
+		<string>zh-Hant</string>
 	</array>
 	<key>CFBundleName</key>
 	<string>$(PRODUCT_NAME)</string>
@@ -28,7 +29,7 @@
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
 	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Save the typing statistics image you choose to your photo library. RIMES does not read your photos.</string>
+	<string>Save the typing statistics image you choose to your photo library. XSIME does not read your photos.</string>
 	<key>RIMESAppGroup</key>
 	<string>$(RIMES_APP_GROUP)</string>
 	<key>RIMESKeychainGroup</key>

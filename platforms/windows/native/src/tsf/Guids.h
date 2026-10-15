@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Windows.h>
+#include "../core/product_brand.hpp"
 
 namespace rimes::windows::tsf {
 
@@ -48,7 +49,7 @@ inline constexpr wchar_t kTextServiceClsidString[] =
     L"{0B2C570B-9811-45DF-989B-EA306281F6B4}";
 inline constexpr wchar_t kLanguageProfileGuidString[] =
     L"{CD791B35-640F-4F1C-A3D3-624099E15ACB}";
-inline constexpr wchar_t kDisplayName[] = L"RIMES";
+inline const wchar_t* const kDisplayName = rimes::branding::Name();
 #endif
 inline constexpr wchar_t kDllFileName[] = L"RimesTsf.dll";
 inline constexpr wchar_t kCandidateWindowClass[] = L"Rimes.CandidateWindow";

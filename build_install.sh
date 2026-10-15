@@ -501,7 +501,7 @@ After switching to it, press F4 to choose an input scheme.
 
 macOS 27: switching to RIMES in sandboxed WeChat/QQ has been reported to crash
 the host app. If affected, use another input method and see:
-  https://github.com/scholay/rimes/blob/main/docs/macos/input-source-cache-recovery.md
+  https://github.com/scholay/xsime/blob/main/docs/macos/input-source-cache-recovery.md
 App caches were not cleared. Restarting/logging out is not a guaranteed fix (#90).
 
 Watch behaviour:  tail -f ~/rimebuffer.log

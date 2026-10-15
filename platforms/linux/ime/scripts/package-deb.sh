@@ -94,7 +94,7 @@ cat > "$WORKDIR/debian/control" <<'EOF'
 Source: fcitx5-rimes
 Section: utils
 Priority: optional
-Maintainer: RIMES contributors <https://github.com/scholay/rimes>
+Maintainer: RIMES contributors <https://github.com/scholay/xsime>
 
 Package: fcitx5-rimes
 Architecture: any
@@ -118,7 +118,7 @@ Architecture: $ARCH
 Installed-Size: $SIZE
 Depends: fcitx5, $DEPS
 Recommends: libgtk-layer-shell0, wl-clipboard
-Maintainer: RIMES contributors <https://github.com/scholay/rimes>
+Maintainer: RIMES contributors <https://github.com/scholay/xsime>
 Description: RIMES input method frontend for Fcitx 5
  A librime frontend owned by RIMES. It deploys the reviewed RIMES rime-data
  set, keeps user state in ~/.local/share/rimes, and ships the Linux Buffer

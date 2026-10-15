@@ -1684,7 +1684,7 @@ final class KeyboardViewController: UIInputViewController {
     private func saveTypingCard() {
         guard canExportTypingCard else { typingCardPreview?.showMessage(L("保存到 App 需要完全访问。", "Saving to the app needs Full Access.")); return }
         guard let png = typingCardPNG else { return }
-        do { try typingCardStore.save(png); typingCardPreview?.showMessage(L("已保存到 RIMES → 打字统计卡片，可从那里保存到相册。", "Saved to RIMES → Typing stats card, where you can save to Photos.")) }
+        do { try typingCardStore.save(png); typingCardPreview?.showMessage(L("已保存到 \(ProductBrand.name) → 打字统计卡片，可从那里保存到相册。", "Saved to \(ProductBrand.name) → Typing stats card, where you can save to Photos.")) }
         catch { typingCardPreview?.showMessage(error.localizedDescription) }
     }
     private func saveTypingCardToPhotos() {
@@ -1731,7 +1731,7 @@ final class KeyboardViewController: UIInputViewController {
         if session.peakCharactersPerMinute > 0 { figures.append(L("最快 \(Int(session.peakCharactersPerMinute.rounded())) 字/分", "peak \(Int(session.peakCharactersPerMinute.rounded())) cpm")) }
         if let code = session.codeLength { figures.append(String(format: L("码长 %.2f 触/字", "%.2f keys/char"), code)) }
         if let keys = session.keysPerSecond { figures.append(String(format: L("击键 %.1f 触/秒", "%.1f keys/s"), keys)) }
-        return "—\n" + figures.joined(separator: " · ") + "\n" + L("来自 RIMES 免费开源输入法", "Sent from RIMES, the free open-source input method")
+        return "—\n" + figures.joined(separator: " · ") + "\n" + L("来自 \(ProductBrand.name) 免费开源输入法", "Sent from \(ProductBrand.name), the free open-source input method")
     }
     private func refreshBufferImports() {
         let visible = bufferEnabled && onscreen
@@ -1794,7 +1794,7 @@ final class KeyboardViewController: UIInputViewController {
         refreshBufferImports()
     }
     private func explainClipboardAccess() {
-        status.text = L("读取剪贴板需要为 RIMES 开启“完全访问”", "Pasting needs Full Access for RIMES"); render()
+        status.text = L("读取剪贴板需要为 \(ProductBrand.name) 开启“完全访问”", "Pasting needs Full Access for \(ProductBrand.name)"); render()
     }
     private func beginPaste(collectOnly: Bool = false) -> Bool {
         guard onscreen, bufferEnabled, pendingPaste == nil, hostImportTask == nil, let target = currentDocument,
@@ -1957,7 +1957,7 @@ final class KeyboardViewController: UIInputViewController {
     }
     private func selectPlugin(_ plugin: KeyboardPlugin?) {
         if let plugin, pluginAuthorization(plugin.rawValue) == nil {
-            status.text = L("请在 RIMES App 的“官方插件”中安装并启用", "Install and enable this plugin in RIMES → Official plugins")
+            status.text = L("请在 \(ProductBrand.name) App 的“官方插件”中安装并启用", "Install and enable this plugin in \(ProductBrand.name) → Official plugins")
             return
         }
         closeClipboard(); cancelBufferImport(); pendingPaste = nil
@@ -1967,8 +1967,8 @@ final class KeyboardViewController: UIInputViewController {
         refreshPluginMenu(); sourceChanged(); render()
     }
     private func aiReadinessHint() -> String? {
-        if !canRunAI { return L("AI 插件需要在系统设置中为 RIMES 开启“完全访问”", "AI plugins need Full Access for RIMES in Settings") }
-        if config.provider == nil { return L("请先在 RIMES App 中配置 AI 服务", "Configure an AI service in the RIMES app first") }
+        if !canRunAI { return L("AI 插件需要在系统设置中为 \(ProductBrand.name) 开启“完全访问”", "AI plugins need Full Access for \(ProductBrand.name) in Settings") }
+        if config.provider == nil { return L("请先在 \(ProductBrand.name) App 中配置 AI 服务", "Configure an AI service in the \(ProductBrand.name) app first") }
         return nil
     }
     // MARK: Settings panel
@@ -2112,7 +2112,7 @@ final class KeyboardViewController: UIInputViewController {
             sections.append(PanelSection(title: L("画框（宽 × 高）", "Frame (width × height)"), items: TextArtOptions.sizes.map { PanelItem(id: "\($0)", title: "\($0) × \($0)", selected: art.width == $0 && art.height == $0) },
                                          action: change { value, id in let size = Int(id) ?? 10; value.width = size; value.height = size }))
         case .polish?, .ask?:
-            sections.append(PanelSection(title: L("AI 服务", "AI service"), note: config.provider.map { "\($0.name) · \($0.model)" } ?? L("未配置。请在 RIMES App 的“AI 服务”中添加。", "Not set up. Add one under AI services in the RIMES app."), items: []) { _ in })
+            sections.append(PanelSection(title: L("AI 服务", "AI service"), note: config.provider.map { "\($0.name) · \($0.model)" } ?? L("未配置。请在 \(ProductBrand.name) App 的“AI 服务”中添加。", "Not set up. Add one under AI services in the \(ProductBrand.name) app."), items: []) { _ in })
         case .poem?:
             let options = preferences.poem, library = config.poemLibrary
             func change(_ edit: @escaping (inout PoemOptions, String) -> Void) -> (String) -> Void {
@@ -2121,7 +2121,7 @@ final class KeyboardViewController: UIInputViewController {
             sections.append(PanelSection(title: L("模式", "Mode"), items: PoemMode.allCases.map { PanelItem(id: $0.rawValue, title: $0.title, selected: options.mode == $0) }, action: change { value, id in value.mode = PoemMode(rawValue: id) ?? .improvise }))
             sections.append(PanelSection(title: L("每句字数", "Characters per line"), items: PoemLineLength.allCases.map { PanelItem(id: "\($0.rawValue)", title: $0.title, selected: options.lineLength == $0) }, action: change { value, id in value.lineLength = Int(id).flatMap(PoemLineLength.init(rawValue:)) ?? .free }))
             sections.append(PanelSection(title: L("句式", "Pattern"), items: library.allPatterns.map { PanelItem(id: $0.id, title: $0.name, selected: options.patternID == $0.id) }, action: change { value, id in value.patternID = id }))
-            sections.append(PanelSection(title: L("词卡", "Word cards"), note: library.cards.isEmpty ? L("在 RIMES App 的“AI 作诗”中添加词卡。", "Add word cards under AI Poem in the RIMES app.") : nil,
+            sections.append(PanelSection(title: L("词卡", "Word cards"), note: library.cards.isEmpty ? L("在 \(ProductBrand.name) App 的“AI 作诗”中添加词卡。", "Add word cards under AI Poem in the \(ProductBrand.name) app.") : nil,
                                          items: library.cards.map { PanelItem(id: $0.id.uuidString, title: $0.name, selected: options.cardIDs.contains($0.id)) }, action: change { value, id in
                 guard let card = UUID(uuidString: id) else { return }
                 if value.cardIDs.contains(card) { value.cardIDs.removeAll { $0 == card } } else { value.cardIDs.append(card) }
@@ -2591,8 +2591,8 @@ final class KeyboardViewController: UIInputViewController {
 /// Its height is exactly that gap, so it is invisible once the heights agree, and it
 /// stays invisible for gaps that close within a few frames.
 final class HeightGapPlaceholder: UIView {
-    /// The product's public name; the architecture name (RIMES) is not shown to users.
-    static let wordmark = "Lingxi IME"
+    /// The unified English product and architecture name; the view uses localized branding.
+    static let wordmark = "XSIME"
     /// Provisional and lagging host frames last well under this; a gap that outlives it is real.
     static let revealDelay: TimeInterval = 0.15
     private(set) var gap: CGFloat = 0
@@ -2607,7 +2607,7 @@ final class HeightGapPlaceholder: UIView {
         translatesAutoresizingMaskIntoConstraints = false
         clipsToBounds = true; isUserInteractionEnabled = false; alpha = 0
         isAccessibilityElement = false; accessibilityElementsHidden = true
-        label.attributedText = NSAttributedString(string: L("灵犀输入法", Self.wordmark), attributes: [.kern: 1.5])
+        label.attributedText = NSAttributedString(string: ProductBrand.name, attributes: [.kern: 1.5])
         let base = UIFont.systemFont(ofSize: 17, weight: .semibold)
         label.font = base.fontDescriptor.withDesign(.rounded).map { UIFont(descriptor: $0, size: 17) } ?? base
         label.textColor = ink.withAlphaComponent(0.3)

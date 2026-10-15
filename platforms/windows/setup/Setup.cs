@@ -209,12 +209,26 @@ internal sealed class SetupWindow : Form
 
     internal static string T(string chinese, string english)
     {
-        return System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh" ? chinese : english;
+        return (System.Globalization.CultureInfo.CurrentUICulture.TwoLetterISOLanguageName == "zh" ? chinese : english).Replace("RIMES", BrandName);
+    }
+
+    internal static string BrandName
+    {
+        get
+        {
+            var culture = System.Globalization.CultureInfo.CurrentUICulture;
+            if (culture.TwoLetterISOLanguageName != "zh") return "XSIME";
+            var name = culture.Name;
+            return name.IndexOf("Hant", StringComparison.OrdinalIgnoreCase) >= 0 ||
+                name.EndsWith("-TW", StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith("-HK", StringComparison.OrdinalIgnoreCase) ||
+                name.EndsWith("-MO", StringComparison.OrdinalIgnoreCase) ? "犀術IME" : "犀术IME";
+        }
     }
 
     internal SetupWindow()
     {
-        Text = "RIMES " + BuildInfo.Version + T(" 安装", " Setup");
+        Text = BrandName + " " + BuildInfo.Version + T(" 安装", " Setup");
         Icon = System.Drawing.Icon.ExtractAssociatedIcon(Application.ExecutablePath);
         Font = new Font("Segoe UI", 10);
         ClientSize = new Size(600, 350);
@@ -326,7 +340,7 @@ internal static class SetupProgram
         {
             if (args.Length > 0 && args[0] == "--verify-only") Console.Error.WriteLine(error.Message);
             else if (!(error is Win32Exception && ((Win32Exception)error).NativeErrorCode == 1223))
-                MessageBox.Show(error.Message, "RIMES Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(error.Message, SetupWindow.BrandName + " Setup", MessageBoxButtons.OK, MessageBoxIcon.Error);
             return 1;
         }
     }

@@ -1,3 +1,4 @@
+#include "../core/product_brand.hpp"
 #include "settings_ui.hpp"
 
 #include <dwmapi.h>
@@ -134,7 +135,7 @@ void SettingsUiHost::Open(HWND owner, bool visible) {
   const int top = monitor.rcWork.top +
                   (monitor.rcWork.bottom - monitor.rcWork.top - height) / 2;
   hwnd_ = CreateWindowExW(
-      0, wc.lpszClassName, L"RIMES 设置", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+      0, wc.lpszClassName, rimes::branding::Text(L"{brand} 设置").c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
       left, top, width, height,
       // Use the Buffer only to select initial placement. A native owner would
       // make Settings inherit its topmost state. SettingsUiHost owns this
@@ -343,7 +344,7 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   EnableWindow(schemes_button_, static_cast<bool>(callbacks_.open_schemes));
   if (!imported_label_) imported_label_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT,
       0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
-  SetWindowTextW(imported_label_, (L"当前使用导入方案：" + draft_.imported_schema + L"\n可在方案管理中启用其他方案或恢复内置方案。重启 RIMES 后生效。").c_str());
+  SetWindowTextW(imported_label_, (L"当前使用导入方案：" + draft_.imported_schema + rimes::branding::Text(L"\n可在方案管理中启用其他方案或恢复内置方案。重启 {brand} 后生效。").c_str()).c_str());
   make_button(record_hotkey_, L"录入快捷键", 409);
   make_button(record_send_, L"录入快捷键", 410);
   make_button(reset_shortcuts_, L"恢复全部默认快捷键", 411);
@@ -639,7 +640,7 @@ bool SettingsUiHost::CommitSave() {
     if (!key.empty())
       SecureZeroMemory(key.data(), key.size() * sizeof(wchar_t));
     if (!ok) {
-      MessageBoxW(hwnd_, Wide(error).c_str(), L"RIMES", MB_OK);
+      MessageBoxW(hwnd_, Wide(error).c_str(), rimes::branding::Text(L"{brand}").c_str(), MB_OK);
       return false;
     }
     draft_.theme = static_cast<ui::ThemeId>(draft_.theme_index);
@@ -650,7 +651,7 @@ bool SettingsUiHost::CommitSave() {
       callbacks_.on_theme_preview(draft_.theme);
     return true;
   } catch (...) {
-    MessageBoxW(hwnd_, L"请检查输入方案、候选数（1–9）、字号和快捷键。", L"RIMES", MB_OK);
+    MessageBoxW(hwnd_, L"请检查输入方案、候选数（1–9）、字号和快捷键。", rimes::branding::Text(L"{brand}").c_str(), MB_OK);
     return false;
   }
 }
@@ -760,7 +761,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
     case WM_COMMAND:
       if (LOWORD(wparam) == 415 && HIWORD(wparam) == BN_CLICKED) {
         if (!self->callbacks_.open_schemes || !self->callbacks_.open_schemes())
-          MessageBoxW(hwnd, L"无法打开方案管理。", L"RIMES 设置", MB_OK | MB_ICONERROR);
+          MessageBoxW(hwnd, L"无法打开方案管理。", rimes::branding::Text(L"{brand} 设置").c_str(), MB_OK | MB_ICONERROR);
         return 0;
       }
       if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 409 || LOWORD(wparam) == 410)) {
@@ -796,7 +797,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
         if (self->callbacks_.manage_plugin && index < self->plugin_rows_.size()) {
           const auto item = self->plugin_rows_[index]; std::string error;
           const std::string operation = action == 0 ? "install" : action == 2 ? "uninstall" : item.enabled ? "disable" : "enable";
-          if (!self->callbacks_.manage_plugin(item.id, operation, &error)) MessageBoxW(hwnd, Wide(error).c_str(), L"RIMES", MB_OK);
+          if (!self->callbacks_.manage_plugin(item.id, operation, &error)) MessageBoxW(hwnd, Wide(error).c_str(), rimes::branding::Text(L"{brand}").c_str(), MB_OK);
           self->UpdatePlugins();
         }
         return 0;

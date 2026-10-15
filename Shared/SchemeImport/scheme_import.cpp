@@ -604,7 +604,7 @@ Review Inspect(const fs::path &path) {
   auto manifest = Member(configurations["rimes-package.yaml"], "rimes_package");
   if (manifest.IsMap()) {
     if (Scalar(Member(manifest, "format")) != "1")
-      Fail("方案包清单版本不受支持，请更新灵犀输入法");
+      Fail("方案包清单版本不受支持，请更新犀术IME");
     if (Member(manifest, "recommended_schemes").IsSequence())
       preferred = Strings(manifest["recommended_schemes"]);
   }

@@ -1,4 +1,4 @@
-# RIMES
+# XSIME
 
 [![中文](.github/readme/labels/zh.svg)](README.md) [![English](.github/readme/labels/en.svg)](README.en.md) [![日本語](.github/readme/labels/ja.svg)](README.ja.md) [![한국어](.github/readme/labels/ko.svg)](README.ko.md) [![Español](.github/readme/labels/es.svg)](README.es.md)
 
@@ -7,9 +7,9 @@
 
 全拼、双拼、声筆、五筆、英語の方案に対応し、速記で使う並打入力と、カスタム方案の読み込みにも対応します。はじめて使う人向けに、インストールパッケージは librime と辞書を**同梱**し、すぐ使えます。
 
-5つのプラットフォームに **五筆 86** と **Lingxi Wubi** を内蔵しています。五筆 86 は `z` に続けて全拼を入力して文字を検索でき、候補の括弧内に五筆コードを表示します。Lingxi Wubi は切り替えなしで五筆と全拼を検索し、完全一致の五筆を優先します。両方案とも4打鍵で候補が一意なら自動確定し、重複コードと全拼検索では候補選択を維持します。[五筆ガイド](docs/wubi.md)を参照してください。
+5つのプラットフォームに **五筆 86** と **XSIME Wubi** を内蔵しています。五筆 86 は `z` に続けて全拼を入力して文字を検索でき、候補の括弧内に五筆コードを表示します。XSIME Wubi は切り替えなしで五筆と全拼を検索し、完全一致の五筆を優先します。両方案とも4打鍵で候補が一意なら自動確定し、重複コードと全拼検索では候補選択を維持します。[五筆ガイド](docs/wubi.md)を参照してください。
 
-> **RIMES** は本プロジェクトのアーキテクチャ名です。公開上の製品名は、英語では **Lingxi IME**、簡体字中国語では **灵犀输入法**、繁体字中国語では **靈犀輸入法** です。iOS App Store ではすでにこれらの製品名を使用しています。
+> 製品・プロジェクト・アーキテクチャ名を **XSIME** に統一します。簡体字名は **犀术IME**、繁体字名は **犀術IME** です（旧 RIMES / Lingxi IME）。公開済みアプリ、ストア情報、届出は順次更新します。[命名・互換性方針](BRANDING.md)。
 
 ## デモ動画
 
@@ -26,22 +26,22 @@
 
 ## 主な機能について
 
-> インストール後、グラフィカルログインに入ると、一度きりのバックグラウンド処理が `open -g` で同じ RIMES プロセスを起動します。そのため Buffer、Clipboard History、Mailbox、Capsule のグローバルショートカットは、どの入力メソッドからでも使えます。
+> インストール後、グラフィカルログインに入ると、一度きりのバックグラウンド処理が `open -g` で同じ XSIME プロセスを起動します。そのため Buffer、Clipboard History、Mailbox、Capsule のグローバルショートカットは、どの入力メソッドからでも使えます。
 >
 > リリースパッケージはシステム payload を置き換える前に、この Mac の通常アカウントをすべて監査します。postinstall が退役させられる現在の GUI ユーザーの開発版を除き、同じ ID の開発版アプリやジョブが見つかった場合、または home を安全に確認できない場合は、すぐに失敗します。postinstall が開発版を退役させ、もう一度監査したあとで、ロールバックできるトランザクションとしてシステムジョブを更新します。ログイン guard は、その後に現れた開発版の痕跡を防御的に止めるだけです。どちらのジョブも `KeepAlive` を設定せず、二つ目の UI/IME サービスも起動しません。
 >
-> Mailbox と Capsule は、キーボードフォーカスを普通に取る管理ウィンドウです。ほかの入力メソッドからショートカット（または Mailbox の通知）で開くとき、RIMES は先に自分を現在の入力メソッドへ切り替えてから開きます。閉じても元には戻さず、その後自分でほかの入力メソッドへ切り替えても、その選択は取り消されません。そのときは下記のとおり機能が制限されます。
+> Mailbox と Capsule は、キーボードフォーカスを普通に取る管理ウィンドウです。ほかの入力メソッドからショートカット（または Mailbox の通知）で開くとき、XSIME は先に自分を現在の入力メソッドへ切り替えてから開きます。閉じても元には戻さず、その後自分でほかの入力メソッドへ切り替えても、その選択は取り消されません。そのときは下記のとおり機能が制限されます。
 >
 > これらの機能は、ほかの入力メソッドの IMK クライアントに触れず、その未確定文字列を読んだり、確定したり、取り消したりしません。注入するキーは、Capsule を有効化したときの任意の `⌘V` 一回だけです（下記の Capsule バーを参照）。設定のショートカットも入力メソッドをまたいで使えます。Mailbox と Capsule のページは設定と状態だけを示し、実際の会話と内容はそれぞれのウィンドウに残します。
 
 | 機能 | ショートカット | 内容 | 操作 | 保存 | 境界 |
 |---|---|---|---|---|---|
-| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、Lingxi Wubi、英語 | — | — | — |
-| バッファ | `⌘⇧B` | 確定前のテキスト | 先に RIMES へ切り替え、取り込んで分割して送る | — | ほかへ切り替えたあとはシステムクリップボードのみ。IMK は使わない |
+| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、XSIME Wubi、英語 | — | — | — |
+| バッファ | `⌘⇧B` | 確定前のテキスト | 先に XSIME へ切り替え、取り込んで分割して送る | — | ほかへ切り替えたあとはシステムクリップボードのみ。IMK は使わない |
 | Capsule バー | `⌘⇧V` | 直前のコピー。ノート、画像、PDF、スキル、パスワード | クリックで選択、ダブルクリックまたは Return で貼り付け。`⌘S` で保存 | この Mac のみ | 貼り付けにはアクセシビリティが必要。未許可ならクリップボードへ入れるだけ |
 | Mailbox | `⌘⇧M` | AI の会話、メモ、確認待ちのプッシュ | 新しい会話。最初の Return で生成を始める | モデルはその会話だけに結び付く | CLI はそれぞれの既定モデル |
 | Capsule 管理 | 歯車または筆 | 五種類の項目。プレビューとコピー | 四組の並打のあとパスワードを表示。最長 15 秒 | iCloud は任意。パスワードと鍵はこの Mac に残す | 合言葉はローカルのダイジェストだけを保存 |
-| 設定 | `⌘⇧S` | ショートカット、状態、同期、セキュリティ | 現在の入力メソッドが RIMES のときだけ開く | — | Mailbox / Capsule のウィンドウは埋め込まない |
+| 設定 | `⌘⇧S` | ショートカット、状態、同期、セキュリティ | 現在の入力メソッドが XSIME のときだけ開く | — | Mailbox / Capsule のウィンドウは埋め込まない |
 
 リアルタイム翻訳、AI 生成、意識の流れ入力はバッファプラグインです。並打は組み込み拡張です。バージョンと ID は下の一覧を見てください。
 
@@ -58,18 +58,18 @@
 
 | プラグイン | ID | バージョン | 既定の導入 | 既定の状態 |
 |---|---|---:|---|---|
-| ChatGPT | `builtin.codex-cli` | 1.1 | RIMES に同梱 | 有効 |
-| Claude | `builtin.claude-code-cli` | 1.1 | RIMES に同梱 | 有効 |
-| AI API | `builtin.openai-compatible` | 1.0 | RIMES に同梱 | 有効 |
-| Reference | `builtin.scholay` | 0.1 | RIMES に同梱 | 有効 |
-| Polisher | `builtin.polisher` | 0.1 | RIMES に同梱 | 有効 |
-| LaTeX | `builtin.latex` | 0.1 | RIMES に同梱 | 有効 |
-| リアルタイム翻訳 | `builtin.apple-translation` | 2.2 | RIMES に同梱 | 有効 |
-| 意識の流れ入力 | `builtin.stream-input` | 1.4 | RIMES に同梱 | 有効 |
-| 電子音楽 | `builtin.music` | 0.2.3 | RIMES に同梱 | 有効 |
-| モールス符号 | `builtin.morse` | 0.1.0 | RIMES に同梱 | 有効 |
+| ChatGPT | `builtin.codex-cli` | 1.1 | XSIME に同梱 | 有効 |
+| Claude | `builtin.claude-code-cli` | 1.1 | XSIME に同梱 | 有効 |
+| AI API | `builtin.openai-compatible` | 1.0 | XSIME に同梱 | 有効 |
+| Reference | `builtin.scholay` | 0.1 | XSIME に同梱 | 有効 |
+| Polisher | `builtin.polisher` | 0.1 | XSIME に同梱 | 有効 |
+| LaTeX | `builtin.latex` | 0.1 | XSIME に同梱 | 有効 |
+| リアルタイム翻訳 | `builtin.apple-translation` | 2.2 | XSIME に同梱 | 有効 |
+| 意識の流れ入力 | `builtin.stream-input` | 1.4 | XSIME に同梱 | 有効 |
+| 電子音楽 | `builtin.music` | 0.2.3 | XSIME に同梱 | 有効 |
+| モールス符号 | `builtin.morse` | 0.1.0 | XSIME に同梱 | 有効 |
 
-表のプラグインはすべて RIMES に同梱され、新規インストール後は既定で有効です。
+表のプラグインはすべて XSIME に同梱され、新規インストール後は既定で有効です。
 
 ## 組み込み拡張
 
@@ -81,11 +81,11 @@
 
 ## インストール
 
-[1.1.4 リリース](https://github.com/scholay/rimes/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
+[1.1.4 リリース](https://github.com/scholay/xsime/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/rimes.git
-cd rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git
+cd xsime
 ```
 
 | プラットフォーム | 進捗 | ビルド |
@@ -115,7 +115,7 @@ cd rimes
 
 ## 自動更新
 
-正式に署名してインストールした RIMES は、[`scholay/rimes`](https://github.com/scholay/rimes) の GitHub Release を確認します。未署名の `vX.Y.Z-preview.N` はこの経路に入りません。
+正式に署名してインストールした XSIME は、[`scholay/xsime`](https://github.com/scholay/xsime) の GitHub Release を確認します。未署名の `vX.Y.Z-preview.N` はこの経路に入りません。
 
 リリースの入口は一つで、バージョン番号は tag だけから来ます。手順は [RELEASE.md](RELEASE.md)、変更は [CHANGELOG.md](CHANGELOG.md) を見てください。
 
@@ -126,13 +126,13 @@ cd rimes
 ./scripts/release.sh platform minor     # 保守用の Windows/Linux データプレビュー（macOS を止めない）
 ```
 
-すべての Release は `scholay/rimes` に公開されます。macOS の `vX.Y.Z` は正式版です。`vX.Y.Z-preview.N` は未署名の Pre-release で、自動更新には入りません。Windows/Linux の `platform-preview-vX.Y.Z` は常に Pre-release です。
+すべての Release は `scholay/xsime` に公開されます。macOS の `vX.Y.Z` は正式版です。`vX.Y.Z-preview.N` は未署名の Pre-release で、自動更新には入りません。Windows/Linux の `platform-preview-vX.Y.Z` は常に Pre-release です。
 
 ## リンク
 
 - [RIME 入力メソッドエンジン](https://rime.im/) — 本プロジェクトの中国語入力は RIME に基づいています。
 - [Linux.do](https://linux.do/u/leowangling/preferences/account) — 誠実で、友好的で、結束し、専門的なコミュニティ Linux.do と、その仲間たちに感謝します。
-- [iRime](https://github.com/jimmy54/iRime) — RIMES への指導と紹介に、iRime の作者へ感謝します。
+- [iRime](https://github.com/jimmy54/iRime) — XSIME への指導と紹介に、iRime の作者へ感謝します。
 
 ## 貢献者
 
@@ -144,12 +144,12 @@ cd rimes
 
 ## 既知の問題
 
-- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay/rimes/issues/43) を参照。
-- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay/rimes/issues/44) を参照。
+- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay/xsime/issues/43) を参照。
+- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay/xsime/issues/44) を参照。
 
 ## ライセンスと第三者
 
-RIMES 自身のコードは [Apache License 2.0](LICENSE) を採用しています。適用範囲と従来の MIT 許諾については [LICENSING.md](LICENSING.md) を参照してください。コアメンテナーは[学术海](https://pm.scholay.com)です。
+XSIME 自身のコードは [Apache License 2.0](LICENSE) を採用しています。適用範囲と従来の MIT 許諾については [LICENSING.md](LICENSING.md) を参照してください。コアメンテナーは[学术海](https://pm.scholay.com)です。
 
 中国語入力には [Rime 入力エンジン（librime）](https://github.com/rime/librime)を使用しています。[NOTICE](NOTICE) に帰属情報、[ATTRIBUTION.md](ATTRIBUTION.md) に任意の表示例を記載しています。表示の推奨は追加のライセンス条件ではありません。
 

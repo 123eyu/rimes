@@ -31,7 +31,7 @@ for mode in ['pinyin','pinyin9','ziranma']:
     schema=f'''# RIMES iOS original minimal schema (Apache-2.0). No desktop includes or Lua.
 schema:
   schema_id: rimes_{mode}
-  name: RIMES {mode}
+  name: XSIME {mode}
   version: "0.1.0"
 switches:
   - name: ascii_mode

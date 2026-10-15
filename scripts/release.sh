@@ -38,7 +38,7 @@ usage() {
 }
 
 REMOTE="origin"
-EXPECTED_REPO="scholay/rimes"
+EXPECTED_REPO="scholay/xsime"
 # The product release gate is macOS-only. CI includes the macOS build/runtime
 # smoke plus portable release-tooling checks. Windows/Linux preview workflows
 # remain maintenance checks, but never block a macOS preview or formal release.

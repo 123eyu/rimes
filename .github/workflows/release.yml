@@ -65,7 +65,7 @@ jobs:
     # Releases are canonical only in the post-migration repository. Keeping
     # this guard in the workflow also makes an accidentally pushed tag in the
     # retired repository harmless.
-    if: github.repository == 'scholay/rimes'
+    if: github.repository == 'scholay/xsime'
     runs-on: macos-15   # ARM64 runner; the app is built universal below
     permissions:
       contents: read
@@ -107,8 +107,8 @@ jobs:
           test "$PARENT_ID" != "$MODE_ID"
           test "$MODE_ID" = "$DECLARED_MODE_ID"
           test "$CONNECTION" = 'RIMES_1_Connection'
-          test "$DISPLAY_NAME" = 'RIMES'
-          test "$MENU_TITLE" = 'RIMES'
+          test "$DISPLAY_NAME" = 'XSIME'
+          test "$MENU_TITLE" = 'XSIME'
           test "$EXECUTABLE" = 'RIMES'
           test "$CHILD_REPERTOIRE" = 'Array{HansHant}'
           # Freeze the input-source identity to exact literals. The structure
@@ -122,8 +122,13 @@ jobs:
           test "$MODE_ID" = "${BUNDLE_ID}.Hans"
           for STRINGS in Resources/*.lproj/InfoPlist.strings; do
             plutil -lint "$STRINGS"
+            case "$STRINGS" in
+              */zh-Hans.lproj/*) EXPECTED_NAME="犀术IME" ;;
+              */zh-Hant.lproj/*) EXPECTED_NAME="犀術IME" ;;
+              *) EXPECTED_NAME="XSIME" ;;
+            esac
             for KEY in CFBundleDisplayName CFBundleName "$BUNDLE_ID" "$MODE_ID"; do
-              test "$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$STRINGS")" = 'RIMES'
+              test "$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$STRINGS")" = "$EXPECTED_NAME"
             done
           done
           if /usr/libexec/PlistBuddy -c 'Print :tsInputMethodCharacterRepertoireKey' Info.plist >/dev/null 2>&1; then
@@ -228,7 +233,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.VERSION }}
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF_TYPE" == tag ]]
@@ -430,11 +435,11 @@ jobs:
           VERSION: ${{ steps.version.outputs.VERSION }}
         run: |
           set -euo pipefail
-          from="$(gh release list --repo scholay/rimes --limit 100 --json tagName,isDraft \
+          from="$(gh release list --repo scholay/xsime --limit 100 --json tagName,isDraft \
             | python3 scripts/release/release_tool.py latest-release --exclude "$VERSION")"
           from_dir="$RUNNER_TEMP/rimes-upgrade-from"
           mkdir -p "$from_dir"
-          gh release download "v$from" --repo scholay/rimes \
+          gh release download "v$from" --repo scholay/xsime \
             --pattern "RIMES-$from.pkg" --pattern SHA256SUMS \
             --dir "$from_dir"
           (cd "$from_dir" \
@@ -687,7 +692,7 @@ jobs:
       needs.build_and_smoke.outputs.is_unsigned_preview == 'true' &&
       github.event_name == 'push' &&
       startsWith(github.ref, 'refs/tags/v') &&
-      github.repository == 'scholay/rimes'
+      github.repository == 'scholay/xsime'
     runs-on: macos-15
     # This fresh runner receives no Developer ID/App Store Connect secrets and
     # never executes RIMES. Its only elevated capability is creating the
@@ -712,7 +717,7 @@ jobs:
         env:
           VERSION: ${{ needs.build_and_smoke.outputs.version }}
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF_TYPE" == tag ]]
@@ -1120,7 +1125,7 @@ jobs:
           VERSION: ${{ needs.build_and_smoke.outputs.version }}
           GITHUB_TOKEN: ${{ github.token }}
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           [[ "$PREVIEW_TAG" == "v$VERSION" ]]
@@ -1150,7 +1155,7 @@ jobs:
           被标记为 Latest。
 
           完整风险边界与安全安装步骤：
-          https://github.com/scholay/rimes/blob/main/UNSIGNED-PREVIEW.md
+          https://github.com/scholay/xsime/blob/main/UNSIGNED-PREVIEW.md
 
           ## 安装
 
@@ -1181,7 +1186,7 @@ jobs:
           预览版的 Debian 版本使用 `~preview.N`。校验后用 `sudo apt install ./文件.deb`
           安装或升级，用 `sudo apt remove fcitx5-rimes` 卸载，保留用户词库和学习记录。
           安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加 RIMES；
-          [完整安装与卸载说明](https://github.com/scholay/rimes/blob/main/platforms/linux/ime/README.md)。
+          [完整安装与卸载说明](https://github.com/scholay/xsime/blob/main/platforms/linux/ime/README.md)。
           deb 附带固定版本的 Rime/Lua 运行库，其他系统需满足包内依赖，X11/Wayland 桌面体验需单独验收。
           EOF
           printf '\n' >>"$notes"
@@ -1232,7 +1237,7 @@ jobs:
     if: >-
       needs.build_and_smoke.result == 'success' &&
       needs.build_and_smoke.outputs.is_release == 'true' &&
-      github.repository == 'scholay/rimes'
+      github.repository == 'scholay/xsime'
     runs-on: macos-15
     # Only this fresh runner reaches the protected environment. Configure it
     # with required reviewers, no admin bypass, and a v* deployment rule.
@@ -1253,7 +1258,7 @@ jobs:
       - name: Require protected signing environment before secrets
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           ENVIRONMENT_NAME: macos-release
         run: |
           set -euo pipefail
@@ -1591,7 +1596,7 @@ jobs:
         env:
           VERSION: ${{ needs.build_and_smoke.outputs.version }}
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF_TYPE" == tag ]]
@@ -1791,7 +1796,7 @@ jobs:
       - name: Revalidate canonical tag and vacant Release before staging
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           remote_sha="$(gh api "repos/$GH_REPO/commits/$GITHUB_REF_NAME" --jq .sha)"
@@ -1861,7 +1866,7 @@ jobs:
           再用 `sudo apt install ./fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` 安装或升级。
           `sudo apt remove fcitx5-rimes` 卸载程序并保留用户词库与学习记录。
           安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加 RIMES；
-          [完整安装与卸载说明](https://github.com/scholay/rimes/blob/main/platforms/linux/ime/README.md)。
+          [完整安装与卸载说明](https://github.com/scholay/xsime/blob/main/platforms/linux/ime/README.md)。
           deb 附带固定版本的 Rime/Lua 运行库，其他系统需满足包内依赖，X11/Wayland 桌面体验需单独验收。
           EOF
           /usr/bin/sed -i '' \
@@ -1876,7 +1881,7 @@ jobs:
           notes_sha="$(shasum -a 256 "$notes" | awk '{print $1}')"
           [[ "$pkg_bytes" =~ ^[1-9][0-9]*$ && "$notes_bytes" =~ ^[1-9][0-9]*$ ]] \
             || die 'invalid staged byte count'
-          printf '%s\n' 'schema=rimes-signed-pkg-release-v1' 'repository=scholay/rimes' \
+          printf '%s\n' 'schema=rimes-signed-pkg-release-v1' 'repository=scholay/xsime' \
             "run_id=$GITHUB_RUN_ID" "commit=$GITHUB_SHA" "tag=$GITHUB_REF_NAME" \
             "version=$VERSION" "pkg=$PKG" "pkg_sha256=$actual_pkg_sha" \
             "pkg_bytes=$pkg_bytes" 'notes=RELEASE-NOTES.md' "notes_sha256=$notes_sha" \
@@ -1937,7 +1942,7 @@ jobs:
       needs.build_and_smoke.result == 'success' &&
       needs.sign_and_stage.result == 'success' &&
       needs.build_and_smoke.outputs.is_release == 'true' &&
-      github.repository == 'scholay/rimes'
+      github.repository == 'scholay/xsime'
     runs-on: macos-15
     # This separate environment holds no signing or notarization credentials.
     # Required reviewers must inspect recorded real-Mac signed-stage rehearsal
@@ -1951,7 +1956,7 @@ jobs:
       - name: Require protected publish environment before release mutation
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           ENVIRONMENT_NAME: macos-publish
         run: |
           set -euo pipefail
@@ -2003,7 +2008,7 @@ jobs:
       - name: Authenticate the exact immutable signed stage
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           STAGE_ID: ${{ needs.sign_and_stage.outputs.artifact_id }}
           STAGE_NAME: ${{ needs.sign_and_stage.outputs.artifact_name }}
           STAGE_DIGEST: ${{ needs.sign_and_stage.outputs.artifact_digest }}
@@ -2072,7 +2077,7 @@ jobs:
           (cd "$stage" && shasum -a 256 -c SHA256SUMS)
 
           expected_manifest="$RUNNER_TEMP/rimes-signed-stage-manifest.expected"
-          printf '%s\n' 'schema=rimes-signed-pkg-release-v1' 'repository=scholay/rimes' \
+          printf '%s\n' 'schema=rimes-signed-pkg-release-v1' 'repository=scholay/xsime' \
             "run_id=$GITHUB_RUN_ID" "commit=$GITHUB_SHA" "tag=$GITHUB_REF_NAME" \
             "version=$VERSION" "pkg=$PKG" "pkg_sha256=$EXPECTED_PKG_SHA" \
             "pkg_bytes=$pkg_bytes" 'notes=RELEASE-NOTES.md' "notes_sha256=$notes_sha" \
@@ -2088,7 +2093,7 @@ jobs:
       - name: Reauthorize canonical tag and vacant Release after package review
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
         run: |
           set -euo pipefail
           [[ "$GITHUB_EVENT_NAME" == push && "$GITHUB_REF_TYPE" == tag ]]
@@ -2105,7 +2110,7 @@ jobs:
       - name: Create Release from the reviewed staged bytes
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           VERSION: ${{ needs.build_and_smoke.outputs.version }}
           PKG: ${{ needs.sign_and_stage.outputs.pkg }}
         run: |
@@ -2121,7 +2126,7 @@ jobs:
       - name: Read back the official Release assets
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           PKG: ${{ needs.sign_and_stage.outputs.pkg }}
           EXPECTED_PKG_SHA: ${{ needs.sign_and_stage.outputs.pkg_sha256 }}
         run: |
@@ -2155,7 +2160,7 @@ jobs:
       needs.build_linux_deb.result == 'success' &&
       (needs.publish_unsigned_preview.result == 'success' || needs.publish_staged_release.result == 'success') &&
       github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v') &&
-      github.repository == 'scholay/rimes'
+      github.repository == 'scholay/xsime'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -2169,7 +2174,7 @@ jobs:
       - name: Verify, attach and read back Linux assets
         env:
           GH_TOKEN: ${{ github.token }}
-          GH_REPO: scholay/rimes
+          GH_REPO: scholay/xsime
           RELEASE_VERSION: ${{ needs.build_and_smoke.outputs.version }}
         run: |
           set -euo pipefail

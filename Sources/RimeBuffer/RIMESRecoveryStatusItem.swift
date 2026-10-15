@@ -30,18 +30,18 @@ final class RIMESRecoveryStatusItem: NSObject {
             } else {
                 button.title = "R"
             }
-            button.toolTip = "切换到 RIMES 输入法"
-            button.setAccessibilityLabel("RIMES 输入法快捷入口")
+            button.toolTip = "切换到 \(ProductBrand.name) 输入法"
+            button.setAccessibilityLabel("\(ProductBrand.name) 输入法快捷入口")
         }
-        let menu = NSMenu(title: "RIMES")
+        let menu = NSMenu(title: "\(ProductBrand.name)")
         let select = NSMenuItem(
-            title: "切换到 RIMES",
+            title: "切换到 \(ProductBrand.name)",
             action: #selector(selectRIMES(_:)), keyEquivalent: ""
         )
         select.target = self
         menu.addItem(select)
         let settings = NSMenuItem(
-            title: "打开 RIMES 设置…",
+            title: "打开 \(ProductBrand.name) 设置…",
             action: #selector(openSettings(_:)), keyEquivalent: ""
         )
         settings.target = self

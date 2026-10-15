@@ -9,7 +9,7 @@ Apple 明确提醒，运行未经签名和公证的软件可能危及电脑、�
 
 ## 一、只从官方 Release 下载
 
-唯一允许的下载位置是 [scholay/rimes 的 GitHub Releases](https://github.com/scholay/rimes/releases)
+唯一允许的下载位置是 [scholay/xsime 的 GitHub Releases](https://github.com/scholay/xsime/releases)
 中标为 **Pre-release** 的 `vX.Y.Z-preview.N`，通常选择最新的一个。
 
 不要从网盘、群文件、论坛附件、短链接或第三方镜像下载，也不要安装别人重新打包的副本。
