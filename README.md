@@ -2,6 +2,8 @@
 
 心有灵犀，落笔见术。
 
+官方网站：[xsime.com](https://xsime.com)。
+
 [![中文](.github/readme/labels/zh.svg)](README.md) [![English](.github/readme/labels/en.svg)](README.en.md) [![日本語](.github/readme/labels/ja.svg)](README.ja.md) [![한국어](.github/readme/labels/ko.svg)](README.ko.md) [![Español](.github/readme/labels/es.svg)](README.es.md)
 
 致敬伟大的开源精神，本项目中文编码逻辑基于 [RIME 输入法引擎](https://rime.im/)。

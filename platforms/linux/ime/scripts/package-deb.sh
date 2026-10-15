@@ -94,11 +94,12 @@ cat > "$WORKDIR/debian/control" <<'EOF'
 Source: fcitx5-rimes
 Section: utils
 Priority: optional
-Maintainer: RIMES contributors <https://github.com/scholay/xsime>
+Maintainer: XSIME contributors <https://github.com/scholay/xsime>
+Homepage: https://xsime.com
 
 Package: fcitx5-rimes
 Architecture: any
-Description: RIMES Fcitx5 input method
+Description: XSIME Fcitx5 input method
 EOF
 printf 'librimes-rime 1 fcitx5-rimes (= %s)\n' "$VERSION" > "$WORKDIR/debian/shlibs.local"
 DEPS=$(cd "$WORKDIR" && dpkg-shlibdeps -O -xfcitx5-rimes -l"$ROOT$PRIVATE_LIB" "${ELF_FILES[@]}")
@@ -118,9 +119,10 @@ Architecture: $ARCH
 Installed-Size: $SIZE
 Depends: fcitx5, $DEPS
 Recommends: libgtk-layer-shell0, wl-clipboard
-Maintainer: RIMES contributors <https://github.com/scholay/xsime>
-Description: RIMES input method frontend for Fcitx 5
- A librime frontend owned by RIMES. It deploys the reviewed RIMES rime-data
+Maintainer: XSIME contributors <https://github.com/scholay/xsime>
+Homepage: https://xsime.com
+Description: XSIME input method frontend for Fcitx 5
+ A librime frontend owned by XSIME. It deploys the reviewed XSIME rime-data
  set, keeps user state in ~/.local/share/rimes, and ships the Linux Buffer
  workbench, Capsule rail and scheme importer next to the Fcitx5 addon.
  A private pinned Rime/Lua runtime supports portable third-party schemes.
