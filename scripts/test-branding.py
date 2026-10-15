@@ -45,6 +45,8 @@ class BrandingTests(unittest.TestCase):
             self.assertIn("schema_id: lingxi_wubi", text(path))
 
     def test_windows_and_linux_identity(self):
+        # Windows PowerShell 5.1 decodes BOM-less scripts using the ANSI code page.
+        self.assertTrue((ROOT / "platforms/windows/installer/Package.Common.ps1").read_bytes().startswith(b"\xef\xbb\xbf"))
         guid = text("platforms/windows/native/src/tsf/Guids.h")
         self.assertIn("{0B2C570B-9811-45DF-989B-EA306281F6B4}", guid)
         self.assertIn("{CD791B35-640F-4F1C-A3D3-624099E15ACB}", guid)

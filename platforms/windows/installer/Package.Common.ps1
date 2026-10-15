@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
 function Get-ProductDisplayName {
