@@ -18,6 +18,7 @@
 # =============================================================================
 set -euo pipefail
 cd "$(dirname "$0")/.."
+source scripts/lib/stapler-validation.sh
 
 SQUIRREL_VERSION="1.1.2"
 SQUIRREL_PACKAGE_BYTES="25498033"
@@ -137,8 +138,8 @@ printf '%s\n' "$signature_output" \
     || die "Squirrel pkg signer is not the reviewed Developer ID identity"
 /usr/sbin/spctl --assess --type install --verbose=4 "$TMP/squirrel.pkg" \
     || die "Gatekeeper rejected the Squirrel pkg"
-/usr/bin/xcrun stapler validate -v "$TMP/squirrel.pkg" \
-    || die "Squirrel pkg has no valid stapled notarization ticket"
+rimes_validate_stapled_ticket "$TMP/squirrel.pkg" \
+    || die "Squirrel pkg notarization ticket validation failed"
 
 if [[ "$used_cache" != true ]]; then
     /bin/mkdir -p "$CACHE_DIR"
