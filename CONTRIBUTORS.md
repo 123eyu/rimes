@@ -14,7 +14,7 @@ Core maintainer / 核心维护者: [学术海](https://pm.scholay.com) ([GitHub:
 
 ## AI coding assistants
 
-These tools helped design, implement, and review substantial parts of RIMES:
+These tools helped design, implement, and review substantial parts of XSIME:
 
 - **Claude** (Anthropic) — Claude Code / Claude in Cursor
 - **[Cursor Agent](https://github.com/cursoragent)** — Cursor editor and CLI agent workflows; [Bugbot](https://cursor.com/docs/bugbot) automated pull-request review
@@ -24,7 +24,7 @@ These tools helped design, implement, and review substantial parts of RIMES:
 
 ## Attribution policy
 
-RIMES treats material work by coding agents as an open-source contribution:
+XSIME treats material work by coding agents as an open-source contribution:
 
 - An agent that materially designs, implements, tests, or reviews a change is named here.
 - Commits use a `Co-authored-by` trailer when the participating agent has a stable, verifiable GitHub identity.
