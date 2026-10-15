@@ -65,7 +65,7 @@ GitHub 网页、Git 和 Release 下载使用平台重定向兼容；不会新建
 - macOS：Xcode Swift 构建通过；更新地址/安装包校验、状态菜单、设置路由 smoke 通过。本机开发安装因已有系统级 `/Library/Input Methods/RIMES.app` 被安全门禁拒绝，未删除或覆盖现有安装，不宣称本机已换新版。
 - iOS：重新生成引擎资源后，模拟器 272 项测试零失败、3 项跳过；不是 App Store / TestFlight 上传或真机验收。
 - Android：debug APK 构建与 core 单元测试通过，不是正式签名发布。
-- 共享核心 82 项、发布工具 89 项、品牌/兼容标识 5 项测试通过。
+- 共享核心 82 项、发布工具 89 项、品牌/兼容标识 6 项测试通过。
 - Linux 本地生命周期/打包 17 项测试通过；Windows 与 Linux 原生构建、安装验证以 PR 的远端 CI 结果为准。Young Windows 主机当时不可连接。
 
 ## 旧 Pages 链接
