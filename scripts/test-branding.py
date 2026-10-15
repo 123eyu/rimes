@@ -61,6 +61,20 @@ class BrandingTests(unittest.TestCase):
         for fragment in ['repositoryID = "1327328463"', '["rimes", "xsime"]', 'githubRepo = "xsime"', 'return "RIMES-\\(version).pkg"', 'matchingAssets.count == 1']:
             self.assertIn(fragment, source)
 
+    def test_official_homepage_does_not_change_compatibility_links(self):
+        for path in ["Sources/RimeBuffer/SettingsWindow.swift",
+                     "platforms/android/app/src/main/java/org/scholay/rimes/android/SetupActivity.java",
+                     "platforms/windows/installer/Package.Common.ps1",
+                     "platforms/linux/ime/data/org.fcitx.Fcitx5.Addon.Rimes.metainfo.xml.in",
+                     "platforms/linux/ime/scripts/package-deb.sh"]:
+            self.assertIn("https://xsime.com", text(path))
+        package = text("platforms/linux/ime/scripts/package-deb.sh")
+        self.assertIn("Package: fcitx5-rimes", package)
+        self.assertIn("~/.local/share/rimes", package)
+        for locale in ["en-US", "zh-Hans", "zh-Hant"]:
+            self.assertIn("scholay.github.io/rimes/ios/", text(
+                f"platforms/ios/AppStore/metadata/{locale}/privacy_url.txt"))
+
     def test_ci_and_release_agree_on_display_and_executable(self):
         for workflow in ["ci.yml", "release.yml"]:
             source = text(".github/workflows/" + workflow)

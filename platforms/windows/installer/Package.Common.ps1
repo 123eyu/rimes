@@ -333,7 +333,7 @@ function Write-InstalledAppRegistration([string]$InstallRoot,[string]$Directory,
         $key.SetValue('RIMESInstallRoot',$InstallRoot)
         $key.SetValue('RIMESUninstallDirectory',$LauncherDirectory)
         $key.SetValue('RIMESUserSid',$UserSid)
-        $key.SetValue('URLInfoAbout','https://github.com/scholay/xsime')
+        $key.SetValue('URLInfoAbout','https://xsime.com')
         $key.SetValue('InstallDate',(Get-Date -Format 'yyyyMMdd'))
         $key.SetValue('NoModify',1,[Microsoft.Win32.RegistryValueKind]::DWord)
         $key.SetValue('NoRepair',1,[Microsoft.Win32.RegistryValueKind]::DWord)

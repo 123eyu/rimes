@@ -1,5 +1,7 @@
 # XSIME
 
+Official website: [xsime.com](https://xsime.com).
+
 [![中文](.github/readme/labels/zh.svg)](README.md) [![English](.github/readme/labels/en.svg)](README.en.md) [![日本語](.github/readme/labels/ja.svg)](README.ja.md) [![한국어](.github/readme/labels/ko.svg)](README.ko.md) [![Español](.github/readme/labels/es.svg)](README.es.md)
 
 With respect for open source, the Chinese input logic of this project is based on the [RIME input method engine](https://rime.im/).

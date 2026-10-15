@@ -1,20 +1,25 @@
-XSIME brings Chinese input, slide chords and a writing Buffer to your iPhone.
+XSIME is a keyboard and text assistant for your iPhone, formerly RIMES / Lingxi IME. Type locally, organize your words in Buffer, and choose optional translation or AI assistance when you need it.
 
-CHOOSE HOW YOU TYPE
-Use Pinyin, Ziranma double Pinyin, Wubi 86 or English. Your last input scheme is remembered. Switch Simplified and Traditional Chinese, and use the built-in emoji palette.
-
-SLIDE CHORDS
-Combine a starting key and an endpoint with each thumb. Available combinations stay clear while other keys fade. Release both thumbs to enter the resolved combination. Copy or import JSON mappings to adapt your layout.
+TYPE YOUR WAY
+Use Pinyin, nine-key Pinyin, Ziranma double Pinyin, Wubi 86, XSIME Wubi, English or slide chords. Switch Simplified and Traditional Chinese, customize key layouts, and import compatible Rime scheme ZIPs or coded UTF-8 text dictionaries. XSIME Wubi combines Wubi and Pinyin; Wubi 86 offers z-prefixed Pinyin lookup. Both Wubi schemes can commit a unique four-key Wubi match automatically.
 
 A BUFFER FOR YOUR WORDS
-Compose in a local Buffer before inserting text into your app. Tap to insert the next block, or hold for one second to insert everything remaining. Unconfirmed composition appears at the cursor instead of occupying another keyboard row.
+Compose and edit before inserting text into your app. Tap to insert one block, or hold for one second to insert all remaining blocks. Default Buffer also offers optional timed insertion, off by default; translation and AI results require explicit insertion. Inserting text never sends a message for you.
 
-OPTIONAL TRANSLATION AND AI
-On iOS 26 or later, Apple on-device translation can preview confirmed Buffer text after a brief pause. Prepare the required languages in the XSIME app first. Availability depends on supported languages and downloaded models.
+Explicitly import readable text from the current input field, or collect clipboard text with the system Paste control. Saved clipboard entries stay in a separate local history that you can delete or clear; opening the list does not read the system clipboard.
 
-You can also configure your own HTTPS AI provider and API key for Quick Q&A, AI Polish, AI Poem and AI Text Art. These features use your selected AI provider; Apple on-device translation uses downloaded language packs. These optional requests send only the Buffer text you explicitly submit after granting recipient consent. Third-party providers may require their own account or payment.
+OPTIONAL APPLE TRANSLATION
+On iOS 26 or later, Apple translation uses downloaded on-device language models. Prepare the required languages in the XSIME app, then choose a language pair in Buffer. Availability depends on supported languages and downloaded models. No external AI fallback is used when local translation is unavailable.
+
+YOUR CHOICE OF EXTERNAL AI
+For optional AI polishing, rewriting and other writing tools, configure your own HTTPS OpenAI-compatible Chat Completions provider, model and API key. The recipient is shown before you grant permission. Only Buffer text you explicitly submit is sent to the configured, consented service. Your provider's data policy applies and its service may require a separate account or payment. XSIME does not include an AI subscription, provider credentials or a hosted AI service.
+
+PERSONALIZE YOUR KEYBOARD
+Manage built-in Buffer tools, keyboard appearance, custom chord mappings and status-light pets. View local typing statistics and create a statistics card. Local learned associations suggest what you may want to type next.
 
 LOCAL EVERYDAY INPUT
-Ordinary typing and Buffer editing work offline without Full Access, an account or a subscription. No ads or keyboard-text telemetry. Optional provider-based AI requires Full Access. The app explains how to enable the keyboard in Settings; secure fields and apps that disallow third-party keyboards use the system keyboard.
+Ordinary typing and Buffer editing work offline without Full Access, an app account or a subscription. XSIME has no ads or keyboard-text telemetry. API keys use this device's Keychain. External AI, collecting clipboard text from the keyboard and keyboard image export require Full Access; saving an image to Photos requests add-only photo access. Buffer drafts are cleared when the keyboard session ends; separately saved clipboard history, learned words and settings remain on the device.
 
-Requires an iPhone running iOS 17 or later. Haptics depend on device and system settings.
+Enable XSIME in Settings > General > Keyboard > Keyboards, then choose it with the globe key. Secure fields and apps that prohibit third-party keyboards use the system keyboard.
+
+Requires an iPhone running iOS 17 or later. Apple local translation requires iOS 26 or later and supported language models. Haptics depend on device and system settings.

@@ -10,7 +10,7 @@
   <description>
     <p>A Fcitx5 frontend for XSIME that links librime and deploys the reviewed XSIME rime-data set. Isolated from stock fcitx5-rime user data.</p>
   </description>
-  <url type="homepage">https://github.com/scholay/xsime</url>
+  <url type="homepage">https://xsime.com</url>
   <provides>
     <id>rimes</id>
   </provides>

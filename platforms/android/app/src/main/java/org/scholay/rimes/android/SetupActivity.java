@@ -247,7 +247,7 @@ public final class SetupActivity extends Activity {
         try { version=getPackageManager().getPackageInfo(getPackageName(),0).versionName; }
         catch(android.content.pm.PackageManager.NameNotFoundException error) { version=t("开发版","Development"); }
         note(getString(R.string.app_name)+"  "+version);
-        contactLink("pm.scholay.com","https://pm.scholay.com",false);
+        contactLink("xsime.com","https://xsime.com",false);
         contactLink("pm@scholay.com","mailto:pm@scholay.com",true);
     }
     private void contactLink(String label,String destination,boolean email) {

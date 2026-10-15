@@ -2502,8 +2502,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         switch subpageID {
         case "website":
             (title, summary, action, destination) = (
-                "pm.scholay.com", "访问 \(ProductBrand.name) 官网，了解产品与项目动态。", "打开官网",
-                "https://pm.scholay.com")
+                "xsime.com", "访问 \(ProductBrand.name) 官网，了解产品与项目动态。", "打开官网",
+                "https://xsime.com")
         case "contact":
             (title, summary, action, destination) = (
                 "pm@scholay.com", "反馈使用体验、问题或合作想法。", "写邮件",
