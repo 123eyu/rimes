@@ -59,5 +59,14 @@ class BrandingTests(unittest.TestCase):
         for fragment in ['repositoryID = "1327328463"', '["rimes", "xsime"]', 'githubRepo = "xsime"', 'return "RIMES-\\(version).pkg"', 'matchingAssets.count == 1']:
             self.assertIn(fragment, source)
 
+    def test_ci_and_release_agree_on_display_and_executable(self):
+        for workflow in ["ci.yml", "release.yml"]:
+            source = text(".github/workflows/" + workflow)
+            self.assertIn('test "$DISPLAY_NAME" = \'XSIME\'', source)
+            self.assertIn('test "$MENU_TITLE" = \'XSIME\'', source)
+            self.assertIn('test "$EXECUTABLE" = \'RIMES\'', source)
+            for name in NAMES.values():
+                self.assertIn('EXPECTED_NAME="' + name + '"', source)
+
 if __name__ == "__main__":
     unittest.main()

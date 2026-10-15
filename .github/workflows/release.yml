@@ -107,8 +107,8 @@ jobs:
           test "$PARENT_ID" != "$MODE_ID"
           test "$MODE_ID" = "$DECLARED_MODE_ID"
           test "$CONNECTION" = 'RIMES_1_Connection'
-          test "$DISPLAY_NAME" = 'RIMES'
-          test "$MENU_TITLE" = 'RIMES'
+          test "$DISPLAY_NAME" = 'XSIME'
+          test "$MENU_TITLE" = 'XSIME'
           test "$EXECUTABLE" = 'RIMES'
           test "$CHILD_REPERTOIRE" = 'Array{HansHant}'
           # Freeze the input-source identity to exact literals. The structure
@@ -122,8 +122,13 @@ jobs:
           test "$MODE_ID" = "${BUNDLE_ID}.Hans"
           for STRINGS in Resources/*.lproj/InfoPlist.strings; do
             plutil -lint "$STRINGS"
+            case "$STRINGS" in
+              */zh-Hans.lproj/*) EXPECTED_NAME="犀术IME" ;;
+              */zh-Hant.lproj/*) EXPECTED_NAME="犀術IME" ;;
+              *) EXPECTED_NAME="XSIME" ;;
+            esac
             for KEY in CFBundleDisplayName CFBundleName "$BUNDLE_ID" "$MODE_ID"; do
-              test "$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$STRINGS")" = 'RIMES'
+              test "$(/usr/libexec/PlistBuddy -c "Print :$KEY" "$STRINGS")" = "$EXPECTED_NAME"
             done
           done
           if /usr/libexec/PlistBuddy -c 'Print :tsInputMethodCharacterRepertoireKey' Info.plist >/dev/null 2>&1; then
