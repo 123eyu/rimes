@@ -25,14 +25,14 @@ IME 表示 Input Method Editor。Rime / librime 是上游输入引擎名称，�
 
 ## 仓库切换与更新兼容
 
-2026-10-15 曾将仓库改名为 `xsime` 并验证重定向，随后发现已发布 macOS 更新器的严格 URL 校验，已暂时恢复为 `scholay/rimes`。仓库简介使用新品牌，仓库 ID 保持 `1327328463`。
+2026-10-15 已正式将同一仓库改名为 `scholay/xsime`，仓库 ID 保持 `1327328463`。本地 origin 已更新。旧仓库 API、Git 读取、PR 和现有 PKG 下载重定向已验证，旧 `/rimes/ios/privacy/` 返回 HTTP 200。源代码合并状态以 PR #143 为准，仓库改名不代表新安装包已经发布。
 
 已发布旧版 `Sources/RimeBuffer/UpdateManager.swift` 的 `githubRepo` 固定为 `rimes`，更新响应最终 API URL 和资产 URL 都要求精确匹配。GitHub 重定向并不能让已安装旧二进制接受新地址。本次源码改用固定仓库 ID 查询，并仅允许同一官方仓库的两个明确名称。
 
 - [x] 新版更新器仅允许同一官方 owner 下明确列出的新旧仓库 URL，并保留签名、包身份、版本和资产唯一性校验。
 - [x] 增加新旧 URL、非官方 owner、相似仓库、异常 URL 的正反向测试。
-- [ ] 明确正式改名时间及旧版用户手动安装说明；即使先发布过渡版，未升级用户仍可能需要手动安装。
-- [x] 源码中的 release workflow 仓库门禁、发布脚本、README 与下载地址已改用 `scholay/xsime`；remote 随正式切换更新。
+- [x] 2026-10-15 正式改名；旧版用户手动安装说明见下，即使先发布过渡版，未升级用户仍可能需要手动安装。
+- [x] 源码中的 release workflow 仓库门禁、发布脚本、README 与下载地址已改用 `scholay/xsime`；origin 已同步。
 - [ ] 实测旧仓库页面、Issue、PR、Release 下载、Git 操作与应用内更新。不得重建 `scholay/rimes` 占用旧地址。
 
 ### 旧版 macOS 用户必读
