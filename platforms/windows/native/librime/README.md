@@ -25,4 +25,4 @@ assembled. It also does not ship a separate `rime-lua.dll`.
 
 The isolated CI schema under `testdata/e2e` is lua-free so typing tests do not
 depend on the product `rime_ice` script tree. A later real install that wants
-雾凇 still needs the RIMES `rime-data` lua modules next to the shared schemas.
+雾凇 still needs the XSIME `rime-data` lua modules next to the shared schemas.

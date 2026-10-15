@@ -1,6 +1,6 @@
-# RIMES Capsule (Linux)
+# XSIME Capsule (Linux)
 
-Note library and bottom rail for the Fcitx5 RIMES addon. Behavior and the
+Note library and bottom rail for the Fcitx5 XSIME addon. Behavior and the
 deliberate macOS gaps are in [SPEC.md](SPEC.md). Real-desktop checks are in
 [MANUAL-TEST.md](MANUAL-TEST.md).
 
@@ -18,7 +18,7 @@ deliberate macOS gaps are in [SPEC.md](SPEC.md). Real-desktop checks are in
 ## How it is wired
 
 `CapsuleService` lives next to `BufferService`. Toggle is
-`Ctrl+Shift+V` / `Super+Shift+V` while RIMES is current. While the rail is
+`Ctrl+Shift+V` / `Super+Shift+V` while XSIME is current. While the rail is
 armed on an input context, navigation and Return are consumed before
 Rime. A selected note is inserted with `InputContext::commitString` after
 the same-IC recheck. The GTK process is a renderer. It does not run
@@ -37,7 +37,7 @@ platforms/linux/ime/tests/e2e/e2e.sh --build-dir platforms/linux/ime/build
 
 | Item | Value |
 |---|---|
-| Toggle | `Ctrl+Shift+V` or `Super+Shift+V` **only while RIMES is current**. A visible but disarmed rail re-arms on the first press. |
+| Toggle | `Ctrl+Shift+V` or `Super+Shift+V` **only while XSIME is current**. A visible but disarmed rail re-arms on the first press. |
 | Close | same hotkey while armed, Escape on the armed field, close button, or a successful insert |
 | Insert selected note | Return, `Ctrl+1`–`Ctrl+9`, or double-click (second press on the same card within 400 ms). The rail closes. |
 | `ctl status` | Reloads the note store, even while the rail is closed |

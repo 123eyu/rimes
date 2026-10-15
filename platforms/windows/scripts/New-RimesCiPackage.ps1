@@ -18,7 +18,7 @@ New-Item -ItemType Directory -Path $OutputDirectory | Out-Null
 # Reuse only immutable OpenCC tables and Microsoft-signed redistributables.
 # Product binaries, scripts, schemes and dictionaries come from this checkout.
 $baselineHash = '9b5711237c3c551f2a68b8de6cfe5d36fa079b1307c7a7cc4b77720876958d23'
-$baselineUrl = 'https://github.com/scholay/rimes/releases/download/windows-v1.1.1/RIMES-Windows-1.1.1.zip'
+$baselineUrl = 'https://github.com/scholay/xsime/releases/download/windows-v1.1.1/RIMES-Windows-1.1.1.zip'
 $baselineZip = Join-Path $OutputDirectory 'dependencies.zip'
 Invoke-WebRequest -Uri $baselineUrl -OutFile $baselineZip -UseBasicParsing
 if ((Get-FileHash -LiteralPath $baselineZip -Algorithm SHA256).Hash.ToLowerInvariant() -ne $baselineHash) {

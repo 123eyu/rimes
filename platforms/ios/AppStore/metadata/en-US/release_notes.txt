@@ -1,3 +1,3 @@
-Adds Lingxi Wubi with direct Wubi and Pinyin input. Wubi 86 now supports z-prefixed Pinyin lookup with smaller Wubi code hints beside candidates. Existing schemes and learned words are preserved.
+Adds XSIME Wubi with direct Wubi and Pinyin input. Wubi 86 now supports z-prefixed Pinyin lookup with smaller Wubi code hints beside candidates. Existing schemes and learned words are preserved.
 
 Both Wubi schemes automatically commit a unique four-key Wubi match while keeping ambiguous codes and Pinyin lookups available for selection.

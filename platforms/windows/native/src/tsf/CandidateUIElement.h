@@ -40,7 +40,7 @@ class CandidateUIElement final : public ITfCandidateListUIElementBehavior {
   }
   HRESULT STDMETHODCALLTYPE GetDescription(BSTR* out) override {
     if (!out) return E_POINTER;
-    *out = SysAllocString(L"Lingxi candidates");
+    *out = SysAllocString(L"XSIME candidates");
     return *out ? S_OK : E_OUTOFMEMORY;
   }
   HRESULT STDMETHODCALLTYPE GetGUID(GUID* out) override {

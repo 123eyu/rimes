@@ -71,7 +71,7 @@ final class KeyboardAppearancePanel extends ScrollView {
     void schemes(String selected,Consumer<String> choose) {
         schema=selected;
         if(!schemas.isEmpty()) return;
-        String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"},names={"拼音","自然码","五笔","灵犀五笔"};
+        String[] ids={"rimes_pinyin","rimes_ziranma","rimes_wubi","lingxi_wubi"},names={"拼音","自然码","五笔","犀术五笔"};
         for(int i=0;i<ids.length;i++) { final String id=ids[i]; KeyButton key=button(schemaRow,names[i],() -> choose.accept(id)); key.setContentDescription("中文方案 "+names[i]); schemas.add(key); }
     }
     void action(String title,String description,Runnable perform) {

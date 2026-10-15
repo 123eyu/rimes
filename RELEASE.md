@@ -11,7 +11,7 @@
 后续 `v*` 发布增加 Ubuntu 24.04 amd64 deb 与校验文件，Linux 本地默认版本也读取根 `VERSION`。
 目标与验收记录见 [1.1.0 发布计划](docs/releases/1.1.0-plan.md)；[1.0 发布准备](RELEASE-1.0.0.md)保留作历史记录。macOS 的 `VERSION`、`Info.plist` 与正式 tag 必须一致。发布脚本不修改、不提交任何文件，只在 `origin/main` 上创建并推送一个 tag；
 构建、验证、发布说明和 Release 由 GitHub Actions 完成。macOS 与数据预览的发布中心是
-[`scholay/rimes`](https://github.com/scholay/rimes/releases)；iOS 独立走 App Store Connect。
+[`scholay/xsime`](https://github.com/scholay/xsime/releases)；iOS 独立走 App Store Connect。
 
 ```mermaid
 flowchart LR
@@ -79,7 +79,7 @@ git switch main && git pull --ff-only
 
 脚本在推送前逐项检查，任何一项不满足都会拒绝（`--dry-run` 只报告）：
 
-- `origin` 的 fetch / push 地址都指向 `scholay/rimes`；
+- `origin` 的 fetch / push 地址都指向 `scholay/xsime`；
 - 当前在 `main`，工作区干净，`HEAD` 等于 `origin/main`；
 - `origin/main` 这个提交的 `CI` 已通过（其中包含 macOS build/runtime smoke 与发布工具校验）；
 - Windows / Linux 的独立 workflow 结果不阻断创建 preview/stable tag；tag 后的本次 Linux deb 打包验收是公开 Release 的条件；

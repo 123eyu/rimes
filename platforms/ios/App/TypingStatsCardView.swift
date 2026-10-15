@@ -43,7 +43,7 @@ struct TypingStatsCardView: View {
         }.navigationTitle(L("打字统计卡片", "Typing stats card"))
         .task { reload() }.onChange(of: phase) { _, value in if value == .active { reload() } }
         .sheet(isPresented: $sharing) { if let png, let image = UIImage(data: png) { TypingCardShareSheet(image: image) } }
-        .fileExporter(isPresented: $exporting, document: TypingCardDocument(png: png ?? Data()), contentType: .png, defaultFilename: "RIMES-typing-card") { result in
+        .fileExporter(isPresented: $exporting, document: TypingCardDocument(png: png ?? Data()), contentType: .png, defaultFilename: "XSIME-typing-card") { result in
             switch result { case .success: message = L("图片已保存。", "Image saved."); case .failure(let error): message = error.localizedDescription }
         }
     }

@@ -104,7 +104,7 @@ final class OpenAiSettings {
         if(!preferences.edit().remove(KEY).commit()) throw failure("AI 设置无法移除，请重试。");
     }
     String credential(Snapshot snapshot) throws OpenAiChatCodec.Failure {
-        if(!snapshot.enabled || !snapshot.hasKey()) throw failure("请在 RIMES 主应用的 AI 服务中配置密钥。");
+        if(!snapshot.enabled || !snapshot.hasKey()) throw failure("请在 犀术IME 主应用的 AI 服务中配置密钥。");
         try {
             Cipher cipher=Cipher.getInstance("AES/GCM/NoPadding");
             cipher.init(Cipher.DECRYPT_MODE,key(false),new GCMParameterSpec(128,Base64.decode(snapshot.iv,Base64.NO_WRAP)));

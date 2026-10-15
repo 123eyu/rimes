@@ -425,10 +425,10 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         let paused = stats.text ?? ""
         XCTAssertNotEqual(typing, paused)
         XCTAssertTrue(paused.contains("3s"), paused)
-        // The ordinary-text action still appends the existing figures and RIMES credit.
+        // The ordinary-text action appends the figures and localized product credit.
         let signature = try XCTUnwrap(controller.typingSignature())
         XCTAssertTrue(signature.contains("\(controller.developmentTypingSession.characters)"))
-        XCTAssertTrue(signature.hasSuffix(L("来自 RIMES 免费开源输入法", "Sent from RIMES, the free open-source input method")))
+        XCTAssertTrue(signature.hasSuffix(L("来自 \(RIMES.ProductBrand.name) 免费开源输入法", "Sent from \(RIMES.ProductBrand.name), the free open-source input method")))
         controller.developmentBuffer(""); window.layoutIfNeeded() // empty Buffer, same session
         controller.developmentAppendSignature()
         XCTAssertEqual(controller.layoutProxy.native.text, "正文\n\n" + signature)

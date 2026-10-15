@@ -1,6 +1,13 @@
 #requires -Version 5.1
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
+function Get-ProductDisplayName {
+    $language = [Globalization.CultureInfo]::CurrentUICulture.Name
+    if ($language -match '^zh-(Hant|TW|HK|MO)(-|$)') { return '犀術IME' }
+    if ($language -match '^zh($|-)') { return '犀术IME' }
+    return 'XSIME'
+}
+
 function Read-VerifiedPackage([string]$Directory,[switch]$AllowMissingFiles,[string]$ManifestSourceDirectory) {
     $root = [IO.Path]::GetFullPath($Directory).TrimEnd('\')
     $manifestDirectory=if($ManifestSourceDirectory){[IO.Path]::GetFullPath($ManifestSourceDirectory)}else{$root}
@@ -317,7 +324,7 @@ function Write-InstalledAppRegistration([string]$InstallRoot,[string]$Directory,
     $key=$null
     try {
         $key=$base.CreateSubKey((Get-InstalledAppKey))
-        $key.SetValue('DisplayName','RIMES')
+        $key.SetValue('DisplayName',(Get-ProductDisplayName))
         $key.SetValue('DisplayVersion',[string]$Manifest.version)
         $key.SetValue('Publisher','Scholay')
         $key.SetValue('InstallLocation',$Directory)
@@ -326,7 +333,7 @@ function Write-InstalledAppRegistration([string]$InstallRoot,[string]$Directory,
         $key.SetValue('RIMESInstallRoot',$InstallRoot)
         $key.SetValue('RIMESUninstallDirectory',$LauncherDirectory)
         $key.SetValue('RIMESUserSid',$UserSid)
-        $key.SetValue('URLInfoAbout','https://github.com/scholay/rimes')
+        $key.SetValue('URLInfoAbout','https://github.com/scholay/xsime')
         $key.SetValue('InstallDate',(Get-Date -Format 'yyyyMMdd'))
         $key.SetValue('NoModify',1,[Microsoft.Win32.RegistryValueKind]::DWord)
         $key.SetValue('NoRepair',1,[Microsoft.Win32.RegistryValueKind]::DWord)
@@ -339,7 +346,7 @@ function Assert-InstalledAppRegistration([string]$InstallRoot,[string]$Directory
     $values=Read-InstalledAppRegistration
     if($null -eq $values){throw 'RIMES is missing from Windows Installed Apps'}
     foreach($name in @('DisplayName','DisplayVersion','InstallLocation','RIMESInstallRoot','RIMESUninstallDirectory','UninstallString')){if(-not $values.ContainsKey($name)){throw "Installed Apps entry is incomplete: $name"}}
-    if($values.DisplayName.value -ne 'RIMES' -or $values.DisplayVersion.value -ne $Manifest.version -or $values.InstallLocation.value -ne $Directory -or $values.RIMESInstallRoot.value -ne $InstallRoot){throw 'Installed Apps entry does not match the active version'}
+    if($values.DisplayName.value -notin @('RIMES','XSIME','犀术IME','犀術IME') -or $values.DisplayVersion.value -ne $Manifest.version -or $values.InstallLocation.value -ne $Directory -or $values.RIMESInstallRoot.value -ne $InstallRoot){throw 'Installed Apps entry does not match the active version'}
     $launcher=[string]$values.RIMESUninstallDirectory.value
     Assert-OwnedVersion $InstallRoot $launcher | Out-Null
     if(-not (Test-Path -LiteralPath (Join-Path $launcher 'Uninstall-App.ps1') -PathType Leaf) -or $values.UninstallString.value -ne (Get-UninstallCommand $InstallRoot $launcher)){throw 'Installed Apps uninstall command is invalid'}
@@ -384,7 +391,7 @@ function Write-SettingsShortcut([string]$InstallRoot,[string]$Directory) {
         $shortcut.Arguments='--settings'
         $shortcut.WorkingDirectory=Join-Path $Directory 'x64'
         $shortcut.IconLocation=$shortcut.TargetPath+',0'
-        $shortcut.Description='Open RIMES settings'
+        $shortcut.Description='Open ' + (Get-ProductDisplayName) + ' settings'
         $shortcut.Save()
     } finally {if($shortcut){[Runtime.InteropServices.Marshal]::FinalReleaseComObject($shortcut) | Out-Null};[Runtime.InteropServices.Marshal]::FinalReleaseComObject($shell) | Out-Null}
     Assert-SettingsShortcut $InstallRoot $Directory

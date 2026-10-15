@@ -7714,7 +7714,7 @@ func runBufferWindowSmokeTest() -> Bool {
               == BufferWorkbenchMetrics.controlSize,
           BufferWorkbenchLayoutMode.derived(targetRows: 99).targetRows == 5,
           BufferAlternativePagerRules.maximumCount == 5,
-          ProductIdentity.displayName == "RIMES",
+          ProductIdentity.displayName == ProductBrand.name,
           BufferWorkbenchMetrics.mainSpacing == 3,
           BufferWorkbenchMetrics.shelfSpacing == 4,
           BufferWorkbenchMetrics.shelfStatusWidth == 88,

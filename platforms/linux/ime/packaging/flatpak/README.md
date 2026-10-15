@@ -1,6 +1,6 @@
 # Flatpak-compatible install path
 
-The RIMES Fcitx5 addon is a **host Fcitx5 module**, not a standalone Flatpak
+The XSIME Fcitx5 addon is a **host Fcitx5 module**, not a standalone Flatpak
 app. Flatpak applications talk to the host or Flatpak Fcitx5 over the portal.
 
 ## User-local prefix (recommended for testers)

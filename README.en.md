@@ -7,7 +7,7 @@ XSIME is an input method for more than one operating system. Three original slot
 
 Schemes include full Pinyin, double Pinyin, Shengbi, Wubi, and English, plus the chorded input used in stenography and custom imports. For new users, the package **bundles** librime and the dictionaries and is ready to use.
 
-All five platforms include **Wubi 86** and **Lingxi Wubi**. Wubi 86 supports `z` followed by Pinyin, such as `zni`, with Wubi codes shown in parentheses. Lingxi Wubi accepts Wubi codes and Pinyin without switching modes, prioritizing exact Wubi matches. Both schemes automatically commit a unique four-key Wubi candidate; ambiguous codes and Pinyin lookups retain candidate selection. See the [Wubi guide](docs/wubi.md).
+All five platforms include **Wubi 86** and **XSIME Wubi**. Wubi 86 supports `z` followed by Pinyin, such as `zni`, with Wubi codes shown in parentheses. XSIME Wubi accepts Wubi codes and Pinyin without switching modes, prioritizing exact Wubi matches. Both schemes automatically commit a unique four-key Wubi candidate; ambiguous codes and Pinyin lookups retain candidate selection. See the [Wubi guide](docs/wubi.md).
 
 > **XSIME** is the unified product, project and architecture name: **犀术IME** in Simplified Chinese and **犀術IME** in Traditional Chinese (formerly RIMES / Lingxi IME). Branding is in transition; installed apps, store listings and filings are updated separately. See [Branding and compatibility](BRANDING.md).
 
@@ -36,7 +36,7 @@ One input method covers everyday translation, generation, and polishing, without
 
 | Capability | Shortcut | Contents | Action | Storage | Limit |
 |---|---|---|---|---|---|
-| Input schemes | — | Rime Ice full Pinyin, Natural Code, Xiaohe, Wubi 86, Lingxi Wubi, English | — | — | — |
+| Input schemes | — | Rime Ice full Pinyin, Natural Code, Xiaohe, Wubi 86, XSIME Wubi, English | — | — | — |
 | Buffer | `⌘⇧B` | Text before it is committed | Switch to XSIME, then capture and deliver in chunks | — | After you switch away, only the system clipboard is used, not IMK |
 | Capsule bar | `⌘⇧V` | Recent copies; notes, images, PDFs, skills, passwords | Click to select, double-click or Return to paste. `⌘S` saves | This Mac only | Paste needs Accessibility; otherwise it only reaches the clipboard |
 | Mailbox | `⌘⇧M` | AI conversations, notes, items waiting for review | New conversation; the first Return starts generation | The model is bound to that conversation | CLIs use their default model |
@@ -59,27 +59,27 @@ This table is generated from [`Catalog/buffer-plugins.json`](Catalog/buffer-plug
 
 | Plug-in | ID | Version | Default installation | Default state |
 |---|---|---:|---|---|
-| Translation | `builtin.apple-translation` | 2.2.0 | Bundled with RIMES | Enabled |
-| Capture | `builtin.capsule.capture` | 1.1.0 | Bundled with RIMES | Enabled |
-| Notes | `builtin.capsule.notes` | 1.1.0 | Bundled with RIMES | Enabled |
-| Passwords | `builtin.capsule.passwords` | 1.1.0 | Bundled with RIMES | Enabled |
-| Resources | `builtin.capsule.resources` | 1.1.0 | Bundled with RIMES | Enabled |
-| Temporary | `builtin.capsule.temporary` | 1.1.0 | Bundled with RIMES | Enabled |
+| Translation | `builtin.apple-translation` | 2.2.0 | Bundled with XSIME | Enabled |
+| Capture | `builtin.capsule.capture` | 1.1.0 | Bundled with XSIME | Enabled |
+| Notes | `builtin.capsule.notes` | 1.1.0 | Bundled with XSIME | Enabled |
+| Passwords | `builtin.capsule.passwords` | 1.1.0 | Bundled with XSIME | Enabled |
+| Resources | `builtin.capsule.resources` | 1.1.0 | Bundled with XSIME | Enabled |
+| Temporary | `builtin.capsule.temporary` | 1.1.0 | Bundled with XSIME | Enabled |
 | Claude | `builtin.claude-code-cli` | 1.1.0 | On demand in Settings | Disabled |
 | ChatGPT | `builtin.codex-cli` | 1.1.1 | On demand in Settings | Disabled |
-| Chord input | `builtin.fly-chord-learning` | 2.0.0 | Bundled with RIMES | Disabled |
+| Chord input | `builtin.fly-chord-learning` | 2.0.0 | Bundled with XSIME | Disabled |
 | LaTeX | `builtin.latex` | 1.1.0 | On demand in Settings | Disabled |
-| Chat | `builtin.mailbox.chat` | 1.1.0 | Bundled with RIMES | Enabled |
-| Inbox | `builtin.mailbox.inbox` | 1.1.0 | Bundled with RIMES | Enabled |
-| Terminal | `builtin.mailbox.terminal` | 1.1.0 | Bundled with RIMES | Enabled |
+| Chat | `builtin.mailbox.chat` | 1.1.0 | Bundled with XSIME | Enabled |
+| Inbox | `builtin.mailbox.inbox` | 1.1.0 | Bundled with XSIME | Enabled |
+| Terminal | `builtin.mailbox.terminal` | 1.1.0 | Bundled with XSIME | Enabled |
 | Morse Code | `builtin.morse` | 0.1.0 | On demand in Settings | Disabled |
 | Electronic Music | `builtin.music` | 0.2.3 | On demand in Settings | Disabled |
 | AI API | `builtin.openai-compatible` | 1.0.0 | On demand in Settings | Disabled |
 | Polisher | `builtin.polisher` | 1.1.0 | On demand in Settings | Disabled |
 | Reference | `builtin.scholay` | 0.1.0 | On demand in Settings | Disabled |
-| Statistics | `builtin.statistics` | 2.0.0 | Bundled with RIMES | Enabled |
-| Stream of Consciousness Input | `builtin.stream-input` | 1.4.0 | Bundled with RIMES | Enabled |
-| Typing practice | `builtin.typing-speed` | 2.0.0 | Bundled with RIMES | Enabled |
+| Statistics | `builtin.statistics` | 2.0.0 | Bundled with XSIME | Enabled |
+| Stream of Consciousness Input | `builtin.stream-input` | 1.4.0 | Bundled with XSIME | Enabled |
+| Typing practice | `builtin.typing-speed` | 2.0.0 | Bundled with XSIME | Enabled |
 
 Bundled plug-ins use the defaults above. Optional plug-ins require installation and explicit enablement. Upgrades preserve existing plugin state.
 <!-- END PRESET BUFFER PLUGINS -->
@@ -94,25 +94,25 @@ Bundled plug-ins use the defaults above. Optional plug-ins require installation 
 
 ## Install
 
-The [1.1.4 release](https://github.com/scholay/rimes/releases/tag/v1.1.4) provides macOS PKG, Android APK/AAB, Windows EXE/ZIP, and Linux DEB packages. All five platforms support importing the same standard Rime ZIP or encoded UTF-8 TXT/TSV dictionary; see the [import guide](docs/portable-scheme-import.md).
+The [1.1.4 release](https://github.com/scholay/xsime/releases/tag/v1.1.4) provides macOS PKG, Android APK/AAB, Windows EXE/ZIP, and Linux DEB packages. All five platforms support importing the same standard Rime ZIP or encoded UTF-8 TXT/TSV dictionary; see the [import guide](docs/portable-scheme-import.md).
 
 | Platform | Installation |
 |---|---|
-| macOS | [1.1.4 PKG](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-1.1.4.pkg), Apple Silicon and Intel, signed and notarized |
-| Android | [1.1.4 APK](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Android-1.1.4.apk), version code 18, signed with the existing long-term key |
-| Windows | [1.1.4 EXE](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
-| Linux | [1.1.4 DEB](https://github.com/scholay/rimes/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb), Ubuntu 24.04 amd64 / Fcitx5 |
+| macOS | [1.1.4 PKG](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-1.1.4.pkg), Apple Silicon and Intel, signed and notarized |
+| Android | [1.1.4 APK](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Android-1.1.4.apk), version code 18, signed with the existing long-term key |
+| Windows | [1.1.4 EXE](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
+| Linux | [1.1.4 DEB](https://github.com/scholay/xsime/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb), Ubuntu 24.04 amd64 / Fcitx5 |
 | iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q). Apple’s pages show the currently available builds. |
 
 See the [1.1.4 release record](docs/releases/1.1.4.md) for build, import, and installation validation.
 
-A user has reported host-app crashes on macOS 27 when switching to XSIME in the App Store sandboxed versions of WeChat and QQ after installation. If affected, switch to another input method and follow the [per-app input-source cache backup and recovery guide](docs/macos/input-source-cache-recovery.md#english). The installer does not clear other apps' caches; restarting the app or logging out is not a guaranteed fix. Investigation remains open in [#90](https://github.com/scholay/rimes/issues/90).
+A user has reported host-app crashes on macOS 27 when switching to XSIME in the App Store sandboxed versions of WeChat and QQ after installation. If affected, switch to another input method and follow the [per-app input-source cache backup and recovery guide](docs/macos/input-source-cache-recovery.md#english). The installer does not clear other apps' caches; restarting the app or logging out is not a guaranteed fix. Investigation remains open in [#90](https://github.com/scholay/xsime/issues/90).
 
 To build locally, clone the source and its pinned official plugins:
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/rimes.git
-cd rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git
+cd xsime
 ```
 
 | Platform | Status | Build |
@@ -142,7 +142,7 @@ cd rimes
 
 ## Automatic updates
 
-An installed, formally signed copy of XSIME checks GitHub Releases for [`scholay/rimes`](https://github.com/scholay/rimes). Unsigned `vX.Y.Z-preview.N` builds are not on that channel.
+An installed, formally signed copy of XSIME checks GitHub Releases for [`scholay/xsime`](https://github.com/scholay/xsime). Unsigned `vX.Y.Z-preview.N` builds are not on that channel.
 
 The macOS automated release workflow uses the commands below. Platform-specific procedures are in [RELEASE.md](RELEASE.md), and changes are in [CHANGELOG.md](CHANGELOG.md):
 
@@ -153,7 +153,7 @@ The macOS automated release workflow uses the commands below. Platform-specific 
 ./scripts/release.sh platform minor     # explicit Windows/Linux data preview for maintenance (does not block macOS)
 ```
 
-Every application release is published on `scholay/rimes`. macOS `vX.Y.Z` is a stable release. `vX.Y.Z-preview.N` is an unsigned pre-release and is not updated automatically. Android and Windows packages use `android-vX.Y.Z` and `windows-vX.Y.Z`, respectively. The legacy Windows/Linux data package `platform-preview-vX.Y.Z` is always a pre-release.
+Every application release is published on `scholay/xsime`. macOS `vX.Y.Z` is a stable release. `vX.Y.Z-preview.N` is an unsigned pre-release and is not updated automatically. Android and Windows packages use `android-vX.Y.Z` and `windows-vX.Y.Z`, respectively. The legacy Windows/Linux data package `platform-preview-vX.Y.Z` is always a pre-release.
 
 ## Links
 
@@ -171,8 +171,8 @@ The core maintainer is a consumer-product manager, not a programmer by training,
 
 ## Known issues
 
-- **Linux: quitting Fcitx5 before a deploy finishes can leave the process running for minutes.** A first-run or background librime deploy cannot be cancelled, and a larger dictionary makes the wait longer. See [#43](https://github.com/scholay/rimes/issues/43).
-- **Linux: clicking another field immediately after dragging the Buffer toolbar can leave capture on.** Reproduced only in Firefox on X11, when the click lands in the same window within about 10 ms of release. Click again or press Esc to recover. See [#44](https://github.com/scholay/rimes/issues/44).
+- **Linux: quitting Fcitx5 before a deploy finishes can leave the process running for minutes.** A first-run or background librime deploy cannot be cancelled, and a larger dictionary makes the wait longer. See [#43](https://github.com/scholay/xsime/issues/43).
+- **Linux: clicking another field immediately after dragging the Buffer toolbar can leave capture on.** Reproduced only in Firefox on X11, when the click lands in the same window within about 10 ms of release. Click again or press Esc to recover. See [#44](https://github.com/scholay/xsime/issues/44).
 
 ## License and third parties
 

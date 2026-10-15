@@ -1,6 +1,6 @@
-# RIMES Buffer (Linux)
+# XSIME Buffer (Linux)
 
-Default Buffer workbench for the Fcitx5 RIMES addon. Behavior and the
+Default Buffer workbench for the Fcitx5 XSIME addon. Behavior and the
 deliberate macOS gaps are in [SPEC.md](SPEC.md). Real-desktop checks are in
 [MANUAL-TEST.md](MANUAL-TEST.md).
 
@@ -40,7 +40,7 @@ platforms/linux/ime/tests/e2e/e2e.sh --build-dir platforms/linux/ime/build
 
 | Item | Value |
 |---|---|
-| Toggle | `Ctrl+Shift+B` or `Super+Shift+B` while RIMES is current |
+| Toggle | `Ctrl+Shift+B` or `Super+Shift+B` while XSIME is current |
 | Close | same hotkey, Escape, or the toolbar close button |
 | Send next | Return tap, or the paper plane |
 | Send all | hold Return 1.2s |

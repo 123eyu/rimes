@@ -1,3 +1,4 @@
+#include "../core/product_brand.hpp"
 #include "rimes_version.hpp"
 #include <iostream>
 #include <fstream>
@@ -37,12 +38,12 @@ void ReportBackgroundFailure(const BrokerOptions& options, const char* stage,
   DWORD session = 0;
   if (options.open_settings &&
       ProcessIdToSessionId(GetCurrentProcessId(), &session) && session != 0)
-    MessageBoxW(nullptr, detail.c_str(), L"RIMES 设置", MB_OK | MB_ICONERROR);
+    MessageBoxW(nullptr, detail.c_str(), rimes::branding::Text(L"{brand} 设置").c_str(), MB_OK | MB_ICONERROR);
 }
 
 void PrintUsage() {
   std::wcout
-      << L"RIMES Windows Broker " << kProductVersionWide << L"\n\n"
+      << rimes::branding::Text(L"{brand} Windows Broker ").c_str() << kProductVersionWide << L"\n\n"
       << L"Usage:\n"
       << L"  RimesBroker --print-endpoint\n"
       << L"  RimesBroker --print-paths\n"
@@ -110,7 +111,7 @@ int wmain(const int argc, wchar_t** argv) {
       std::wcerr << L"Failed to remove broker autostart: " << error << L'\n';
       return 7;
     }
-    std::wcout << L"Removed the current-user RIMES broker autostart entry.\n";
+    std::wcout << rimes::branding::Text(L"Removed the current-user {brand} broker autostart entry.\n").c_str();
     return 0;
   }
   if (options.install_autostart) {
@@ -184,7 +185,7 @@ int wmain(const int argc, wchar_t** argv) {
       ReportBackgroundFailure(options, "settings forwarding failed", error);
       return 8;
     }
-    std::wcerr << L"The per-user RIMES broker is already running.\n";
+    std::wcerr << rimes::branding::Text(L"The per-user {brand} broker is already running.\n").c_str();
     return 0;
   }
 

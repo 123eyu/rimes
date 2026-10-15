@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">RIMES</string>
+    <string name="app_name">XSIME</string>
     <string name="english_keyboard">Chinese / English</string>
     <string name="privacy">Ordinary typing stays on this device. Only explicitly requested online AI sends Buffer source to your configured service. Buffer drafts clear when the keyboard closes or the input field changes. Buffer is disabled in password and private fields.</string>
     <string name="try_typing">Try typing here</string>

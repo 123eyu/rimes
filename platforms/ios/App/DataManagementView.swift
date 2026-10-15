@@ -12,7 +12,7 @@ struct DataManagementView: View {
                     Label(L("清除联想学习记录", "Clear learned associations"), systemImage: "text.badge.xmark").foregroundStyle(.red)
                 }.accessibilityIdentifier("dataManagement.clearAssociations")
                 if requested {
-                    Text(L("清除请求已保存，下次打开 RIMES 键盘时生效。", "Request saved. It takes effect the next time you open the RIMES keyboard."))
+                    Text(L("清除请求已保存，下次打开 \(ProductBrand.name) 键盘时生效。", "Request saved. It takes effect the next time you open the \(ProductBrand.name) keyboard."))
                         .font(.footnote).foregroundStyle(.secondary)
                         .accessibilityIdentifier("dataManagement.resetRequested")
                 }
@@ -25,7 +25,7 @@ struct DataManagementView: View {
                 .accessibilityIdentifier("dataManagement.confirmClearAssociations")
             Button(L("取消", "Cancel"), role: .cancel) { }
         } message: {
-            Text(L("此操作无法撤销。仅清除学习到的词语接续关系，下次打开 RIMES 键盘时执行。", "This cannot be undone. Only learned word continuations are cleared, when you next open the RIMES keyboard."))
+            Text(L("此操作无法撤销。仅清除学习到的词语接续关系，下次打开 \(ProductBrand.name) 键盘时执行。", "This cannot be undone. Only learned word continuations are cleared, when you next open the \(ProductBrand.name) keyboard."))
         }
     }
     private func requestReset() {

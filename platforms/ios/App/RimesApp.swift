@@ -32,7 +32,7 @@ struct HomeView: View {
                             .clipShape(RoundedRectangle(cornerRadius: 16))
                             .accessibilityHidden(true)
                         VStack(alignment: .leading, spacing: 8) {
-                            Text("RIMES").font(.system(size: 32, weight: .bold, design: .rounded))
+                            Text("\(ProductBrand.name)").font(.system(size: 32, weight: .bold, design: .rounded))
                             VStack(alignment: .leading, spacing: 4) {
                                 Text(L("世界对智者太过挑剔", "The world is too hard on the wise."))
                                 Text(L("好奇的人需要朋友", "Curious minds need friends."))
@@ -44,7 +44,7 @@ struct HomeView: View {
                         .accessibilityIdentifier("settings.home.hero")
                 }.listRowBackground(Color.teal.opacity(0.08))
                 Section(L("开始使用", "Get started")) {
-                    NavigationLink { SetupView() } label: { Label(L("启用 RIMES 键盘", "Enable RIMES keyboard"), systemImage: "keyboard") }
+                    NavigationLink { SetupView() } label: { Label(L("启用 \(ProductBrand.name) 键盘", "Enable \(ProductBrand.name) keyboard"), systemImage: "keyboard") }
                     NavigationLink { PlaygroundView() } label: { Label(L("输入体验", "Try typing"), systemImage: "square.and.pencil") }
                     NavigationLink { TypingStatsCardView() } label: { Label(L("打字统计卡片", "Typing stats card"), systemImage: "square.grid.3x3") }
                 }
@@ -62,7 +62,7 @@ struct HomeView: View {
                 Section {
                     NavigationLink { DataManagementView() } label: { Label(L("数据管理", "Data management"), systemImage: "externaldrive") }
                     NavigationLink(L("隐私与第三方许可", "Privacy & licenses")) { PrivacyView() }
-                    Text("RIMES " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
+                    Text("\(ProductBrand.name) " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
                 } footer: {
                     VStack(spacing: 0) {
                         Link("pm.scholay.com", destination: URL(string: "https://pm.scholay.com")!)
@@ -84,7 +84,7 @@ struct SetupView: View {
     var body: some View {
         List {
             Section(L("添加键盘", "Add the keyboard")) {
-                Text(L("1. 打开系统设置 → 通用 → 键盘 → 键盘。\n2. 点击“添加新键盘”，选择 RIMES。\n3. 回到输入框，长按地球按钮切换至 RIMES。", "1. Open Settings → General → Keyboard → Keyboards.\n2. Tap Add New Keyboard and choose RIMES.\n3. In a text field, hold the globe key and choose RIMES."))
+                Text(L("1. 打开系统设置 → 通用 → 键盘 → 键盘。\n2. 点击“添加新键盘”，选择 \(ProductBrand.name)。\n3. 回到输入框，长按地球按钮切换至 \(ProductBrand.name)。", "1. Open Settings → General → Keyboard → Keyboards.\n2. Tap Add New Keyboard and choose \(ProductBrand.name).\n3. In a text field, hold the globe key and choose \(ProductBrand.name)."))
                 Button(L("打开设置", "Open Settings")) { if let url = URL(string: UIApplication.openSettingsURLString) { UIApplication.shared.open(url) } }
             }
             Section(L("完全访问是可选的", "Full Access is optional")) {
@@ -99,7 +99,7 @@ struct PlaygroundView: View {
     @State private var second = ""
     var body: some View {
         Form {
-            Section(L("使用系统地球键切换至 RIMES", "Switch to RIMES using the globe key")) { TextEditor(text: $text).frame(minHeight: 170).accessibilityIdentifier("playground.primary") }
+            Section(L("使用系统地球键切换至 \(ProductBrand.name)", "Switch to \(ProductBrand.name) using the globe key")) { TextEditor(text: $text).frame(minHeight: 170).accessibilityIdentifier("playground.primary") }
             Section(L("另一个输入框", "Another field")) { TextField(L("测试切换输入目标", "Test switching fields"), text: $second).submitLabel(.send).accessibilityIdentifier("playground.secondary") }
             #if DEBUG
             NavigationLink(L("本地引擎检查", "Local engine check")) { EngineCheckView() }
@@ -169,7 +169,7 @@ struct ProviderEditor: View {
                     Text(L("查询模型列表会将 API Key 发送到上方地址，不发送 Buffer 文本。查询失败不影响手动填写和保存。", "Fetching models sends the API key to the address above, without Buffer text. You can enter and save a model ID even if lookup fails.")).font(.caption).foregroundStyle(.secondary)
                     if !models.isEmpty { Picker("Models",selection:$provider.model) { Text(provider.model).tag(provider.model); ForEach(models.filter { $0 != provider.model },id:\.self) { Text($0).tag($0) } } }
                 } header: { Text(L("连接信息", "Connection")) } footer: {
-                    Text(L("保存并选用后，在键盘选择快问快答、AI 润色、AI 作诗或 AI 字符画，输入内容并点 ▶ 执行。请先为 RIMES 开启完全访问。Apple 本地翻译始终使用本机语言包。", "After Save & select, choose Quick Q&A, AI Polish, AI Poem or AI Text Art in the keyboard, enter text and tap ▶ to run. Enable Full Access for RIMES first. Apple on-device translation uses the device's language packs."))
+                    Text(L("保存并选用后，在键盘选择快问快答、AI 润色、AI 作诗或 AI 字符画，输入内容并点 ▶ 执行。请先为 \(ProductBrand.name) 开启完全访问。Apple 本地翻译始终使用本机语言包。", "After Save & select, choose Quick Q&A, AI Polish, AI Poem or AI Text Art in the keyboard, enter text and tap ▶ to run. Enable Full Access for \(ProductBrand.name) first. Apple on-device translation uses the device's language packs."))
                 }
                 Section(L("发送许可", "Sending permission")) {
                     Text(provider.consentIdentity.isEmpty ? L("填写有效地址后显示接收方", "Enter a valid endpoint to see the recipient") : provider.consentIdentity).font(.caption).textSelection(.enabled)

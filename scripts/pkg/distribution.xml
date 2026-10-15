@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <installer-gui-script minSpecVersion="1">
-    <title>RIMES</title>
+    <title>XSIME</title>
     <welcome file="welcome.html" mime-type="text/html"/>
     <readme file="readme.html" mime-type="text/html"/>
     <conclusion file="conclusion.html" mime-type="text/html"/>
@@ -9,7 +9,7 @@
     <choices-outline>
         <line choice="default"/>
     </choices-outline>
-    <choice id="default" title="RIMES">
+    <choice id="default" title="XSIME">
         <pkg-ref id="com.scholay.inputmethod.isaac"/>
     </choice>
     <!-- make-pkg.sh requires this sole zero-version placeholder and stamps the

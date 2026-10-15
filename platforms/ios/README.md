@@ -1,4 +1,4 @@
-# RIMES iOS 1.1.0 preparation
+# XSIME iOS 1.1.0 preparation
 
 Native iPhone application and keyboard extension (iOS 17+). The next local
 release target is **1.1.0 (40)**; both targets inherit the same marketing version
@@ -242,7 +242,7 @@ This smoke is not a substitute for keyboard-extension lifecycle or physical test
   and preserves pending blocks for a fresh Insert action. Hiding/resigning the
   keyboard ends the session and clears its in-memory draft.
 - iOS's proxy gives no host acknowledgement of successful application-level send.
-  RIMES makes one explicit proxy insertion and consumes that local block; it does
+  XSIME makes one explicit proxy insertion and consumes that local block; it does
   not retry, synthesize Return or claim a message was sent.
 - Basic typing, Buffer and card previews work without Full Access. Keyboard image
   export and clipboard access require Full Access; AI also requires separate
@@ -288,7 +288,7 @@ captures verify native host typing, Buffer composition and refocusing separately
 Physical thumb/haptic and cross-app acceptance remain device tasks.
 
 In the tested simulator, a field that has lost focus can retain its visual marked
-underline until it regains focus. RIMES ends stale marking during UIKit's document
+underline until it regains focus. XSIME ends stale marking during UIKit's document
 reset before starting new composition; the field's existing text is preserved.
 The earlier refocus failure caused by a temporarily missing document ID is fixed.
 This host-rendering behavior and physical cross-app coverage are recorded in

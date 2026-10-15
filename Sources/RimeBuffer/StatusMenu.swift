@@ -110,7 +110,7 @@ final class StatusMenu {
 
     static func makeMaintenanceMenu(target: NSObject, pendingVersion: String?) -> NSMenu {
         let menu = NSMenu(title: "维护")
-        let updateTitle = pendingVersion.map { "安装 RIMES v\($0)…" } ?? "检查更新…"
+        let updateTitle = pendingVersion.map { "安装 \(ProductBrand.name) v\($0)…" } ?? "检查更新…"
         let checkUpdate = NSMenuItem(
             title: updateTitle,
             action: #selector(RIMESController.checkUpdateFromInputMenu(_:)),

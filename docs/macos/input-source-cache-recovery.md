@@ -1,6 +1,6 @@
 # macOS 27：特定应用切换输入法时闪退
 
-[#90](https://github.com/scholay/rimes/issues/90) 的报告者在 macOS 27.0（26A428）的 App Store 沙盒版微信 4.1.5、QQ 6.9.93 中，遇到切换到 RIMES 1.1.0 时宿主应用闪退。报告者提供了 `CFRelease(NULL)` 调用栈，并通过自己的沙盒测试进程将问题定位到应用持有的旧输入源缓存。维护者尚未独立复现这条崩溃路径；这是恢复建议，不是已完成的系统修复。运行中应用何时重建缓存也没有得到维护者验证。
+[#90](https://github.com/scholay/xsime/issues/90) 的报告者在 macOS 27.0（26A428）的 App Store 沙盒版微信 4.1.5、QQ 6.9.93 中，遇到切换到 RIMES 1.1.0 时宿主应用闪退。报告者提供了 `CFRelease(NULL)` 调用栈，并通过自己的沙盒测试进程将问题定位到应用持有的旧输入源缓存。维护者尚未独立复现这条崩溃路径；这是恢复建议，不是已完成的系统修复。运行中应用何时重建缓存也没有得到维护者验证。
 
 安装器会注册、启用并核验 RIMES 输入源，但不会清理其他应用的缓存。重启应用、退出登录或注册成功，都不能保证解决本报告的情况。
 
@@ -46,7 +46,7 @@
 
 ## English
 
-The reporter of [#90](https://github.com/scholay/rimes/issues/90) observed host-app crashes when switching to RIMES 1.1.0 in App Store sandboxed WeChat 4.1.5 and QQ 6.9.93 on macOS 27.0 (26A428). Their crash stack includes `CFRelease(NULL)`, and their own sandbox probe points to stale per-app input-source caches. The maintainer has not independently reproduced that crash path or verified when running apps rebuild these caches. This is a recovery suggestion, not a completed system fix. Successful input-source registration, restarting an app, or logging out does not guarantee recovery.
+The reporter of [#90](https://github.com/scholay/xsime/issues/90) observed host-app crashes when switching to RIMES 1.1.0 in App Store sandboxed WeChat 4.1.5 and QQ 6.9.93 on macOS 27.0 (26A428). Their crash stack includes `CFRelease(NULL)`, and their own sandbox probe points to stale per-app input-source caches. The maintainer has not independently reproduced that crash path or verified when running apps rebuild these caches. This is a recovery suggestion, not a completed system fix. Successful input-source registration, restarting an app, or logging out does not guarantee recovery.
 
 ### Update (2026-10-09): precondition and installer fix
 

@@ -14,7 +14,7 @@ enum InputEncoding: String, CaseIterable, Codable {
         case .naturalDoublePinyin: return "自然码双拼"
         case .xiaoheDoublePinyin: return "小鹤双拼"
         case .wubi86: return "五笔86"
-        case .lingxiWubi: return "灵犀五笔"
+        case .lingxiWubi: return "犀术五笔"
         case .english: return "英文"
         }
     }
@@ -474,7 +474,7 @@ enum InputSchemaCatalog {
         InputSchemaOption(id: "double_pinyin", name: "自然码双拼", detail: "自然码双拼方案"),
         InputSchemaOption(id: "double_pinyin_flypy", name: "小鹤双拼", detail: "小鹤双拼方案"),
         InputSchemaOption(id: "wubi86", name: "五笔86", detail: "86 版五笔 · z 引导全拼查字"),
-        InputSchemaOption(id: "lingxi_wubi", name: "灵犀五笔", detail: "五笔与全拼混输 · 拼音候选提示五笔码"),
+        InputSchemaOption(id: "lingxi_wubi", name: "犀术五笔", detail: "五笔与全拼混输 · 拼音候选提示五笔码"),
         InputSchemaOption(id: "english", name: "英文", detail: "英文候选与补全"),
         InputSchemaOption(id: ChordExtensionStore.schemaID,
                           name: ChordKeymapStore.shared.activeProfile.name,

@@ -88,7 +88,7 @@ content; blocks are not persisted.
     reactivation is a field switch and pauses. Physical button release and
     receipt of `drag_end` are different events: the 50 ms UI poll and socket
     dispatch can leave a window in which a fast field click is still taken
-    for the drag's focus return ([#44](https://github.com/scholay/rimes/issues/44)).
+    for the drag's focus return ([#44](https://github.com/scholay/xsime/issues/44)).
     The command-order regression covers the IME after receipt, not this
     physical-release window. Every other same-IC reactivation is a field
     switch. A gedit hamburger-menu focus blip pauses capture (expected). Another IC

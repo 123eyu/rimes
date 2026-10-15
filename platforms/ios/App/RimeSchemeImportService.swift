@@ -241,7 +241,7 @@ enum RimeSchemeImportService {
             if let list = node["patch"]?["schema_list"]?.array() { preferred = list.compactMap { $0["schema"]?.string } }
         }
         if let manifest = configurationNodes["rimes-package.yaml"]?["rimes_package"] {
-            guard manifest["format"]?.string == "1" else { throw invalid("方案包清单版本不受支持，请更新灵犀输入法后再导入。") }
+            guard manifest["format"]?.string == "1" else { throw invalid("方案包清单版本不受支持，请更新犀术IME后再导入。") }
             if let ids = manifest["recommended_schemes"]?.array(of: String.self) { preferred = ids }
         }
         var candidates = [RimeSchemeCandidate]()

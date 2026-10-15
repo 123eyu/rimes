@@ -16,6 +16,8 @@ enum RimesIdentity {
     static let unregistrableBundleIdentifier = "com.scholay.isaac"
     static let legacyBundleIdentifier = "com.isaac.inputmethod.RimeBuffer"
     static let inputSourceID = bundleIdentifier + ".Hans"
+    // Frozen executable/bundle path component, NOT the localized display name.
+    // UI must use ProductBrand.name; changing this would break installed updates.
     static let productName = "RIMES"
     /// Prefix for persisted preference keys. Renamed with a migration rather
     /// than left behind, since a key is only invisible until someone reads it.

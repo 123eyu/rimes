@@ -7,7 +7,7 @@
 
 全拼、双拼、声筆、五筆、英語の方案に対応し、速記で使う並打入力と、カスタム方案の読み込みにも対応します。はじめて使う人向けに、インストールパッケージは librime と辞書を**同梱**し、すぐ使えます。
 
-5つのプラットフォームに **五筆 86** と **Lingxi Wubi** を内蔵しています。五筆 86 は `z` に続けて全拼を入力して文字を検索でき、候補の括弧内に五筆コードを表示します。Lingxi Wubi は切り替えなしで五筆と全拼を検索し、完全一致の五筆を優先します。両方案とも4打鍵で候補が一意なら自動確定し、重複コードと全拼検索では候補選択を維持します。[五筆ガイド](docs/wubi.md)を参照してください。
+5つのプラットフォームに **五筆 86** と **XSIME Wubi** を内蔵しています。五筆 86 は `z` に続けて全拼を入力して文字を検索でき、候補の括弧内に五筆コードを表示します。XSIME Wubi は切り替えなしで五筆と全拼を検索し、完全一致の五筆を優先します。両方案とも4打鍵で候補が一意なら自動確定し、重複コードと全拼検索では候補選択を維持します。[五筆ガイド](docs/wubi.md)を参照してください。
 
 > 製品・プロジェクト・アーキテクチャ名を **XSIME** に統一します。簡体字名は **犀术IME**、繁体字名は **犀術IME** です（旧 RIMES / Lingxi IME）。公開済みアプリ、ストア情報、届出は順次更新します。[命名・互換性方針](BRANDING.md)。
 
@@ -36,7 +36,7 @@
 
 | 機能 | ショートカット | 内容 | 操作 | 保存 | 境界 |
 |---|---|---|---|---|---|
-| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、Lingxi Wubi、英語 | — | — | — |
+| 入力方案 | — | 霧凇全拼、自然碼、小鶴、五筆 86、XSIME Wubi、英語 | — | — | — |
 | バッファ | `⌘⇧B` | 確定前のテキスト | 先に XSIME へ切り替え、取り込んで分割して送る | — | ほかへ切り替えたあとはシステムクリップボードのみ。IMK は使わない |
 | Capsule バー | `⌘⇧V` | 直前のコピー。ノート、画像、PDF、スキル、パスワード | クリックで選択、ダブルクリックまたは Return で貼り付け。`⌘S` で保存 | この Mac のみ | 貼り付けにはアクセシビリティが必要。未許可ならクリップボードへ入れるだけ |
 | Mailbox | `⌘⇧M` | AI の会話、メモ、確認待ちのプッシュ | 新しい会話。最初の Return で生成を始める | モデルはその会話だけに結び付く | CLI はそれぞれの既定モデル |
@@ -81,11 +81,11 @@
 
 ## インストール
 
-[1.1.4 リリース](https://github.com/scholay/rimes/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
+[1.1.4 リリース](https://github.com/scholay/xsime/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/rimes.git
-cd rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git
+cd xsime
 ```
 
 | プラットフォーム | 進捗 | ビルド |
@@ -115,7 +115,7 @@ cd rimes
 
 ## 自動更新
 
-正式に署名してインストールした XSIME は、[`scholay/rimes`](https://github.com/scholay/rimes) の GitHub Release を確認します。未署名の `vX.Y.Z-preview.N` はこの経路に入りません。
+正式に署名してインストールした XSIME は、[`scholay/xsime`](https://github.com/scholay/xsime) の GitHub Release を確認します。未署名の `vX.Y.Z-preview.N` はこの経路に入りません。
 
 リリースの入口は一つで、バージョン番号は tag だけから来ます。手順は [RELEASE.md](RELEASE.md)、変更は [CHANGELOG.md](CHANGELOG.md) を見てください。
 
@@ -126,7 +126,7 @@ cd rimes
 ./scripts/release.sh platform minor     # 保守用の Windows/Linux データプレビュー（macOS を止めない）
 ```
 
-すべての Release は `scholay/rimes` に公開されます。macOS の `vX.Y.Z` は正式版です。`vX.Y.Z-preview.N` は未署名の Pre-release で、自動更新には入りません。Windows/Linux の `platform-preview-vX.Y.Z` は常に Pre-release です。
+すべての Release は `scholay/xsime` に公開されます。macOS の `vX.Y.Z` は正式版です。`vX.Y.Z-preview.N` は未署名の Pre-release で、自動更新には入りません。Windows/Linux の `platform-preview-vX.Y.Z` は常に Pre-release です。
 
 ## リンク
 
@@ -144,8 +144,8 @@ cd rimes
 
 ## 既知の問題
 
-- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay/rimes/issues/43) を参照。
-- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay/rimes/issues/44) を参照。
+- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay/xsime/issues/43) を参照。
+- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay/xsime/issues/44) を参照。
 
 ## ライセンスと第三者
 

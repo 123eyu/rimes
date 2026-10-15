@@ -69,11 +69,11 @@ struct CapturePermissionPresentation {
             message = "已开启，可以继续。"; showsVerify = false
         } else if requested || state == .blocked {
             action = .openSettings; primaryTitle = "打开系统设置"
-            message = state == .blocked ? "授权还未生效，开启后再试。" : "在系统设置中打开 RIMES 的开关。"
+            message = state == .blocked ? "授权还未生效，开启后再试。" : "在系统设置中打开 \(ProductBrand.name) 的开关。"
             showsVerify = true
         } else {
             action = .request; primaryTitle = "去开启"
-            message = "macOS 会请你允许 RIMES。"; showsVerify = false
+            message = "macOS 会请你允许 \(ProductBrand.name)。"; showsVerify = false
         }
     }
 }
@@ -135,9 +135,9 @@ final class CapturePermissionGuide {
         if permission.supportsManualApplicationAddition {
             recovery.append(PermissionApplicationCard(width: 456, allowsSystemActions: allowsSystemActions))
         } else {
-            recovery.append(label("在系统设置的「\(permission.title)」中开启 RIMES。"))
+            recovery.append(label("在系统设置的「\(permission.title)」中开启 \(ProductBrand.name)。"))
         }
-        let restart = CaptureButton("重启 RIMES…") { [weak self] in self?.restart() }
+        let restart = CaptureButton("重启 \(ProductBrand.name)…") { [weak self] in self?.restart() }
         restart.toolTip = "开关已开启但仍不能用时，重启后再试"
         recovery.append(CaptureUI.row([settings, restart]))
         let help = PermissionHelpDisclosure(details: CaptureUI.column(recovery, spacing: 12), width: 456)
@@ -266,9 +266,9 @@ final class CapturePermissionGuide {
     private func restart() {
         guard allowsSystemActions else { return }
         let alert = NSAlert()
-        alert.messageText = "重启 RIMES？"
+        alert.messageText = "重启 \(ProductBrand.name)？"
         alert.informativeText = "会关闭窗口、结束终端会话并停止录屏。请先保存未完成内容；词库和设置会保留。"
-        alert.addButton(withTitle: "取消"); alert.addButton(withTitle: "重启 RIMES")
+        alert.addButton(withTitle: "取消"); alert.addButton(withTitle: "重启 \(ProductBrand.name)")
         guard alert.runModal() == .alertSecondButtonReturn else { return }
         dismiss(); StatusMenu.shared.restart()
     }

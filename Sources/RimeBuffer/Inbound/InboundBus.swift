@@ -489,7 +489,7 @@ final class InboundBus {
         case .rime:
             return MailboxSource(
                 kind: .other,
-                displayName: "RIMES",
+                displayName: ProductBrand.name,
                 identifier: "rime",
                 replyCapability: .localNotesOnly
             )

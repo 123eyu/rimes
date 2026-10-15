@@ -61,15 +61,15 @@ enum TypingStatsText {
         }
         let edge = String(repeating: "⬜", count: 8)
         let matrix = ([edge] + rows.map { "⬜" + $0.joined() + "⬜" } + [edge]).joined(separator: "\n")
-        let title = chinese ? "RIMES · 免费开源输入法" : "RIMES · Free & open source"
+        let title = chinese ? "\(ProductBrand.name) · 免费开源输入法" : "\(ProductBrand.name) · Free & open source"
         let legend = chinese ? "📝字数 · 📊均速 · 🚀峰速（字/分）\n⌨️码长（键/字）· ⏱️击键（键/秒）"
             : "📝characters · 📊avg · 🚀peak (cpm)\n⌨️keys/char · ⏱️keys/sec"
-        return title + "\n" + matrix + "\n" + legend + "\nhttps://github.com/scholay/rimes"
+        return title + "\n" + matrix + "\n" + legend + "\nhttps://github.com/scholay/xsime"
     }
 }
 
 @MainActor enum TypingStatsCard {
-    static let github = "https://github.com/scholay/rimes"
+    static let github = "https://github.com/scholay/xsime"
     static func render(_ stats: TypingCardSnapshot, chinese: Bool = L("zh", "en") == "zh") throws -> Data {
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 1024), format: format)
@@ -99,7 +99,7 @@ enum TypingStatsText {
                                         withAttributes: [.font: font, .foregroundColor: color, .paragraphStyle: style])
             }
             let header = block(0, 0, 8, 1, ink)
-            text("RIMES", in: CGRect(x: header.minX + 28, y: header.minY, width: 300, height: 120), size: 54, weight: .bold, color: ivory)
+            text("\(ProductBrand.name)", in: CGRect(x: header.minX + 28, y: header.minY, width: 300, height: 120), size: 54, weight: .bold, color: ivory)
             text(chinese ? "免费开源输入法" : "FREE & OPEN SOURCE", in: CGRect(x: 398, y: 32, width: 566, height: 120), size: 28, weight: .medium, color: ivory, alignment: .right)
             func metric(_ rect: CGRect, _ value: String, _ label: String, _ unit: String, size: CGFloat) {
                 let inner = rect.insetBy(dx: 26, dy: 0)
@@ -113,7 +113,7 @@ enum TypingStatsText {
             metric(block(3, 4, 3, 3, gray), TypingCardSnapshot.number(stats.codeLength, decimals: 2), chinese ? "平均码长" : "KEYS / CHAR", chinese ? "键 / 字" : "keys / character", size: 106)
             metric(block(6, 4, 2, 3, orange), TypingCardSnapshot.number(stats.keysPerSecond, decimals: 1), chinese ? "击键频率" : "KEY RATE", chinese ? "键 / 秒" : "keys / sec", size: 90)
             let footer = block(0, 7, 8, 1, ivory)
-            text("github.com/scholay/rimes", in: footer.insetBy(dx: 28, dy: 0), size: 44, weight: .medium)
+            text("github.com/scholay/xsime", in: footer.insetBy(dx: 28, dy: 0), size: 44, weight: .medium)
             ink.setStroke(); cg.setLineWidth(6); cg.stroke(CGRect(x: 32, y: 32, width: 960, height: 960))
         }
         guard let data = image.pngData() else { throw TypingCardError.render }; return data

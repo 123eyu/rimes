@@ -5,9 +5,9 @@
 致敬伟大的开源精神，本项目中文编码逻辑基于 [RIME 输入法引擎](https://rime.im/)。
 这是一个支持多操作系统的输入法项目，用三个首创的插槽式平台来承接用户的个性化需求: 1. 输入法显式缓冲区（buffer） 2. 管理剪切板历史、截屏、个人知识库的记忆胶囊(capsule) 3. 接收外部信息的对话窗口(mailbox)。
 
-支持全拼、双拼、声笔、五笔 86、灵犀五笔、英文方案；支持速录行业的并击式键入方案、支持自定义导入。面向新手用户，本项目安装包**自包含** librime 与词库，开箱即用。
+支持全拼、双拼、声笔、五笔 86、犀术五笔、英文方案；支持速录行业的并击式键入方案、支持自定义导入。面向新手用户，本项目安装包**自包含** librime 与词库，开箱即用。
 
-五端内置 **五笔 86** 与 **灵犀五笔**：五笔 86 输入 `z` 后可用全拼查字（如 `zni`），候选括号提示五笔码；灵犀五笔无需切换，直接输入五笔码或全拼，同码时完整五笔匹配优先。两套方案均支持四码唯一自动上屏，重码和拼音查字保留候选。详见[五笔输入](docs/wubi.md)。
+五端内置 **五笔 86** 与 **犀术五笔**：五笔 86 输入 `z` 后可用全拼查字（如 `zni`），候选括号提示五笔码；犀术五笔无需切换，直接输入五笔码或全拼，同码时完整五笔匹配优先。两套方案均支持四码唯一自动上屏，重码和拼音查字保留候选。详见[五笔输入](docs/wubi.md)。
 
 > **犀术IME / 犀術IME / XSIME** 是产品、项目与架构的统一名称（原 RIMES / 灵犀输入法 / Lingxi IME）。品牌正在迁移；已发布客户端、商店和备案名称按各自流程更新，不代表已经全部更名。兼容标识与迁移顺序见 [命名规范](BRANDING.md)。
 
@@ -44,7 +44,7 @@
 
 | 能力 | 快捷键 | 内容 | 操作 | 存放 | 边界 |
 |---|---|---|---|---|---|
-| 输入方案 | — | 雾凇全拼、自然码、小鹤、五笔 86、灵犀五笔、英文 | — | — | — |
+| 输入方案 | — | 雾凇全拼、自然码、小鹤、五笔 86、犀术五笔、英文 | — | — | — |
 | 缓冲工作台 | `⌘⇧B` | 上屏前的文本 | 先切到 XSIME，再捕获、分块投递 | — | 切走后只走系统剪贴板，不走 IMK |
 | Capsule 底栏 | `⌘⇧V` | 最近复制；笔记、图片、PDF、技能、密码 | 单击选择，双击或 Return 粘贴。`⌘S` 收录 | 只在本机 | 粘贴需辅助功能；未授权则只进剪贴板 |
 | Mailbox | `⌘⇧M` | AI 会话、备注、待审核推送 | 新建对话；首次 Return 才生成 | 模型只绑定该会话 | CLI 用默认模型 |
@@ -67,27 +67,27 @@
 
 | 插件 | ID | 版本 | 默认安装 | 默认状态 |
 |---|---|---:|---|---|
-| 实时翻译 | `builtin.apple-translation` | 2.2.0 | 随 RIMES 预装 | 启用 |
-| 捕获 | `builtin.capsule.capture` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 笔记 | `builtin.capsule.notes` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 密码 | `builtin.capsule.passwords` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 资源 | `builtin.capsule.resources` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 临时 | `builtin.capsule.temporary` | 1.1.0 | 随 RIMES 预装 | 启用 |
+| 实时翻译 | `builtin.apple-translation` | 2.2.0 | 随 XSIME 预装 | 启用 |
+| 捕获 | `builtin.capsule.capture` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 笔记 | `builtin.capsule.notes` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 密码 | `builtin.capsule.passwords` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 资源 | `builtin.capsule.resources` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 临时 | `builtin.capsule.temporary` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | Claude | `builtin.claude-code-cli` | 1.1.0 | 设置中按需下载 | 禁用 |
 | ChatGPT | `builtin.codex-cli` | 1.1.1 | 设置中按需下载 | 禁用 |
-| 并击 | `builtin.fly-chord-learning` | 2.0.0 | 随 RIMES 预装 | 禁用 |
+| 并击 | `builtin.fly-chord-learning` | 2.0.0 | 随 XSIME 预装 | 禁用 |
 | LaTeX | `builtin.latex` | 1.1.0 | 设置中按需下载 | 禁用 |
-| 对话 | `builtin.mailbox.chat` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 收件 | `builtin.mailbox.inbox` | 1.1.0 | 随 RIMES 预装 | 启用 |
-| 终端 | `builtin.mailbox.terminal` | 1.1.0 | 随 RIMES 预装 | 启用 |
+| 对话 | `builtin.mailbox.chat` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 收件 | `builtin.mailbox.inbox` | 1.1.0 | 随 XSIME 预装 | 启用 |
+| 终端 | `builtin.mailbox.terminal` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 摩斯电码 | `builtin.morse` | 0.1.0 | 设置中按需下载 | 禁用 |
 | 电音演奏 | `builtin.music` | 0.2.3 | 设置中按需下载 | 禁用 |
 | AI API | `builtin.openai-compatible` | 1.0.0 | 设置中按需下载 | 禁用 |
 | Polisher | `builtin.polisher` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Reference | `builtin.scholay` | 0.1.0 | 设置中按需下载 | 禁用 |
-| 统计 | `builtin.statistics` | 2.0.0 | 随 RIMES 预装 | 启用 |
-| 意识流输入 | `builtin.stream-input` | 1.4.0 | 随 RIMES 预装 | 启用 |
-| 打字测速 | `builtin.typing-speed` | 2.0.0 | 随 RIMES 预装 | 启用 |
+| 统计 | `builtin.statistics` | 2.0.0 | 随 XSIME 预装 | 启用 |
+| 意识流输入 | `builtin.stream-input` | 1.4.0 | 随 XSIME 预装 | 启用 |
+| 打字测速 | `builtin.typing-speed` | 2.0.0 | 随 XSIME 预装 | 启用 |
 
 预装插件在全新安装后按默认状态启用；选装插件下载后需手动启用。升级时保留已有插件状态。
 <!-- END PRESET BUFFER PLUGINS -->
@@ -102,25 +102,25 @@
 
 ## 安装
 
-[1.1.4 全平台发布页](https://github.com/scholay/rimes/releases/tag/v1.1.4)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
+[1.1.4 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.1.4)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
 
 | 平台 | 版本与安装入口 |
 |---|---|
-| macOS | [1.1.4 PKG](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-1.1.4.pkg)，Apple Silicon／Intel，已签名和公证 |
-| Android | [1.1.4 APK](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Android-1.1.4.apk)，版本码 18，沿用长期签名 |
-| Windows | [1.1.4 EXE](https://github.com/scholay/rimes/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
-| Linux | [1.1.4 DEB](https://github.com/scholay/rimes/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
+| macOS | [1.1.4 PKG](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-1.1.4.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.1.4 APK](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Android-1.1.4.apk)，版本码 18，沿用长期签名 |
+| Windows | [1.1.4 EXE](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.1.4 DEB](https://github.com/scholay/xsime/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
 | iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。公开可安装版本以 Apple 页面为准 |
 
 本轮构建、导入测试与安装验收范围见[1.1.4 发布记录](docs/releases/1.1.4.md)。
 
-macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/rimes/issues/90)。
+macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/xsime/issues/90)。
 
 也可以拉取源码和固定版本的官方插件，在本机构建：
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/rimes.git
-cd rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git
+cd xsime
 ```
 
 | 平台 | 进度 | 构建 |
@@ -152,7 +152,7 @@ cd rimes
 
 ## 自动更新
 
-已发布的正式签名版（仍可能显示 RIMES）会检查 [`scholay/rimes`](https://github.com/scholay/rimes) 的
+已发布的正式签名版（仍可能显示 XSIME）会检查 [`scholay/xsime`](https://github.com/scholay/xsime) 的
 GitHub Release；未签名的 `vX.Y.Z-preview.N` 不会进入该通道。
 
 macOS 自动发布工作流的入口如下（各平台流程见 [RELEASE.md](RELEASE.md)，变更见 [CHANGELOG.md](CHANGELOG.md)）：
@@ -164,7 +164,7 @@ macOS 自动发布工作流的入口如下（各平台流程见 [RELEASE.md](REL
 ./scripts/release.sh platform minor     # 显式维护用 Windows/Linux 数据预览（不阻断 macOS）
 ```
 
-所有 Release 都发布在 `scholay/rimes`：macOS `vX.Y.Z` 是正式版；`vX.Y.Z-preview.N` 是未签名
+所有 Release 都发布在 `scholay/xsime`：macOS `vX.Y.Z` 是正式版；`vX.Y.Z-preview.N` 是未签名
 Pre-release，不进入自动更新。Android 正式包使用 `android-vX.Y.Z`，Windows 正式包使用 `windows-vX.Y.Z`；旧 Windows/Linux 数据包 `platform-preview-vX.Y.Z` 始终是 Pre-release。
 
 ## 友链
@@ -183,8 +183,8 @@ Pre-release，不进入自动更新。Android 正式包使用 `android-vX.Y.Z`�
 
 ## 已知问题
 
-- **Linux：部署还没结束就退出 Fcitx5，进程可能要几分钟才退出。** 首次或后台的 librime 部署无法中途取消，词库较大时更明显。见 [#43](https://github.com/scholay/rimes/issues/43)。
-- **Linux：拖完 Buffer 工具条后立刻点另一个输入框，捕获可能还开着。** 目前只在 X11 的 Firefox 里复现，松开后约 10 毫秒内点到同一窗口的另一个输入框就会碰上。再点一次或按 Esc 即可恢复。见 [#44](https://github.com/scholay/rimes/issues/44)。
+- **Linux：部署还没结束就退出 Fcitx5，进程可能要几分钟才退出。** 首次或后台的 librime 部署无法中途取消，词库较大时更明显。见 [#43](https://github.com/scholay/xsime/issues/43)。
+- **Linux：拖完 Buffer 工具条后立刻点另一个输入框，捕获可能还开着。** 目前只在 X11 的 Firefox 里复现，松开后约 10 毫秒内点到同一窗口的另一个输入框就会碰上。再点一次或按 Esc 即可恢复。见 [#44](https://github.com/scholay/xsime/issues/44)。
 
 ## 许可证与第三方
 

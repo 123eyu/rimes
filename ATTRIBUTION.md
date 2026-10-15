@@ -2,7 +2,7 @@
 
 RIMES 核心维护者：[学术海](https://pm.scholay.com)。
 
-RIMES 项目：[scholay/rimes](https://github.com/scholay/rimes)。
+RIMES 项目：[scholay/xsime](https://github.com/scholay/xsime)。
 官方免费插件：[scholay/rimes-plugins](https://github.com/scholay/rimes-plugins)。
 输入引擎：[Rime / librime](https://github.com/rime/librime)。
 
@@ -24,7 +24,7 @@ Rime 引擎及其他组件仍遵守其各自的许可。引用接口、复制代
 
 适用于仍使用 Rime 输入引擎、基于 RIMES 修改开发的版本：
 
-> 本软件基于 [RIMES](https://github.com/scholay/rimes) 修改开发，其中文输入能力基于 [Rime 输入法引擎（librime）](https://github.com/rime/librime)。RIMES 核心维护者为[学术海](https://pm.scholay.com)。
+> 本软件基于 [RIMES](https://github.com/scholay/xsime) 修改开发，其中文输入能力基于 [Rime 输入法引擎（librime）](https://github.com/rime/librime)。RIMES 核心维护者为[学术海](https://pm.scholay.com)。
 >
 > 本版本由〈维护者公开署名及主页链接〉维护，主要修改包括〈修改摘要〉。原有成果的版权归各自权利人所有。来源署名不代表上游对本衍生版本的认可或背书。
 
@@ -40,7 +40,7 @@ Rime 引擎及其他组件仍遵守其各自的许可。引用接口、复制代
 
 适用于仅使用公开接口、未复用官方插件或本体代码的插件：
 
-> 本插件为 [RIMES](https://github.com/scholay/rimes) 开发，使用其公开插件接口。RIMES 的中文输入能力基于 [Rime 输入法引擎](https://github.com/rime/librime)。
+> 本插件为 [RIMES](https://github.com/scholay/xsime) 开发，使用其公开插件接口。RIMES 的中文输入能力基于 [Rime 输入法引擎](https://github.com/rime/librime)。
 >
 > 本插件由〈作者公开署名及主页链接〉独立开发和维护。
 

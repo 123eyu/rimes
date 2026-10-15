@@ -42,7 +42,7 @@ from urllib import request as urlrequest
 from dataclasses import dataclass
 from pathlib import Path
 
-REPO = "scholay/rimes"
+REPO = "scholay/xsime"
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CHANGELOG = REPO_ROOT / "CHANGELOG.md"
 PRODUCT_VERSION = (REPO_ROOT / "VERSION").read_text(encoding="utf-8").strip()
@@ -513,7 +513,7 @@ def render_changelog(releases: list[dict] | None = None) -> str:
         "# 更新日志\n\n"
         "本文件由 `python3 scripts/release/release_tool.py changelog --write` 根据公开 GitHub Release 与\n"
         "[Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。\n"
-        "每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/rimes/releases)。\n"
+        "每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/xsime/releases)。\n"
     )
     return header + "\n" + "\n\n".join(reversed(sections)) + "\n"
 

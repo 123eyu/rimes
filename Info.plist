@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleDisplayName</key>
-	<string>RIMES</string>
+	<string>XSIME</string>
 	<key>CFBundleExecutable</key>
 	<string>RIMES</string>
 	<key>CFBundleIconFile</key>
@@ -15,7 +15,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>com.scholay.inputmethod.isaac</string>
 	<key>CFBundleName</key>
-	<string>RIMES</string>
+	<string>XSIME</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
@@ -37,7 +37,7 @@
 				<key>tsInputModeAlternateMenuIconFileKey</key>
 				<string>etinput-menu.pdf</string>
 				<key>tsInputModeAlternateMenuTitleKey</key>
-				<string>RIMES</string>
+				<string>XSIME</string>
 				<key>tsInputModeCharacterRepertoireKey</key>
 				<array>
 					<string>Hans</string>
@@ -87,7 +87,7 @@
 		<string>_etinput._tcp</string>
 	</array>
 	<key>NSLocalNetworkUsageDescription</key>
-	<string>RIMES 用局域网直连，把你打的字即时发送到已配对的另一台 Mac。</string>
+	<string>犀术IME 用局域网直连，把你打的字即时发送到已配对的另一台 Mac。</string>
 	<key>NSPrincipalClass</key>
 	<string>NSApplication</string>
 	<key>TICapsLockLanguageSwitchCapable</key>

@@ -158,5 +158,5 @@ release workflow, and a prerelease is excluded from the macOS updater's
 Create a platform tag only through an explicit maintenance decision with
 `./scripts/release.sh platform X.Y.Z` (or `platform patch|minor|major`); the
 script refuses dirty or diverged worktrees and verifies that both `origin` URLs
-resolve to the canonical `scholay/rimes` repository before pushing. This
+resolve to the canonical `scholay/xsime` repository before pushing. This
 separate preview channel never unblocks or blocks the macOS release path.

@@ -44,7 +44,7 @@ final class MarineChromePairingPromptController: NSObject, NSWindowDelegate {
 
         guard RimeInputSourceAuthority.currentSourceIsOwn() else {
             IMELog.write(
-                "marine pairing prompt rejected; RIMES is not selected"
+                "marine pairing prompt rejected; \(ProductBrand.name) is not selected"
             )
             respond(false)
             return
@@ -56,7 +56,7 @@ final class MarineChromePairingPromptController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        panel.title = "RIMES · marine-chrome"
+        panel.title = "\(ProductBrand.name) · marine-chrome"
         panel.isReleasedWhenClosed = false
         panel.level = .floating
         panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
@@ -64,12 +64,12 @@ final class MarineChromePairingPromptController: NSObject, NSWindowDelegate {
         panel.delegate = self
         panel.onCancel = { [weak self] in self?.finish(approved: false) }
 
-        let title = NSTextField(labelWithString: "允许 marine-chrome 连接 RIMES？")
+        let title = NSTextField(labelWithString: "允许 marine-chrome 连接 \(ProductBrand.name)？")
         title.font = .systemFont(ofSize: 17, weight: .semibold)
         title.alignment = .center
 
         let explanation = NSTextField(wrappingLabelWithString:
-            "确认码应与 Chrome 连接页一致。允许后，扩展只能把当前网页的短期上下文交给本机 RIMES；它不会替你输入、点击或发布。")
+            "确认码应与 Chrome 连接页一致。允许后，扩展只能把当前网页的短期上下文交给本机 \(ProductBrand.name)；它不会替你输入、点击或发布。")
         explanation.font = .systemFont(ofSize: 12)
         explanation.textColor = .secondaryLabelColor
         explanation.alignment = .center
@@ -147,7 +147,7 @@ final class MarineChromePairingPromptController: NSObject, NSWindowDelegate {
     @objc private func approve() {
         guard RimeInputSourceAuthority.currentSourceIsOwn() else {
             IMELog.write(
-                "marine pairing approval rejected; RIMES is not selected"
+                "marine pairing approval rejected; \(ProductBrand.name) is not selected"
             )
             finish(approved: false)
             return

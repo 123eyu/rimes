@@ -1,4 +1,4 @@
-# RIMES App Store submission — 22 September 2026
+# XSIME App Store submission — 22 September 2026
 
 **Historical snapshot: build 10 was submitted on 22 September 2026 and recorded as WAITING FOR REVIEW. This is not a live store-status check.**
 

@@ -27,7 +27,7 @@ inline constexpr IconId kSettingsPageIcons[] = {
     IconId::kKeyboard, IconId::kPalette, IconId::kGrid, IconId::kLink,
     IconId::kGrid, IconId::kSettings};
 inline constexpr const wchar_t* kSettingsSchemeTitles[] = {
-    L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"灵犀五笔", L"英文", L"isaac2026"};
+    L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"犀术五笔", L"英文", L"isaac2026"};
 inline constexpr IconId kSettingsSchemeIcons[] = {
     IconId::kAlphabet, IconId::kKeyboard, IconId::kBird, IconId::kGrid, IconId::kGrid,
     IconId::kEnglish, IconId::kKeyboard};

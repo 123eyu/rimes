@@ -1,6 +1,9 @@
 [Addon]
-Name=RIMES
-Comment=RIMES frontend for Fcitx5 (librime)
+Name=XSIME
+Name[zh_CN]=犀术IME
+Name[zh_TW]=犀術IME
+Name[zh_HK]=犀術IME
+Comment=XSIME frontend for Fcitx5 (librime)
 Category=InputMethod
 Version=@PROJECT_VERSION@
 Library=rimes

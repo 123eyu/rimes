@@ -1,3 +1,4 @@
+#include "../../../product_brand.hpp"
 #include "engine/rime_engine.hpp"
 #include "engine/rime_paths.hpp"
 #include "engine/rime_user_lock.hpp"
@@ -328,7 +329,7 @@ struct Manager {
   int Run(int argc, char **argv) {
     gtk_init(&argc, &argv);
     window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
-    gtk_window_set_title(GTK_WINDOW(window), "灵犀输入法 · 方案管理");
+    gtk_window_set_title(GTK_WINDOW(window), rimes::branding::Title(" · 方案管理").c_str());
     gtk_window_set_default_size(GTK_WINDOW(window), 720, 520);
     g_signal_connect(
         window, "delete-event",

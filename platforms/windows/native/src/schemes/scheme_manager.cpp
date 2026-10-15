@@ -1,3 +1,4 @@
+#include "../core/product_brand.hpp"
 #include "../broker/default_paths.hpp"
 #include "../engine/rime_engine.hpp"
 #include "../workbench/provider.hpp"
@@ -479,7 +480,7 @@ struct Manager {
     type.hCursor = LoadCursorW(nullptr, IDC_ARROW);
     type.hbrBackground = reinterpret_cast<HBRUSH>(COLOR_WINDOW + 1);
     RegisterClassW(&type);
-    window = CreateWindowExW(0, type.lpszClassName, L"灵犀输入法 · 方案管理",
+    window = CreateWindowExW(0, type.lpszClassName, rimes::branding::Text(L"{brand} · 方案管理").c_str(),
                              WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT,
                              900, 650, nullptr, nullptr, type.hInstance, this);
     if (!window)

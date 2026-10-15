@@ -126,7 +126,7 @@ func runStatusMenuSmokeTest() -> Bool {
         return fail("maintenance must contain exactly the five existing commands")
     }
     let pendingMenu = StatusMenu.makeMaintenanceMenu(target: spy, pendingVersion: "9.8.7-preview.1")
-    guard pendingMenu.items.first?.title == "安装 RIMES v9.8.7-preview.1…",
+    guard pendingMenu.items.first?.title == "安装 \(ProductBrand.name) v9.8.7-preview.1…",
           pendingMenu.items.dropFirst().map(\.title) == Array(maintenanceTitles.dropFirst()) else {
         return fail("ready update title must retain the pending version and all other commands")
     }

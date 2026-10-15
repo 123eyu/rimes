@@ -1358,7 +1358,7 @@ final class CapsuleWindowController: NSObject, NSWindowDelegate {
             backing: .buffered,
             defer: false
         )
-        window.title = "RIMES Capsule"
+        window.title = "\(ProductBrand.name) Capsule"
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
         for button in [NSWindow.ButtonType.closeButton, .miniaturizeButton, .zoomButton] {

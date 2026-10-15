@@ -1,7 +1,10 @@
 [InputMethod]
-Name=RIMES
+Name=XSIME
+Name[zh_CN]=犀术IME
+Name[zh_TW]=犀術IME
+Name[zh_HK]=犀術IME
 Icon=rimes
-Label=RIMES
+Label=XSIME
 LangCode=zh_CN
 Addon=rimes
 Configurable=True

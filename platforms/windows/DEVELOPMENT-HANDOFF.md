@@ -1,6 +1,6 @@
 # Windows 开发接手（2026-10-12）
 
-产品名为灵犀输入法 / Lingxi IME，技术架构及现有文件名保留 RIMES。
+产品名为犀术IME / XSIME，技术架构及现有文件名保留 RIMES。
 这是原生 TSF + Broker 的开发入口；日用验收优先保证关闭 Buffer 时正常打字，再验证 Buffer、设置和安装卸载。
 
 ## 当前源码与安装包
@@ -9,7 +9,7 @@
 | --- | --- |
 | 集成主线 | 汇合 #107、#111、#114、#119、#121 的普通输入、候选、Buffer、设置与安装卸载修复，保留原贡献者提交 |
 | 本地验收 | 维护者于 2026-10-12 确认 #79、#83、#87、#93、#102、#103、#104、#106 已完成本地验收，详见对应 issue 的收口记录 |
-| 公开 Windows 安装包 | [1.1.1](https://github.com/scholay/rimes/releases/tag/windows-v1.1.1) |
+| 公开 Windows 安装包 | [1.1.1](https://github.com/scholay/xsime/releases/tag/windows-v1.1.1) |
 | Windows 1.1.2 | 草稿发布；源码合并不会自动替换其安装包，也不代表草稿包包含 #107 或 #93 |
 
 此表是本次交接快照。下载时以 Release 是否公开及其 `BUILD-INFO.json`、`PACKAGE.json` 中的确切提交和校验和为准。
@@ -22,7 +22,7 @@
 
 ```powershell
 # 路径可替换为自己的开发目录；目标目录应尚不存在。
-git clone --recurse-submodules https://github.com/scholay/rimes.git D:\Dev\rimes
+git clone --recurse-submodules https://github.com/scholay/xsime.git D:\Dev\rimes
 if ($LASTEXITCODE) { throw 'Clone failed' }
 Set-Location D:\Dev\rimes
 git switch main

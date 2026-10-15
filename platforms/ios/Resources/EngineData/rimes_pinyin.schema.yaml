@@ -1,7 +1,7 @@
 # RIMES iOS original minimal schema (Apache-2.0). No desktop includes or Lua.
 schema:
   schema_id: rimes_pinyin
-  name: RIMES pinyin
+  name: XSIME pinyin
   version: "0.1.0"
 switches:
   - name: ascii_mode

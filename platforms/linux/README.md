@@ -1,9 +1,9 @@
-# RIMES Linux
+# XSIME Linux
 
 Linux 现在有两层，互相独立：
 
-1. **[Fcitx5 RIMES 输入法](ime/README.md)** — C++ addon，链接 librime，部署审核后的
-   RIMES `rime-data`，用 Fcitx5 的 preedit/候选 UI 上屏。**[Buffer 工作台](buffer/README.md)**
+1. **[Fcitx5 XSIME 输入法](ime/README.md)** — C++ addon，链接 librime，部署审核后的
+   XSIME `rime-data`，用 Fcitx5 的 preedit/候选 UI 上屏。**[Buffer 工作台](buffer/README.md)**
    和 **[Capsule 底栏](capsule/README.md)** 已接到同一 addon。Buffer 把 Rime 提交分块
    暂存后再上屏；Capsule 用本机 Markdown 笔记库，经 `commitString` 插入选中笔记。
    规格见 [buffer/SPEC.md](buffer/SPEC.md) 与 [capsule/SPEC.md](capsule/SPEC.md)，
@@ -12,7 +12,7 @@ Linux 现在有两层，互相独立：
 2. **下面的 Data / Input-Schemes Preview** — 仍把同一批 57 个审核文件装进用户已有的
    Fcitx5 Rime 或 IBus Rime。数据包保持原样，不依赖上面的 addon。
 
-IBus 自己的 RIMES 引擎尚未开始；需要什么见 IME README。
+IBus 自己的 XSIME 引擎尚未开始；需要什么见 IME README。
 
 **安装完整 Linux 输入法：Debian／Ubuntu 推荐使用项目 `v*` Release 附带的 deb。**
 用 `apt install ./fcitx5-rimes_<版本>_<架构>.deb` 安装或升级，
@@ -23,7 +23,7 @@ IBus 自己的 RIMES 引擎尚未开始；需要什么见 IME README。
 
 ---
 
-# RIMES Linux Data / Input-Schemes Preview
+# XSIME Linux Data / Input-Schemes Preview
 
 这是一个面向 Linux 的 **Rime 数据与输入方案预览包**，首发目标是
 [Fcitx5 Rime](https://github.com/fcitx/fcitx5-rime)，同时兼容
@@ -31,12 +31,12 @@ IBus 自己的 RIMES 引擎尚未开始；需要什么见 IME README。
 安装到所选前端的用户数据目录，默认提供雾凇全拼、自然码双拼、小鹤双拼、五笔 86
 和英文五个核心方案；`my_combo` 飞耀方案随包提供，但作为默认关闭的可选并击方案。
 
-这不是完整的 Linux 版 RIMES 应用。独立的 Fcitx5 addon 与 Buffer 在 [ime/](ime/README.md)
+这不是完整的 Linux 版 XSIME 应用。独立的 Fcitx5 addon 与 Buffer 在 [ime/](ime/README.md)
 和 [buffer/](buffer/README.md)。
 数据包本身不包含 Buffer 工作台、Capsule 底栏、AI/翻译、OCR、插件 UI、自绘候选窗、焦点租约或设置窗口；
 走数据包路径时，候选显示、上屏和部署仍由用户已经安装的 Fcitx5 Rime 或 IBus Rime 负责。
 数据包中的 `my_combo` 可把同一批次按键交给 Rime chord composer，并包含单键 `v`
-修复；RIMES macOS 前端实现的跨批分离击键配对不在本预览中。
+修复；XSIME macOS 前端实现的跨批分离击键配对不在本预览中。
 
 ## 前置条件
 
@@ -147,7 +147,7 @@ tmp_root=$(mktemp -d)
 工具或 policy 校验失败时，构建会 fail-closed，不会退回复制整个 `rime-data`。
 
 归档同时保留项目 `LICENSE`、`THIRD_PARTY_NOTICES.md` 和经过 policy 校验的
-`rime-data/licenses/`。RIMES 自有脚本采用 Apache-2.0，历史 MIT 授权范围见根目录 `LICENSING.md`；后续发行应附带 `LICENSE`、`NOTICE` 及适用的保留许可。雾凇及衍生数据按 GPL-3.0-only，
+`rime-data/licenses/`。XSIME 自有脚本采用 Apache-2.0，历史 MIT 授权范围见根目录 `LICENSING.md`；后续发行应附带 `LICENSE`、`NOTICE` 及适用的保留许可。雾凇及衍生数据按 GPL-3.0-only，
 easy-en 词典按 LGPL-3.0，`lua/search.lua` 保留 CC BY-SA 4.0 署名。精确来源边界见包内
 第三方声明和数据目录中的 source notice。
 

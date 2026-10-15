@@ -795,7 +795,7 @@ final class ClipboardHistoryWindowController: NSObject, NSWindowDelegate {
                 return self.pane.handleStandaloneKeyEquivalent(event)
             }
         }
-        panel.setAccessibilityTitle("RIMES Capsule")
+        panel.setAccessibilityTitle("\(ProductBrand.name) Capsule")
 
         chrome.translatesAutoresizingMaskIntoConstraints = false
         pane.translatesAutoresizingMaskIntoConstraints = false

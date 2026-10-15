@@ -13,7 +13,7 @@
 
 ## 2026-10-13 全平台 1.1.3 发布
 
-- 最新本地产品改动通过 [PR #127](https://github.com/scholay/rimes/pull/127) 合入 `main`，发布源提交为 `0f018eec5668a8cd633b51134ba234351a17401a`。Windows 安装器／Buffer 修改、Linux 安装卸载改动、五端输入方案导入与兼容修复均已收敛。
+- 最新本地产品改动通过 [PR #127](https://github.com/scholay/xsime/pull/127) 合入 `main`，发布源提交为 `0f018eec5668a8cd633b51134ba234351a17401a`。Windows 安装器／Buffer 修改、Linux 安装卸载改动、五端输入方案导入与兼容修复均已收敛。
 - 检查 11 个本地工作区，确认其产品提交已被发布源包含，且无遗漏的已跟踪源码改动。历史验收资料、商店提交材料、构建缓存、stash 与备份引用保留。
 - Android、Windows 与项目级 `v1.1.3` 使用同一源提交；iOS 1.1.3（56）使用同一源码归档并上传 Apple。iOS 商店审核和外部测试审核单独记录。
 - 公开资产、校验和、签名与安装验收范围见 [1.1.3 发布记录](docs/releases/1.1.3.md)。此记录在公开下载读回后合入，不更改已经发布的源 tag。
@@ -40,15 +40,15 @@
 - 官方插件固定到 `c276dce6cf19a62fa055affc8e274036d8ffcf1d`，包含 Android 并击工具键取消和受限高度适配；本体不自动跟随插件仓库 HEAD。
 - 此次集成本机检查：Shared 82 项、Android JVM 70 项、方案工具 35 项均通过；iOS 模拟器 212 项中 1 项跳过、0 失败。Android Debug APK、两套 instrumentation APK 编译和 Lint 通过；iOS 静态检查、插件目录与日志隐私检查通过。
 - Android 原生库和预编译词库复用已验收工作区产物，其全部 34 项输入摘要与集成源码相符，并重新通过资源完整性及双 ABI 16 KB 对齐检查。本次没有重新安装或验收集成后的手机包，既有设备记录仅代表各自记录的产物。
-- Windows [PR #73](https://github.com/scholay/rimes/pull/73) 保持草稿，等待真实桌面验收；不把 CI 通过当成桌面验收完成。
+- Windows [PR #73](https://github.com/scholay/xsime/pull/73) 保持草稿，等待真实桌面验收；不把 CI 通过当成桌面验收完成。
 - `platforms/ios/AppStore/submission-1.1.0/` 的本地提交材料保留在工作区，不纳入源码提交。此次分支维护不创建发布标签、不上传商店版本。
 
 ## 2026-10-07 后续反馈收敛
 
-- Windows [PR #73](https://github.com/scholay/rimes/pull/73) 已在补齐桌面验收后合入；修复 Shift 字符、设置与托盘入口、系统卸载入口以及打开设置时保留 Buffer。验收覆盖及仍待验证的登录启动、长期日用范围见 [Windows 记录](platforms/windows/native/validation/2026-10-07-feedback.md)。
+- Windows [PR #73](https://github.com/scholay/xsime/pull/73) 已在补齐桌面验收后合入；修复 Shift 字符、设置与托盘入口、系统卸载入口以及打开设置时保留 Buffer。验收覆盖及仍待验证的登录启动、长期日用范围见 [Windows 记录](platforms/windows/native/validation/2026-10-07-feedback.md)。
 - Android 纳入截至 `68552cc` 的 code14 修复与验收记录，保留原提交；官方插件固定 `aecf9c1f505ac83934b01c28c59a29f99707d199`。集成时撤去旧的字母页语言归一化，确保中英上滑标点正确，并保留主线数字页首个句末标点自动返回行为。
 - 集成本机 Android 70 项核心测试、Debug APK、app/testhost instrumentation 编译、两模块 Lint、原生资源完整性及双 ABI 16 KB 对齐检查通过。原 code14 真机/30 分钟记录对应其确切源提交；本次主线整合没有重装手机或发布安装包。
-- 外部 [PR #77](https://github.com/scholay/rimes/pull/77) 暂留待审：丢失 state.json 时按目录名选择恢复版本，尚需验证与实际注册路径的一致性，以及同现有卸载入口和回滚逻辑的兼容性。
+- 外部 [PR #77](https://github.com/scholay/xsime/pull/77) 暂留待审：丢失 state.json 时按目录名选择恢复版本，尚需验证与实际注册路径的一致性，以及同现有卸载入口和回滚逻辑的兼容性。
 
 ## 代码边界
 

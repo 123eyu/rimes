@@ -3,7 +3,7 @@ import Foundation
 public enum InputScheme: String, Codable, CaseIterable, Identifiable {
     case pinyin, ziranma, wubi86, lingxiWubi, english, chord
     public var id: String { rawValue }
-    public var title: String { switch self { case .pinyin: return "全拼 · Pinyin"; case .ziranma: return "自然码 · Ziranma"; case .wubi86: return "五笔 86 · Wubi"; case .lingxiWubi: return "灵犀五笔 · Lingxi Wubi"; case .english: return "English"; case .chord: return "并击 · Chord" } }
+    public var title: String { switch self { case .pinyin: return "全拼 · Pinyin"; case .ziranma: return "自然码 · Ziranma"; case .wubi86: return "五笔 86 · Wubi"; case .lingxiWubi: return "犀术五笔 · XSIME Wubi"; case .english: return "English"; case .chord: return "并击 · Chord" } }
     public var schemaID: String { switch self { case .pinyin, .chord: return "rimes_pinyin"; case .ziranma: return "rimes_ziranma"; case .wubi86: return "rimes_wubi"; case .lingxiWubi: return "lingxi_wubi"; case .english: return "" } }
 }
 public struct EngineSnapshot {

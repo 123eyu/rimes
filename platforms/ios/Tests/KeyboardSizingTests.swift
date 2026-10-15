@@ -216,7 +216,7 @@ import RimesCore
             settle(container: height)
             let gap = keyboard.developmentHeightGap
             XCTAssertEqual(gap.height, height - idleHeight, accuracy: 0.5, "container \(height)")
-            XCTAssertEqual(gap.wordmark, "Lingxi IME")
+            XCTAssertEqual(gap.wordmark, "XSIME")
             // A short-lived provisional frame must never show the branded fill.
             XCTAssertFalse(gap.wordmarkVisible)
             XCTAssertEqual(keyboard.view.frame.maxY, height, accuracy: 0.5)

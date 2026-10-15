@@ -38,7 +38,7 @@ enum CustomLayoutImportService {
             var layout = try CustomKeyboardLayout.importData(data)
             // Import is always a new draft, never an overwrite of an existing applied ID.
             layout.id = UUID().uuidString
-            return .init(layouts: [layout], title: "RIMES 布局",
+            return .init(layouts: [layout], title: "\(ProductBrand.name) 布局",
                          details: ["已识别 1 套布局，将作为新副本打开。"],
                          warnings: ["这里只导入普通输入键位，不改变并击方案或词库。"])
         case "yaml", "yml":
@@ -46,7 +46,7 @@ enum CustomLayoutImportService {
         case "zip":
             return try inspectZIP(data)
         default:
-            throw invalid("请选择 RIMES JSON、仓鼠 YAML 或含键盘配置的 ZIP。")
+            throw invalid("请选择 \(ProductBrand.name) JSON、仓鼠 YAML 或含键盘配置的 ZIP。")
         }
     }
 
@@ -80,7 +80,7 @@ enum CustomLayoutImportService {
                 .contains(($0.path as NSString).lastPathComponent.lowercased())
         }
         guard !configs.isEmpty else {
-            throw invalid("压缩包中未找到 hamster.yaml 布局。Rime 方案和词典不是键位布局，请导入 RIMES JSON 或仓鼠键盘 YAML。")
+            throw invalid("压缩包中未找到 hamster.yaml 布局。Rime 方案和词典不是键位布局，请导入 \(ProductBrand.name) JSON 或仓鼠键盘 YAML。")
         }
         guard configs.count <= 8 else { throw invalid("ZIP 中键盘配置文件过多，请只保留需要导入的配置。") }
         let luaCount = entries.filter { $0.path.lowercased().hasSuffix(".lua") }.count
@@ -269,12 +269,12 @@ enum CustomLayoutImportService {
             let horizontal = insets.float.map { $0 * 2 } ?? ((insets["left"]?.float ?? 0) + (insets["right"]?.float ?? 0))
             guard horizontal.isFinite, (0...12).contains(horizontal) else { throw invalid("键间距超出 0–12 pt。") }
             metrics.gap = horizontal
-            warnings.append("「\(name)」的左右内边距已近似转换成键间距；键高、外边距及纵向间距使用 RIMES 编辑器规则。")
+            warnings.append("「\(name)」的左右内边距已近似转换成键间距；键高、外边距及纵向间距使用 \(ProductBrand.name) 编辑器规则。")
         }
         if swipes > 0 || callouts > 0 { warnings.append("「\(name)」的 \(swipes) 项滑动、\(callouts) 项长按菜单尚未导入，请勿依赖原快捷动作。") }
         if margins > 0 { warnings.append("「\(name)」的 \(margins) 个 characterMargin 边缘动作未保留，使用普通错行居中预览。") }
-        if orientation { warnings.append("「\(name)」只采用竖屏宽度；独立横屏参数未导入，横屏将使用 RIMES 自适应布局。") }
-        if layer { warnings.append("「\(name)」的数字切换键连接 RIMES 内置数字层，包内数字键盘没有一起应用。") }
+        if orientation { warnings.append("「\(name)」只采用竖屏宽度；独立横屏参数未导入，横屏将使用 \(ProductBrand.name) 自适应布局。") }
+        if layer { warnings.append("「\(name)」的数字切换键连接 \(ProductBrand.name) 内置数字层，包内数字键盘没有一起应用。") }
         if !unhandled.isEmpty { warnings.append("「\(name)」未支持的点击动作：\(unhandled.sorted().joined(separator: "、"))。") }
         let layout = CustomKeyboardLayout(name: name, rows: rows, metrics: metrics)
         do { _ = try layout.validated() }
