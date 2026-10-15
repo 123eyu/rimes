@@ -1,6 +1,6 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.3**, local build **57**, including standard upstream ZIP and coded UTF-8 dictionary import from current main. Build 57 also avoids hidden Buffer layout work and stops offscreen status animations. The prior build-55 cold-start fixes remain. Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
+Current iOS target: **1.1.5 (59)**, prepared from merged main with XSIME branding. The verified archive was uploaded manually through Xcode and formally submitted for App Review on 2026-10-15 at 15:47 Asia/Tokyo. The same build was submitted for external TestFlight review at 17:14 and assigned to RIMES Community, with automatic tester notification enabled. Both reviews were last observed as **Waiting for Review**; neither submission establishes approval or public availability. The maintainer's six screenshots and three-locale copy are included. The development-signed Release app is installed on the paired iPhone; outstanding physical acceptance limitations remain documented in [the preparation record](AppStore/release-preparation/1.1.5.md). Build, upload, TestFlight, App Review and public availability are separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs

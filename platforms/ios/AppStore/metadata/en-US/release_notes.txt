@@ -1,3 +1,5 @@
-Adds XSIME Wubi with direct Wubi and Pinyin input. Wubi 86 now supports z-prefixed Pinyin lookup with smaller Wubi code hints beside candidates. Existing schemes and learned words are preserved.
+RIMES / Lingxi IME is now XSIME.
 
-Both Wubi schemes automatically commit a unique four-key Wubi match while keeping ambiguous codes and Pinyin lookups available for selection.
+This update unifies the app name, keyboard name, setup guidance and help text under the new brand. This is an update to the same app: your installed input schemes, learned words, settings and API credentials are retained. No uninstall or new app account is needed.
+
+Offline typing and Buffer remain free. Optional external AI still uses your own provider and API key; no AI subscription is included.

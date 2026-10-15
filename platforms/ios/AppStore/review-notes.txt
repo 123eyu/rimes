@@ -1,15 +1,22 @@
-Historical review notes submitted for build 10; not instructions for the current build 22 UI.
+XSIME 1.1.5 (59) is an update of the existing iPhone app, formerly RIMES / Lingxi IME. The English name is XSIME; Simplified Chinese is 犀术IME and Traditional Chinese is 犀術IME. Bundle IDs, App Group, Keychain group and persistent data locations are unchanged. No app account, subscription, ads or in-app purchases are included.
 
-RIMES is an iPhone custom keyboard extension and containing setup app. No app login or paid entitlement is required for offline keyboard and Buffer features.
+SETUP / FULL ACCESS OFF
+Settings > General > Keyboard > Keyboards > Add New Keyboard > XSIME (or its localized Chinese name). Open the app's Try typing page, focus a field, and select XSIME using the system globe. Keep Full Access OFF to test ordinary offline typing and Buffer editing. Secure fields and apps prohibiting third-party keyboards use the system keyboard.
 
-Setup: Settings > General > Keyboard > Keyboards > Add New Keyboard > RIMES. Return to RIMES > Try typing, focus either field and select RIMES with the system globe. Leave Full Access disabled for ordinary typing and Buffer.
+INPUT / BUFFER
+The keyboard gear menu selects schemes and layouts, including Pinyin, nine-key Pinyin, Ziranma, Wubi 86, XSIME Wubi, English and slide chords. XSIME Wubi supports Wubi/Pinyin mixed input; Wubi 86 supports z-prefixed Pinyin lookup. A unique four-key Wubi match commits automatically. Imported compatible Rime schemes and coded UTF-8 dictionaries are reviewed and deployed locally; no executable plug-ins are downloaded.
 
-Use the short scheme button for Pinyin, Ziranma, Wubi, English or Chord. Chord mode uses one start/end pair per hand and resolves after both hands release. Single letter taps remain valid. The emoji and Simplified/Traditional controls occupy the two rightmost utility cells.
+Tap the layers icon to enable Buffer. Type, select a candidate, then tap the paper plane to insert one block or hold for one second for all remaining blocks. Default automatic insertion is optional and OFF by default. Translation/AI results require explicit insertion. Insertion does not send a message in the host app. Ending the keyboard session clears the draft.
 
-Tap the stacked-layers icon to enable Buffer. Tap the paper plane to insert one block; hold it for one second to insert all remaining blocks. More contains source insertion, clear and cursor movement. Inserting text does not send a message in the host app. Hiding the keyboard clears its in-memory draft.
+The local clipboard collects text only after an explicit native Paste-control tap with Full Access. Opening history does not read the system clipboard. Saved entries remain separately in local history and can be deleted/cleared. Local learned associations and typing statistics are not transmitted to a service.
 
-Apple translation: iOS 26 or later. Prepare models through Apple translation languages in the containing app, then choose the translation plugin and language pair in Buffer. Missing or unsupported languages show their availability state. No cloud fallback is used. Results require explicit insertion. iOS 17-25 retain ordinary keyboard, Buffer and provider-based AI.
+APPLE TRANSLATION
+Requires iOS 26+ and supported downloaded language models. Prepare languages in the containing app, select the translation tool and a language pair in Buffer. Missing models or unsupported languages show an unavailable state; there is no automatic external-AI fallback.
 
-Optional third-party AI: users configure their own HTTPS Chat Completions provider, model and API key, enable Full Access and grant recipient consent. Only explicitly submitted Buffer text is transmitted. No provider credential is bundled. Ordinary keyboard and Buffer features do not require any app account, API key or network access.
+OPTIONAL EXTERNAL AI
+Users supply their own HTTPS OpenAI-compatible Chat Completions endpoint, model and API key, enable Full Access, and explicitly consent to the displayed recipient. Only explicitly submitted Buffer text is sent. API keys are device-only Keychain items. Requests do not follow redirects. Optional model lookup is a separate explicit action that sends the key to the configured provider. No provider key, account or AI service is bundled; the provider's own charges/policies may apply.
 
-Secure fields and host apps that prohibit third-party keyboards use the system keyboard. The extension uses only public APIs. Privacy and third-party licenses are available in the containing app and on the support site.
+PERMISSIONS / PRIVACY
+Full Access is needed for external AI, keyboard clipboard collection and keyboard image export, not ordinary typing or Buffer editing. Explicit Save to Photos requests add-only access. Privacy and third-party licenses are available in the app and on the support site. No keyboard-text telemetry or automatic clipboard monitoring is used.
+
+This version updates the product name and related guidance; prior schemes, learned words, settings and credentials are retained.

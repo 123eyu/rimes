@@ -1,1 +1,1 @@
-pinyin,chinese,keyboard,wubi,ziranma,chord,typing,buffer,translation,offline
+pinyin,chinese,keyboard,wubi,ziranma,ninekey,chord,buffer,translation,offline,writing,rimes
