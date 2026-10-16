@@ -9,7 +9,9 @@
 // Creates one disposable, capability-free AppContainer. Only this test's
 // staging directory receives its exact package SID; no machine ACL is changed.
 int wmain(int argc, wchar_t** argv) {
-  if (argc != 2) return 2;
+  if (argc != 2 && argc != 3) return 2;
+  const bool lpac = argc == 3 && std::wstring(argv[2]) == L"--lpac";
+  if (argc == 3 && !lpac) return 2;
   GUID guid{};
   if (FAILED(CoCreateGuid(&guid))) return 3;
   wchar_t id[40]{};
@@ -50,21 +52,28 @@ int wmain(int argc, wchar_t** argv) {
     if (descriptor) LocalFree(descriptor);
     if (error != ERROR_SUCCESS) throw 6;
     SIZE_T bytes = 0;
-    InitializeProcThreadAttributeList(nullptr, 1, 0, &bytes);
+    const DWORD attribute_count = lpac ? 2 : 1;
+    InitializeProcThreadAttributeList(nullptr, attribute_count, 0, &bytes);
     std::vector<std::byte> buffer(bytes);
     attributes = reinterpret_cast<PPROC_THREAD_ATTRIBUTE_LIST>(buffer.data());
-    if (!InitializeProcThreadAttributeList(attributes, 1, 0, &bytes)) throw 7;
+    if (!InitializeProcThreadAttributeList(attributes, attribute_count, 0, &bytes)) throw 7;
     SECURITY_CAPABILITIES capabilities{};
     capabilities.AppContainerSid = sid;
     if (!UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_SECURITY_CAPABILITIES,
         &capabilities, sizeof(capabilities), nullptr, nullptr)) {
       DeleteProcThreadAttributeList(attributes); attributes = nullptr; throw 7;
     }
+    DWORD package_policy = PROCESS_CREATION_ALL_APPLICATION_PACKAGES_OPT_OUT;
+    if (lpac && !UpdateProcThreadAttribute(attributes, 0,
+        PROC_THREAD_ATTRIBUTE_ALL_APPLICATION_PACKAGES_POLICY,
+        &package_policy, sizeof(package_policy), nullptr, nullptr)) {
+      DeleteProcThreadAttributeList(attributes); attributes = nullptr; throw 7;
+    }
     STARTUPINFOEXW startup{};
     startup.StartupInfo.cb = sizeof(startup);
     startup.lpAttributeList = attributes;
     PROCESS_INFORMATION child{};
-    std::wstring command = L"\"" + exe.wstring() + L"\"";
+    std::wstring command = L"\"" + exe.wstring() + L"\"" + (lpac ? L" --lpac" : L"");
     const BOOL started = CreateProcessW(exe.c_str(), command.data(), nullptr, nullptr,
         FALSE, EXTENDED_STARTUPINFO_PRESENT | CREATE_NO_WINDOW,
         nullptr, directory.c_str(), &startup.StartupInfo, &child);
@@ -81,7 +90,7 @@ int wmain(int argc, wchar_t** argv) {
     DWORD exit = 10;
     GetExitCodeProcess(process, &exit);
     result = static_cast<int>(exit);
-    std::cout << "Capability-free AppContainer input probe exit=" << exit << '\n';
+    std::cout << (lpac ? "LPAC" : "AppContainer") << " input probe exit=" << exit << '\n';
   } catch (int code) { result = code; }
     catch (...) { result = 11; }
   if (process) CloseHandle(process);

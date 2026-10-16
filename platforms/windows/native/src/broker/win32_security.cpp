@@ -161,12 +161,15 @@ bool UserSecurityContext::Initialize(std::wstring* error) {
   attributes_.bInheritHandle = FALSE;
 
   // AppContainers perform both the user and restricted-package access check.
+  // LPAC explicitly opts out of ALL APPLICATION PACKAGES (AC); it needs the
+  // ALL RESTRICTED APPLICATION PACKAGES SID as well. Both get input I/O only,
+  // still authenticated to this exact user/session by the Broker.
   // 0x12008b = FILE_GENERIC_READ | FILE_WRITE_DATA: read metadata, synchronize
   // and data I/O, never CREATE_PIPE_INSTANCE, WRITE_DAC or WRITE_OWNER.
   // The low label applies to this input endpoint
   // alone, not the desktop pipe, lifetime mutex or maintenance event.
   const std::wstring input_sddl = L"O:" + sid_string_ + L"D:P(A;;GA;;;" +
-      sid_string_ + L")(A;;0x12008b;;;AC)S:(ML;;NW;;;LW)";
+      sid_string_ + L")(A;;0x12008b;;;AC)(A;;0x12008b;;;S-1-15-2-2)S:(ML;;NW;;;LW)";
   if (!ConvertStringSecurityDescriptorToSecurityDescriptorW(
           input_sddl.c_str(), SDDL_REVISION_1, &input_descriptor_, nullptr)) {
     if (error) *error = L"creating input endpoint security failed: " +
