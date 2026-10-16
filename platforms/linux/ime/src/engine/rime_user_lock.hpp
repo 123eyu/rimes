@@ -17,6 +17,7 @@ public:
     bool Acquire(const std::filesystem::path& user_dir,
                  std::string* error = nullptr) noexcept;
     void Release() noexcept;
+    int Descriptor() const noexcept { return fd_; }
 
 private:
     int fd_ = -1;

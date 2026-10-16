@@ -77,14 +77,25 @@ add_library(RimesEngine STATIC
     src/engine/rime_paths.cpp
     src/engine/rime_snapshot.cpp
     src/engine/rime_user_lock.cpp
+    src/engine/deployment_process.cpp
 )
 target_include_directories(RimesEngine PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 target_link_libraries(RimesEngine PUBLIC PkgConfig::Rime Threads::Threads RimesSchemeImport)
 target_compile_definitions(RimesEngine PRIVATE RIMES_DISTRIBUTION_VERSION="${PROJECT_VERSION}")
+target_compile_definitions(RimesEngine PRIVATE
+    RIMES_INSTALLED_DEPLOY_HELPER="${CMAKE_INSTALL_FULL_LIBEXECDIR}/rimes/rimes-deploy"
+    RIMES_BUILD_DEPLOY_HELPER="${CMAKE_BINARY_DIR}/rimes-deploy")
 set_target_properties(RimesEngine PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesEngine)
+
+add_executable(rimes-deploy src/engine/deploy_main.cpp)
+target_link_libraries(rimes-deploy PRIVATE PkgConfig::Rime)
+target_compile_definitions(rimes-deploy PRIVATE RIMES_DISTRIBUTION_VERSION="${PROJECT_VERSION}")
+rimes_harden(rimes-deploy)
+install(TARGETS rimes-deploy DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
+add_dependencies(RimesEngine rimes-deploy)
 
 if(RIMES_BUILD_FCITX5)
     find_package(Gettext REQUIRED)
@@ -230,6 +241,12 @@ if(RIMES_BUILD_TESTS)
     target_link_libraries(rimes-user-lock-tests PRIVATE RimesEngine)
     rimes_harden(rimes-user-lock-tests)
     add_test(NAME RimesUserLock COMMAND rimes-user-lock-tests)
+
+    add_executable(rimes-deployment-shutdown-tests tests/deployment_shutdown_tests.cpp)
+    target_link_libraries(rimes-deployment-shutdown-tests PRIVATE RimesEngine)
+    rimes_harden(rimes-deployment-shutdown-tests)
+    add_test(NAME RimesDeploymentShutdown COMMAND rimes-deployment-shutdown-tests)
+    set_tests_properties(RimesDeploymentShutdown PROPERTIES TIMEOUT 15)
 
     add_executable(rimes-engine-smoke tests/rime_engine_smoke.cpp)
     target_link_libraries(rimes-engine-smoke PRIVATE RimesEngine)

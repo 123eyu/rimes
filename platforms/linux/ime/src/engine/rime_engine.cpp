@@ -1,6 +1,7 @@
 #include "rime_engine.hpp"
 
-#include <cstring>
+#include <chrono>
+#include <condition_variable>
 #include <mutex>
 #include <thread>
 #include <unordered_set>
@@ -16,6 +17,7 @@
 #include "rime_key.hpp"
 #include "rime_paths.hpp"
 #include "rime_user_lock.hpp"
+#include "deployment_process.hpp"
 
 namespace rimes::linuxime {
 namespace {
@@ -41,7 +43,7 @@ public:
     bool Start(const RimeEngineOptions& options, std::string* error) noexcept {
         try {
             std::lock_guard<std::mutex> lock(mutex_);
-            if (healthy_) {
+            if (healthy_ || external_pending_) {
                 return true;
             }
 
@@ -74,28 +76,12 @@ public:
             user_data_dir_ = options.user_data_dir.string();
             log_dir_ = options.log_dir.string();
 
-            RIME_STRUCT(RimeTraits, traits);
-            traits.shared_data_dir = shared_data_dir_.c_str();
-            traits.user_data_dir = user_data_dir_.c_str();
-            traits.distribution_name = "RIMES";
-            traits.distribution_code_name = "rimes";
-            traits.distribution_version = RIMES_DISTRIBUTION_VERSION;
-            traits.app_name = "rime.rimes.linux";
-            traits.min_log_level = 2;
-            traits.log_dir = log_dir_.c_str();
-
-            // setup() initializes glog. A second call in this process aborts
-            // ("You called InitGoogleLogging() twice") after Stop()+Start().
-            static bool setup_done = false;
-            if (!setup_done) {
-                api_->setup(&traits);
-                setup_done = true;
+            deployment_helper_ = options.deployment_helper;
+            if (deployment_helper_.empty()) {
+                deployment_helper_ = std::filesystem::exists(RIMES_INSTALLED_DEPLOY_HELPER)
+                    ? RIMES_INSTALLED_DEPLOY_HELPER : RIMES_BUILD_DEPLOY_HELPER;
             }
-            api_->initialize(&traits);
-            initialized_ = true;
-            if (api_->set_notification_handler != nullptr) {
-                api_->set_notification_handler(&Impl::OnRimeNotification, this);
-            }
+            if (options.wait_for_maintenance) InitializeRuntimeLocked();
 
             const bool full_check =
                 options.full_maintenance_check ||
@@ -128,6 +114,7 @@ public:
             {
                 std::lock_guard<std::mutex> lock(mutex_);
                 watch_stop_ = true;
+                watch_cv_.notify_all();
             }
             {
                 std::lock_guard<std::mutex> lock(callback_mutex_);
@@ -171,20 +158,20 @@ public:
             if (healthy_ && api_ != nullptr) {
                 return true;
             }
+            if (external_pending_) {
+                if (!deployment_.Poll()) return false;
+                external_pending_ = false;
+                deploying_ = false;
+                if (deployment_.ExitCode() != 0) {
+                    SetError(error, "librime deployment worker failed; inspect deployment logs");
+                    return false;
+                }
+                InitializeRuntimeLocked();
+            }
             if (!initialized_ || api_ == nullptr) {
                 SetError(error, "librime is not initialized");
                 return false;
             }
-            if (api_->is_maintenance_mode != nullptr && api_->is_maintenance_mode() != 0) {
-                return false;
-            }
-            // A live watcher already called (or is calling) join. Do not join
-            // from the UI thread — that is the freeze we are avoiding.
-            if (!async_watch_started_ && api_->join_maintenance_thread != nullptr) {
-                api_->join_maintenance_thread();
-                watch_joined_maintenance_ = true;
-            }
-            deploying_ = false;
             return FinishReadyLocked(error);
         } catch (...) {
             SetError(error, "exception while polling librime maintenance");
@@ -438,29 +425,52 @@ private:
         return true;
     }
 
-    bool RunMaintenanceLocked(bool full_check, bool wait, std::string* error) noexcept {
-        if (api_->start_maintenance == nullptr) {
-            SetError(error, "librime maintenance API is unavailable");
-            return false;
+    void InitializeRuntimeLocked() {
+        RIME_STRUCT(RimeTraits, traits);
+        traits.shared_data_dir = shared_data_dir_.c_str();
+        traits.user_data_dir = user_data_dir_.c_str();
+        traits.distribution_name = "RIMES";
+        traits.distribution_code_name = "rimes";
+        traits.distribution_version = RIMES_DISTRIBUTION_VERSION;
+        traits.app_name = "rime.rimes.linux";
+        traits.min_log_level = 2;
+        traits.log_dir = log_dir_.c_str();
+        // glog setup is process-wide and aborts if initialized twice.
+        static bool setup_done = false;
+        if (!setup_done) {
+            api_->setup(&traits);
+            setup_done = true;
         }
-        const bool started = api_->start_maintenance(full_check ? True : False) != 0;
-        const bool in_maintenance =
-            started ||
-            (api_->is_maintenance_mode != nullptr && api_->is_maintenance_mode() != 0);
-        if (!in_maintenance) {
-            deploying_ = false;
-            return true;
-        }
+        api_->initialize(&traits);
+        initialized_ = true;
+    }
+
+    bool RunMaintenanceLocked(bool full_check, bool wait, std::string* error) {
         if (!wait) {
-            deploying_ = true;
+            // librime has no cancellable deployment API. Keep its compiler in
+            // a child so shutdown can terminate it without killing Fcitx or
+            // leaving a thread accessing a destroyed engine. Runtime and worker
+            // never open the user dictionaries at the same time.
             healthy_ = false;
-            StartWatchLocked();
+            if (initialized_) {
+                api_->finalize();
+                initialized_ = false;
+            }
+            if (!deployment_.Start(deployment_helper_, shared_data_dir_,
+                    user_data_dir_, log_dir_, full_check, user_lock_.Descriptor(), error))
+                return false;
+            external_pending_ = true;
+            deploying_ = true;
+            worker_notified_ = false;
+            if (!StartWatchLocked()) {
+                deployment_.Stop();
+                external_pending_ = deploying_ = false;
+                SetError(error, "could not start deployment watcher");
+                return false;
+            }
             return true;
         }
-        if (api_->join_maintenance_thread == nullptr) {
-            SetError(error, "librime maintenance API is unavailable");
-            return false;
-        }
+        api_->start_maintenance(full_check ? True : False);
         api_->join_maintenance_thread();
         deploying_ = false;
         return true;
@@ -601,108 +611,64 @@ private:
         return true;
     }
 
-    void StartWatchLocked() noexcept {
-        if (watch_thread_.joinable()) {
-            if (!watch_joined_maintenance_) {
-                return;
-            }
-            watch_thread_.join();
-            async_watch_started_ = false;
-        }
+    bool StartWatchLocked() noexcept {
         watch_stop_ = false;
-        async_watch_started_ = true;
-        watch_joined_maintenance_ = false;
-        try {
-            watch_thread_ = std::thread([this] { WatchMaintenance(); });
-        } catch (...) {
-            async_watch_started_ = false;
+        if (!watch_thread_.joinable()) {
+            try { watch_thread_ = std::thread([this] { WatchMaintenance(); }); }
+            catch (...) { return false; }
         }
+        watch_cv_.notify_all();
+        return true;
     }
 
     void WatchMaintenance() noexcept {
-        RimeApi* api = nullptr;
         try {
-            std::lock_guard<std::mutex> lock(mutex_);
-            api = api_;
-        } catch (...) {
-            return;
-        }
-        if (api != nullptr && api->join_maintenance_thread != nullptr) {
-            api->join_maintenance_thread();
-        }
-        try {
-            std::lock_guard<std::mutex> lock(mutex_);
-            watch_joined_maintenance_ = true;
-            if (watch_stop_) {
-                return;
+            std::unique_lock<std::mutex> lock(mutex_);
+            while (!watch_stop_) {
+                watch_cv_.wait(lock, [this] {
+                    return watch_stop_ || (external_pending_ && !worker_notified_);
+                });
+                if (watch_stop_) return;
+                if (!deployment_.Poll()) {
+                    watch_cv_.wait_for(lock, std::chrono::milliseconds(20),
+                                       [this] { return watch_stop_; });
+                    continue;
+                }
+                worker_notified_ = true;
+                lock.unlock();
+                NotifyDeployReady();
+                lock.lock();
             }
-        } catch (...) {
-            return;
-        }
-        NotifyDeployReady();
+        } catch (...) {}
     }
 
     void NotifyDeployReady() noexcept {
-        // Do not coalesce: deploy/success can fire before
-        // is_maintenance_mode() clears. The join watcher notifies again.
         RimeEngine::DeployReadyCallback callback;
         try {
             std::lock_guard<std::mutex> lock(callback_mutex_);
             callback = deploy_ready_;
-        } catch (...) {
-            return;
-        }
+        } catch (...) { return; }
         if (callback) {
-            try {
-                callback();
-            } catch (...) {
-            }
-        }
-    }
-
-    static void OnRimeNotification(void* context,
-                                   RimeSessionId,
-                                   const char* message_type,
-                                   const char* message_value) {
-        auto* self = static_cast<Impl*>(context);
-        if (self == nullptr || message_type == nullptr || message_value == nullptr) {
-            return;
-        }
-        if (std::strcmp(message_type, "deploy") != 0) {
-            return;
-        }
-        if (std::strcmp(message_value, "success") == 0 ||
-            std::strcmp(message_value, "failure") == 0) {
-            self->NotifyDeployReady();
+            try { callback(); } catch (...) {}
         }
     }
 
     void StopLocked() noexcept {
         healthy_ = false;
+        deployment_.Stop();
+        external_pending_ = false;
         if (api_ != nullptr) {
             for (const SessionId session : sessions_) {
                 api_->destroy_session(session);
             }
             sessions_.clear();
-            if (initialized_ && api_->set_notification_handler != nullptr) {
-                api_->set_notification_handler(nullptr, nullptr);
-            }
-            if (initialized_ && api_->join_maintenance_thread != nullptr &&
-                !watch_joined_maintenance_ &&
-                (deploying_ ||
-                 (api_->is_maintenance_mode != nullptr &&
-                  api_->is_maintenance_mode() != 0))) {
-                api_->join_maintenance_thread();
-                watch_joined_maintenance_ = true;
-            }
             if (initialized_ && api_->finalize != nullptr) {
                 api_->finalize();
             }
         }
         deploying_ = false;
         initialized_ = false;
-        async_watch_started_ = false;
-        watch_joined_maintenance_ = false;
+        worker_notified_ = false;
         api_ = nullptr;
         shared_data_dir_.clear();
         user_data_dir_.clear();
@@ -719,8 +685,11 @@ private:
     bool healthy_ = false;
     bool deploying_ = false;
     bool watch_stop_ = false;
-    bool async_watch_started_ = false;
-    bool watch_joined_maintenance_ = false;
+    bool external_pending_ = false;
+    bool worker_notified_ = false;
+    std::condition_variable watch_cv_;
+    DeploymentProcess deployment_;
+    std::filesystem::path deployment_helper_;
     std::thread watch_thread_;
     RimeEngine::DeployReadyCallback deploy_ready_;
     std::string shared_data_dir_;

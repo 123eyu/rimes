@@ -88,6 +88,7 @@ Installed the RIMES Fcitx5 addon, Buffer workbench, and Capsule rail.
   buffer:  $PREFIX/libexec/rimes/rimes-buffer and $PREFIX/bin/rimes-buffer
   capsule: $PREFIX/libexec/rimes/rimes-capsule and $PREFIX/bin/rimes-capsule
   ctl:     $PREFIX/bin/rimes-buffer-ctl and $PREFIX/bin/rimes-capsule-ctl
+  deploy:  $PREFIX/libexec/rimes/rimes-deploy
   data:    $PREFIX/share/rimes/data
   receipt: $PREFIX/share/rimes/ime-install-manifest.json
 Uninstall with: $SCRIPT_DIR/uninstall.sh --prefix "$PREFIX"

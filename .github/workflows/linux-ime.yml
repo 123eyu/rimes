@@ -117,6 +117,7 @@ jobs:
             platforms/linux/ime/build/rimes-capsule
             platforms/linux/ime/build/rimes-capsule-ctl
             platforms/linux/ime/build/rimes-schemes
+            platforms/linux/ime/build/rimes-deploy
             platforms/linux/ime/.engine/install/lib/librime.so*
           if-no-files-found: error
           retention-days: 14

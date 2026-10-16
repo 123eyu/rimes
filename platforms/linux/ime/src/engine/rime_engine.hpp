@@ -19,6 +19,8 @@ struct RimeEngineOptions {
     // Tests wait so they can type immediately. The Fcitx5 addon must not:
     // join_maintenance_thread on the UI thread freezes every client.
     bool wait_for_maintenance = true;
+    // Empty selects the installed worker (or the sibling build worker).
+    std::filesystem::path deployment_helper;
 };
 
 // Process-wide librime owner. One instance per Fcitx5 addon process. Sessions
@@ -40,19 +42,18 @@ public:
     [[nodiscard]] bool IsHealthy() const noexcept;
     [[nodiscard]] bool IsDeploying() const noexcept;
 
-    // Invoked from the librime maintenance thread or the join watcher, not
+    // Invoked from the deployment worker watcher, not
     // the Fcitx5 main thread. The addon must bounce to EventDispatcher.
     void SetDeployReadyCallback(DeployReadyCallback callback);
 
     // Returns true once maintenance has finished and the engine is healthy.
-    // Safe to call from the Fcitx5 main thread: it never joins while a
-    // background watcher already owns join_maintenance_thread.
+    // Safe to call from the Fcitx5 main thread: it never waits for a running
+    // deployment worker. The runtime starts only after that worker exits.
     bool PollMaintenance(std::string* error = nullptr) noexcept;
 
     bool RunMaintenance(bool full_check, std::string* error = nullptr) noexcept;
 
-    // start_maintenance without joining. Same path a later fcitx5 start uses
-    // when librime decides to rebuild. Sessions must be closed first.
+    // Deploy in a separate, cancellable process. Sessions must be closed first.
     bool StartBackgroundMaintenance(bool full_check,
                                     std::string* error = nullptr) noexcept;
 

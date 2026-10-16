@@ -22,8 +22,8 @@ void FinishAsyncDeploy(rimes::linuxime::RimeEngine& engine,
                        std::condition_variable& ready_cv,
                        bool& notified,
                        const char* label) {
-    // deploy/success can notify before is_maintenance_mode() clears. Keep
-    // waiting through later watcher notifies until PollMaintenance succeeds.
+    // The worker watcher posts readiness; the caller initializes its runtime
+    // only after the child has finished and released its dictionary handles.
     const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(180);
     std::string error;
     while (std::chrono::steady_clock::now() < deadline) {
