@@ -629,6 +629,7 @@ jobs:
             matrix-smoke
             candidate-metrics-smoke
             candidate-pagination-smoke
+            candidate-rendering-smoke
             candidate-commit-smoke
             activation-cache-smoke
             theme-smoke

@@ -22,44 +22,7 @@ enum CandidatePanelInteractionRules {
 
 enum CandidatePanelVisibilityPhase: Equatable {
     case hidden
-    case fadingIn
     case visible
-    case fadingOut
-}
-
-enum CandidatePanelAnimationRules {
-    /// Keep both edges perceptible without making candidate delivery wait on
-    /// decoration. The outgoing edge is deliberately the shorter one.
-    static let fadeInDuration: TimeInterval = 0.06
-    static let fadeOutDuration: TimeInterval = 0.045
-
-    /// `continuesCommittedSurface` marks a composition begun by the same
-    /// keystroke that committed the previous one (顶字上屏). Its candidates
-    /// replace a surface the user was already reading, so they appear at once
-    /// instead of replaying the entrance.
-    static func shouldFadeIn(panelIsVisible: Bool,
-                             phase: CandidatePanelVisibilityPhase,
-                             reduceMotion: Bool,
-                             continuesCommittedSurface: Bool = false) -> Bool {
-        guard !reduceMotion, !continuesCommittedSurface else { return false }
-        return !panelIsVisible || phase == .hidden || phase == .fadingOut
-    }
-
-    static func shouldFadeOut(panelIsVisible: Bool,
-                              phase: CandidatePanelVisibilityPhase,
-                              reduceMotion: Bool) -> Bool {
-        !reduceMotion && panelIsVisible && phase != .fadingOut
-    }
-
-    static func allowsInteraction(phase: CandidatePanelVisibilityPhase) -> Bool {
-        phase == .fadingIn || phase == .visible
-    }
-
-    static func mayCompleteFadeOut(expectedGeneration: UInt64,
-                                   currentGeneration: UInt64,
-                                   phase: CandidatePanelVisibilityPhase) -> Bool {
-        expectedGeneration == currentGeneration && phase == .fadingOut
-    }
 }
 
 enum CandidatePanelSpaceRules {
@@ -179,7 +142,7 @@ enum CandidateWindowMetric: String, CaseIterable {
     }
 }
 
-struct CandidateWindowMetrics {
+struct CandidateWindowMetrics: Equatable {
     private static let compactDefaultsMigrationKey = "candidateWindow.compactDefaultsMigrated.v1"
 
     let baseWidth: CGFloat
@@ -565,11 +528,8 @@ struct CandidateCommitRetirementSnapshot {
     let orderedOutSynchronously: Bool
     let retiredLogicalPresentation: Bool
     let sameKeystrokeContinuedWithoutEntrance: Bool
-    let continuationConsumedByOneShow: Bool
-    let continuationExpiredAfterKeystroke: Bool
-    let hiddenRetirementDidNotArmContinuation: Bool
-    let laterEntrancePhase: CandidatePanelVisibilityPhase
-    let expectedEntrancePhase: CandidatePanelVisibilityPhase
+    let ordinaryHideIsImmediate: Bool
+    let laterEntranceIsImmediate: Bool
 }
 
 /// In-process candidate window. Candidates default to a compact one-line strip
@@ -608,8 +568,48 @@ final class CandidateWindow {
     private var barBottomConstraint: NSLayoutConstraint!
     private var lastGoodCaretRect: NSRect?
 
-    private var currentContext = RimeContextModel()
-    private var currentSignature = ""
+    private var currentContext = RimeContextModel() {
+        didSet {
+            if currentContext.candidates != oldValue.candidates
+                || currentContext.usesNumericSelectionKeys != oldValue.usesNumericSelectionKeys {
+                measuredWidths.removeAll(keepingCapacity: true)
+                cachedPagination = nil
+            } else if currentContext.pageNo != oldValue.pageNo
+                || currentContext.isLastPage != oldValue.isLastPage {
+                cachedPagination = nil
+            }
+        }
+    }
+    private var layoutMetrics = CandidateWindowMetrics.current
+    private var measuredWidths: [RimeCandidateModel: CGFloat] = [:]
+    private var cachedPagination: (width: CGFloat, result: CandidatePagination)?
+    private var compactRowButtons: [CandidatePillButton] = []
+    private var compactRowSeparators: [NSTextField] = []
+    private var lastRenderState: RenderState?
+    private var renderingProbe: RenderingProbe?
+
+    private struct RenderState: Equatable {
+        let context: RimeContextModel
+        let selection: Int
+        let page: Int
+        let expandedPages: [RimeContextModel]
+        let expandedSelection: Int
+        let expandedBase: Int
+        let columnBases: [Int: Int]
+        let characters: String
+        let characterSelection: Int
+        let preedit: String
+        let width: CGFloat
+    }
+
+    /// Populated only by the native performance regression/benchmark.
+    private final class RenderingProbe {
+        var widthMeasurements = 0
+        var paginationBuilds = 0
+        var renders = 0
+        var buttonCreations = 0
+    }
+    private var observers: [NSObjectProtocol] = []
     private var selectedIndex = 0
     private var visualPageIndex = 0
     /// Every Rime page fetched so far, one row each. The index IS the page
@@ -635,12 +635,6 @@ final class CandidateWindow {
     private weak var contentHost: NSView?
     private var contentHostConstraints: [NSLayoutConstraint] = []
     private var visibilityPhase: CandidatePanelVisibilityPhase = .hidden
-    private var visibilityTransitionGeneration: UInt64 = 0
-    private var scrubRenderedViewsWhenHidden = false
-    /// Set while the keystroke that retired a visible panel for a commit is
-    /// still being handled; see `retireForCommit`.
-    private var commitContinuationArmed = false
-    private var commitContinuationGeneration: UInt64 = 0
 
     var onSelect: ((FocusToken, CandidateSelection) -> Void)?
     var onPage: ((FocusToken, Int) -> Void)?
@@ -671,8 +665,7 @@ final class CandidateWindow {
             } ?? false,
             panelIsVisible: presentationIsVisible,
             panelIsOnActiveSpace: presentationIsOnActiveSpace,
-            transitionAllowsInteraction: CandidatePanelAnimationRules
-                .allowsInteraction(phase: visibilityPhase)
+            transitionAllowsInteraction: visibilityPhase == .visible
         )
     }
     var isVisible: Bool {
@@ -688,9 +681,7 @@ final class CandidateWindow {
         // candidate-only key paths indefinitely.
         guard presentationIsVisible,
               presentationIsOnActiveSpace,
-              CandidatePanelAnimationRules.allowsInteraction(
-                phase: visibilityPhase
-              ) else { return false }
+              visibilityPhase == .visible else { return false }
         return !currentContext.candidates.isEmpty || !projectionPreedit.isEmpty
     }
     var isExpanded: Bool { !expandedPages.isEmpty }
@@ -863,24 +854,29 @@ final class CandidateWindow {
         )
 
         applyAppearance()
-        NotificationCenter.default.addObserver(
+        observers.append(NotificationCenter.default.addObserver(
             forName: .rimeAppearanceDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
+            self?.lastRenderState = nil
             self?.applyAppearance()
             self?.renderCandidates()
             self?.layoutAndShowAccordingToPresentation()
-        }
-        NotificationCenter.default.addObserver(
+        })
+        observers.append(NotificationCenter.default.addObserver(
             forName: .candidateWindowMetricsDidChange,
             object: nil,
             queue: .main
         ) { [weak self] _ in
-            self?.applyMetrics()
+            self?.reloadMetrics()
             self?.renderCandidates()
             self?.layoutAndShowAccordingToPresentation()
-        }
+        })
+    }
+
+    deinit {
+        for observer in observers { NotificationCenter.default.removeObserver(observer) }
     }
 
     private var presentationIsVisible: Bool {
@@ -952,13 +948,14 @@ final class CandidateWindow {
         }
         ownerToken = owner
         presentationMode = presentation
-        let signature = contextSignature(ctx)
-        let signatureChanged = signature != currentSignature
-        if signature != currentSignature {
+        let signatureChanged = ctx.input != currentContext.input
+            || ctx.preedit != currentContext.preedit
+            || ctx.pageNo != currentContext.pageNo
+            || ctx.candidates != currentContext.candidates
+        if signatureChanged {
             resetExpandedState()
             resetCharacterSelectionState()
             selectedIndex = clamp(ctx.highlightedIndex, count: ctx.candidates.count)
-            currentSignature = signature
         }
 
         currentContext = ctx
@@ -977,67 +974,40 @@ final class CandidateWindow {
         }
 
         projectionPreedit = showPreedit ? (ctx.preedit.isEmpty ? ctx.input : ctx.preedit) : ""
-        preeditLabel.stringValue = projectionPreedit
+        if preeditLabel.stringValue != projectionPreedit {
+            preeditLabel.stringValue = projectionPreedit
+        }
         preeditPill.isHidden = preeditLabel.stringValue.isEmpty
-        updatePreeditWidth()
-        applyAppearance()
         renderCandidates()
         layoutAndShowAccordingToPresentation()
     }
 
     func hide(owner: FocusToken) {
         guard let ownerToken else {
-            // A repeated hide can arrive while the retired pixels are already
-            // fading. Let that transition finish instead of snapping it off.
-            if visibilityPhase != .fadingOut {
-                hidePanel(reason: "owner-hide-without-presentation",
-                          clearsPresentation: true,
-                          animated: false)
-            }
+            hidePanel(reason: "owner-hide-without-presentation", clearsPresentation: true)
             return
         }
         guard ownerToken == owner else {
             IMELog.write("candidate stale hide ignored owner=\(owner)")
             return
         }
-        let mayFade = InputFocusCoordinator.shared.isCurrent(owner)
-            && !IsSecureEventInputEnabled()
-        hidePanel(reason: "owner-hide",
-                  clearsPresentation: true,
-                  animated: mayFade)
+        hidePanel(reason: "owner-hide", clearsPresentation: true)
     }
 
-    /// Committing makes the shown candidates obsolete the moment the host
-    /// displays the text, so the panel leaves synchronously, before insertion.
-    /// The eased fade-out `hide` uses kept stale candidates nearly opaque
-    /// beside already-committed text for ~50 ms, which fast typing exposes.
+    /// Retire both pixels and selection authority before host insertion.
+    /// Every entrance/exit is immediate, including a new composition started
+    /// by the same committing key, so no deferred animation can revive it.
     func retireForCommit(owner: FocusToken) {
         if let ownerToken, ownerToken != owner {
             IMELog.write("candidate stale commit retirement ignored owner=\(owner)")
             return
         }
-        // No pixels outlive a commit boundary, including an earlier fade.
-        let replacedVisibleSurface = panel.isVisible
-        hidePanel(reason: "commit-retirement",
-                  clearsPresentation: true,
-                  animated: false)
-        guard replacedVisibleSurface else { return }
-        // The committing keystroke may already carry the next composition
-        // (顶字上屏); its update lands before control returns to the run loop.
-        commitContinuationGeneration &+= 1
-        let generation = commitContinuationGeneration
-        commitContinuationArmed = true
-        DispatchQueue.main.async { [weak self] in
-            guard let self,
-                  self.commitContinuationGeneration == generation else { return }
-            self.commitContinuationArmed = false
-        }
+        hidePanel(reason: "commit-retirement", clearsPresentation: true)
     }
 
     func hideAll() {
         hidePanel(reason: "global-hide",
-                  clearsPresentation: true,
-                  animated: false)
+                  clearsPresentation: true)
     }
 
     private func resetPresentationState(scrubRenderedViews: Bool = true) {
@@ -1049,7 +1019,6 @@ final class CandidateWindow {
         resetExpandedState()
         resetCharacterSelectionState()
         currentContext = RimeContextModel()
-        currentSignature = ""
         projectionPreedit = ""
         ownerToken = nil
         presentationMode = .caret
@@ -1066,6 +1035,11 @@ final class CandidateWindow {
     }
 
     private func scrubRenderedCandidateViews() {
+        lastRenderState = nil
+        compactRowButtons.removeAll()
+        compactRowSeparators.removeAll()
+        measuredWidths.removeAll(keepingCapacity: true)
+        cachedPagination = nil
         candidateStack.arrangedSubviews.forEach {
             candidateStack.removeArrangedSubview($0)
             $0.removeFromSuperview()
@@ -1085,8 +1059,7 @@ final class CandidateWindow {
                 .inlineInputCaretScreenRect(owner: ownerToken) else {
             if presentationMode == .bufferCaret {
                 hidePanel(reason: "buffer-caret-unavailable",
-                          clearsPresentation: false,
-                          animated: false)
+                          clearsPresentation: false)
             }
             return
         }
@@ -1332,15 +1305,16 @@ final class CandidateWindow {
 
     @discardableResult
     private func layoutPanel(caretRect: NSRect, bundleId: String) -> Bool {
-        let metrics = CandidateWindowMetrics.current
-        panel.setContentSize(desiredPanelContentSize(caretRect: caretRect, metrics: metrics))
+        let metrics = layoutMetrics
+        let size = desiredPanelContentSize(caretRect: caretRect, metrics: metrics)
+        if panel.contentView?.bounds.size != size { panel.setContentSize(size) }
         panel.layoutIfNeeded()
         updateCandidateDocumentSize()
         resetCandidateScroll()
         guard let origin = origin(for: caretRect, bundleId: bundleId) else {
             return false
         }
-        panel.setFrameOrigin(origin)
+        if panel.frame.origin != origin { panel.setFrameOrigin(origin) }
         return true
     }
 
@@ -1361,8 +1335,9 @@ final class CandidateWindow {
     /// are attached. This keeps AppKit from laying a three-row stack inside the
     /// stale compact (one-row) document geometry during reconciliation.
     private func prepareCandidateGeometryForRendering() {
-        let metrics = CandidateWindowMetrics.current
-        panel.setContentSize(desiredPanelContentSize(caretRect: lastCaretRect, metrics: metrics))
+        let metrics = layoutMetrics
+        let size = desiredPanelContentSize(caretRect: lastCaretRect, metrics: metrics)
+        if panel.contentView?.bounds.size != size { panel.setContentSize(size) }
         panel.layoutIfNeeded()
         candidateStack.setFrameSize(NSSize(
             width: candidateScroll.contentSize.width,
@@ -1409,18 +1384,14 @@ final class CandidateWindow {
     }
 
     private func panelWidth(caretRect: NSRect) -> CGFloat {
-        let metrics = CandidateWindowMetrics.current
+        let metrics = layoutMetrics
         let visibleWidth = (screen(containing: caretRect)?.visibleFrame.width ?? metrics.baseWidth) - 12
         return min(metrics.baseWidth, max(1, visibleWidth))
     }
 
     private func layoutAndShowAccordingToPresentation() {
         guard let ownerToken else {
-            if visibilityPhase != .fadingOut {
-                hidePanel(reason: "missing-owner",
-                          clearsPresentation: true,
-                          animated: false)
-            }
+            hidePanel(reason: "missing-owner", clearsPresentation: true)
             return
         }
         guard let interactionTarget = InputFocusCoordinator.shared.interactionTarget(
@@ -1431,8 +1402,7 @@ final class CandidateWindow {
             // candidate state that looks visible. A later trusted `update`
             // supplies a fresh context and safely reconstructs the panel.
             hidePanel(reason: "interaction-target-unavailable",
-                      clearsPresentation: true,
-                      animated: false)
+                      clearsPresentation: true)
             return
         }
         guard !currentContext.candidates.isEmpty || !projectionPreedit.isEmpty else {
@@ -1443,8 +1413,7 @@ final class CandidateWindow {
             secureInputEnabled: IsSecureEventInputEnabled()
         ) else {
             hidePanel(reason: "secure-input-before-level",
-                      clearsPresentation: true,
-                      animated: false)
+                      clearsPresentation: true)
             return
         }
 
@@ -1452,8 +1421,7 @@ final class CandidateWindow {
             guard let caret = BufferWindowController.shared
                 .inlineInputCaretScreenRect(owner: ownerToken) else {
                 hidePanel(reason: "buffer-caret-unavailable",
-                          clearsPresentation: false,
-                          animated: false)
+                          clearsPresentation: false)
                 return
             }
             lastCaretRect = caret
@@ -1461,8 +1429,7 @@ final class CandidateWindow {
             guard let caret = ClipboardHistoryWindowController.shared
                 .searchCaretScreenRect(expected: ownerToken) else {
                 hidePanel(reason: "clipboard-caret-unavailable",
-                          clearsPresentation: false,
-                          animated: false)
+                          clearsPresentation: false)
                 return
             }
             lastCaretRect = caret
@@ -1471,8 +1438,7 @@ final class CandidateWindow {
         attachContentToPanel()
         guard layoutPanel(caretRect: lastCaretRect, bundleId: lastBundleId) else {
             hidePanel(reason: "layout-unavailable",
-                      clearsPresentation: false,
-                      animated: false)
+                      clearsPresentation: false)
             return
         }
         panel.level = CandidatePanelLevelRules.level(
@@ -1486,156 +1452,38 @@ final class CandidateWindow {
     /// AppKit visibility cannot silently diverge. Reasons are fixed internal
     /// strings; logs contain only counts, geometry, and focus tokens — never
     /// candidate, preedit, input, or bundle text.
-    private func hidePanel(reason: String,
-                           clearsPresentation: Bool,
-                           animated: Bool = true) {
+    private func hidePanel(reason: String, clearsPresentation: Bool) {
         let snapshot = panelLogSnapshot()
         panel.level = CandidatePanelLevelRules.standard
-
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let shouldFade = animated && CandidatePanelAnimationRules.shouldFadeOut(
-            panelIsVisible: panel.isVisible,
-            phase: visibilityPhase,
-            reduceMotion: reduceMotion
-        )
-
-        if visibilityPhase == .fadingOut && animated && panel.isVisible {
-            if clearsPresentation {
-                scrubRenderedViewsWhenHidden = true
-                resetPresentationState(scrubRenderedViews: false)
-            }
-            return
-        }
-
-        visibilityTransitionGeneration &+= 1
-        let generation = visibilityTransitionGeneration
         panel.ignoresMouseEvents = true
-
-        if shouldFade {
-            scrubRenderedViewsWhenHidden = scrubRenderedViewsWhenHidden
-                || clearsPresentation
-            if clearsPresentation {
-                // Retire owner/context synchronously so a host callback cannot
-                // select an already committed candidate while its pixels fade.
-                resetPresentationState(scrubRenderedViews: false)
-            }
-            visibilityPhase = .fadingOut
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = CandidatePanelAnimationRules.fadeOutDuration
-                context.timingFunction = CAMediaTimingFunction(name: .easeIn)
-                panel.animator().alphaValue = 0
-            }, completionHandler: { [weak self] in
-                guard let self,
-                      CandidatePanelAnimationRules.mayCompleteFadeOut(
-                        expectedGeneration: generation,
-                        currentGeneration: self.visibilityTransitionGeneration,
-                        phase: self.visibilityPhase
-                      ) else { return }
-                self.panel.orderOut(nil)
-                self.panel.alphaValue = 1
-                self.visibilityPhase = .hidden
-                if self.scrubRenderedViewsWhenHidden {
-                    self.scrubRenderedPresentation()
-                    self.scrubRenderedViewsWhenHidden = false
-                }
-                self.attachContentToPanel()
-                self.logPanelTransition(
-                    action: "hide",
-                    reason: reason,
-                    before: snapshot,
-                    retiredPresentation: clearsPresentation
-                )
-            })
-            return
-        }
-
-        panel.orderOut(nil)
+        if panel.isVisible { panel.orderOut(nil) }
         panel.alphaValue = 1
         visibilityPhase = .hidden
-        let shouldScrub = clearsPresentation || scrubRenderedViewsWhenHidden
-        scrubRenderedViewsWhenHidden = false
-        if clearsPresentation {
-            resetPresentationState(scrubRenderedViews: shouldScrub)
-        } else if shouldScrub {
-            scrubRenderedPresentation()
-        }
+        if clearsPresentation { resetPresentationState() }
         attachContentToPanel()
-        logPanelTransition(
-            action: "hide",
-            reason: reason,
-            before: snapshot,
-            retiredPresentation: clearsPresentation
-        )
+        logPanelTransition(action: "hide", reason: reason, before: snapshot,
+                           retiredPresentation: clearsPresentation)
     }
 
     private func showPanel(reason: String) {
         guard CandidatePanelSecurityRules.mayOrderFront(
             secureInputEnabled: IsSecureEventInputEnabled()
         ) else {
-            hidePanel(reason: "secure-input-before-show",
-                      clearsPresentation: true,
-                      animated: false)
+            hidePanel(reason: "secure-input-before-show", clearsPresentation: true)
             return
         }
         let snapshot = panelLogSnapshot()
         if CandidatePanelSpaceRules.shouldOrderOutBeforeShow(
-            isVisible: panel.isVisible,
-            isOnActiveSpace: panel.isOnActiveSpace
+            isVisible: panel.isVisible, isOnActiveSpace: panel.isOnActiveSpace
         ) {
-            visibilityTransitionGeneration &+= 1
             panel.orderOut(nil)
-            panel.alphaValue = 1
-            visibilityPhase = .hidden
         }
-
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        let continuesCommittedSurface = commitContinuationArmed
-        commitContinuationArmed = false
-        let shouldFade = CandidatePanelAnimationRules.shouldFadeIn(
-            panelIsVisible: panel.isVisible,
-            phase: visibilityPhase,
-            reduceMotion: reduceMotion,
-            continuesCommittedSurface: continuesCommittedSurface
-        )
-        scrubRenderedViewsWhenHidden = false
+        panel.alphaValue = 1
         panel.ignoresMouseEvents = false
-
-        if shouldFade {
-            visibilityTransitionGeneration &+= 1
-            let generation = visibilityTransitionGeneration
-            if !panel.isVisible {
-                panel.alphaValue = 0
-            }
-            visibilityPhase = .fadingIn
-            panel.orderFrontRegardless()
-            NSAnimationContext.runAnimationGroup({ context in
-                context.duration = CandidatePanelAnimationRules.fadeInDuration
-                context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                panel.animator().alphaValue = 1
-            }, completionHandler: { [weak self] in
-                guard let self,
-                      generation == self.visibilityTransitionGeneration,
-                      self.visibilityPhase == .fadingIn else { return }
-                self.panel.alphaValue = 1
-                self.visibilityPhase = .visible
-            })
-        } else {
-            if visibilityPhase == .fadingIn && !reduceMotion {
-                // Frequent Rime updates land inside the 60 ms entrance. Keep
-                // that one transition running instead of flashing from zero.
-            } else if visibilityPhase != .visible {
-                visibilityTransitionGeneration &+= 1
-                visibilityPhase = .visible
-                panel.alphaValue = 1
-            }
-            panel.orderFrontRegardless()
-        }
-        logPanelTransition(
-            action: "show",
-            reason: reason,
-            before: snapshot,
-            retiredPresentation: false
-        )
+        visibilityPhase = .visible
+        if !panel.isVisible { panel.orderFrontRegardless() }
+        logPanelTransition(action: "show", reason: reason, before: snapshot,
+                           retiredPresentation: false)
     }
 
     private struct PanelLogSnapshot {
@@ -1696,11 +1544,6 @@ final class CandidateWindow {
     // MARK: Rendering
 
     private func renderCandidates() {
-        candidateStack.arrangedSubviews.forEach {
-            candidateStack.removeArrangedSubview($0)
-            $0.removeFromSuperview()
-        }
-
         if isExpanded {
             // A too-narrow panel no longer collapses the matrix: at least one
             // column always renders and the viewport scrolls to the rest.
@@ -1712,6 +1555,23 @@ final class CandidateWindow {
             }
         }
         visualPageIndex = pageIndex(containing: selectedIndex, panelWidth: activePanelWidth())
+        let state = RenderState(context: currentContext, selection: selectedIndex,
+            page: visualPageIndex, expandedPages: expandedPages,
+            expandedSelection: expandedSelectionPageOffset, expandedBase: expandedWindowBase,
+            columnBases: expandedColumnBases, characters: characterSelectionText,
+            characterSelection: characterSelectionIndex, preedit: projectionPreedit,
+            width: activePanelWidth())
+        guard state != lastRenderState else { return }
+        lastRenderState = state
+        renderingProbe?.renders += 1
+        if isExpanded || isSingleCharacterSelectionActive || compactRowButtons.isEmpty {
+            candidateStack.arrangedSubviews.forEach {
+                candidateStack.removeArrangedSubview($0)
+                $0.removeFromSuperview()
+            }
+            compactRowButtons.removeAll()
+            compactRowSeparators.removeAll()
+        }
         pagingControls.isHidden = isExpanded || isSingleCharacterSelectionActive
             || !compactPagination(panelWidth: activePanelWidth()).showsControls
         pagingControls.update(canGoBack: canPageBackward, canGoForward: canPageForward)
@@ -1726,7 +1586,6 @@ final class CandidateWindow {
         } else {
             renderCompactRow()
         }
-        applyAppearance()
         updateCandidateDocumentSize()
     }
 
@@ -1737,23 +1596,42 @@ final class CandidateWindow {
 
         let panelWidth = activePanelWidth()
         let indices = currentVisualCandidateIndices(panelWidth: panelWidth)
-        let renderedIndices = indices
-        for (offset, i) in renderedIndices.enumerated() {
+        let maximumWidth = candidateMaxWidth(panelWidth: panelWidth)
+        var views: [NSView] = []
+        for (offset, i) in indices.enumerated() {
             if offset > 0 {
-                candidateStack.addArrangedSubview(candidateSeparatorView())
+                if compactRowSeparators.count < offset {
+                    compactRowSeparators.append(candidateSeparatorView())
+                }
+                let separator = compactRowSeparators[offset - 1]
+                separator.textColor = RimeUI.borderStrong
+                views.append(separator)
             }
             let c = compactCandidate(at: i, visibleIndex: offset)
-            candidateStack.addArrangedSubview(candidateButton(
+            let button = candidateButton(
+                reusing: compactRowButtons.indices.contains(offset) ? compactRowButtons[offset] : nil,
                 pageOffset: 0,
                 index: i,
                 candidate: c,
                 highlighted: i == selectedIndex,
                 compact: true,
                 width: nil,
-                maxWidth: candidateMaxWidth(panelWidth: panelWidth)
-            ))
+                maxWidth: maximumWidth
+            )
+            if compactRowButtons.count <= offset { compactRowButtons.append(button) }
+            views.append(button)
         }
-
+        let retained = Set(views.map(ObjectIdentifier.init))
+        for view in candidateStack.arrangedSubviews where !retained.contains(ObjectIdentifier(view)) {
+            candidateStack.removeArrangedSubview(view)
+            view.removeFromSuperview()
+        }
+        for view in views where view.superview !== candidateStack {
+            candidateStack.addArrangedSubview(view)
+        }
+        // Do not retain a no-longer-visible candidate's text in the reuse pool.
+        compactRowButtons = Array(compactRowButtons.prefix(indices.count))
+        compactRowSeparators = Array(compactRowSeparators.prefix(max(0, indices.count - 1)))
     }
 
     private func renderExpandedMatrix() {
@@ -1792,7 +1670,7 @@ final class CandidateWindow {
             row.spacing = Self.candidateSpacing
             row.translatesAutoresizingMaskIntoConstraints = false
             row.heightAnchor.constraint(equalToConstant: compactCandidateButtonHeight(
-                for: CandidateWindowMetrics.current
+                for: layoutMetrics
             )).isActive = true
 
             let displayedCandidates = renderedCandidates
@@ -1960,6 +1838,7 @@ final class CandidateWindow {
     }
 
     private func candidateButton(
+        reusing existing: CandidatePillButton? = nil,
         pageOffset: Int,
         index: Int,
         candidate: RimeCandidateModel,
@@ -1969,8 +1848,9 @@ final class CandidateWindow {
         maxWidth: CGFloat? = nil,
         showsLabel: Bool = true,
         tag: Int? = nil
-    ) -> NSButton {
-        let button = CandidatePillButton()
+    ) -> CandidatePillButton {
+        let button = existing ?? CandidatePillButton()
+        if existing == nil { renderingProbe?.buttonCreations += 1 }
         button.tag = tag ?? candidateTag(pageOffset: pageOffset, index: index)
         button.target = self
         button.action = #selector(candidateTapped(_:))
@@ -1982,9 +1862,7 @@ final class CandidateWindow {
                 ? "\(candidate.label) \(candidate.text)"
                 : candidate.text
         )
-        if !candidate.comment.isEmpty {
-            button.setAccessibilityHelp(candidate.comment)
-        }
+        button.setAccessibilityHelp(candidate.comment.isEmpty ? nil : candidate.comment)
         button.applyAppearance(highlighted: highlighted)
         button.toolTip = candidate.comment.isEmpty
             ? candidate.text
@@ -1996,26 +1874,23 @@ final class CandidateWindow {
                                                        compact: compact,
                                                        showsLabel: showsLabel))
         let cappedWidth = maxWidth.map { min(naturalWidth, $0) } ?? naturalWidth
-        NSLayoutConstraint.activate([
-            button.widthAnchor.constraint(equalToConstant: width ?? cappedWidth),
-            button.heightAnchor.constraint(equalToConstant: compact
-                ? compactCandidateButtonHeight(for: CandidateWindowMetrics.current)
-                : 32),
-        ])
+        button.setCandidateSize(width: width ?? cappedWidth, height: compact
+            ? compactCandidateButtonHeight(for: layoutMetrics) : 32)
         return button
     }
 
     private func candidateTitle(
         _ c: RimeCandidateModel,
         highlighted: Bool,
-        showsLabel: Bool = true
+        showsLabel: Bool = true,
+        measuring: Bool = false
     ) -> NSAttributedString {
-        let metrics = CandidateWindowMetrics.current
+        let metrics = layoutMetrics
         let line = NSMutableAttributedString()
-        let labelColor = highlighted
+        let labelColor = measuring ? NSColor.labelColor : highlighted
             ? RimeUI.selectedCandidateTextColor
             : RimeUI.textSecondary
-        let textColor = highlighted
+        let textColor = measuring ? NSColor.labelColor : highlighted
             ? RimeUI.selectedCandidateTextColor
             : RimeUI.textPrimary
         let labelFont = NSFont.monospacedDigitSystemFont(ofSize: metrics.labelFontSize,
@@ -2049,7 +1924,7 @@ final class CandidateWindow {
                 string: " \(c.comment)",
                 attributes: [
                     .font: annotationFont,
-                    .foregroundColor: highlighted
+                    .foregroundColor: measuring ? NSColor.labelColor : highlighted
                         ? RimeUI.selectedCandidateTextColor
                         : RimeUI.textMuted,
                     .baselineOffset: annotationBaseline,
@@ -2059,7 +1934,7 @@ final class CandidateWindow {
         return line
     }
 
-    private func candidateSeparatorView() -> NSView {
+    private func candidateSeparatorView() -> NSTextField {
         let label = NSTextField(labelWithString: "|")
         label.font = .systemFont(ofSize: 10, weight: .regular)
         label.textColor = RimeUI.borderStrong
@@ -2075,7 +1950,7 @@ final class CandidateWindow {
         compact: Bool,
         showsLabel: Bool = true
     ) -> CGFloat {
-        candidateTitle(c, highlighted: highlighted, showsLabel: showsLabel).size().width
+        candidateTitle(c, highlighted: highlighted, showsLabel: showsLabel, measuring: true).size().width
             + (compact ? Self.compactCandidateHorizontalPadding : 14)
     }
 
@@ -2117,8 +1992,17 @@ final class CandidateWindow {
     }
 
     private func stableCandidateWidth(_ candidate: RimeCandidateModel) -> CGFloat {
-        ceil(max(measuredCandidateWidth(candidate, highlighted: true, compact: true),
-                 measuredCandidateWidth(candidate, highlighted: false, compact: true)))
+        // Numeric labels use a monospaced font. Measure once with "1" and
+        // reuse that width for every visible ordinal, without changing labels.
+        let key = usesNumericSelectionKeys && !candidate.label.isEmpty
+            ? RimeCandidateModel(text: candidate.text, comment: candidate.comment, label: "1")
+            : candidate
+        if let width = measuredWidths[key] { return width }
+        renderingProbe?.widthMeasurements += 1
+        let width = ceil(max(measuredCandidateWidth(key, highlighted: true, compact: true),
+                             measuredCandidateWidth(key, highlighted: false, compact: true)))
+        measuredWidths[key] = width
+        return width
     }
 
     private func candidateAvailableWidth(panelWidth: CGFloat) -> CGFloat {
@@ -2137,12 +2021,16 @@ final class CandidateWindow {
     }
 
     private func compactPagination(panelWidth: CGFloat) -> CandidatePagination {
-        CandidatePagination(widths: currentContext.candidates.indices.map {
+        if let cachedPagination, cachedPagination.width == panelWidth { return cachedPagination.result }
+        renderingProbe?.paginationBuilds += 1
+        let result = CandidatePagination(widths: currentContext.candidates.indices.map {
             stableCandidateWidth(compactCandidate(at: $0, visibleIndex: 0))
         },
             availableWidth: panelWidth - Self.barHorizontalPadding * 2,
-            limit: CandidateWindowMetrics.current.candidatesPerPage,
+            limit: layoutMetrics.candidatesPerPage,
             hasEngineNeighbours: currentContext.pageNo > 0 || !currentContext.isLastPage)
+        cachedPagination = (panelWidth, result)
+        return result
     }
 
     private func compactCandidate(at index: Int, visibleIndex: Int) -> RimeCandidateModel {
@@ -2178,7 +2066,7 @@ final class CandidateWindow {
     }
 
     private func updateCandidateDocumentSize() {
-        let metrics = CandidateWindowMetrics.current
+        let metrics = layoutMetrics
         let fit = candidateStack.fittingSize
         let height = candidateAreaHeight(for: metrics)
         candidateStack.setFrameSize(NSSize(width: max(fit.width, candidateScroll.contentSize.width),
@@ -2209,8 +2097,20 @@ final class CandidateWindow {
         pagingControls.update(canGoBack: canPageBackward, canGoForward: canPageForward)
     }
 
+    private func reloadMetrics() {
+        setLayoutMetrics(CandidateWindowMetrics.current)
+    }
+
+    private func setLayoutMetrics(_ metrics: CandidateWindowMetrics) {
+        layoutMetrics = metrics
+        measuredWidths.removeAll(keepingCapacity: true)
+        cachedPagination = nil
+        lastRenderState = nil
+        applyMetrics()
+    }
+
     private func applyMetrics() {
-        let metrics = CandidateWindowMetrics.current
+        let metrics = layoutMetrics
         preeditLabel.font = .monospacedSystemFont(ofSize: 12, weight: .regular)
         preeditHeightConstraint.constant = metrics.preeditHeight
         updatePreeditWidth()
@@ -2255,6 +2155,118 @@ final class CandidateWindow {
     /// AppKit-backed seam for `buffer-window-smoke`. Unlike the pure viewport
     /// math above, this exercises the real NSPanel/NSScrollView/NSStackView
     /// hierarchy and catches a reintroduced autoresizing-mask conflict.
+    /// Native regression for the actual render path. It uses private fixture
+    /// state, never user preferences or the installed IME's focus/session.
+    static func renderingPerformanceSmoke() -> Bool {
+        _ = NSApplication.shared
+        let window = CandidateWindow()
+        defer { window.hideAll() }
+        func metrics(width: CGFloat = 622, font: CGFloat = 15, count: Int = 9) -> CandidateWindowMetrics {
+            CandidateWindowMetrics(baseWidth: width, compactStripHeight: 32,
+                compactCandidateHeight: 24, preeditHeight: 22,
+                candidateFontSize: font, labelFontSize: 10, candidatesPerPage: count)
+        }
+        window.setLayoutMetrics(metrics())
+        window.lastCaretRect = NSRect(x: 100, y: 200, width: 1, height: 20)
+        window.preeditPill.isHidden = true
+        window.strip.isHidden = false
+        let probe = RenderingProbe()
+        window.renderingProbe = probe
+        var context = RimeContextModel()
+        context.isLastPage = true
+        context.pageSize = 9
+        context.candidates = (1...9).map { RimeCandidateModel(text: "词\($0)", comment: "", label: String($0)) }
+        window.currentContext = context
+        window.renderCandidates()
+        var failures: [String] = []
+        func check(_ condition: Bool, _ message: String) {
+            if !condition { failures.append(message) }
+        }
+        check(probe.widthMeasurements == 9 && probe.paginationBuilds == 1,
+              "one measurement per candidate and one pagination per context")
+        let originalButtons = window.compactRowButtons.map(ObjectIdentifier.init)
+        let firstRenders = probe.renders
+        for _ in 0..<100 {
+            window.currentContext = context
+            window.renderCandidates()
+            _ = window.layoutPanel(caretRect: window.lastCaretRect, bundleId: "smoke")
+            _ = window.canPageForward
+            _ = window.fittedPanelWidth()
+        }
+        check(probe.widthMeasurements == 9 && probe.paginationBuilds == 1
+              && probe.renders == firstRenders, "unchanged updates do not measure or redraw")
+        window.selectedIndex = 1
+        window.renderCandidates()
+        check(probe.widthMeasurements == 9 && probe.paginationBuilds == 1,
+              "highlight changes reuse width and pagination")
+        check(window.compactRowButtons.map(ObjectIdentifier.init) == originalButtons,
+              "highlight changes reuse native controls")
+        context.isLastPage = false
+        window.currentContext = context
+        window.renderCandidates()
+        check(window.canPageForward && probe.paginationBuilds == 2 && probe.widthMeasurements == 9,
+              "engine continuation invalidates pagination without remeasuring text")
+        context.isLastPage = true
+        context.candidates[0] = RimeCandidateModel(text: "较长的候选词", comment: "注释", label: "1")
+        window.currentContext = context
+        window.renderCandidates()
+        check(probe.widthMeasurements == 18 && probe.paginationBuilds == 3,
+              "changed text and annotation invalidate widths once")
+        window.setLayoutMetrics(metrics(width: 360, font: 24, count: 5))
+        window.renderCandidates()
+        let pages = window.candidatePages(panelWidth: window.activePanelWidth())
+        check(pages.flatMap { $0 } == Array(0..<9) && pages.allSatisfy { $0.count <= 5 },
+              "font/width/count changes invalidate cache without losing overflow")
+        let visible = window.currentVisualCandidateIndices(panelWidth: window.activePanelWidth())
+        check(window.compactRowButtons.count == visible.count,
+              "resizing removes surplus controls")
+        context.usesNumericSelectionKeys = false
+        context.candidates[0] = RimeCandidateModel(text: "词", comment: "", label: "custom")
+        window.currentContext = context
+        window.selectedIndex = 0
+        window.renderCandidates()
+        check(window.compactRowButtons.first?.accessibilityLabel()?.hasPrefix("custom ") == true,
+              "custom selection keys invalidate numeric-label cache")
+        check(window.compactRowButtons.first?.accessibilityHelp() == nil,
+              "reused controls clear removed annotations")
+        window.setLayoutMetrics(metrics())
+        context.usesNumericSelectionKeys = true
+        context.candidates = (1...9).map { RimeCandidateModel(text: "词\($0)", comment: "", label: String($0)) }
+        window.currentContext = context
+        window.renderCandidates()
+        let warmButtons = window.compactRowButtons.map(ObjectIdentifier.init)
+        var times: [Double] = []
+        let measuredBefore = probe.widthMeasurements
+        let paginatedBefore = probe.paginationBuilds
+        for index in 0..<150 {
+            context.input = "fixture-\(index)"
+            context.candidates[0] = RimeCandidateModel(text: index.isMultiple(of: 2) ? "新词" : "改词", comment: "", label: "1")
+            let start = CFAbsoluteTimeGetCurrent()
+            window.currentContext = context
+            window.renderCandidates()
+            _ = window.layoutPanel(caretRect: window.lastCaretRect, bundleId: "smoke")
+            times.append((CFAbsoluteTimeGetCurrent() - start) * 1_000)
+        }
+        check(probe.widthMeasurements - measuredBefore == 150 * 9
+              && probe.paginationBuilds - paginatedBefore == 150,
+              "changed updates perform one width pass and one pagination")
+        check(window.compactRowButtons.map(ObjectIdentifier.init) == warmButtons,
+              "typing reuses controls and constraints")
+        check(window.compactRowButtons.allSatisfy { button in
+            button.constraints.filter { $0.identifier?.hasPrefix("candidate.size.") == true }.count == 2
+        }, "reused buttons retain exactly two size constraints")
+        window.hideAll()
+        check(window.compactRowButtons.isEmpty && window.measuredWidths.isEmpty
+              && window.lastRenderState == nil && window.candidateStack.arrangedSubviews.isEmpty,
+              "retirement scrubs text caches and views")
+        times.sort()
+        print(String(format: "candidate render fixture: p50=%.3fms p95=%.3fms max=%.3fms (native layout, excludes IMK/chord)",
+                     times[times.count / 2], times[Int(Double(times.count - 1) * 0.95)], times.last!))
+        for failure in failures { print("FAILED: \(failure)") }
+        print("candidate-rendering-smoke: \(failures.isEmpty ? "OK" : "FAILED") (cached/changed updates, invalidation, reuse, privacy)")
+        return failures.isEmpty
+    }
+
     static func matrixLayoutSnapshotForSmoke(rowCount: Int) -> CandidateMatrixLayoutSnapshot {
         let candidateWindow = CandidateWindow()
         let initialPanelLevel = candidateWindow.panel.level.rawValue
@@ -2430,13 +2442,6 @@ final class CandidateWindow {
             candidateWindow.renderCandidates()
             candidateWindow.showPanel(reason: "smoke")
         }
-        func drainKeystroke() {
-            let deadline = Date(timeIntervalSinceNow: 1)
-            while candidateWindow.commitContinuationArmed, Date() < deadline {
-                _ = RunLoop.main.run(mode: .default,
-                                     before: Date(timeIntervalSinceNow: 0.01))
-            }
-        }
 
         present()
         let presented = candidateWindow.panel.isVisible
@@ -2459,31 +2464,22 @@ final class CandidateWindow {
         let sameKeystrokeContinuedWithoutEntrance = candidateWindow.panel.isVisible
             && candidateWindow.visibilityPhase == .visible
             && candidateWindow.panel.alphaValue == 1
-        let continuationConsumedByOneShow = !candidateWindow.commitContinuationArmed
-
-        // A commit whose keystroke ends without a follow-up composition must
-        // not leak its continuation into a later, genuinely new entrance.
-        candidateWindow.retireForCommit(owner: owner)
-        drainKeystroke()
-        let continuationExpiredAfterKeystroke = !candidateWindow.commitContinuationArmed
-
-        // Nothing was on screen to continue from.
-        candidateWindow.retireForCommit(owner: owner)
-        let hiddenRetirementDidNotArmContinuation = !candidateWindow.commitContinuationArmed
-
+        candidateWindow.hide(owner: owner)
+        let ordinaryHideIsImmediate = !candidateWindow.panel.isVisible
+            && candidateWindow.visibilityPhase == .hidden
+            && candidateWindow.currentContext.candidates.isEmpty
         present()
-        let reduceMotion = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let laterEntranceIsImmediate = candidateWindow.panel.isVisible
+            && candidateWindow.visibilityPhase == .visible
+            && candidateWindow.panel.alphaValue == 1
         return CandidateCommitRetirementSnapshot(
             presented: presented,
             strangerRetirementIgnored: strangerRetirementIgnored,
             orderedOutSynchronously: orderedOutSynchronously,
             retiredLogicalPresentation: retiredLogicalPresentation,
             sameKeystrokeContinuedWithoutEntrance: sameKeystrokeContinuedWithoutEntrance,
-            continuationConsumedByOneShow: continuationConsumedByOneShow,
-            continuationExpiredAfterKeystroke: continuationExpiredAfterKeystroke,
-            hiddenRetirementDidNotArmContinuation: hiddenRetirementDidNotArmContinuation,
-            laterEntrancePhase: candidateWindow.visibilityPhase,
-            expectedEntrancePhase: reduceMotion ? .visible : .fadingIn
+            ordinaryHideIsImmediate: ordinaryHideIsImmediate,
+            laterEntranceIsImmediate: laterEntranceIsImmediate
         )
     }
 
@@ -2770,11 +2766,6 @@ final class CandidateWindow {
         )
     }
 
-    private func contextSignature(_ ctx: RimeContextModel) -> String {
-        let candidates = ctx.candidates.map { "\($0.label):\($0.text):\($0.comment)" }.joined(separator: "|")
-        return "\(ctx.input)#\(ctx.preedit)#\(ctx.pageNo)#\(candidates)"
-    }
-
     private func clamp(_ index: Int, count: Int) -> Int {
         guard count > 0 else { return 0 }
         return min(max(index, 0), count - 1)
@@ -2933,6 +2924,22 @@ private final class CandidatePillButton: CandidateTextButton {
     private var trackingArea: NSTrackingArea?
     private var isHovered = false
     private var isSelectedCandidate = false
+    private var candidateWidthConstraint: NSLayoutConstraint?
+    private var candidateHeightConstraint: NSLayoutConstraint?
+
+    func setCandidateSize(width: CGFloat, height: CGFloat) {
+        if candidateWidthConstraint == nil {
+            candidateWidthConstraint = widthAnchor.constraint(equalToConstant: width)
+            candidateHeightConstraint = heightAnchor.constraint(equalToConstant: height)
+            candidateWidthConstraint?.identifier = "candidate.size.width"
+            candidateHeightConstraint?.identifier = "candidate.size.height"
+            NSLayoutConstraint.activate([candidateWidthConstraint!, candidateHeightConstraint!])
+        } else {
+            candidateWidthConstraint?.constant = width
+            candidateHeightConstraint?.constant = height
+        }
+    }
+
 
     init() {
         super.init(cornerRadius: CandidateLayout.selectedCandidateCornerRadius)

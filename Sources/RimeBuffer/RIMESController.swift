@@ -2009,7 +2009,7 @@ final class RIMESController: IMKInputController {
             // is too late for a field whose first key is Return.
             updateUI(client: activeClient)
         }
-        BufferWindowController.shared.refresh()
+        BufferWindowController.shared.refreshForFocusChange()
     }
 
     /// Post-start initialization, shared by activateServer AND the key paths —
