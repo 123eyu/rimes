@@ -43,6 +43,7 @@ struct ParitySettings::Impl {
   HWND parent = nullptr;
   Settings config;
   std::map<unsigned, HWND> controls;
+  std::vector<ui::DipRect> edit_frames;
   std::map<std::string, std::wstring> secrets;
   std::size_t selected = 0;
   core::Json profile;
@@ -88,6 +89,11 @@ struct ParitySettings::Impl {
                  WS_TABSTOP | WS_VSCROLL |
                      (editable ? CBS_DROPDOWN : CBS_DROPDOWNLIST) |
                      CBS_HASSTRINGS | CBS_OWNERDRAWFIXED);
+    SetWindowLongPtrW(h, GWL_STYLE,
+                      GetWindowLongPtrW(h, GWL_STYLE) & ~WS_BORDER);
+    SetWindowPos(h, nullptr, 0, 0, 0, 0,
+                 SWP_FRAMECHANGED | SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER |
+                     SWP_NOACTIVATE);
     for (const auto *text : entries)
       SendMessageW(h, CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(text));
   }
@@ -103,11 +109,18 @@ struct ParitySettings::Impl {
       p.base_url = Utf8(Text(H(6006)));
     p.model = Utf8(Text(H(6007)));
     auto key = Text(H(6008));
-    if (!key.empty() && p.kind == "openai-compatible") {
-      auto &old = secrets[p.id];
-      if (!old.empty())
-        SecureZeroMemory(old.data(), old.size() * sizeof(wchar_t));
-      old = key;
+    if (p.kind == "openai-compatible") {
+      auto prior = secrets.find(p.id);
+      if (prior != secrets.end()) {
+        if (!prior->second.empty())
+          SecureZeroMemory(prior->second.data(),
+                           prior->second.size() * sizeof(wchar_t));
+        secrets.erase(prior);
+      }
+      // A blank field preserves the credential already in the vault, not a
+      // draft the user typed and subsequently erased in this dialog.
+      if (!key.empty())
+        secrets.emplace(p.id, key);
     }
     if (!key.empty())
       SecureZeroMemory(key.data(), key.size() * sizeof(wchar_t));
@@ -188,10 +201,12 @@ struct ParitySettings::Impl {
           std::filesystem::file_size(file) > 2 * 1024 * 1024)
         throw std::runtime_error("键位文件过大或类型无效。");
       std::ifstream in(file, std::ios::binary);
-      auto imported = core::Json::parse(in, [](int depth, core::Json::parse_event_t, core::Json&) {
-        if (depth > 16) throw std::runtime_error("键位文件嵌套过深。");
-        return true;
-      });
+      auto imported = core::Json::parse(
+          in, [](int depth, core::Json::parse_event_t, core::Json &) {
+            if (depth > 16)
+              throw std::runtime_error("键位文件嵌套过深。");
+            return true;
+          });
       (void)ChordProfile::Parse(imported);
       imported["id"] = ID();
       profile = std::move(imported);
@@ -226,7 +241,7 @@ void ParitySettings::Create(HWND parent, const Settings &settings) {
   p.Label(6105, L"连接方式");
   p.Label(6106, L"API 地址");
   p.Label(6107, L"模型");
-  p.Label(6108, L"密钥（留空保留）");
+  p.Label(6108, L"密钥（留空保留已保存密钥）");
   p.Label(
       6110,
       L"保存后，该配置用于 AI 生成与 AI 翻译。每个 API 的密钥独立存储。\nCodex "
@@ -288,6 +303,7 @@ void ParitySettings::Create(HWND parent, const Settings &settings) {
 void ParitySettings::Layout(ui::SettingsPage page, int subpage,
                             const ui::DipRect &body, unsigned dpi, HFONT font) {
   auto &p = *impl_;
+  p.edit_frames.clear();
   for (auto [id, h] : p.controls) {
     ShowWindow(h, SW_HIDE);
     SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
@@ -296,23 +312,46 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
   auto put = [&](unsigned id, float left, float top, float width,
                  float height) {
     const float scale = static_cast<float>(dpi) / 96;
+    wchar_t kind[20]{};
+    GetClassNameW(p.H(id), kind, 20);
+    if (_wcsicmp(kind, L"EDIT") == 0) {
+      p.edit_frames.push_back(
+          {x + left, y + top, x + left + width, y + top + height});
+      left += 8;
+      top += 6;
+      width -= 16;
+      height -= 11;
+    }
     MoveWindow(p.H(id), static_cast<int>((x + left) * scale),
                static_cast<int>((y + top) * scale),
                static_cast<int>(width * scale),
                static_cast<int>(height * scale), TRUE);
-    wchar_t kind[20]{};
-    GetClassNameW(p.H(id), kind, 20);
     if (std::wstring(kind) == L"ComboBox") {
       SendMessageW(p.H(id), CB_SETITEMHEIGHT, static_cast<WPARAM>(-1),
                    static_cast<LPARAM>(23 * scale));
       SendMessageW(p.H(id), CB_SETITEMHEIGHT, 0,
                    static_cast<LPARAM>(23 * scale));
+      if ((GetWindowLongPtrW(p.H(id), GWL_STYLE) & 3) == CBS_DROPDOWN) {
+        COMBOBOXINFO info{sizeof(info)};
+        RECT client{};
+        if (GetComboBoxInfo(p.H(id), &info) &&
+            GetClientRect(p.H(id), &client)) {
+          const int inset = static_cast<int>(8 * scale);
+          const int text_height = static_cast<int>(17 * scale);
+          SetWindowPos(info.hwndItem, nullptr, inset,
+                       (client.bottom - text_height) / 2,
+                       client.right - static_cast<int>(36 * scale), text_height,
+                       SWP_NOZORDER | SWP_NOACTIVATE);
+        }
+      }
     }
     ShowWindow(p.H(id), SW_SHOW);
   };
   auto row = [&](unsigned id, unsigned label, float top, bool combo = false) {
     put(label, 16, top + 5, 210, 24);
-    put(id, 232, top, w - 248, combo ? 150.f : 29.f);
+    const bool number =
+        id == 6012 || id == 6030 || id == 6031 || (id >= 6033 && id <= 6035);
+    put(id, 232, top, number ? 96.f : w - 248, combo ? 150.f : 29.f);
   };
   if (page == ui::SettingsPage::kApi) {
     if (subpage == 0) {
@@ -368,6 +407,21 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
       row(6032, 6132, 292, true);
   } else if (page == ui::SettingsPage::kBuffer && subpage == 0)
     row(6031, 6131, 326);
+}
+void ParitySettings::PaintFields(HDC dc, ui::ThemeId theme,
+                                 unsigned dpi) const {
+  const auto &palette = ui::Palette(theme);
+  const float scale = static_cast<float>(dpi) / 96;
+  for (const auto &box : impl_->edit_frames) {
+    const RECT pixels{static_cast<LONG>(box.left * scale),
+                      static_cast<LONG>(box.top * scale),
+                      static_cast<LONG>(box.right * scale),
+                      static_cast<LONG>(box.bottom * scale)};
+    ui::FillRoundRect(dc, pixels, MulDiv(8, static_cast<int>(dpi), 96),
+                      ui::ToColorRef(palette.surface));
+    ui::StrokeRoundRect(dc, pixels, MulDiv(8, static_cast<int>(dpi), 96),
+                        ui::ToColorRef(palette.border));
+  }
 }
 bool ParitySettings::Command(unsigned id, unsigned notification) {
   auto &p = *impl_;

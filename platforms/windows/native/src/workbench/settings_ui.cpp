@@ -145,7 +145,7 @@ void SettingsUiHost::Open(HWND owner, bool visible) {
   CreateOrUpdateChildren();
   parity_ = std::make_unique<ParitySettings>();
   parity_->Create(hwnd_, callbacks_.load ? callbacks_.load() : Settings{});
-  for (const auto id : {6000, 6005, 6011, 6023, 6032})
+  for (const auto id : {6000, 6005, 6007, 6011, 6023, 6032})
     SetWindowSubclass(GetDlgItem(hwnd_, id), ComboProcedure, 1, reinterpret_cast<DWORD_PTR>(this));
   SetTimer(hwnd_, 11, 500, nullptr);
   Relayout();
@@ -570,7 +570,7 @@ LRESULT CALLBACK SettingsUiHost::ComboProcedure(HWND hwnd, UINT message, WPARAM 
     RECT client{}; GetClientRect(hwnd, &client);
     ui::FillRectColor(dc, client, ui::ToColorRef(p.settings_background));
     ui::FillRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(p.surface));
-    ui::StrokeRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(GetFocus() == hwnd ? p.accent : p.border));
+    ui::StrokeRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(GetFocus() == hwnd || IsChild(hwnd, GetFocus()) ? p.accent : p.border));
     RECT arrow = client; arrow.left = arrow.right - MulDiv(26, static_cast<int>(self->dpi_), 96);
     const auto pen = CreatePen(PS_SOLID, (std::max)(1, MulDiv(1, static_cast<int>(self->dpi_), 96)), ui::ToColorRef(p.text_secondary));
     const auto old_pen = SelectObject(dc, pen);
@@ -679,6 +679,7 @@ void SettingsUiHost::Paint(HDC dc) {
   if (!bitmap) {
     if (frame) DeleteDC(frame);
     ui::PaintSettingsShell(dc, layout_, draft_, fonts_, dpi_);
+    if (parity_) parity_->PaintFields(dc, draft_.preview_theme, dpi_);
     return;
   }
   const auto previous = SelectObject(frame, bitmap);
@@ -686,6 +687,7 @@ void SettingsUiHost::Paint(HDC dc) {
   // WM_ERASEBKGND alone cannot prevent a direct GDI clear/draw sequence from
   // exposing an empty intermediate frame when the mouse crosses navigation.
   ui::PaintSettingsShell(frame, layout_, draft_, fonts_, dpi_);
+  if (parity_) parity_->PaintFields(frame, draft_.preview_theme, dpi_);
   BitBlt(dc, 0, 0, client.right, client.bottom, frame, 0, 0, SRCCOPY);
   SelectObject(frame, previous);
   DeleteObject(bitmap);

@@ -310,11 +310,11 @@ inline void PaintSettingsShell(HDC dc, const SettingsLayout& layout,
   } else if (draft.page == SettingsPage::kAppearance) {
     SelectObject(dc, fonts.body);
     SetTextColor(dc, ToColorRef(p.text_secondary));
-    RECT fl = px({layout.body.left, layout.font_edit.top,
+    RECT fl = px({layout.body.left + 16, layout.font_edit.top,
                   layout.font_edit.left - 8.0f, layout.font_edit.bottom});
     DrawTextW(dc, L"候选字号（10–40）", -1, &fl,
               DT_LEFT | DT_VCENTER | DT_SINGLELINE);
-    RECT count_label = px({layout.body.left, layout.candidate_count_edit.top,
+    RECT count_label = px({layout.body.left + 16, layout.candidate_count_edit.top,
       layout.candidate_count_edit.left - 8.f, layout.candidate_count_edit.bottom});
     DrawTextW(dc, L"每页候选数（1–9）", -1, &count_label, DT_LEFT | DT_VCENTER | DT_SINGLELINE);
   } else if (draft.page == SettingsPage::kBuffer && draft.subpage == 0) {

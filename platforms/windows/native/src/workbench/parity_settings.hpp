@@ -13,6 +13,7 @@ public:
   void Create(HWND parent, const Settings &settings);
   void Layout(ui::SettingsPage page, int subpage, const ui::DipRect &body,
               unsigned dpi, HFONT font);
+  void PaintFields(HDC dc, ui::ThemeId theme, unsigned dpi) const;
   bool Command(unsigned id, unsigned notification);
   void Tick();
   bool Read(Settings *settings, std::string *error);

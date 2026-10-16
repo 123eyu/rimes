@@ -243,10 +243,10 @@ struct SettingsLayout {
     }
   } else if (draft.page == SettingsPage::kAppearance) {
     const float fy = layout.body.top;
-    layout.font_edit = {layout.body.left + 170.0f, fy, layout.body.left + 250.0f,
-                        fy + 26.0f};
-    layout.candidate_count_edit = {layout.font_edit.left, fy + 44.f, layout.font_edit.right, fy + 70.f};
-    layout.check_vertical = {layout.body.left, fy + 88.f, layout.body.right, fy + 118.f};
+    layout.font_edit = {layout.body.left + 232.0f, fy, layout.body.left + 328.0f,
+                        fy + 29.0f};
+    layout.candidate_count_edit = {layout.font_edit.left, fy + 44.f, layout.font_edit.right, fy + 73.f};
+    layout.check_vertical = {layout.body.left + 16.f, fy + 88.f, layout.body.right, fy + 118.f};
   } else if (draft.page == SettingsPage::kBuffer && draft.subpage == 1) {
     const float x = layout.body.left + 200, y = layout.body.top;
     layout.auto_send_combo = {x, y + 22, layout.body.right - 18, y + 52};
@@ -271,22 +271,6 @@ struct SettingsLayout {
                              layout.body.left + 170, layout.body.top + 202};
     layout.shortcut_feedback = {layout.body.left, layout.body.top + 220,
                                 layout.body.right, layout.body.top + 310};
-  } else if (draft.page == SettingsPage::kApi) {
-    float y = layout.body.top;
-    auto place = [&](DipRect& edit) {
-      edit = {layout.body.left + 200.0f, y, layout.body.right, y + 26.0f};
-      y += 40.0f;
-    };
-    if (draft.subpage == 0) {
-      place(layout.connector_combo);
-      place(layout.codex_path_edit);
-      place(layout.codex_model_edit);
-      place(layout.base_edit);
-      place(layout.model_edit);
-      place(layout.lang_edit);
-    } else {
-      place(layout.key_edit);
-    }
   }
   if (draft.page == SettingsPage::kAppearance && draft.subpage == 0 &&
       draft.theme_detail >= 0 && draft.theme_detail < 4) {

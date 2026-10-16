@@ -1201,6 +1201,15 @@ void TestParityDraftsAndConnections() {
   Check(saves==2 && mapping && saved.buffer_width==900 && saved.send_hold_ms==1600 &&
     saved.candidate_width==640 && saved.candidate_height==44 && saved.candidate_label_size==12,
     "native keymap, Buffer and candidate fields save through the production settings host");
+  host.OpenPage(nullptr,ui::SettingsPage::kApi,0,false); window=host.hwnd();
+  edit(6008,L"erased-synthetic-key");
+  for (const int selection : {2, 0}) {
+    SendMessageW(GetDlgItem(window,6000),CB_SETCURSEL,selection,0);
+    SendMessageW(window,WM_COMMAND,MAKEWPARAM(6000,CBN_SELCHANGE),reinterpret_cast<LPARAM>(GetDlgItem(window,6000)));
+  }
+  edit(6008,L""); host.Close(true);
+  Check(saves==3 && keys.empty(),
+    "erasing a previously captured key draft preserves the saved vault credential");
 }
 
 int main() {

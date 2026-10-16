@@ -21,7 +21,8 @@
 | RimesChordProfile | isaac2026 内置键表、非法/重复映射、组键间隔、重复及迟到抬键、左右批次配对、上下文重置 |
 | RimesConnections | 旧配置迁移、配置切换、外观/键位持久化、独立测试凭据、保存失败回滚、旧请求失效；不使用真实 API 密钥 |
 | RimesSettingsUi | 原生控件的配置草稿、保存/取消、多连接器密钥隔离、键位编辑、候选尺寸、Buffer 参数 |
-| RimesRuntime / RimesCodexCli | 分块确认、失焦撤销、长按/重复抬键、取消、超时、子进程退出、CLI 输出解析 |
+| RimesRuntime / RimesCodexConnector | 分块确认、失焦撤销、长按/重复抬键、取消、超时、子进程退出、CLI 输出解析 |
+| API 本机模拟服务 | 流式 Unicode、断流、取消、断网、超时、模型列表、鉴权失败、畸形/超大响应、拒绝重定向；使用临时测试密钥 |
 | 完整产品数据及原生输入集成 | 全词库、各方案、真实 librime 的 isaac2026 同时/相邻批次、自定义映射、Buffer 与上下文隔离 |
 | AppContainer / LPAC 集成 | x64/x86 输入通道、容器权限边界；仍需实际开始菜单复测 |
 | 安装生命周期 | 注册恢复、双架构文件、升级/卸载脚本、完整 EXE 和包校验 |
