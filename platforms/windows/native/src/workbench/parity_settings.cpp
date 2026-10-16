@@ -125,6 +125,7 @@ struct ParitySettings::Impl {
     Set(H(6004), Wide(p.name));
     SendMessageW(H(6005), CB_SETCURSEL, p.kind == "codex-cli" ? 1 : 0, 0);
     Set(H(6006), Wide(p.kind == "codex-cli" ? p.executable : p.base_url));
+    SendMessageW(H(6007), CB_RESETCONTENT, 0, 0);
     Set(H(6007), Wide(p.model));
     Set(H(6008), secrets.contains(p.id) ? secrets.at(p.id) : L"");
     EnableWindow(H(6008), p.kind != "codex-cli");
@@ -308,7 +309,7 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
   };
   auto row = [&](unsigned id, unsigned label, float top, bool combo = false) {
     put(label, 16, top + 5, 210, 24);
-    put(id, 232, top, w - 248, combo ? 150 : 29);
+    put(id, 232, top, w - 248, combo ? 150.f : 29.f);
   };
   if (page == ui::SettingsPage::kApi) {
     if (subpage == 0) {

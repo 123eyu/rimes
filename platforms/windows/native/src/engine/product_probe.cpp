@@ -55,7 +55,7 @@ bool TestNativeIsaac2026(RimeEngine& engine, const std::filesystem::path& log_di
     return connection.Handle(request,peer,&response)==broker::ClientAction::kContinue;
   };
   core::InputSessionOpened opened;
-  if (!core::EncodeClientHello({peer,0,core::kModifierSnapshotsCapability,"IsaacProbe"},&payload) ||
+  if (!core::EncodeClientHello({peer,0,core::kModifierSnapshotsCapability | core::kPendingChordCapability,"IsaacProbe"},&payload) ||
       !exchange(core::MessageType::kClientHello,std::move(payload)) ||
       !core::EncodeOpenInputSession({1,{}},&payload) ||
       !exchange(core::MessageType::kOpenInputSession,std::move(payload)) ||
@@ -78,6 +78,15 @@ bool TestNativeIsaac2026(RimeEngine& engine, const std::filesystem::path& log_di
     std::cerr<<"Native isaac2026 adjacent batches failed\n"; return false;
   }
   if(!batch("dvi") || !key(VK_SPACE,true) || state.commit_text!="你" || !key(VK_SPACE,false)) return false;
+  if(!batch("dv") || !key('I',true) || !key(VK_SPACE,true) || state.commit_text!="你" ||
+      !key('I',false) || !key(VK_SPACE,false)) {
+    std::cerr<<"Adjacent chord must settle before a command while a key remains held\n"; return false;
+  }
+  if(!key('D',true) || !(state.state_flags & static_cast<unsigned>(core::InputStateFlags::kPendingChord)) ||
+      !state.composition.empty() || !key(VK_ESCAPE,true) ||
+      (state.state_flags & static_cast<unsigned>(core::InputStateFlags::kPendingChord)) || !key('D',false)) {
+    std::cerr<<"Pending-key routing state must not fabricate preedit or survive cancellation\n"; return false;
+  }
   auto config=runtime.Configuration(); config.chord_profile=workbench::BuiltinChordProfile();
   for(auto& mapping:config.chord_profile["mappings"]) if(mapping["keys"]=="dvi") mapping["output"]="hao";
   if(!runtime.Configure(config,{},false,nullptr) || !batch("dvi") || !key(VK_SPACE,true) || state.commit_text!="好" || !key(VK_SPACE,false)) {

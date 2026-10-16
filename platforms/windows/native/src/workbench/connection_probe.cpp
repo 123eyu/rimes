@@ -79,7 +79,8 @@ ConnectionProbeResult ProbeConnection(const ConnectionProfile &profile,
                                nullptr, 0));
     if (!session)
       throw std::runtime_error("network");
-    WinHttpSetTimeouts(session.get(), 3000, 3000, 3000, 3000);
+    if (!WinHttpSetTimeouts(session.get(), 3000, 3000, 3000, 3000))
+      throw std::runtime_error("network");
     Handle connection(
         WinHttpConnect(session.get(), host.c_str(), url.nPort, 0));
     if (!connection)
@@ -91,8 +92,8 @@ ConnectionProbeResult ProbeConnection(const ConnectionProfile &profile,
     if (!request)
       throw std::runtime_error("network");
     DWORD redirect = WINHTTP_OPTION_REDIRECT_POLICY_NEVER;
-    WinHttpSetOption(request.get(), WINHTTP_OPTION_REDIRECT_POLICY, &redirect,
-                     sizeof(redirect));
+    if (!WinHttpSetOption(request.get(), WINHTTP_OPTION_REDIRECT_POLICY, &redirect,
+                     sizeof(redirect))) throw std::runtime_error("network");
     std::wstring authorization =
         secret.empty() ? L"" : L"Authorization: Bearer " + secret + L"\r\n";
     Wipe wipe_header{authorization};
@@ -140,8 +141,9 @@ ConnectionProbeResult ProbeConnection(const ConnectionProfile &profile,
     result.message = "已读取 " + std::to_string(result.models.size()) +
                      " 个模型。选择模型后保存。";
   } catch (...) {
-    result.message = "连接检查失败。请检查地址、密钥、网络和 /models "
-                     "支持；也可手动填写模型。";
+    result.message = profile.kind == "codex-cli"
+        ? "未找到可用的 Codex CLI。请安装官方 CLI，填写 codex.exe 路径，并在终端运行 codex login。"
+        : "连接检查失败。请检查地址、密钥、网络和 /models 支持；也可手动填写模型。";
   }
   return result;
 }

@@ -86,6 +86,7 @@ class BrokerConnection final {
   bool hello_received_ = false;
   bool modifier_snapshots_ = false;
   bool key_routing_ = false;
+  bool pending_chord_ = false;
   workbench::Runtime* runtime_;
   workbench::Runtime* settings_;
   std::function<bool()> open_settings_;

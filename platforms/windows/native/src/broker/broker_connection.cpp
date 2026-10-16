@@ -178,10 +178,11 @@ ClientAction BrokerConnection::HandleHello(const core::Frame& request,
   broker_hello.process_id = GetCurrentProcessId();
   broker_hello.session_id = broker_session_id_;
   broker_hello.capabilities = (runtime_ ? 1ULL : 0ULL) |
-      core::kModifierSnapshotsCapability | core::kKeyRoutingCapability;
+      core::kModifierSnapshotsCapability | core::kKeyRoutingCapability | core::kPendingChordCapability;
   modifier_snapshots_ =
       (hello.capabilities & core::kModifierSnapshotsCapability) != 0;
   key_routing_ = (hello.capabilities & core::kKeyRoutingCapability) != 0;
+  pending_chord_ = (hello.capabilities & core::kPendingChordCapability) != 0;
   peer_process_ = verified_client_process_id;
   broker_hello.broker_version = std::string(kBrokerVersion);
   std::vector<std::byte> payload;
@@ -247,13 +248,13 @@ ClientAction BrokerConnection::HandleOpenSession(const core::Frame& request,
     state.schema_id = open.schema_id;
     if (settings_) {
       const auto config = settings_->Configuration();
-      if (!engine_->Configure(engine_session, config.schema == "my_combo" ? "rime_ice" : config.schema, config.ascii,
+      if (!engine_->Configure(engine_session, pending_chord_ && config.schema == "my_combo" ? "rime_ice" : config.schema, config.ascii,
                               config.traditional, config.ascii_punctuation,
                               nullptr, config.candidate_count))
         throw std::runtime_error("Schema unavailable");
       if (runtime_) state.target =
           runtime_->Register(peer_process_, session_id, open.context_id);
-      if (config.schema == "my_combo" && config.chord_enabled) {
+      if (pending_chord_ && config.schema == "my_combo" && config.chord_enabled) {
         state.chord_profile = workbench::ChordProfile::Parse(config.chord_profile.is_null() ? workbench::BuiltinChordProfile() : config.chord_profile);
         state.chord_interval_ms = config.chord_interval_ms;
       }
@@ -364,12 +365,12 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     if (session.settings_revision != settings_revision ||
         session.capture != capture) {
       const auto config = settings_->Configuration();
-      if (!engine_->Configure(session.engine_session_id, (config.schema == "my_combo" ? "rime_ice" : config.schema),
+      if (!engine_->Configure(session.engine_session_id, (pending_chord_ && config.schema == "my_combo" ? "rime_ice" : config.schema),
                               config.ascii, config.traditional,
                               config.ascii_punctuation, nullptr, config.candidate_count))
         return RespondPassThrough(request, key, session, response);
       session.chord.Reset(); session.chord_snapshot = {}; session.chord_profile.reset();
-      if (config.schema == "my_combo" && config.chord_enabled) {
+      if (pending_chord_ && config.schema == "my_combo" && config.chord_enabled) {
         try { session.chord_profile = workbench::ChordProfile::Parse(config.chord_profile.is_null()
             ? workbench::BuiltinChordProfile() : config.chord_profile); } catch (...) {}
       }
@@ -393,7 +394,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     state.sequence_id = key.sequence_id;
     state.revision = session.revision;
     const bool likely_handled =
-        key_down ? IsLikelyHandledForTest(key, session.composing)
+        key_down ? IsLikelyHandledForTest(key, session.composing || session.chord.Pending())
                  : session.handled_key_downs.test(key.virtual_key);
     if (likely_handled) {
       state.state_flags = StateFlag(core::InputStateFlags::kHandled);
@@ -404,9 +405,15 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   // Resolve the current Rime composition before a Buffer source edit. This
   // is an internal engine operation, never a synthesized host key/paste.
   const auto command_modifiers = key.modifiers & ~static_cast<unsigned>(core::KeyModifiers::kCapsLock);
+  const auto physical_key = TranslateWindowsKey(key);
+  const bool physical_chord_key = session.chord_profile && physical_key &&
+      !core::HasHostCommandModifier(key.modifiers) &&
+      !(key.modifiers & static_cast<unsigned>(core::KeyModifiers::kShift)) &&
+      physical_key->keycode >= 0 && physical_key->keycode <= 127 &&
+      (session.chord_profile->left + session.chord_profile->right).find(static_cast<char>(physical_key->keycode)) != std::string::npos;
   if (runtime_ && runtime_->Capturing(session.target) && key_down &&
       session.chord_profile && session.chord.Pending() &&
-      (key.virtual_key < 'A' || key.virtual_key > 'Z' || command_modifiers != 0)) {
+      !physical_chord_key) {
     const auto flush = session.chord.Flush(*session.chord_profile);
     engine::EngineSnapshot settled; bool replaced = false;
     if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
@@ -504,7 +511,8 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     std::string prefix_commit;
     if (session.chord_profile && session.chord.Pending()) {
       const auto flush = session.chord.Flush(*session.chord_profile); bool replaced = false;
-      if (!engine_->ProcessChordText(session.engine_session_id, flush.text, "", {}, &snapshot, &replaced, &engine_error))
+      if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
+          flush.replace ? flush.raw : "", session.chord_snapshot, &snapshot, &replaced, &engine_error))
         return RespondPassThrough(request, key, session, response);
       prefix_commit = snapshot.commit_text;
     }
@@ -568,6 +576,11 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
 ClientAction BrokerConnection::RespondWithInputState(const core::Frame& request,
                                                      core::InputState state,
                                                      core::Frame* response) {
+  if (pending_chord_) {
+    const auto session = sessions_.find(state.session_id);
+    if (session != sessions_.end() && session->second.chord.Pending())
+      state.state_flags |= StateFlag(core::InputStateFlags::kPendingChord);
+  }
   if (key_routing_ && engine_) {
     const auto session = sessions_.find(state.session_id);
     if (session != sessions_.end() &&

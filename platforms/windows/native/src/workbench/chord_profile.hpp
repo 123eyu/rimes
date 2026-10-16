@@ -142,10 +142,12 @@ private:
         text = m->output +
                ((m->kind == "syllable" || p.boundary == "legacyBatches") ? "'"
                                                                          : "");
-      else
+      else {
         text.erase(std::remove_if(text.begin(), text.end(),
                                   [](char c) { return c == ',' || c == '.'; }),
                    text.end());
+        std::sort(text.begin(), text.end());
+      }
     }
     const auto fallback = text;
     bool replace = false;
