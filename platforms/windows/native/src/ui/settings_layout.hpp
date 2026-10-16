@@ -18,14 +18,15 @@ enum class SettingsPage {
   kApi = 3,
   kPlugins = 4,
   kAbout = 5,
+  kChord = 6,
 };
 
-inline constexpr int kSettingsPageCount = 6;
+inline constexpr int kSettingsPageCount = 7;
 inline constexpr const wchar_t* kSettingsPageTitles[] = {
-    L"输入法", L"外观", L"Buffer", L"连接器", L"官方插件", L"关于"};
+    L"输入法", L"外观", L"Buffer", L"连接器", L"插件", L"维护", L"并击"};
 inline constexpr IconId kSettingsPageIcons[] = {
     IconId::kKeyboard, IconId::kPalette, IconId::kGrid, IconId::kLink,
-    IconId::kGrid, IconId::kSettings};
+    IconId::kGrid, IconId::kSettings, IconId::kKeyboard};
 inline constexpr const wchar_t* kSettingsSchemeTitles[] = {
     L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"犀术五笔", L"英文", L"isaac2026"};
 inline constexpr IconId kSettingsSchemeIcons[] = {
@@ -36,9 +37,10 @@ inline constexpr const wchar_t* kSettingsSubpageLabels[][2] = {
     {L"输入方案", L"选项"},
     {L"主题", L"尺寸"},
     {L"快捷键", L"行为"},
-    {L"模型", L"密钥"},
+    {L"AI 模型", L"连接检测"},
     {L"管理", L"说明"},
     {L"版本", L"诊断"},
+    {L"isaac2026", L"键位与预览"},
 };
 
 struct SettingsMetrics {
@@ -174,6 +176,7 @@ struct SettingsLayout {
   const float pad = static_cast<float>(m.sidebar_pad_x_dip);
   float ny = static_cast<float>(m.sidebar_row_y_dip);
   for (int i = 0; i < kSettingsPageCount; ++i) {
+    if (i == 6) ny += 28;
     layout.nav[static_cast<std::size_t>(i)] = {
         pad, ny, side_w - pad,
         ny + static_cast<float>(m.sidebar_row_height_dip)};

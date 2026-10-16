@@ -247,12 +247,16 @@ ClientAction BrokerConnection::HandleOpenSession(const core::Frame& request,
     state.schema_id = open.schema_id;
     if (settings_) {
       const auto config = settings_->Configuration();
-      if (!engine_->Configure(engine_session, config.schema, config.ascii,
+      if (!engine_->Configure(engine_session, config.schema == "my_combo" ? "rime_ice" : config.schema, config.ascii,
                               config.traditional, config.ascii_punctuation,
                               nullptr, config.candidate_count))
         throw std::runtime_error("Schema unavailable");
       if (runtime_) state.target =
           runtime_->Register(peer_process_, session_id, open.context_id);
+      if (config.schema == "my_combo" && config.chord_enabled) {
+        state.chord_profile = workbench::ChordProfile::Parse(config.chord_profile.is_null() ? workbench::BuiltinChordProfile() : config.chord_profile);
+        state.chord_interval_ms = config.chord_interval_ms;
+      }
       state.schema_id = config.schema;
       state.settings_revision = config.revision;
     }
@@ -349,20 +353,27 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   }
   session.last_sequence_id = key.sequence_id;
   if (session.candidate_guard) {
-    const auto revision = settings_ ? settings_->Configuration().revision : 0;
+    const auto revision = settings_ ? settings_->ConfigurationRevision() : 0;
     const bool valid = *session.candidate_guard == revision;
     session.candidate_guard.reset();
     if (!valid) return RespondPassThrough(request, key, session, response);
   }
   if (settings_) {
-    const auto config = settings_->Configuration();
+    const auto settings_revision = settings_->ConfigurationRevision();
     const bool capture = runtime_ && runtime_->Capturing(session.target);
-    if (session.settings_revision != config.revision ||
+    if (session.settings_revision != settings_revision ||
         session.capture != capture) {
-      if (!engine_->Configure(session.engine_session_id, config.schema,
+      const auto config = settings_->Configuration();
+      if (!engine_->Configure(session.engine_session_id, (config.schema == "my_combo" ? "rime_ice" : config.schema),
                               config.ascii, config.traditional,
                               config.ascii_punctuation, nullptr, config.candidate_count))
         return RespondPassThrough(request, key, session, response);
+      session.chord.Reset(); session.chord_snapshot = {}; session.chord_profile.reset();
+      if (config.schema == "my_combo" && config.chord_enabled) {
+        try { session.chord_profile = workbench::ChordProfile::Parse(config.chord_profile.is_null()
+            ? workbench::BuiltinChordProfile() : config.chord_profile); } catch (...) {}
+      }
+      session.chord_interval_ms = config.chord_interval_ms;
       session.settings_revision = config.revision;
       session.composing = false;
       session.capture = capture;
@@ -393,6 +404,18 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   // Resolve the current Rime composition before a Buffer source edit. This
   // is an internal engine operation, never a synthesized host key/paste.
   const auto command_modifiers = key.modifiers & ~static_cast<unsigned>(core::KeyModifiers::kCapsLock);
+  if (runtime_ && runtime_->Capturing(session.target) && key_down &&
+      session.chord_profile && session.chord.Pending() &&
+      (key.virtual_key < 'A' || key.virtual_key > 'Z' || command_modifiers != 0)) {
+    const auto flush = session.chord.Flush(*session.chord_profile);
+    engine::EngineSnapshot settled; bool replaced = false;
+    if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
+        flush.replace ? flush.raw : "", session.chord_snapshot, &settled, &replaced, nullptr))
+      return RespondPassThrough(request, key, session, response);
+    runtime_->Capture(session.target, &settled);
+    session.composing = settled.composing;
+    session.chord.Reset(); session.chord_snapshot = {};
+  }
   if (!test_only && runtime_ && runtime_->Capturing(session.target) && session.composing && key_down &&
       command_modifiers == static_cast<unsigned>(core::KeyModifiers::kControl) &&
       (key.virtual_key == 'A' || key.virtual_key == 'V')) {
@@ -404,6 +427,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   }
   if (!test_only && runtime_ &&
       runtime_->BeforeKey(session.target, key, session.composing)) {
+    session.chord.Reset(); session.chord_snapshot = {};
     // Paused Buffer input must not run a Shift tap through librime: it could
     // commit preedit into a full draft or an in-flight result. Physical Shift
     // down belongs to the host, so its release must also remain unclaimed.
@@ -458,11 +482,38 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
 
   engine::EngineSnapshot snapshot;
   std::string engine_error;
-  const bool processed = shift_tap
-      ? engine_->ProcessShiftTap(session.engine_session_id, translated->keycode,
-                                translated->modifiers, &snapshot, &engine_error)
-      : engine_->ProcessKey(session.engine_session_id, translated->keycode,
-                            translated->modifiers, &snapshot, &engine_error);
+  bool processed = false;
+  const bool chord_key = session.chord_profile && !engine_->IsAsciiMode(session.engine_session_id) &&
+      !core::HasHostCommandModifier(key.modifiers) &&
+      !(key.modifiers & static_cast<unsigned>(core::KeyModifiers::kShift)) &&
+      translated->keycode >= 0 && translated->keycode <= 127 &&
+      (session.chord_profile->left + session.chord_profile->right).find(static_cast<char>(translated->keycode)) != std::string::npos;
+  if (chord_key) {
+    const auto chord = session.chord.Key(*session.chord_profile, static_cast<char>(translated->keycode),
+                                        key_down, GetTickCount64(), session.chord_interval_ms);
+    bool replaced = false;
+    if (chord.handled) {
+      processed = engine_->ProcessChordText(session.engine_session_id, chord.text,
+          chord.replace ? chord.raw : "", session.chord_snapshot, &snapshot, &replaced, &engine_error);
+      if (!snapshot.commit_text.empty() || (chord.replace && !replaced)) session.chord.RevokePair();
+      session.chord_snapshot = snapshot;
+    } else processed = engine_->ProcessKey(session.engine_session_id, translated->keycode, translated->modifiers, &snapshot, &engine_error);
+  } else {
+    // Editing, selection, modifiers and punctuation end adjacent-batch authority.
+    // A pending physical batch settles before the command, never in the host.
+    std::string prefix_commit;
+    if (session.chord_profile && session.chord.Pending()) {
+      const auto flush = session.chord.Flush(*session.chord_profile); bool replaced = false;
+      if (!engine_->ProcessChordText(session.engine_session_id, flush.text, "", {}, &snapshot, &replaced, &engine_error))
+        return RespondPassThrough(request, key, session, response);
+      prefix_commit = snapshot.commit_text;
+    }
+    session.chord.Reset(); session.chord_snapshot = {};
+    processed = shift_tap
+        ? engine_->ProcessShiftTap(session.engine_session_id, translated->keycode, translated->modifiers, &snapshot, &engine_error)
+        : engine_->ProcessKey(session.engine_session_id, translated->keycode, translated->modifiers, &snapshot, &engine_error);
+    snapshot.commit_text = prefix_commit + snapshot.commit_text;
+  }
   if (!processed) {
     LogEngineFailure("ProcessKey", key.session_id, engine_error);
     if (!key_down) {
