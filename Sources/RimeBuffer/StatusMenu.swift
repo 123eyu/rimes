@@ -7,6 +7,7 @@ struct InputSourceMenuState {
     let bufferTitle: String
     let clipboardTitle: String
     let mailboxTitle: String
+    var userDictionaryWarning: String? = nil
 }
 
 /// Builds ETInput's commands for the system input-source menu. The menu items
@@ -42,12 +43,22 @@ final class StatusMenu {
             healthy: healthy,
             bufferTitle: bufferTitle,
             clipboardTitle: "Capsule…（\(clipboardShortcut)）",
-            mailboxTitle: mailboxTitle
+            mailboxTitle: mailboxTitle,
+            userDictionaryWarning: UserDictionaryHealth.shared.warning
         ))
     }
 
     static func makeInputSourceMenu(target: NSObject, state: InputSourceMenuState) -> NSMenu {
         let menu = NSMenu()
+
+        if let warning = state.userDictionaryWarning {
+            let item = NSMenuItem(title: "⚠️ 学习词库异常 — 打开设置检查",
+                action: #selector(RIMESController.openSettingsFromInputMenu(_:)), keyEquivalent: "")
+            item.target = target
+            item.toolTip = warning
+            menu.addItem(item)
+            menu.addItem(.separator())
+        }
 
         if !state.healthy {
             let health = NSMenuItem(

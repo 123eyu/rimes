@@ -7,6 +7,14 @@ import InputMethodKit
 let rimeEngine = RimeEngine()
 let candidateWindow = CandidateWindow()
 
+/// Only plain presses can enter deferred or held-chord state. Caps Lock may
+/// already be on when a fresh Chinese session resets ascii_mode to false;
+/// librime still rejects Lock-modified letters. Keep their processing
+/// synchronous so that rejection returns the original event to the host.
+enum ChordPressRoutingRules {
+    static func accepts(mask: Int32) -> Bool { mask == 0 }
+}
+
 enum BufferControlDisposition: Equatable {
     case passThrough
     case executeBufferAction
@@ -33,6 +41,8 @@ enum CandidateKeyboardRoutingRules {
              RimeKey.return, RimeKey.space, RimeKey.pageUp, RimeKey.pageDown,
              0x2D, 0x3D:
             return true
+        case RimeKey.escape:
+            return isExpanded
         case 0x31...0x39:
             return isExpanded || usesNumericLabels
         default:
@@ -1217,11 +1227,13 @@ final class RIMESController: IMKInputController {
     private var userDictionaryMaintenanceObserver: NSObjectProtocol?
     private var userDictionaryMaintenanceEndObserver: NSObjectProtocol?
 
-    private var chordGated: Bool {
-        FlyChordRoutingRules.shouldStage(schemaID: currentSchemaId,
-                                         asciiMode: currentASCIIMode,
-                                         extensionEnabled:
-                                            ChordExtensionStore.shared.isEnabled)
+    private func shouldStageFlyChord(mask: Int32) -> Bool {
+        ChordPressRoutingRules.accepts(mask: mask)
+            && FlyChordRoutingRules.shouldStage(
+                schemaID: currentSchemaId,
+                asciiMode: currentASCIIMode,
+                extensionEnabled: ChordExtensionStore.shared.isEnabled
+            )
     }
     private var flyChordSettlementPolicy: FlyChordSettlementPolicy {
         ChordExtensionStore.shared.settlementPolicy
@@ -1882,13 +1894,16 @@ final class RIMESController: IMKInputController {
     }
 
     override func activateServer(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "activate"
         ) else { return }
-        // Seed from real hardware state — clearing to [] would desync the
-        // flagsChanged delta stream whenever a modifier (esp. Caps Lock) is
-        // held or locked across a focus change.
-        lastModifiers = NSEvent.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        // Activation has no flagsChanged event. NSEvent's process-local state
+        // may still reflect another app's earlier Caps Lock state, so seed
+        // from the combined session before comparing the next modifier delta.
+        lastModifiers = NSEvent.ModifierFlags(
+            rawValue: UInt(CGEventSource.flagsState(.combinedSessionState).rawValue)
+        ).intersection(.deviceIndependentFlagsMask)
         if !lastModifiers.contains(.shift) {
             shiftGesture = nil
         } else {
@@ -2003,13 +2018,17 @@ final class RIMESController: IMKInputController {
             return
         }
         StatusMenu.shared.setHealthy(true)
-        _ = ensureSessionReady(applyPreference: true)
+        let sessionReady = ensureSessionReady(applyPreference: true)
+        IMELog.write(
+            "activate: sessionReady=\(sessionReady) schema=\(currentSchemaId) "
+                + "ascii=\(currentASCIIMode) capsLock=\(lastModifiers.contains(.capsLock))"
+        )
         if let activeClient {
             // Arm the idle guard during activation. Waiting for the first key
             // is too late for a field whose first key is Return.
             updateUI(client: activeClient)
         }
-        BufferWindowController.shared.refresh()
+        BufferWindowController.shared.refreshForFocusChange()
     }
 
     /// Post-start initialization, shared by activateServer AND the key paths —
@@ -2445,6 +2464,7 @@ final class RIMESController: IMKInputController {
     }
 
     override func deactivateServer(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "deactivate"
         ) else { return }
@@ -2478,6 +2498,7 @@ final class RIMESController: IMKInputController {
     }
 
     override func commitComposition(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "commitComposition"
         ) else { return }
@@ -2952,12 +2973,32 @@ final class RIMESController: IMKInputController {
 
     // MARK: Key routing
 
+    /// Retire local state without calling the protected IMK client. Returning
+    /// false from handle then leaves the original event to the system, instead
+    /// of consuming it in Rime and rejecting its commit at Delivery.
+    private func rejectProtectedInput(client: IMKTextInput?) -> Bool {
+        guard ProtectedInput.isActive(client: client) else { return false }
+        if let lease = InputFocusCoordinator.shared.invalidateAll(reason: "protected input") {
+            lease.controller?.finalizeProtectedSession(lease, reason: "protected input")
+        }
+        cancelFocusBoundGestures()
+        if session != 0 { rimeEngine.clearComposition(session: session) }
+        composition.markCleared()
+        if let token = focusToken {
+            candidateWindow.hide(owner: token)
+            BufferWindowController.shared.clearInlineComposition(owner: token)
+        }
+        focusToken = nil
+        return true
+    }
+
     override func recognizedEvents(_ sender: Any!) -> Int {
         Int(NSEvent.EventTypeMask([.keyDown, .keyUp, .flagsChanged]).rawValue)
     }
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, let client = sender as? IMKTextInput else { return false }
+        guard !rejectProtectedInput(client: client) else { return false }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "handle"
         ) else { return false }
@@ -3882,7 +3923,8 @@ final class RIMESController: IMKInputController {
             return false
         }
         let mask = routedMask
-        if NativeChordRoutingRules.isChordKey(
+        if ChordPressRoutingRules.accepts(mask: mask),
+           NativeChordRoutingRules.isChordKey(
             keycode: keycode,
             mask: mask,
             profile: ChordKeymapStore.shared.activeProfile,
@@ -5661,15 +5703,7 @@ final class RIMESController: IMKInputController {
     }
 
     private func shiftedDirectText(for event: NSEvent) -> String? {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(.shift),
-              flags.intersection([.control, .option, .command, .function]).isEmpty,
-              let text = event.characters,
-              !text.isEmpty,
-              text.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value != 0x7f }) else {
-            return nil
-        }
-        return text
+        MacShiftKeyRouting.directText(for: event)
     }
 
     private func insertDirectText(_ text: String,
@@ -5794,6 +5828,7 @@ final class RIMESController: IMKInputController {
     /// keyDown → Rime keysym: letters/punct/F-keys via the virtual-key table,
     /// then editing/navigation keys, then any typed ASCII character.
     private func keysym(for event: NSEvent) -> Int32? {
+        if let symbol = MacShiftKeyRouting.symbolKeysym(for: event) { return symbol }
         if let k = RimeKey.fromVirtualKeyCode(event.keyCode) { return k }
         switch event.keyCode {
         case 36, 76: return RimeKey.return
@@ -5831,15 +5866,11 @@ final class RIMESController: IMKInputController {
     /// unhandled ones fall through to the app (Cmd-C etc. keep working).
     private func processRimeKey(_ keycode: Int32, mask: Int32, client: IMKTextInput) -> Bool {
         let isPress = mask & RimeKey.releaseMask == 0
-        // A chord key is a PLAIN press of a chording letter — anything carrying
-        // Ctrl/Opt/Cmd is a shortcut/binding, never chord material.
-        let hasCommandModifier = mask & (
-            RimeKey.controlMask | RimeKey.altMask | RimeKey.superMask
-        ) != 0
+        // Only plain presses may be deferred. Modified letters (including
+        // Caps Lock) need the synchronous route so rejection can pass through.
         let isChordKey = isPress
-            && !hasCommandModifier
             && ChordKeymapStore.shared.activeProfile.half(for: keycode) != nil
-            && chordGated
+            && shouldStageFlyChord(mask: mask)
         // Prototype semantics: a PRESS of a non-chord key resolves the pending
         // chord before processing; release events never pre-flush.
         if isPress, !isChordKey {
@@ -6458,7 +6489,13 @@ final class RIMESController: IMKInputController {
                     )
                 }
             }
-            IMELog.write("FlyYao batch rejected accepted=\(acceptedKeys.count) total=\(engineKeys.count)")
+            let status = rimeEngine.getStatus(session: session)
+            let masks = Set(engineKeys.map(\.mask)).sorted()
+            IMELog.write(
+                "FlyYao batch rejected accepted=\(acceptedKeys.count) total=\(engineKeys.count) "
+                    + "released=\(handledCount) masks=\(masks) schema=\(status.schemaId) "
+                    + "ascii=\(status.asciiMode) disabled=\(status.disabled)"
+            )
         }
         if !chordClientRoutingGate.allowsClientRouting {
             IMELog.write("chord replay isolated from reused client proxy keys=\(keys.count) handled=\(handledCount)")
@@ -6524,6 +6561,8 @@ final class RIMESController: IMKInputController {
             mutualPairingState.reset()
         }
         switch keycode {
+        case RimeKey.escape:
+            return candidateWindow.collapseExpanded()
         case RimeKey.left:
             return candidateWindow.moveSelection(delta: -1)
         case RimeKey.right:

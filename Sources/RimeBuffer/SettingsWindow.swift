@@ -739,6 +739,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private var registryObserver: NSObjectProtocol?
     private var activeBufferPluginObserver: NSObjectProtocol?
     private var inputConfigurationObserver: NSObjectProtocol?
+    private var dictionaryHealthObserver: NSObjectProtocol?
+    private weak var dictionaryWarningLabel: NSTextField?
     private var aiConnectorObserver: NSObjectProtocol?
     private var aiConnectorAvailabilityObserver: NSObjectProtocol?
     private var appearanceObserver: NSObjectProtocol?
@@ -840,6 +842,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private var claudeLoginCancelling = false
     private var claudeLoginFeedback: String?
     private var claudeLoginFeedbackIsError = false
+    private let candidateArrangementPopUp = NSPopUpButton(frame: .zero, pullsDown: false)
     private var candidateMetricFields: [CandidateWindowMetric: NSTextField] = [:]
     private var candidateMetricSliders: [CandidateWindowMetric: NSSlider] = [:]
     private var candidateMetricHints: [CandidateWindowMetric: NSTextField] = [:]
@@ -1721,6 +1724,12 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         ) { [weak self] _ in
             self?.refreshInputConfigurationSelection()
         }
+        dictionaryHealthObserver = NotificationCenter.default.addObserver(
+            forName: .rimeUserDictionaryHealthChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.dictionaryWarningLabel?.stringValue = UserDictionaryHealth.shared.warning ?? ""
+            self?.dictionaryWarningLabel?.isHidden = UserDictionaryHealth.shared.warning == nil
+        }
 
         aiConnectorObserver = NotificationCenter.default.addObserver(
             forName: .aiTextConnectorDidChange,
@@ -2549,6 +2558,11 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func inputPage(subpageID: String) -> NSView {
+        let dictionaryWarning = caption(UserDictionaryHealth.shared.warning ?? "")
+        dictionaryWarningLabel = dictionaryWarning
+        dictionaryWarning.textColor = .systemRed
+        dictionaryWarning.isHidden = UserDictionaryHealth.shared.warning == nil
+        dictionaryWarning.identifier = .init("settings.input.dictionary-warning")
         let importButton = SettingsPointingButton(title: "导入与管理 Rime 方案 / 文本词库…", target: self, action: #selector(openSchemeManager))
         let openDirBtn = SettingsPointingButton(
             title: "打开配置目录",
@@ -2560,6 +2574,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         switch subpageID {
         case "dictionaries":
             return contentColumn([
+                dictionaryWarning,
                 importButton,
                 sectionLabel("已安装词库"),
                 lexiconCard(kind: .chinese,
@@ -2577,7 +2592,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             ])
         default:
             if let imported = MacRimeSchemeLibrary.shared.runtimePackage {
-                return contentColumn([sectionLabel("当前使用：\(imported.name)"),
+                return contentColumn([dictionaryWarning, sectionLabel("当前使用：\(imported.name)"),
                     caption("从方案管理切换包或恢复内置方案；各方案包的学习词库独立保存。"), importButton])
             }
             let chordStatus = chordSchemaStatusView()
@@ -2585,6 +2600,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             recovery.textColor = .systemRed
             recovery.isHidden = ChordKeymapActivationCoordinator.shared.recoveryMessage == nil
             return contentColumn([
+                dictionaryWarning,
                 importButton,
                 chordStatus,
                 recovery,
@@ -3143,6 +3159,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             sectionLabel("候选窗预览"),
             preview,
             spacer(12),
+            candidateArrangementView(),
             candidateMetricsView(),
             spacer(20),
             sectionLabel("缓冲工作台"),
@@ -4601,83 +4618,12 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         ])
     }
 
-    /// One short instruction; recovery is an explicit, collapsed choice.
     private func permissionsPage() -> NSView {
-        let intro = NSTextField(labelWithString: "正常打字无需授权，用到扩展功能时再开启。")
-        intro.font = .systemFont(ofSize: 13)
-        intro.textColor = RimeUI.textSecondary
-        var rows: [NSView] = [intro]
-        for report in SystemPermissionAudit.reportAll() {
-            let status: String
-            let symbol: String
-            switch report.status {
-            case .granted:
-                status = "已开启"; symbol = "checkmark.circle"
-            case .denied:
-                // A negative screen preflight is not proof that the system
-                // switch is off; the guide verifies the actual capability.
-                status = report.permission == .screenRecording ? "待确认" : "未开启"
-                symbol = "circle"
-            case .undeterminable:
-                status = "按需开启"; symbol = "network"
+        contentColumn([SystemPermissionsView { permission, intent in
+            MainActor.assumeIsolated {
+                CapturePermissionGuide.shared.show(permission, intent: intent)
             }
-            let button = SettingsPointingButton(
-                title: report.permission == .localNetwork ? "系统设置"
-                    : report.status == .granted ? "检查" : "开启",
-                target: self, action: #selector(permissionActionTapped(_:)))
-            button.font = .systemFont(ofSize: 13)
-            button.tag = SystemPermission.allCases.firstIndex(of: report.permission) ?? 0
-            button.setAccessibilityLabel("\(button.title)\(report.permission.title)")
-            rows.append(settingsRow(
-                title: "\(report.permission.title) · \(status)",
-                detail: report.permission.shortPurpose,
-                symbolName: symbol, control: button, nameSize: 13))
-        }
-        let refresh = SettingsPointingButton(title: "重新检测", target: self,
-                                             action: #selector(refreshPermissionsPage))
-        let reset = SettingsPointingButton(title: "重置辅助功能…", target: self,
-                                           action: #selector(resetAccessibilityRecordTapped))
-        reset.toolTip = "仅重置 \(ProductBrand.name) 的辅助功能授权；执行前会确认"
-        let identity = SystemPermissionAudit.identity()
-        refresh.toolTip = "\(identity.bundleIdentifier)\n\(identity.bundlePath)"
-        if let authority = SystemPermissionAudit.signingAuthority() {
-            refresh.toolTip! += "\n\(authority)"
-        }
-        let help = PermissionHelpDisclosure(details: CaptureUI.column([
-            PermissionApplicationCard(width: 650), CaptureUI.row([refresh, reset])
-        ]), width: 650)
-        help.didToggle = { [weak intro, weak help] in intro?.isHidden = help?.expanded == true }
-        rows.append(help)
-        return contentColumn(rows)
-    }
-
-    @MainActor @objc private func permissionActionTapped(_ sender: NSButton) {
-        let permissions = SystemPermission.allCases
-        guard sender.tag >= 0, sender.tag < permissions.count else { return }
-        let permission = permissions[sender.tag]
-        if permission == .localNetwork, let url = permission.settingsURL {
-            NSWorkspace.shared.open(url)
-        } else {
-            CapturePermissionGuide.shared.show(permission)
-        }
-    }
-
-    @MainActor @objc private func resetAccessibilityRecordTapped() {
-        let alert = NSAlert()
-        alert.messageText = "仅重置 \(ProductBrand.name) 的辅助功能授权？"
-        alert.informativeText = "这不会修复屏幕录制权限，也不会清除其他权限。重置后需要重新允许 \(ProductBrand.name) 使用辅助功能。"
-        alert.addButton(withTitle: "取消"); alert.addButton(withTitle: "重置辅助功能")
-        guard alert.runModal() == .alertSecondButtonReturn else { return }
-        let cleared = SystemPermissionAudit.resetAccessibilityRecord()
-        // Only ask after the record is gone; asking first is what produced
-        // nothing at all.
-        if cleared { CapturePermissionGuide.shared.show(.accessibility) }
-        else { info("未能重置辅助功能授权。请到系统设置手动检查 \(ProductBrand.name) 条目。") }
-        reload()
-    }
-
-    @objc private func refreshPermissionsPage() {
-        reload()
+        }])
     }
 
     private func contentColumn(_ views: [NSView]) -> NSView {
@@ -4725,6 +4671,24 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         v.setContentHuggingPriority(.defaultLow, for: .horizontal)
         v.setContentHuggingPriority(.defaultLow, for: .vertical)
         return v
+    }
+
+    private func candidateArrangementView() -> NSView {
+        candidateArrangementPopUp.removeFromSuperview()
+        candidateArrangementPopUp.removeAllItems()
+        candidateArrangementPopUp.addItems(withTitles: ["横向", "纵向"])
+        candidateArrangementPopUp.selectItem(at: CandidateArrangement.current == .vertical ? 1 : 0)
+        candidateArrangementPopUp.target = self
+        candidateArrangementPopUp.action = #selector(candidateArrangementChanged)
+        candidateArrangementPopUp.setAccessibilityLabel("候选排列")
+        let row = NSStackView(views: [NSTextField(labelWithString: "候选排列"), candidateArrangementPopUp])
+        row.spacing = 12
+        return row
+    }
+
+    @objc private func candidateArrangementChanged() {
+        CandidateArrangement.current = candidateArrangementPopUp.indexOfSelectedItem == 1 ? .vertical : .horizontal
+        candidatePreview?.metrics = candidateMetrics(from: liveMetricValues())
     }
 
     private func candidateMetricsView() -> NSView {
@@ -5081,6 +5045,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshCandidateMetricControls() {
+        candidateArrangementPopUp.selectItem(at: CandidateArrangement.current == .vertical ? 1 : 0)
         var stored: [CandidateWindowMetric: Double] = [:]
         for metric in CandidateWindowMetric.allCases {
             stored[metric] = Double(CandidateWindowMetrics.value(for: metric))
@@ -5151,7 +5116,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             preeditHeight: get(.preeditHeight),
             candidateFontSize: get(.candidateFontSize),
             labelFontSize: get(.labelFontSize),
-            candidatesPerPage: Int(get(.candidatesPerPage))
+            candidatesPerPage: Int(get(.candidatesPerPage)),
+            verticalCandidates: CandidateArrangement.current == .vertical
         )
     }
 

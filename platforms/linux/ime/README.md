@@ -21,7 +21,7 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
 - Escape cancels composition without committing
 - First-run (and later rebuild) dictionary deploy runs in the background;
   Fcitx5 stays responsive and keys pass through until librime is ready
-  (`subMode` shows `Deploying`). The maintenance thread notifies the Fcitx5
+  (`subMode` shows `Deploying`). A worker watcher notifies the Fcitx5
   event loop when deploy finishes — status leaves `Deploying` without a restart.
 - A process-lifetime user-directory lock prevents two XSIME instances from
   deploying or opening user dictionaries in the same directory concurrently.
@@ -52,20 +52,22 @@ See [the shared format and verification guide](../../../docs/portable-scheme-imp
 
 ## Maintenance limits
 
-Stopping Fcitx5 during a librime rebuild can still wait for that rebuild to
-finish ([#43](https://github.com/scholay/xsime/issues/43)). Do not start a
-second instance against the same user directory while waiting. The lock
-prevents concurrent XSIME writers; it does not coordinate stock fcitx5-rime,
-IBus, or external deploy tools. A bounded shutdown requires deployment
-process isolation rather than detaching a thread that still uses librime.
+Background deployment runs in `libexec/rimes/rimes-deploy`, before the Fcitx
+process opens its runtime. On shutdown XSIME terminates that worker, gives it
+250 ms to exit, then forces termination and reaps it before releasing the
+user-directory lock. No compiler thread is detached. An interrupted deployment
+leaves a marker that requests a full check on the next start, including partial
+build directories. The inherited lock also prevents a new
+XSIME process from writing while a worker survives an unexpected parent exit.
+This lock does not coordinate stock fcitx5-rime, IBus, or external deploy tools.
 
 Buffer preserves capture for one same-IC activation while a toolbar drag
 is pending. Once the IME receives `drag_end`, the next activation retires
 capture without a grace period. The GTK workbench normally detects physical
 release by polling every 50 ms; a click before the IME receives that message
 can still consume the pending drag. The 0–10 ms physical-release case in
-[#44](https://github.com/scholay/xsime/issues/44) still needs X11/xfwm/Firefox
-acceptance. The Fcitx regression covers command receipt, not physical pointer
+[#44](https://github.com/scholay/xsime/issues/44) was accepted by the maintainer
+on 2026-10-16. The Fcitx regression covers command receipt, not physical pointer
 release. See the timing matrix in [`../buffer/MANUAL-TEST.md`](../buffer/MANUAL-TEST.md).
 
 ## Dependencies

@@ -28,7 +28,7 @@ def managed_path(raw):
     allowed = (
         (path.parent == PurePosixPath("bin") and path.name in PROGRAMS)
         or (path.parent == PurePosixPath("libexec/rimes")
-            and path.name in {"rimes-buffer", "rimes-capsule"})
+            and path.name in {"rimes-buffer", "rimes-capsule", "rimes-deploy"})
         or re.fullmatch(r"lib(?:64)?/(?:[^/]+/)?fcitx5/rimes\.so", raw)
         or raw in {"share/fcitx5/addon/rimes.conf", "share/fcitx5/inputmethod/rimes.conf",
                    "share/metainfo/org.fcitx.Fcitx5.Addon.Rimes.metainfo.xml",

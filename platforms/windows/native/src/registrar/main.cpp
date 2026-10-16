@@ -30,10 +30,10 @@ using rimes::windows::tsf::kTextServiceClsidString;
 
 constexpr wchar_t kThreadingModel[] = L"Apartment";
 
-// product_version.rc.in embeds the full mascot first and the black horn
-// second. AddLanguageProfile takes a zero-based icon index, so use the horn
-// for the Windows input-method/language-bar indicator instead of the mascot.
-constexpr ULONG kLanguageProfileIconIndex = 1;
+// A static TSF profile cannot follow the tray's theme changes. The fourth
+// resource is a two-tone horn with its own contrasting background and rim.
+// AddLanguageProfile refreshes existing profiles on upgrade as well.
+constexpr ULONG kLanguageProfileIconIndex = 3;
 
 // These categories are backed by UIElement negotiation, owned candidate
 // windows/light-dismiss events and the authenticated sandbox input endpoint.

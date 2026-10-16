@@ -2,6 +2,7 @@
 #include <sddl.h>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <vector>
 #include "TextService.h"
 #include "fake_tsf.hpp"

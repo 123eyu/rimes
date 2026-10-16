@@ -105,6 +105,20 @@ CandidateSnapshot CandidateWindow::snapshot() const noexcept {
   return snapshot_;
 }
 
+std::optional<std::size_t> CandidateWindow::MatrixDigitIndex(std::size_t digit) const noexcept {
+  std::size_t offset = 0;
+  for (const auto count : snapshot_.matrix_rows) {
+    if (snapshot_.highlighted >= offset && snapshot_.highlighted < offset + count) {
+      for (std::size_t i = offset; i < offset + count && i < hit_pills_.size(); ++i) {
+        if (hit_pills_[i].width() > 0 && digit-- == 0) return i;
+      }
+      return std::nullopt;
+    }
+    offset += count;
+  }
+  return std::nullopt;
+}
+
 void CandidateWindow::Hide() noexcept {
   snapshot_ = {};
   hover_index_ = -1;
@@ -166,6 +180,7 @@ void CandidateWindow::Update(const CandidateSnapshot& snapshot) noexcept {
     if (snapshot_.composition != snapshot.composition ||
         snapshot_.items != snapshot.items ||
         snapshot_.matrix_rows != snapshot.matrix_rows ||
+        (!snapshot.matrix_rows.empty() && snapshot_.highlighted != snapshot.highlighted) ||
         snapshot_.page_start != snapshot.page_start) {
       pressed_index_ = -1;
       hover_index_ = -1;
@@ -182,10 +197,11 @@ void CandidateWindow::Update(const CandidateSnapshot& snapshot) noexcept {
 void CandidateWindow::LayoutAndShow(
     const CandidateSnapshot& snapshot) {
   const unsigned int dpi = WindowDpi(window_);
-  const auto metrics = ui::MakeCandidateMetrics(font_size_);
+  const auto metrics = Metrics();
   const ScreenRect work = WorkAreaFromCaret(snapshot.caret_rect);
   const float available_dip =
-      static_cast<float>(work.width()) * 96.0f / static_cast<float>(dpi);
+      (std::min)(static_cast<float>(metrics.max_strip_width_dip),
+      static_cast<float>(work.width()) * 96.0f / static_cast<float>(dpi));
 
   HDC device = GetDC(window_);
   const int cand_px = ui::ScaleDip(metrics.candidate_font_dip, dpi);
@@ -236,11 +252,19 @@ void CandidateWindow::LayoutAndShow(
   if (ann_font) DeleteObject(ann_font);
 
   const auto layout = !snapshot.matrix_rows.empty()
-      ? ui::LayoutCandidateMatrixMeasured(items, snapshot.matrix_rows, metrics, available_dip)
+      ? ui::LayoutCandidateMatrixMeasured(items, snapshot.matrix_rows, metrics, (std::min)(available_dip, 640.f), snapshot.highlighted)
       : ui::LayoutCandidateStripMeasured(
       items, metrics, available_dip, vertical_,
       static_cast<float>(work.height()) * 96.f / static_cast<float>(dpi));
   hit_pills_ = layout.pills;
+  matrix_labels_.assign(snapshot.items.size(), L"");
+  std::size_t offset = 0;
+  for (const auto count : snapshot.matrix_rows) {
+    std::size_t number = 0;
+    for (std::size_t i = offset; i < offset + count && i < hit_pills_.size(); ++i)
+      if (hit_pills_[i].width() > 0) matrix_labels_[i] = std::to_wstring(++number);
+    offset += count;
+  }
   layout_width_dip_ = layout.width_dip;
   layout_height_dip_ = layout.height_dip;
 
@@ -280,7 +304,7 @@ void CandidateWindow::Paint(HDC device) const {
   GetClientRect(window_, &client);
   const unsigned dpi = WindowDpi(window_);
   const auto& palette = ui::Palette(theme_);
-  const auto metrics = ui::MakeCandidateMetrics(font_size_);
+  const auto metrics = Metrics();
 
   HDC mem = CreateCompatibleDC(device);
   HBITMAP bitmap =
@@ -319,6 +343,7 @@ void CandidateWindow::Paint(HDC device) const {
 
   for (std::size_t i = 0; i < snapshot_.items.size() && i < hit_pills_.size();
        ++i) {
+    if (hit_pills_[i].width() <= 0) continue;
     RECT pill = to_px(hit_pills_[i]);
     const bool selected =
         snapshot_.highlighted != 0xffff &&
@@ -335,7 +360,7 @@ void CandidateWindow::Paint(HDC device) const {
                           ui::ToColorRef(palette.border));
     }
 
-    std::wstring label = snapshot_.items[i].label;
+    std::wstring label = snapshot_.matrix_rows.empty() ? snapshot_.items[i].label : matrix_labels_[i];
     if (label.empty()) {
       const wchar_t key = CandidateSelectionKey(label, i);
       if (key) label.assign(1, key);

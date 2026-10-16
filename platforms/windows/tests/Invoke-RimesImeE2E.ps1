@@ -212,6 +212,9 @@ try {
         & (Join-Path $artifactRoot 'RimesAppContainerLauncher.exe') (Join-Path $artifactRoot 'RimesSandboxProbe.exe')
         if ($LASTEXITCODE -ne 0) { throw "AppContainer input probe failed: exit=$LASTEXITCODE" }
         Write-Host 'PASS: capability-free AppContainer TSF/Broker Chinese input and endpoint isolation'
+        & (Join-Path $artifactRoot 'RimesAppContainerLauncher.exe') (Join-Path $artifactRoot 'RimesSandboxProbe.exe') --lpac
+        if ($LASTEXITCODE -ne 0) { throw "LPAC input probe failed: exit=$LASTEXITCODE" }
+        Write-Host 'PASS: LPAC TSF/Broker Chinese input and endpoint isolation'
     }
     # Exercise the real maintenance shutdown on the test-only endpoint. A
     # retained lifetime handle prevents a cached TSF from opening another
@@ -248,6 +251,7 @@ Write-RimesJson -Path (Join-Path $workRoot 'e2e-result.json') -Object ([ordered]
     IsolatedFromDailyBroker = $true
     GracefulMaintenanceShutdown = $gracefulShutdown
     AppContainerInputPassed = [bool]$AppContainer
+    LessPrivilegedAppContainerInputPassed = [bool]$AppContainer
     DesktopProbe = $probe
 })
 
