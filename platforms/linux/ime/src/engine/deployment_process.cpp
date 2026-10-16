@@ -33,8 +33,10 @@ bool DeploymentProcess::Start(const std::filesystem::path& executable,
     // The same open file description holds the user-directory lock even if
     // Fcitx unexpectedly dies. A replacement cannot write alongside this child.
     status = posix_spawn_file_actions_adddup2(&actions, lock_fd, 3);
-#if defined(__GLIBC__) && __GLIBC_PREREQ(2, 34)
+#if defined(__GLIBC__)
+#if __GLIBC_PREREQ(2, 34)
     if (status == 0) status = posix_spawn_file_actions_addclosefrom_np(&actions, 4);
+#endif
 #endif
     if (status == 0) status = posix_spawn(&pid_, executable.c_str(), &actions,
                                          nullptr, args.data(), environ);

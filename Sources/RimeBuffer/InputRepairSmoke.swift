@@ -24,7 +24,10 @@ func runInputRepairSmokeTest() -> Bool {
         else { return fail("Shift symbol \(text)") }
     }
     guard MacShiftKeyRouting.directText(for: event("A", key: 0)) == "A",
+          MacShiftKeyRouting.directText(for: event("§", key: 20)) == "§",
+          MacShiftKeyRouting.directText(for: event("É", key: 14)) == "É",
           MacShiftKeyRouting.directText(for: event("\r", key: 36)) == nil,
+          MacShiftKeyRouting.directText(for: event("\u{f700}", key: 126)) == nil,
           MacShiftKeyRouting.symbolKeysym(for: event("\r", key: 36)) == nil
     else { return fail("uppercase and editing keys") }
     for modifier in [NSEvent.ModifierFlags.command, .control, .option, .function] {

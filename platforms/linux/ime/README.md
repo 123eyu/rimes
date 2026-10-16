@@ -56,7 +56,8 @@ Background deployment runs in `libexec/rimes/rimes-deploy`, before the Fcitx
 process opens its runtime. On shutdown XSIME terminates that worker, gives it
 250 ms to exit, then forces termination and reaps it before releasing the
 user-directory lock. No compiler thread is detached. An interrupted deployment
-is checked again on the next start. The inherited lock also prevents a new
+leaves a marker that requests a full check on the next start, including partial
+build directories. The inherited lock also prevents a new
 XSIME process from writing while a worker survives an unexpected parent exit.
 This lock does not coordinate stock fcitx5-rime, IBus, or external deploy tools.
 

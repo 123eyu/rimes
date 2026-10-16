@@ -9,6 +9,7 @@
 #include <iostream>
 #include <mutex>
 #include <string>
+#include <thread>
 
 namespace {
 
@@ -104,6 +105,27 @@ int main(int argc, char** argv) {
         Die("first-run Start blocked the caller for " + std::to_string(start_ms) +
             " ms");
     }
+    const auto pending = options.user_data_dir / ".rimes-deployment-pending";
+    if (first_deploy) {
+        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(3);
+        while (!std::filesystem::exists(pending) &&
+               !std::filesystem::exists(options.user_data_dir / "build") &&
+               std::chrono::steady_clock::now() < deadline)
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        if (std::filesystem::exists(pending)) {
+            engine.Stop();
+            options.full_maintenance_check = false;
+            // The interrupted worker's marker, not the caller's full-check
+            // option, must recover any partially created build directory.
+            engine.SetDeployReadyCallback([&]() {
+                std::lock_guard<std::mutex> lock(notify_mutex);
+                notified = true;
+                notify_cv.notify_all();
+            });
+            if (!engine.Start(options, &error)) Die("interrupted deploy restart: " + error);
+            std::cout << "ok: cancelled a real deployment and restarted with incomplete-build recovery\n";
+        }
+    }
     // Reject a competing owner before it initializes librime or deploys.
     rimes::linuxime::RimeEngine replacement;
     if (replacement.Start(options, &error) ||
@@ -117,6 +139,7 @@ int main(int argc, char** argv) {
                   << " ms while deploying\n";
     }
     FinishAsyncDeploy(engine, notify_mutex, notify_cv, notified, "first-run");
+    if (std::filesystem::exists(pending)) Die("successful worker left deployment marker");
     std::cout << "ok: engine ready after async deploy (" << start_ms << " ms to return)\n";
 
     const auto session = engine.CreateSession(&error);

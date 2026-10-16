@@ -54,9 +54,11 @@ launch an external process. Secure input remains fail-open with no Broker use.
 Integrated search suggestions and tray/input-mode compartments are separate
 features and are not advertised by this change.
 
-`Invoke-RimesImeE2E.ps1 -AppContainer` adds real capability-free AppContainer
-and LPAC processes to the isolated TSF/Broker/Rime test. The LPAC probe verifies
-its restricted token and repeats Chinese input and endpoint isolation checks.
+`Invoke-RimesImeE2E.ps1 -AppContainer` adds a capability-free AppContainer
+and an LPAC with the Win32/COM `registryRead` and `lpacCom` capabilities to the
+isolated TSF/Broker/Rime test. The launcher verifies the actual token access
+boundary before resuming either process, then the probes repeat Chinese input
+and endpoint isolation checks.
 Its TSF document host is a fixture;
 passing it does not establish compatibility with SearchHost or every app.
 See the [local validation record](../../../validation/windows-search-compatibility-20261014/README.md)

@@ -9,8 +9,16 @@ enum MacShiftKeyRouting {
 
     static func directText(for event: NSEvent) -> String? {
         guard unmodifiedShift(event), let text = event.characters, !text.isEmpty,
-              text.unicodeScalars.allSatisfy({ CharacterSet.letters.contains($0) })
+              text.unicodeScalars.allSatisfy({
+                  $0.value >= 0x20 && $0.value != 0x7f
+                      && !(0xf700...0xf8ff).contains($0.value)
+              })
         else { return nil }
+        // Only a single ASCII symbol takes the schema punctuation path.
+        // Preserve composed text and symbols on other keyboard layouts (e.g.
+        // German Shift+3 = §), which the physical US key table cannot express.
+        if text.unicodeScalars.count == 1, let scalar = text.unicodeScalars.first,
+           scalar.value <= 0x7e, !CharacterSet.letters.contains(scalar) { return nil }
         return text
     }
 
