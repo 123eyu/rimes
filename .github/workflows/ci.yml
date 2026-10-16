@@ -617,6 +617,8 @@ jobs:
 
           SMOKES=(
             schema-smoke
+            input-repair-smoke
+            shift-punctuation-smoke
             buffer-smoke
             buffer-window-smoke
             buffer-music-smoke
