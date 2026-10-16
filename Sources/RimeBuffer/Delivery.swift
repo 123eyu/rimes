@@ -28,8 +28,8 @@ enum Delivery {
             IMELog.write("delivery blocked: RIMES is not the current input source")
             return false
         }
-        guard !IsSecureEventInputEnabled() else {
-            IMELog.write("delivery blocked: secure input active len=\(text.count)")
+        guard !ProtectedInput.isActive(client: client) else {
+            IMELog.write("delivery blocked: protected input")
             return false
         }
         client.insertText(text as NSString, replacementRange: NSRange(location: NSNotFound, length: 0))

@@ -1882,6 +1882,7 @@ final class RIMESController: IMKInputController {
     }
 
     override func activateServer(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "activate"
         ) else { return }
@@ -2445,6 +2446,7 @@ final class RIMESController: IMKInputController {
     }
 
     override func deactivateServer(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "deactivate"
         ) else { return }
@@ -2478,6 +2480,7 @@ final class RIMESController: IMKInputController {
     }
 
     override func commitComposition(_ sender: Any!) {
+        guard !rejectProtectedInput(client: sender as? IMKTextInput) else { return }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "commitComposition"
         ) else { return }
@@ -2952,12 +2955,32 @@ final class RIMESController: IMKInputController {
 
     // MARK: Key routing
 
+    /// Retire local state without calling the protected IMK client. Returning
+    /// false from handle then leaves the original event to the system, instead
+    /// of consuming it in Rime and rejecting its commit at Delivery.
+    private func rejectProtectedInput(client: IMKTextInput?) -> Bool {
+        guard ProtectedInput.isActive(client: client) else { return false }
+        if let lease = InputFocusCoordinator.shared.invalidateAll(reason: "protected input") {
+            lease.controller?.finalizeProtectedSession(lease, reason: "protected input")
+        }
+        cancelFocusBoundGestures()
+        if session != 0 { rimeEngine.clearComposition(session: session) }
+        composition.markCleared()
+        if let token = focusToken {
+            candidateWindow.hide(owner: token)
+            BufferWindowController.shared.clearInlineComposition(owner: token)
+        }
+        focusToken = nil
+        return true
+    }
+
     override func recognizedEvents(_ sender: Any!) -> Int {
         Int(NSEvent.EventTypeMask([.keyDown, .keyUp, .flagsChanged]).rawValue)
     }
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, let client = sender as? IMKTextInput else { return false }
+        guard !rejectProtectedInput(client: client) else { return false }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "handle"
         ) else { return false }
@@ -5661,15 +5684,7 @@ final class RIMESController: IMKInputController {
     }
 
     private func shiftedDirectText(for event: NSEvent) -> String? {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags.contains(.shift),
-              flags.intersection([.control, .option, .command, .function]).isEmpty,
-              let text = event.characters,
-              !text.isEmpty,
-              text.unicodeScalars.allSatisfy({ $0.value >= 0x20 && $0.value != 0x7f }) else {
-            return nil
-        }
-        return text
+        MacShiftKeyRouting.directText(for: event)
     }
 
     private func insertDirectText(_ text: String,
@@ -5794,6 +5809,7 @@ final class RIMESController: IMKInputController {
     /// keyDown → Rime keysym: letters/punct/F-keys via the virtual-key table,
     /// then editing/navigation keys, then any typed ASCII character.
     private func keysym(for event: NSEvent) -> Int32? {
+        if let symbol = MacShiftKeyRouting.symbolKeysym(for: event) { return symbol }
         if let k = RimeKey.fromVirtualKeyCode(event.keyCode) { return k }
         switch event.keyCode {
         case 36, 76: return RimeKey.return

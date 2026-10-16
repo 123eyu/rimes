@@ -937,6 +937,12 @@ final class InputFocusCoordinator {
                           eventType: NSEvent.EventType?,
                           eventFloor: TimeInterval?) -> Activation? {
         dispatchPrecondition(condition: .onQueue(.main))
+        guard !ProtectedInput.isActive(client: client) else {
+            if let lease = invalidateAll(reason: "protected focus activation") {
+                lease.controller?.finalizeProtectedSession(lease, reason: "protected focus activation")
+            }
+            return nil
+        }
         guard RimeInputSourceAuthority.currentSourceIsOwn() else {
             IMELog.write("focus callback rejected; RIMES authority retired")
             return nil
@@ -1654,6 +1660,7 @@ final class InputFocusCoordinator {
         clientIdentity: ObjectIdentifier
     ) -> FocusLease? {
         dispatchPrecondition(condition: .onQueue(.main))
+        guard !ProtectedInput.isActive(clientBundleID: owner?.bundleID) else { return nil }
         guard RimeInputSourceAuthority.currentSourceIsOwn() else { return nil }
         _ = pruneExpiredOwner()
         guard let owner,
@@ -1754,6 +1761,7 @@ final class InputFocusCoordinator {
     private func validatedTarget(expected token: FocusToken?,
                                  requireExternal: Bool,
                                  forceOverlayVisibilityRefresh: Bool) -> FocusLease? {
+        guard !ProtectedInput.isActive(clientBundleID: owner?.bundleID) else { return nil }
         // Utility windows may call focus probes while another input method is
         // active. A frozen RIMES lease is then bookkeeping only; never resolve
         // or inspect either IMK proxy under foreign input-source authority.

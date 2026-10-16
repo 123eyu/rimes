@@ -73,6 +73,7 @@ final class CompositionSession {
     /// Reflect the current Rime preedit into the client's marked text.
     /// `cursorPosUTF8` is librime's byte offset into the UTF-8 preedit.
     func update(preedit: String, cursorPosUTF8: Int, client: IMKTextInput, mode: Mode) {
+        guard !ProtectedInput.isActive(client: client) else { markCleared(); return }
         guard !preedit.isEmpty else {
             clear(client: client)
             return
@@ -126,6 +127,7 @@ final class CompositionSession {
     }
 
     private func installBufferGuard(client: IMKTextInput) {
+        guard !ProtectedInput.isActive(client: client) else { markCleared(); return }
         markedTextActive = true
         bufferGuardActive = true
         client.setMarkedText(bufferGuardText as NSString,
@@ -138,6 +140,7 @@ final class CompositionSession {
 
     /// End the session explicitly (escape / focus loss / commit without insert).
     func clear(client: IMKTextInput) {
+        guard !ProtectedInput.isActive(client: client) else { markCleared(); return }
         guard markedTextActive else { return }
         // See `update`: clear the old latch before entering the host so a
         // reentrant new composition cannot be overwritten on return.

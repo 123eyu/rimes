@@ -739,6 +739,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private var registryObserver: NSObjectProtocol?
     private var activeBufferPluginObserver: NSObjectProtocol?
     private var inputConfigurationObserver: NSObjectProtocol?
+    private var dictionaryHealthObserver: NSObjectProtocol?
+    private weak var dictionaryWarningLabel: NSTextField?
     private var aiConnectorObserver: NSObjectProtocol?
     private var aiConnectorAvailabilityObserver: NSObjectProtocol?
     private var appearanceObserver: NSObjectProtocol?
@@ -1721,6 +1723,12 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         ) { [weak self] _ in
             self?.refreshInputConfigurationSelection()
         }
+        dictionaryHealthObserver = NotificationCenter.default.addObserver(
+            forName: .rimeUserDictionaryHealthChanged, object: nil, queue: .main
+        ) { [weak self] _ in
+            self?.dictionaryWarningLabel?.stringValue = UserDictionaryHealth.shared.warning ?? ""
+            self?.dictionaryWarningLabel?.isHidden = UserDictionaryHealth.shared.warning == nil
+        }
 
         aiConnectorObserver = NotificationCenter.default.addObserver(
             forName: .aiTextConnectorDidChange,
@@ -2549,6 +2557,11 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func inputPage(subpageID: String) -> NSView {
+        let dictionaryWarning = caption(UserDictionaryHealth.shared.warning ?? "")
+        dictionaryWarningLabel = dictionaryWarning
+        dictionaryWarning.textColor = .systemRed
+        dictionaryWarning.isHidden = UserDictionaryHealth.shared.warning == nil
+        dictionaryWarning.identifier = .init("settings.input.dictionary-warning")
         let importButton = SettingsPointingButton(title: "导入与管理 Rime 方案 / 文本词库…", target: self, action: #selector(openSchemeManager))
         let openDirBtn = SettingsPointingButton(
             title: "打开配置目录",
@@ -2560,6 +2573,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         switch subpageID {
         case "dictionaries":
             return contentColumn([
+                dictionaryWarning,
                 importButton,
                 sectionLabel("已安装词库"),
                 lexiconCard(kind: .chinese,
@@ -2577,7 +2591,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             ])
         default:
             if let imported = MacRimeSchemeLibrary.shared.runtimePackage {
-                return contentColumn([sectionLabel("当前使用：\(imported.name)"),
+                return contentColumn([dictionaryWarning, sectionLabel("当前使用：\(imported.name)"),
                     caption("从方案管理切换包或恢复内置方案；各方案包的学习词库独立保存。"), importButton])
             }
             let chordStatus = chordSchemaStatusView()
@@ -2585,6 +2599,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             recovery.textColor = .systemRed
             recovery.isHidden = ChordKeymapActivationCoordinator.shared.recoveryMessage == nil
             return contentColumn([
+                dictionaryWarning,
                 importButton,
                 chordStatus,
                 recovery,

@@ -455,6 +455,7 @@ if StandaloneRimeCommandRules.requiresIsolatedUserDir(
         exit(1)
     }
     if (CommandLine.arguments.contains("smoke")
+        || CommandLine.arguments.contains("shift-punctuation-smoke")
         || CommandLine.arguments.contains("candidate-pagination-smoke")
         || CommandLine.arguments.contains("user-lexicon-bridge-smoke")
         || CommandLine.arguments.contains("external-schema-engine-smoke")
@@ -1167,6 +1168,12 @@ if CommandLine.arguments.contains("candidate-commit-smoke") {
 }
 if CommandLine.arguments.contains("activation-cache-smoke") {
     exit(runRimeActivationMetadataCacheSmokeTest() ? 0 : 1)
+}
+if CommandLine.arguments.contains("input-repair-smoke") {
+    exit(runInputRepairSmokeTest() ? 0 : 1)
+}
+if CommandLine.arguments.contains("shift-punctuation-smoke") {
+    exit(runShiftPunctuationEngineSmokeTest() ? 0 : 1)
 }
 if CommandLine.arguments.contains("theme-smoke") {
     exit(runThemeSmokeTest() ? 0 : 1)
