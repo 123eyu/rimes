@@ -36,6 +36,15 @@ class RuntimePreferences {
 
 bool TestNativeIsaac2026(RimeEngine& engine, const std::filesystem::path& log_dir) {
   using namespace rimes::windows;
+  const auto guarded=engine.CreateSession(nullptr);
+  EngineSnapshot before, changed; bool replaced=false;
+  if(!guarded || !engine.Configure(guarded,"rime_ice",false,false,false,nullptr) ||
+      !engine.ProcessChordText(guarded,"n'","",{},&before,&replaced,nullptr) ||
+      !engine.ProcessKey(guarded,'a',0,&changed,nullptr) ||
+      !engine.ProcessChordText(guarded,"i","ni'",before,&changed,&replaced,nullptr) || replaced) {
+    std::cerr<<"Chord rewrite must reject changed engine preedit\n"; return false;
+  }
+  engine.DestroySession(guarded);
   RuntimePreferences preferences(log_dir);
   if (!preferences.active()) return false;
   workbench::Settings initial; initial.schema = "my_combo";

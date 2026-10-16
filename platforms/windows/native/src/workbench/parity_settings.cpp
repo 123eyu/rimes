@@ -188,7 +188,10 @@ struct ParitySettings::Impl {
           std::filesystem::file_size(file) > 2 * 1024 * 1024)
         throw std::runtime_error("键位文件过大或类型无效。");
       std::ifstream in(file, std::ios::binary);
-      auto imported = core::Json::parse(in);
+      auto imported = core::Json::parse(in, [](int depth, core::Json::parse_event_t, core::Json&) {
+        if (depth > 16) throw std::runtime_error("键位文件嵌套过深。");
+        return true;
+      });
       (void)ChordProfile::Parse(imported);
       imported["id"] = ID();
       profile = std::move(imported);

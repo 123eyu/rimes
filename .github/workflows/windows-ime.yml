@@ -130,6 +130,12 @@ jobs:
             -Configuration Release `
             -RunBuild
 
+      - name: Verify isolated API streaming and model discovery
+        shell: pwsh
+        run: |
+          python platforms/windows/tests/test_provider_transport.py platforms/windows/native/out/build/windows-${{ matrix.architecture }}/Release/RimesProviderProbe.exe
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
       - name: Render native settings and Buffer fixtures
         if: matrix.architecture == 'x64'
         shell: pwsh

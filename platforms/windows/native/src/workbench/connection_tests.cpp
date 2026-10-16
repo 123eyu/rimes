@@ -136,6 +136,7 @@ int main() {
           "failed save preserves applied keymap and connector");
     std::ifstream input(path);
     const std::string bytes{std::istreambuf_iterator<char>(input), {}};
+    input.close(); // Windows replacement requires the reader to release its handle.
     Check(bytes.find("synthetic-a") == std::string::npos &&
               bytes.find("synthetic-b") == std::string::npos,
           "settings never serialize credentials");

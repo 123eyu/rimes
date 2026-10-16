@@ -164,7 +164,10 @@ bool LoadSettings(Settings* value, std::string* error) {
         std::filesystem::file_size(path) > 3 * 1024 * 1024)
       throw std::runtime_error("Invalid settings file");
     std::ifstream file(path);
-    auto j = Json::parse(file);
+    auto j = Json::parse(file, [](int depth, Json::parse_event_t, Json&) {
+      if (depth > 16) throw std::runtime_error("Settings nesting limit");
+      return true;
+    });
     // Do not expose partial or invalid values to startup hotkey registration.
     // A failed read retains the caller's previous trusted configuration.
     Settings candidate;

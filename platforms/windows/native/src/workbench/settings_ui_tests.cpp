@@ -1162,10 +1162,12 @@ void TestBufferBehaviorControls() {
 }
 void TestParityDraftsAndConnections() {
   workbench::Settings current, saved;
+  current.theme="rasta"; current.follow_system_theme=true;
   std::map<std::string,std::wstring> keys;
   int saves=0;
   workbench::SettingsUiCallbacks callbacks;
   callbacks.load=[&] {return current;};
+  callbacks.load_theme=[] {return ui::ThemeId::kNight;};
   callbacks.save_connections=[&](workbench::Settings value,const auto& secrets,std::string*) {
     saved=std::move(value); keys=secrets; current=saved; ++saves; return true;
   };
@@ -1185,6 +1187,7 @@ void TestParityDraftsAndConnections() {
     keys.size()==2 && keys["legacy-api"]==L"synthetic-a" && keys[saved.connections.back().id]==L"synthetic-b",
     "native connection controls preserve unsaved profiles and isolate their key drafts");
   Check(workbench::ValidConnections(saved),"new GUID profile identity is valid for persisted settings");
+  Check(saved.theme=="rasta" && saved.follow_system_theme,"saving another page retains the fixed fallback while following system appearance");
   host.OpenPage(nullptr,ui::SettingsPage::kChord,1,false); window=host.hwnd();
   edit(6021,L"dvi"); edit(6022,L"hao"); press(6024);
   edit(6010,L"Cancelled keymap"); host.Close(false);

@@ -68,7 +68,7 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   draft_.theme = callbacks_.load_theme ? callbacks_.load_theme()
                                        : ui::ThemeIdOrDefault(config.theme);
   draft_.preview_theme = draft_.theme;
-  draft_.theme_index = static_cast<int>(draft_.theme);
+  draft_.theme_index = static_cast<int>(ui::ThemeIdOrDefault(config.theme));
   draft_.theme_detail = -1;
   opened_theme_ = draft_.theme;
   draft_.ascii = config.ascii;
@@ -726,6 +726,7 @@ void SettingsUiHost::ActivateHit(int hit) {
   } else if (hit >= 200 && hit < 204 &&
              draft_.page == ui::SettingsPage::kAppearance && draft_.subpage == 0) {
     draft_.theme_index = hit - 200;
+    if (parity_) SendMessageW(GetDlgItem(hwnd_,6032), CB_SETCURSEL, 0, 0);
     draft_.theme_detail = -1;
     draft_.preview_theme = static_cast<ui::ThemeId>(draft_.theme_index);
     draft_.focus = hit;

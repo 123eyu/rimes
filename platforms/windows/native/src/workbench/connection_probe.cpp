@@ -122,7 +122,10 @@ ConnectionProbeResult ProbeConnection(const ConnectionProfile &profile,
         break;
       bytes.append(block, count);
     }
-    const auto data = core::Json::parse(bytes).at("data");
+    const auto data = core::Json::parse(bytes, [](int depth, core::Json::parse_event_t, core::Json&) {
+      if (depth > 16) throw std::runtime_error("models nesting limit");
+      return true;
+    }).at("data");
     if (!data.is_array() || data.size() > 4096)
       throw std::runtime_error("models");
     for (const auto &item : data) {
