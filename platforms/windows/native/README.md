@@ -38,7 +38,8 @@ the popup, including when no Win32 caret is available. Host selection/finalize
 uses the same context and revision guards as mouse selection. Native popups
 are owned by the input window and emit IME show/change/hide events.
 
-AppContainer clients use a separate `.input` pipe. Its package ACE grants
+AppContainer clients use a separate `.input` pipe. Its normal and restricted
+package ACEs support both AppContainer and LPAC clients, granting
 `FILE_GENERIC_READ | FILE_WRITE_DATA`, without pipe-instance creation or ACL
 modification; only this endpoint has a low mandatory label. The Broker still
 authenticates the actual client SID, session and PID. The sandbox client checks
@@ -53,8 +54,10 @@ launch an external process. Secure input remains fail-open with no Broker use.
 Integrated search suggestions and tray/input-mode compartments are separate
 features and are not advertised by this change.
 
-`Invoke-RimesImeE2E.ps1 -AppContainer` adds a real capability-free AppContainer
-process to the isolated TSF/Broker/Rime test. Its TSF document host is a fixture;
+`Invoke-RimesImeE2E.ps1 -AppContainer` adds real capability-free AppContainer
+and LPAC processes to the isolated TSF/Broker/Rime test. The LPAC probe verifies
+its restricted token and repeats Chinese input and endpoint isolation checks.
+Its TSF document host is a fixture;
 passing it does not establish compatibility with SearchHost or every app.
 See the [local validation record](../../../validation/windows-search-compatibility-20261014/README.md)
 and the [host checklist](MANUAL-TEST.md) for the remaining desktop acceptance.

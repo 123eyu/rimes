@@ -2,6 +2,7 @@
 #include <sddl.h>
 #include <iomanip>
 #include <sstream>
+#include <string>
 #include <vector>
 #include "TextService.h"
 #include "fake_tsf.hpp"
@@ -9,12 +10,19 @@
 #include "../core/broker_identity.hpp"
 
 // Exit codes identify the failed assertion even without stdout in a sandbox.
-int main() {
+int main(int argc, char** argv) {
   using namespace rimes::windows;
   bool sandboxed = false;
   if (!tsf::ReadAppContainer(&sandboxed) || !sandboxed) return 20;
   HANDLE token = nullptr;
   if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &token)) return 21;
+  if (argc == 2 && std::string(argv[1]) == "--lpac") {
+    DWORD lpac = 0, size = 0;
+    if (!GetTokenInformation(token, TokenIsLessPrivilegedAppContainer,
+                            &lpac, sizeof(lpac), &size) || !lpac) {
+      CloseHandle(token); return 42;
+    }
+  }
   DWORD bytes = 0;
   GetTokenInformation(token, TokenUser, nullptr, 0, &bytes);
   std::vector<std::byte> storage(bytes);
