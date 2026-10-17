@@ -20,6 +20,17 @@ int main() {
             Check(ValidFilter(module,"all"),"native default filter missing");
             model.EnableModule(module,true);
         }
+        {
+            CapsuleModel reenabled;
+            for(auto module:kModules) reenabled.EnableModule(module,false);
+            reenabled.EnableModule(Module::Resources,true);
+            Check(reenabled.module()==Module::Resources && reenabled.ModuleEnabled(reenabled.module()),
+                  "enabling first available module kept disabled selection");
+            reenabled.EnableModule(Module::Resources,false);
+            reenabled.EnableModule(Module::Resources,true);
+            Check(reenabled.module()==Module::Resources && !reenabled.armed(),
+                  "same-module re-enable revived insertion authority");
+        }
         Check(ModuleDefinition(Module::Notes).at("title")=="笔记","native module title");
         Check(!ModuleFromRaw("unknown") && !ValidFilter(Module::Notes,"image"),"invalid module/filter");
         std::vector<Record> records;

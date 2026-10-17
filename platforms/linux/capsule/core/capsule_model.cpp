@@ -98,7 +98,10 @@ void CapsuleModel::set_filter(std::string filter) {
     filter_ = std::move(filter); selected_ = 0; ApplyFilter(); Touch();
 }
 void CapsuleModel::EnableModule(Module module, bool enabled) {
-    if (enabled) enabled_modules_.insert(module);
+    if (enabled) {
+        enabled_modules_.insert(module);
+        if (!ModuleEnabled(module_)) set_module(module);
+    }
     else {
         enabled_modules_.erase(module);
         // Stop exposing disabled plaintext; persistent stores remain untouched.
