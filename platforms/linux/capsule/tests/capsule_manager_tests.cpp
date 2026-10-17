@@ -1,9 +1,12 @@
-#include "capsule_manager.hpp"
 #include "capsule_hash.hpp"
+#include "capsule_manager.hpp"
+#include "capsule_rich_text.hpp"
+#include "desktop.hpp"
 #include "official_catalog.hpp"
 #include "private_files.hpp"
 #include <chrono>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <thread>
 #include <unistd.h>
@@ -122,7 +125,101 @@ int main(int argc,char** argv) {
             g_signal_emit_by_name(library.Window(),"key-press-event",&key,&handled);
             Check(handled && paged.selected()==391,"manager lost list focus while replacing transport window");
         }
-        std::cout<<"GTK manager save, protected draft recovery, revocation and concurrent-edit conflict passed\n";
+        {
+            std::ifstream input(NATIVE_NOTES_FIXTURES);
+            auto fixture = Json::parse(input).at("rich").at(1);
+            Record rich;
+            rich.title = "Native image";
+            rich.note_format = "rich-text";
+            rich.rich_asset = *Base64Decode(fixture.at("asset").get<std::string>());
+            rich.content = fixture.at("markdown");
+            Check(store.Put(rich, "", &rich, &error) == StoreStatus::Ok, "rich manager fixture");
+            CapsuleModel rich_model;
+            rich_model.set_visible(true);
+            rich_model.set_managing(true);
+            rich_model.LoadCards({rich});
+            ManagerWindow* receiver = nullptr;
+            int saved_count = 0;
+            ManagerWindow editor([&](const std::string& raw) {
+                if (Json::parse(raw).at("op") == "refresh") {
+                    ++saved_count;
+                    Check(store.Get(rich.id, &rich, &error) == StoreStatus::Ok, "rich reload");
+                    rich_model.LoadCards({rich});
+                    receiver->Apply(MakeSnapshot(rich_model));
+                }
+            });
+            receiver = &editor;
+            editor.Apply(MakeSnapshot(rich_model));
+            auto* rich_title = Find(editor.Root(), "capsule-title");
+            auto* rich_body = Find(editor.Root(), "capsule-body");
+            auto* rich_save = Find(editor.Root(), "capsule-save");
+            Wait([&] {
+                return std::string(gtk_entry_get_text(GTK_ENTRY(rich_title))) == rich.title;
+            });
+            Check(gtk_widget_get_visible(Find(editor.Root(), "capsule-rich-tools")) &&
+                      !gtk_widget_get_visible(Find(editor.Root(), "capsule-bullet-tools")),
+                  "native format toolbar visibility");
+            if (argc == 2) {
+                gtk_window_set_focus(GTK_WINDOW(editor.Window()), nullptr);
+                while (gtk_events_pending())
+                    gtk_main_iteration();
+                Check(rimes::desktop::Render(editor.Root(), argv[1]), "rich manager render");
+            }
+            gtk_entry_set_text(GTK_ENTRY(rich_title), "Rich draft");
+            auto protected_state = MakeSnapshot(rich_model);
+            protected_state.password_field = true;
+            protected_state.visible = false;
+            editor.Apply(protected_state);
+            Check(Text(rich_body).empty(), "rich body concealed");
+            editor.Apply(MakeSnapshot(rich_model));
+            Check(std::string(gtk_entry_get_text(GTK_ENTRY(rich_title))) == "Rich draft",
+                  "rich title draft restored");
+            gtk_button_clicked(GTK_BUTTON(rich_save));
+            Wait([&] { return saved_count == 1; });
+            const auto original =
+                ReadRichText(*Base64Decode(fixture.at("asset").get<std::string>()));
+            auto captured = ReadRichText(rich.rich_asset);
+            Check(captured && captured->PlainText() == original->PlainText() &&
+                      captured->assets == original->assets &&
+                      captured->Markdown() == original->Markdown(),
+                  "rich manager save/protected restore lost native image");
+            Wait([&] {
+                return std::string(gtk_entry_get_text(GTK_ENTRY(rich_title))) == rich.title;
+            });
+            auto external = RenderMarkdown(rich);
+            external.replace(external.rfind(rich.content), rich.content.size(),
+                             "external Markdown projection");
+            {
+                std::ofstream output(rich.path);
+                output << external;
+            }
+            Check(store.Get(rich.id, &rich, &error) == StoreStatus::Ok, "projection reload");
+            rich_model.LoadCards({rich});
+            editor.Apply(MakeSnapshot(rich_model));
+            auto* importer = Find(editor.Root(), "capsule-import-projection");
+            Wait([&] { return gtk_widget_is_visible(importer); });
+            gtk_button_clicked(GTK_BUTTON(rich_save));
+            Check(store.Get(rich.id, &rich, &error) == StoreStatus::Ok && rich.projection_conflict,
+                  "GUI silently resolved projection conflict");
+            g_idle_add(
+                +[](gpointer) -> gboolean {
+                    auto* windows = gtk_window_list_toplevels();
+                    for (auto* node = windows; node; node = node->next)
+                        if (GTK_IS_MESSAGE_DIALOG(node->data))
+                            gtk_dialog_response(GTK_DIALOG(node->data), GTK_RESPONSE_ACCEPT);
+                    g_list_free(windows);
+                    return G_SOURCE_REMOVE;
+                },
+                nullptr);
+            gtk_button_clicked(GTK_BUTTON(importer));
+            gtk_button_clicked(GTK_BUTTON(rich_save));
+            Wait([&] { return saved_count == 2; });
+            Check(!rich.projection_conflict &&
+                      ReadRichText(rich.rich_asset)->PlainText() == "external Markdown projection",
+                  "explicit GUI import did not persist replacement");
+        }
+        std::cout << "GTK manager save, protected draft recovery, revocation and "
+                     "concurrent-edit conflict passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';std::filesystem::remove_all(root);return 1;}
     std::filesystem::remove_all(root);return 0;
 }

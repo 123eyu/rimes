@@ -58,20 +58,25 @@ set_target_properties(RimesBufferCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(RimesBufferCore PUBLIC RimesPluginCore RimesTranslationUnits)
 rimes_harden(RimesBufferCore)
 
+pkg_check_modules(CapsuleICU REQUIRED IMPORTED_TARGET icu-i18n)
 add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_hash.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_kinds.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_modules.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_text.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_structure.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_rich_text.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_store.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_model.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_transport.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_clipboard.cpp"
 )
 target_include_directories(RimesCapsuleCore PUBLIC
     "${RIMES_CAPSULE_ROOT}/core"
     "${RIMES_BUFFER_ROOT}/core"
 )
-target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess)
+target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess PkgConfig::CapsuleICU)
 set_target_properties(RimesCapsuleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesCapsuleCore)
 
@@ -213,6 +218,7 @@ if(RIMES_BUILD_FCITX5)
 
         add_executable(rimes-capsule
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
         )
         target_include_directories(rimes-capsule PRIVATE ${GTK3_INCLUDE_DIRS})
@@ -335,6 +341,18 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesBufferProcess COMMAND rimes-buffer-process-tests)
     add_test(NAME RimesBufferPlacement COMMAND rimes-buffer-placement-tests)
 
+    add_executable(rimes-capsule-notes-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_notes_tests.cpp")
+    target_link_libraries(rimes-capsule-notes-tests PRIVATE RimesCapsuleCore)
+    target_compile_definitions(rimes-capsule-notes-tests PRIVATE NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
+    rimes_harden(rimes-capsule-notes-tests)
+    add_test(NAME RimesCapsuleNotes COMMAND rimes-capsule-notes-tests)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME capsule-native-fixtures COMMAND ${Python3_EXECUTABLE} "${RIMES_CAPSULE_ROOT}/tests/verify_native_notes.py")
+    add_executable(rimes-capsule-transport-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_transport_tests.cpp")
+    target_link_libraries(rimes-capsule-transport-tests PRIVATE RimesCapsuleCore)
+    rimes_harden(rimes-capsule-transport-tests)
+    add_test(NAME RimesCapsuleTransport COMMAND rimes-capsule-transport-tests)
+
     add_executable(rimes-capsule-store-tests
         "${RIMES_CAPSULE_ROOT}/tests/capsule_store_tests.cpp"
     )
@@ -376,13 +394,22 @@ if(RIMES_BUILD_TESTS)
     rimes_harden(rimes-capsule-modules-tests)
     add_test(NAME RimesCapsuleModules COMMAND rimes-capsule-modules-tests)
     if(TARGET rimes-capsule)
+        add_executable(rimes-capsule-note-editor-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_note_editor_tests.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp")
+        target_include_directories(rimes-capsule-note-editor-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
+        target_link_libraries(rimes-capsule-note-editor-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
+        target_compile_definitions(rimes-capsule-note-editor-tests PRIVATE NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
+        rimes_harden(rimes-capsule-note-editor-tests)
         add_executable(rimes-capsule-manager-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_manager_tests.cpp"
-            "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp")
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp")
         target_include_directories(rimes-capsule-manager-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
         target_link_libraries(rimes-capsule-manager-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
-        target_compile_definitions(rimes-capsule-manager-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        target_compile_definitions(rimes-capsule-manager-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}" NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
         rimes_harden(rimes-capsule-manager-tests)
         if(RIMES_XVFB_RUN)
+            add_test(NAME capsule-note-editor-ui COMMAND ${RIMES_XVFB_RUN} -a $<TARGET_FILE:rimes-capsule-note-editor-tests>)
+            set_tests_properties(capsule-note-editor-ui PROPERTIES ENVIRONMENT "G_DEBUG=fatal-criticals")
             add_test(NAME capsule-manager-ui COMMAND ${RIMES_XVFB_RUN} -a $<TARGET_FILE:rimes-capsule-manager-tests>)
             set_tests_properties(capsule-manager-ui PROPERTIES ENVIRONMENT "G_DEBUG=fatal-criticals")
         endif()

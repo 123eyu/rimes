@@ -257,9 +257,10 @@
         "保留非本产品拥有的 front matter，坏记录单条降级，并发修订冲突不覆盖。",
         "卡片详情支持逐行复制/插入，整条插入仍可用；覆盖外部编辑冲突、资产哈希及迁移。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 163,
-      "url": "https://github.com/scholay/xsime/issues/163"
+      "url": "https://github.com/scholay/xsime/issues/163",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 14,

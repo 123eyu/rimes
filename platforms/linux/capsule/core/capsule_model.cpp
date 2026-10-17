@@ -1,4 +1,6 @@
 #include "capsule_model.hpp"
+#include "capsule_structure.hpp"
+#include "capsule_text.hpp"
 
 #include <algorithm>
 #include <cctype>
@@ -10,14 +12,8 @@ bool MatchesQuery(const Card& card, std::string_view query) {
     if (query.empty()) {
         return true;
     }
-    std::string haystack = card.title + "\n" + card.payload;
-    std::string needle(query);
-    for (char& ch : haystack) {
-        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-    }
-    for (char& ch : needle) {
-        ch = static_cast<char>(std::tolower(static_cast<unsigned char>(ch)));
-    }
+    const auto haystack = LowerText(card.title + "\n" + card.payload);
+    const auto needle = OneLine(LowerText(query));
     std::size_t start = 0;
     while (start < needle.size()) {
         while (start < needle.size() &&
@@ -187,7 +183,7 @@ void CapsuleModel::LoadCards(const std::vector<Record>& records) {
         card.id = record.id; card.kind = record.kind; card.title = record.title;
         card.payload = record.content; card.module = module; card.filter = RecordFilter(record);
         card.revision = record.revision; card.attachment = record.attachment;
-        card.preview = PreviewOf(record.summary.empty() ? record.content : record.summary);
+        card.preview = record.summary.empty() ? NoteSummary(record.content) : record.summary;
         all_.push_back(std::move(card));
     }
     ApplyFilter();

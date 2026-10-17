@@ -1,5 +1,7 @@
-#include "official_catalog.hpp"
+#include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
+#include "capsule_transport.hpp"
+#include "official_catalog.hpp"
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -8,8 +10,11 @@
 #include <fstream>
 #include <iostream>
 #include <memory>
+#include <nlohmann/json.hpp>
 #include <stdexcept>
 #include <string>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 #include <fcitx-utils/capabilityflags.h>
@@ -125,6 +130,190 @@ void ExpectNoZwsp(fcitx::InputContext* ic, const char* where) {
     if (client.find(kZwsp) != std::string::npos || popup.find(kZwsp) != std::string::npos) {
         Die(std::string("U+200B leaked into host preedit at ") + where);
     }
+}
+
+std::unique_ptr<fcitx::EventSourceTime> detail_timer;
+void RunDetailSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
+                    fcitx::InputContext* ic, const std::string& dump_path) {
+    using namespace rimes::capsule;
+    struct State {
+        int fd = -1, phase = 0;
+        Record note;
+        std::string incoming, large;
+        Snapshot wire;
+        ~State() {
+            if (fd >= 0)
+                close(fd);
+        }
+    };
+    auto state = std::make_shared<State>();
+    state->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+    std::strncpy(address.sun_path, std::getenv("RIMES_CAPSULE_SOCKET"),
+                 sizeof(address.sun_path) - 1);
+    if (state->fd < 0 || connect(state->fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)))
+        Die("detail socket connection");
+    ContentStore store(ContentStore::DefaultRoot());
+    std::string error;
+    if (store.Get(kDefaultEntryId, &state->note, &error) != StoreStatus::Ok)
+        Die("detail fixture missing");
+    state->note.content = "# Login\n- 账号: user@example.com\n- 代码: "
+                          "αβ\n```\nline one\nline two\n```";
+    if (store.Put(state->note, state->note.revision, &state->note, &error) != StoreStatus::Ok)
+        Die("detail fixture update");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    detail_timer = instance.eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 20000, 20000,
+        [&, frontend, uuid, ic, dump_path, state, deadline](fcitx::EventSourceTime* timer,
+                                                            uint64_t) {
+            try {
+                if (std::chrono::steady_clock::now() > deadline)
+                    Die("detail integration timed out at phase " + std::to_string(state->phase));
+                char chunk[65536];
+                for (;;) {
+                    const auto size = recv(state->fd, chunk, sizeof(chunk), MSG_DONTWAIT);
+                    if (size < 0 && errno == EINTR)
+                        continue;
+                    if (size < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
+                        break;
+                    if (size <= 0)
+                        Die("detail socket disconnected");
+                    state->incoming.append(chunk, size);
+                }
+                while (state->incoming.size() >= 4) {
+                    std::uint32_t size = 0;
+                    if (!DecodeFrameHeader(state->incoming.data(), &size))
+                        Die("detail frame header");
+                    if (state->incoming.size() < size + 4)
+                        break;
+                    Snapshot snapshot;
+                    if (DecodeSnapshot(std::string_view(state->incoming).substr(4, size),
+                                       &snapshot))
+                        state->wire = std::move(snapshot);
+                    state->incoming.erase(0, size + 4);
+                }
+                auto send = [&](const std::string& op, int index = -1,
+                                const std::string& revision = "") {
+                    std::string frame;
+                    const auto raw = nlohmann::json{
+                        {"v", 1},
+                        {"op", op},
+                        {"id", state->note.id},
+                        {"revision", revision},
+                        {"index", index}}.dump();
+                    if (!EncodeFrame(raw, &frame) ||
+                        ::send(state->fd, frame.data(), frame.size(), MSG_NOSIGNAL) !=
+                            static_cast<ssize_t>(frame.size()))
+                        Die("detail command send");
+                };
+                const auto snapshot = nlohmann::json::parse(ReadDump(dump_path));
+                auto loaded = [&] {
+                    return !snapshot.at("loading").get<bool>() && !snapshot.at("cards").empty() &&
+                           snapshot.at("cards")[0].at("revision") == state->note.revision;
+                };
+                switch (state->phase) {
+                case 0:
+                    if (!loaded())
+                        break;
+                    send("detail");
+                    state->phase = 1;
+                    break;
+                case 1:
+                    if (!snapshot.at("detail").get<bool>())
+                        break;
+                    if (snapshot.at("detail_selected") != 0 || snapshot.at("detail_count") != 3)
+                        Die("native detail rows/selection differ");
+                    frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("user@example.com");
+                    SendKey(frontend, uuid, "Return");
+                    ExpectContains(ReadDump(dump_path), "\"visible\":true",
+                                   "row insertion closed the rail");
+                    SendKey(frontend, uuid, "Control+c");
+                    frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("αβ");
+                    send("row-insert", 1, state->note.revision);
+                    state->phase = 2;
+                    break;
+                case 2:
+                    if (snapshot.at("detail_selected") != 1)
+                        break;
+                    if (snapshot.at("last_copied") != "user@example.com")
+                        Die("row copy included its label");
+                    {
+                        ContentStore storage(ContentStore::DefaultRoot());
+                        std::string err;
+                        const auto stale = state->note.revision;
+                        state->note.content = "- 账号: external edit";
+                        if (storage.Put(state->note, stale, &state->note, &err) != StoreStatus::Ok)
+                            Die("external edit failed");
+                        send("row-insert", 1, stale); // Must not insert an obsolete row
+                                                      // even before inotify reload.
+                    }
+                    state->phase = 3;
+                    break;
+                case 3:
+                    if (!loaded() || snapshot.at("detail").get<bool>())
+                        break;
+                    send("detail");
+                    state->phase = 4;
+                    break;
+                case 4:
+                    if (!snapshot.at("detail").get<bool>())
+                        break;
+                    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit} |
+                                           fcitx::CapabilityFlag::Password);
+                    {
+                        const auto hidden = nlohmann::json::parse(ReadDump(dump_path));
+                        if (hidden.at("detail").get<bool>() || !hidden.at("detail_rows").empty() ||
+                            hidden.at("visible").get<bool>())
+                            Die("protected detail remained exposed");
+                    }
+                    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit} |
+                                           fcitx::CapabilityFlag::ClientUnfocusCommit);
+                    instance.setCurrentInputMethod(ic, "rimes", true);
+                    ic->focusIn();
+                    SendKey(frontend, uuid, "Control+Shift+V");
+                    for (int i = 0; i < 180000; ++i)
+                        state->large += "👩🏽‍💻";
+                    state->note.content = state->large;
+                    {
+                        ContentStore storage(ContentStore::DefaultRoot());
+                        std::string err;
+                        if (storage.Put(state->note, state->note.revision, &state->note, &err) !=
+                            StoreStatus::Ok)
+                            Die("large Unicode fixture failed");
+                    }
+                    state->phase = 5;
+                    break;
+                case 5:
+                    if (!loaded())
+                        break;
+                    SendKey(frontend, uuid, "Control+c");
+                    state->phase = 6;
+                    break;
+                case 6:
+                    if (state->wire.last_copied != state->large)
+                        break;
+                    std::cout << "ok: real Fcitx details insert exact row values, "
+                                 "reject stale revisions, conceal on protected input "
+                                 "and copy 2.7 MiB Unicode over fragmented IPC\n";
+                    SendKey(frontend, uuid, "Control+Shift+B");
+                    SendKey(frontend, uuid, "Return");
+                    ExpectContains(ReadDump(dump_path), "\"visible\":true",
+                                   "Buffer Return must not close Capsule");
+                    std::cout << "ok: Buffer capturing keeps Capsule from consuming Return\n";
+                    instance.exit();
+                    return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000);
+                timer->setOneShot();
+                return true;
+            } catch (const std::exception& error) {
+                std::cerr << error.what() << '\n';
+                g_exit_status = EXIT_FAILURE;
+                instance.exit();
+                return true;
+            }
+        });
 }
 
 void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
@@ -288,10 +477,10 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
                 const auto restored=ReadDump(dump_path);
                 ExpectContains(restored,"\"armed\":true","re-enabled plugin needs explicit target capture");
                 ExpectContains(restored,"RIMES 默认词条","re-enabled module failed to reload data");
-                std::cout<<"ok: package disable revokes capture, preserves data and ordinary typing; re-enable reloads notes\n";
-                SendKey(frontend,uuid,"Control+Shift+B");SendKey(frontend,uuid,"Return");
-                ExpectContains(ReadDump(dump_path),"\"visible\":true","Buffer Return must not close Capsule");
-                std::cout<<"ok: Buffer capturing keeps Capsule from consuming Return\n";
+                std::cout<< "ok: package disable revokes capture, preserves data "
+                             "and ordinary typing; re-enable reloads notes\n";
+                RunDetailSuite(instance, frontend, uuid, ic, dump_path);
+                return true;
             } catch(const TestFailed&) {}
             instance.exit();return true;
         });
@@ -301,7 +490,8 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
 
 int main(int argc, char** argv) {
     if (argc < 4) {
-        std::cerr << "Usage: rimes-capsule-fcitx-e2e <build-dir> <addon-rel-dir> <data-rel-dir>\n";
+        std::cerr << "Usage: rimes-capsule-fcitx-e2e <build-dir> <addon-rel-dir> "
+                     "<data-rel-dir>\n";
         return EXIT_FAILURE;
     }
 

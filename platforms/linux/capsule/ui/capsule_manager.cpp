@@ -1,11 +1,12 @@
 #include "capsule_manager.hpp"
 #include "background_jobs.hpp"
+#include "capsule_note_editor.hpp"
 #include "desktop.hpp"
-#include "private_files.hpp"
 #include "official_catalog.hpp"
-#include <optional>
+#include "private_files.hpp"
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 #include <utility>
 namespace rimes::capsule {
 using namespace rimes::desktop;
@@ -26,7 +27,7 @@ GtkWidget* Scroll(GtkWidget* child) {
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
     gtk_container_add(GTK_CONTAINER(scroll),child); return scroll;
 }
-}
+} // namespace
 struct ManagerWindow::Impl {
     Send send;
     GtkWidget *window, *root, *header, *modules, *modules_scroll, *toolbar, *list, *list_scroll, *editor;
@@ -37,16 +38,47 @@ struct ManagerWindow::Impl {
     bool dirty = false, updating = false, preview = false, writing = false;
     int layout_width = 0, layout_height = 0;
     std::string detail_key, theme;
+    std::unique_ptr<NoteEditor> note_editor;
+    GtkWidget *rich_bar = nullptr, *bullet_bar = nullptr, *projection_warning = nullptr;
+    bool rich_supported = true;
+    int current_format = 0;
+    std::optional<RichDocument> suspended_rich;
     runtime::BackgroundJobs jobs;
     std::shared_ptr<std::atomic<bool>> alive = std::make_shared<std::atomic<bool>>(true);
     std::shared_ptr<std::atomic<bool>> read_cancel, write_cancel;
     std::unique_ptr<plugins::PackageStore> packages;
     std::optional<Record> suspended_draft;
     std::string suspended_key;
+    GtkWidget* confirmation = nullptr;
+    bool ConfirmCurrent(const std::string& caption, const std::string& message) {
+        confirmation =
+            gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
+                                   GTK_BUTTONS_NONE, "%s", caption.c_str());
+        gtk_message_dialog_format_secondary_text(GTK_MESSAGE_DIALOG(confirmation), "%s",
+                                                 message.c_str());
+        gtk_dialog_add_buttons(GTK_DIALOG(confirmation), "取消", GTK_RESPONSE_CANCEL, "确认",
+                               GTK_RESPONSE_ACCEPT, nullptr);
+        const bool result = gtk_dialog_run(GTK_DIALOG(confirmation)) == GTK_RESPONSE_ACCEPT;
+        gtk_widget_destroy(confirmation);
+        confirmation = nullptr;
+        return result;
+    }
     Record CaptureDraft() const {
         Record value=draft;
         value.title=gtk_entry_get_text(GTK_ENTRY(title)); value.summary=gtk_entry_get_text(GTK_ENTRY(summary)); value.content=Text(body);
-        value.note_format=gtk_combo_box_get_active(GTK_COMBO_BOX(format))==1?"bullet":draft.note_format=="rich-text"?"rich-text":"other";
+        const int selected =gtk_combo_box_get_active(GTK_COMBO_BOX(format));
+        value.note_format = selected == 1 ? "bullet" : selected == 2 ? "rich-text" : "other";
+        if (value.note_format == "rich-text") {
+            if (rich_supported) {
+                const auto document = note_editor->Capture();
+                value.content = document.Markdown();
+                value.rich_asset = WriteRichText(document).value_or("");
+            } else {
+                value.content = draft.content;
+                value.rich_asset = draft.rich_asset;
+            }
+        } else
+            value.rich_asset.clear();
         return value;
     }
     void FillDraft() {
@@ -54,7 +86,19 @@ struct ManagerWindow::Impl {
         gtk_entry_set_text(GTK_ENTRY(title),draft.title.c_str());
         gtk_entry_set_text(GTK_ENTRY(summary),draft.summary.c_str());
         gtk_combo_box_set_active(GTK_COMBO_BOX(format),draft.note_format=="bullet"?1:draft.note_format=="rich-text"?2:0);
-        gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(body)),draft.content.c_str(),-1);
+        current_format = gtk_combo_box_get_active(GTK_COMBO_BOX(format));
+        rich_supported = true;
+        if (draft.note_format == "rich-text") {
+            auto document = ReadRichText(draft.rich_asset);
+            if (document) {
+                note_editor->Load(*document);
+                rich_supported = document->editable;
+            } else {
+                note_editor->LoadPlain(draft.content);
+                rich_supported = false;
+            }
+        } else
+            note_editor->LoadPlain(draft.content);
         updating=false;
         gtk_label_set_text(GTK_LABEL(heading),draft.id.empty()?"新建笔记":"编辑笔记"); Controls();
     }
@@ -95,11 +139,52 @@ struct ManagerWindow::Impl {
         format=gtk_combo_box_text_new();
         for (const auto* name:{"其他","Bullet","富文本"}) gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(format),name);
         field("笔记类型",format);
+        projection_warning = Column(6);
+        auto* warning =
+            Label("Markdown 副本已被修改。富文本原稿仍在，请显式导入副本后再保存。", "error");
+        gtk_label_set_line_wrap(GTK_LABEL(warning), TRUE);
+        gtk_label_set_max_width_chars(GTK_LABEL(warning), 1);
+        Add(projection_warning, warning);
+        auto* import_projection = Button("导入 Markdown 副本", [this] {
+            if (!draft.projection_conflict ||
+                !ConfirmCurrent("导入 Markdown 副本？",
+                                "将副本作为当前富文本正文，保存后替换富文本原稿。"))
+                return;
+            if (!state.visible || !state.managing || state.password_field ||
+                !draft.projection_conflict)
+                return;
+            note_editor->LoadPlain(draft.content);
+            rich_supported = true;
+            draft.projection_conflict = false;
+            draft.resolve_projection = true;
+            Changed();
+        });
+        gtk_widget_set_name(import_projection, "capsule-import-projection");
+        Add(projection_warning, import_projection);
+        Add(form, projection_warning);
+        rich_bar = Row(6);
+        Add(rich_bar, Button("粗体", [this] { note_editor->Bold(); }, "capsule-link"));
+        Add(rich_bar, Button("斜体", [this] { note_editor->Italic(); }, "capsule-link"));
+        Add(rich_bar,
+            Button("链接", [this] { note_editor->Link(GTK_WINDOW(window)); }, "capsule-link"));
+        Add(rich_bar,
+            Button("图片…", [this] { note_editor->Image(GTK_WINDOW(window)); }, "capsule-link"));
+        Add(form, rich_bar);
+        bullet_bar = Button("＋ 清单项", [this] { note_editor->AddBullet(); }, "capsule-link");
+        gtk_widget_set_halign(bullet_bar, GTK_ALIGN_START);
+        Add(form, bullet_bar);
+        for (auto* bar : {rich_bar, bullet_bar, projection_warning}) {
+            gtk_widget_show_all(bar);
+            gtk_widget_set_no_show_all(bar, TRUE);
+            gtk_widget_hide(bar);
+        }
         body=gtk_text_view_new(); gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(body),GTK_WRAP_WORD_CHAR);
         gtk_text_view_set_left_margin(GTK_TEXT_VIEW(body),14); gtk_text_view_set_right_margin(GTK_TEXT_VIEW(body),14);
         gtk_text_view_set_top_margin(GTK_TEXT_VIEW(body),10); gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(body),10);
+        note_editor = std::make_unique<NoteEditor>(body, [this] { Changed(); });
         auto* area=Class(Scroll(body),"capsule-text"); gtk_widget_set_size_request(area,-1,220); field("内容",area,true);
-        auto* writing_hint=Label("写法：「- 标签：值」是字段，复制时只复制值；「## 标题」分组；其余每行单独复制。","capsule-writing-hint");
+        auto* writing_hint=Label("写法：「- 标签：值」是字段，复制时只复制值；「## "
+                                   "标题」分组；其余每行单独复制。","capsule-writing-hint");
         gtk_label_set_line_wrap(GTK_LABEL(writing_hint),TRUE); gtk_label_set_max_width_chars(GTK_LABEL(writing_hint),1); Add(form,writing_hint);
         Add(editor,Scroll(form),true);
         auto* actions=Row(8); gtk_widget_set_margin_start(actions,16); gtk_widget_set_margin_end(actions,16); gtk_widget_set_margin_bottom(actions,12);
@@ -110,7 +195,9 @@ struct ManagerWindow::Impl {
             {title,"capsule-title"},{summary,"capsule-summary"},{body,"capsule-body"},{format,"capsule-format"},
             {save,"capsule-save"},{remove,"capsule-delete"},{create,"capsule-new"},{status,"capsule-status"},
             {modules_scroll,"capsule-modules"},{list_scroll,"capsule-list"},{editor,"capsule-editor"},
-            {header,"capsule-header"},{toolbar,"capsule-toolbar"}})
+            {header,"capsule-header"},{toolbar,"capsule-toolbar"},
+                 {rich_bar, "capsule-rich-tools"},
+                 {bullet_bar, "capsule-bullet-tools"}})
             gtk_widget_set_name(item.first,item.second);
         hint=Label("管理本机 Capsule","capsule-hint"); gtk_label_set_xalign(GTK_LABEL(hint),0);
         for (auto* child : {header,modules_scroll,toolbar,list_scroll,divider,editor,hint}) gtk_layout_put(GTK_LAYOUT(root),child,0,0);
@@ -130,7 +217,16 @@ struct ManagerWindow::Impl {
             if (!self->updating) self->Navigate({{"v",1},{"op","search"},{"text",gtk_entry_get_text(GTK_ENTRY(entry))}});
         }),this);
         g_signal_connect(summary,"changed",G_CALLBACK(+[](GtkEditable*,gpointer data) { static_cast<Impl*>(data)->Changed(); }),this);
-        g_signal_connect(format,"changed",G_CALLBACK(+[](GtkComboBox*,gpointer data) { static_cast<Impl*>(data)->Changed(); }),this);
+        g_signal_connect(format,"changed",G_CALLBACK(+[](GtkComboBox*,gpointer data) {
+                auto* self = static_cast<Impl*>(data);
+                if (self->updating)
+                    return;
+                const int selected = gtk_combo_box_get_active(GTK_COMBO_BOX(self->format));
+                if (self->current_format == 2 && selected != 2)
+                    self->note_editor->LoadPlain(self->note_editor->Capture().PlainText());
+                self->current_format = selected;
+                self->rich_supported = true;
+                self->Changed(); }),this);
         g_signal_connect(title,"changed",G_CALLBACK(+[](GtkEditable*,gpointer data) { static_cast<Impl*>(data)->Changed(); }),this);
         g_signal_connect(gtk_text_view_get_buffer(GTK_TEXT_VIEW(body)),"changed",G_CALLBACK(+[](GtkTextBuffer*,gpointer data) { static_cast<Impl*>(data)->Changed(); }),this);
         g_signal_connect(window,"delete-event",G_CALLBACK(+[](GtkWidget*,GdkEvent*,gpointer data)->gboolean {
@@ -163,6 +259,7 @@ struct ManagerWindow::Impl {
     ~Impl() {
         alive->store(false); jobs.Shutdown();
         g_signal_handlers_disconnect_by_data(window,this);
+        note_editor.reset();
         gtk_widget_destroy(window); g_object_unref(css);
     }
     void Layout(int width,int height) {
@@ -184,32 +281,42 @@ struct ManagerWindow::Impl {
         const std::string rules=
             ".capsule-manager { background: "+c("bufferBackground")+"; color: "+c("textPrimary")+"; border-radius: 14px; }"
             ".capsule-manager viewport { background: transparent; }"
-            ".capsule-heading { font-family: monospace; font-size: 15px; font-weight: bold; }"
+            ".capsule-heading { font-family: monospace; font-size: 15px; "
+            "font-weight: bold; }"
             ".capsule-count { font-family: monospace; font-size: 10px; color: "+c("textSecondary")+"; }"
             ".capsule-hint { font-family: monospace; font-size: 9px; color: "+c("textSecondary")+"; }"
             ".capsule-list,.capsule-editor { background: "+c("surfaceSecondary")+"; border: 1px solid "+c("border")+"; border-radius: 6px; }"
             ".capsule-modules { background: transparent; border: 0; }"
-            ".capsule-manager textview,.capsule-manager textview text { font-family: monospace; font-size: 12px; background: "+c("surfaceTertiary")+"; color: "+c("textPrimary")+"; }"
-            ".capsule-manager entry { min-height: 0; padding: 0 3px; font-family: monospace; font-size: 11px; }"
+            ".capsule-manager textview,.capsule-manager textview text { "
+            "font-family: monospace; font-size: 12px; background: " +c("surfaceTertiary")+"; color: "+c("textPrimary")+"; }"
+            ".capsule-manager entry { min-height: 0; padding: 0 3px; font-family: "
+            "monospace; font-size: 11px; }"
             ".capsule-manager .capsule-field { border-radius: 0; font-size: 12px; }"
             ".capsule-manager combobox button { min-height: 18px; padding: 0 5px; }"
             ".capsule-manager .capsule-text { border: 1px solid "+c("border")+"; }"
-            ".capsule-form-heading,.capsule-field-label { font-family: monospace; font-size: 9px; font-weight: 600; color: "+c("textSecondary")+"; }"
+            ".capsule-form-heading,.capsule-field-label { font-family: monospace; "
+            "font-size: 9px; font-weight: 600; color: " +c("textSecondary")+"; }"
             ".capsule-form-heading { font-size: 10px; color: "+c("accentText")+"; }"
-            ".capsule-writing-hint,.capsule-status { font-family: monospace; font-size: 9px; color: "+c("textMuted")+"; }"
+            ".capsule-writing-hint,.capsule-status { font-family: monospace; "
+            "font-size: 9px; color: " +c("textMuted")+"; }"
             ".capsule-writing-hint { font-size: 10px; }"
-            ".capsule-manager .capsule-link label { font-family: monospace; font-size: 9px; font-weight: 600; color: "+c("textSecondary")+"; }"
+            ".capsule-manager .capsule-link label { font-family: monospace; "
+            "font-size: 9px; font-weight: 600; color: " +c("textSecondary")+"; }"
             ".capsule-module,.capsule-filter,.capsule-link { background: alpha("+c("textSecondary")+",0.10); padding: 0 5px; min-height: 16px; border-radius: 12px; }"
-            ".capsule-manager .capsule-gear { min-width: 22px; min-height: 22px; background: alpha("+c("accentGreen")+",0.2); border-radius: 6px; }"
+            ".capsule-manager .capsule-gear { min-width: 22px; min-height: 22px; "
+            "background: alpha(" +c("accentGreen")+",0.2); border-radius: 6px; }"
             ".capsule-manager .capsule-close { min-width: 16px; min-height: 16px; }"
             ".capsule-module label { font-size: 12px; font-weight: 500; color: "+c("textPrimary")+"; }"
-            ".capsule-module.selected label { font-weight: bold; } .capsule-filter label { font-size: 10px; color: "+c("textSecondary")+"; }"
+            ".capsule-module.selected label { font-weight: bold; } .capsule-filter "
+            "label { font-size: 10px; color: " +c("textSecondary")+"; }"
             ".capsule-filter.selected label { color: "+c("accentText")+"; font-weight: 600; }"
-            ".capsule-entry { background: transparent; border-radius: 0; padding: 0 10px; min-height: 0; }"
+            ".capsule-entry { background: transparent; border-radius: 0; padding: "
+            "0 10px; min-height: 0; }"
             ".capsule-entry.selected { background: alpha("+c("accentGreen")+",0.10); }"
             ".capsule-entry label { font-family: monospace; color: "+c("textPrimary")+"; } .capsule-entry .caption { font-size: 9px; color: "+c("textSecondary")+"; }"
             ".capsule-entry .capsule-kind { font-size: 8px; color: "+c("textSecondary")+"; }"
-            ".capsule-entry.selected .name,.capsule-entry.selected .capsule-kind { color: "+c("accentText")+"; }"
+            ".capsule-entry.selected .name,.capsule-entry.selected .capsule-kind { "
+            "color: " +c("accentText")+"; }"
             ".capsule-divider { background: "+c("border")+"; min-width: 1px; }";
         gtk_css_provider_load_from_data(css,rules.c_str(),-1,nullptr);
         gtk_style_context_add_provider_for_screen(gtk_widget_get_screen(window),GTK_STYLE_PROVIDER(css),GTK_STYLE_PROVIDER_PRIORITY_APPLICATION+2);
@@ -217,7 +324,7 @@ struct ManagerWindow::Impl {
     void SendCommand(const std::string& op,const std::string& id="") { send(Json{{"v",1},{"op",op},{"id",id}}.dump()); }
     bool Discard() {
         if (writing) return false;
-        if (dirty && !Confirm(GTK_WINDOW(window),"放弃未保存的修改？","当前编辑尚未保存。")) return false;
+        if (dirty && !ConfirmCurrent("放弃未保存的修改？","当前编辑尚未保存。")) return false;
         dirty=false; return true;
     }
     void Navigate(Json command) { if (command.at("op")=="search" || Discard()) send(command.dump()); }
@@ -228,12 +335,24 @@ struct ManagerWindow::Impl {
     }
     void Controls() {
         const bool notes=state.module=="notes" && std::find(state.modules.begin(),state.modules.end(),Module::Notes)!=state.modules.end();
-        const bool editable=notes && state.visible && state.managing && !state.password_field && !writing && (draft.id.empty() || draft.note_format!="rich-text");
-        gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable);
+        const bool editable=notes && state.visible && state.managing && !state.password_field && !writing;
+        gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable && rich_supported);
         gtk_widget_set_sensitive(create,notes && !writing); gtk_widget_set_sensitive(save,editable);
         gtk_widget_set_sensitive(remove,!draft.id.empty() && !writing && notes);
         gtk_editable_set_editable(GTK_EDITABLE(summary),editable);
-        gtk_widget_set_sensitive(format,editable);
+        gtk_widget_set_sensitive(format, editable && rich_supported && !draft.projection_conflict);
+        const int selected = gtk_combo_box_get_active(GTK_COMBO_BOX(format));
+        note_editor->SetFormat(selected == 2, selected == 1);
+        gtk_widget_set_visible(rich_bar, selected == 2);
+        gtk_widget_set_visible(bullet_bar, selected == 1);
+        if (selected == 2)
+            gtk_widget_show_all(rich_bar);
+        gtk_widget_set_visible(projection_warning, draft.projection_conflict);
+        if (draft.projection_conflict)
+            gtk_widget_show_all(projection_warning);
+        gtk_widget_set_sensitive(rich_bar,
+                                 editable && rich_supported && !draft.projection_conflict);
+        gtk_widget_set_sensitive(bullet_bar,editable);
         gtk_widget_set_sensitive(search,!writing);
     }
     void NewNote() {
@@ -264,23 +383,32 @@ struct ManagerWindow::Impl {
             Post([this,life,cancelled,key,revision,result,value=std::move(value)] {
                 if (!life->load() || cancelled->load() || !state.visible || !state.managing || state.password_field || detail_key!=key) return;
                 if (result!=StoreStatus::Ok || value.revision!=revision) { gtk_label_set_text(GTK_LABEL(status),"条目已变动，请重新选择"); return; }
-                draft=value; FillDraft(); gtk_label_set_text(GTK_LABEL(status),value.note_format=="rich-text"?"富文本原始附件已保留":"本机条目"); Controls();
+                draft=value; FillDraft(); gtk_label_set_text(GTK_LABEL(status),
+                                   !value.format_issue.empty() ? value.format_issue.c_str()
+                                   : value.projection_conflict ? "Markdown 副本已被修改"
+                                   : value.note_format == "rich-text"
+                                       ? (rich_supported ? "富文本与附件已载入"
+                                                         : "此富文本格式仅可查看，原始附件已保留")
+                                       :"本机条目"); Controls();
             });
         });
     }
     void Save() {
         if (preview || writing || state.module!="notes" || state.password_field || !state.visible) return;
         Record value=CaptureDraft();
-        if (value.note_format=="rich-text") return;
-        if (gtk_combo_box_get_active(GTK_COMBO_BOX(format))==2) {
-            gtk_label_set_text(GTK_LABEL(status),"富文本编辑尚不可用，当前草稿已保留"); return;
+        if (draft.projection_conflict) {
+            gtk_label_set_text(GTK_LABEL(status), "请先显式导入 Markdown 副本，草稿已保留");
+            return;
+        }
+        if (value.note_format == "rich-text" && value.rich_asset.empty()) {
+            gtk_label_set_text(GTK_LABEL(status), "富文本资产超过 4 MiB 上限，草稿已保留"); return;
         }
         if (value.title.empty() || value.content.empty()) { gtk_label_set_text(GTK_LABEL(status),"请填写标题和内容"); return; }
         Write(std::move(value),false);
     }
     void Remove() {
         if (preview || writing || draft.id.empty() || !Discard() ||
-            !Confirm(GTK_WINDOW(window),"删除这条笔记？","仅删除当前条目，附件文件仍保留。")) return;
+            !ConfirmCurrent("删除这条笔记？","仅删除当前条目，附件文件仍保留。")) return;
         Write(draft,true);
     }
     void Write(Record value,bool removing) {
@@ -295,11 +423,20 @@ struct ManagerWindow::Impl {
                 if (!life->load()) return;
                 writing=false;
                 if (result==StoreStatus::Ok) {
-                    dirty=false; suspended_draft.reset(); ClearDraft();
+                    dirty=false; suspended_draft.reset();
+                    suspended_rich.reset();
+                    ClearDraft();
                     if (state.visible && state.managing && !state.password_field) SendCommand("refresh",removing?"":saved.id);
                 } else {
                     if (suspended_draft && state.visible && state.managing && !state.password_field && state.module=="notes") {
-                        draft=*suspended_draft; detail_key=suspended_key; FillDraft(); dirty=true; suspended_draft.reset();
+                        draft=*suspended_draft; detail_key=suspended_key; FillDraft();
+                        if (suspended_rich) {
+                            note_editor->Load(*suspended_rich);
+                            rich_supported = true;
+                            suspended_rich.reset();
+                            Controls();
+                        }
+                        dirty=true; suspended_draft.reset();
                     }
                     gtk_label_set_text(GTK_LABEL(status),result==StoreStatus::RevisionConflict?"条目已被修改，草稿已保留；重新读取后再保存":"保存失败，草稿已保留");
                 }
@@ -323,7 +460,12 @@ struct ManagerWindow::Impl {
         const bool notes_enabled=std::find(snapshot.modules.begin(),snapshot.modules.end(),Module::Notes)!=snapshot.modules.end();
         if (dirty && state.module=="notes" && (!snapshot.visible || !snapshot.managing || snapshot.password_field || snapshot.module!="notes" || !notes_enabled)) {
             suspended_draft=CaptureDraft(); suspended_key=detail_key;
+            if (gtk_combo_box_get_active(GTK_COMBO_BOX(format)) == 2 && rich_supported)
+                suspended_rich = note_editor->Capture();
         }
+        if (confirmation && (!snapshot.visible || !snapshot.managing || snapshot.password_field ||
+                             snapshot.module != "notes" || !notes_enabled))
+            gtk_dialog_response(GTK_DIALOG(confirmation), GTK_RESPONSE_CANCEL);
         state=snapshot;
         if (theme!=state.theme) SetTheme(state.theme);
         if (!state.visible || !state.managing || state.password_field) {
@@ -337,7 +479,14 @@ struct ManagerWindow::Impl {
             if(write_cancel) write_cancel->store(true);
             ClearDraft();
         } else if(suspended_draft && !writing) {
-            draft=*suspended_draft; detail_key=suspended_key; FillDraft(); dirty=true;
+            draft=*suspended_draft; detail_key=suspended_key; FillDraft();
+            if (suspended_rich) {
+                note_editor->Load(*suspended_rich);
+                rich_supported = true;
+                suspended_rich.reset();
+                Controls();
+            }
+            dirty=true;
             suspended_draft.reset(); gtk_label_set_text(GTK_LABEL(status),"已恢复未保存的草稿");
         }
         updating=true;
@@ -387,4 +536,4 @@ ManagerWindow::~ManagerWindow()=default;
 void ManagerWindow::Apply(const Snapshot& snapshot){impl_->Apply(snapshot);}
 GtkWidget* ManagerWindow::Window() const{return impl_->window;}
 GtkWidget* ManagerWindow::Root() const{return impl_->root;}
-}
+} // namespace rimes::capsule

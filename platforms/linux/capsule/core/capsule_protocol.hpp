@@ -26,6 +26,11 @@ enum class CommandOp {
     Manage,
     Rail,
     Refresh,
+    Detail,
+    DetailClose,
+    RowSelect,
+    RowCopy,
+    RowInsert,
     Unknown,
 };
 
@@ -34,6 +39,7 @@ struct Command {
     std::string text;
     int index = -1;
     std::string id;
+    std::string revision;
 };
 
 struct Snapshot {
@@ -60,6 +66,12 @@ struct Snapshot {
     int count = 0;
     int ui_clients = 0;
     std::vector<Card> cards;
+    bool detail = false;
+    std::string detail_revision;
+    std::string detail_notice;
+    int detail_selected = -1, detail_offset = 0, detail_count = 0;
+    std::vector<DetailRow> detail_rows;
+    std::vector<std::string> detail_headings;
 };
 
 Snapshot MakeSnapshot(const CapsuleModel& model);

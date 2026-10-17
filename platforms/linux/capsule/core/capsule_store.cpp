@@ -14,6 +14,9 @@
 
 #include "buffer_protocol.hpp"
 #include "capsule_hash.hpp"
+#include "capsule_rich_text.hpp"
+#include "capsule_structure.hpp"
+#include "capsule_text.hpp"
 #include "private_files.hpp"
 #include <array>
 #include <set>
@@ -93,17 +96,30 @@ std::string RenderMarkdown(const Record& record) {
     if (!record.summary.empty()) out << "summary: " << JsonQuote(record.summary) << '\n';
     if (record.kind == Kind::Note) out << "capsule_note_format: " << JsonQuote(record.note_format) << '\n';
     if (record.kind == Kind::Resource) out << "capsule_resource_type: " << JsonQuote(record.resource_type) << '\n';
+    if (record.kind == Kind::Note && record.note_format == "rich-text") {
+        out << "capsule_rich_version: 1\ncapsule_rich_hash: "
+            << JsonQuote(Sha256Hex(record.rich_asset))
+            << "\ncapsule_projection_hash: " << JsonQuote(Sha256Hex(record.content))
+            << "\ncapsule_rich_asset: " << JsonQuote(Base64Encode(record.rich_asset)) << '\n';
+    }
     if (!record.attachment.empty()) out << "capsule_linux_asset: " << JsonQuote(record.attachment) << '\n';
     for (const auto& line : record.extra_header) out << line << '\n';
     out << "---\n\n" << record.content;
     return out.str();
 }
 
-bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
+static bool ParseMarkdownUnchecked(std::string_view text, Record* out, std::string* error) {
     if (out == nullptr) {
         return false;
     }
     *out = Record{};
+    if (text.size() > kMaxDocumentBytes)
+        return false;
+    try {
+        (void)CharacterCount(text);
+    } catch (const std::exception&) {
+        return false;
+    }
     const auto start = text.find("---");
     if (start != 0 || (text.substr(0,4) != "---\n" && text.substr(0,5) != "---\r\n")) {
         if (error != nullptr) {
@@ -120,50 +136,29 @@ bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
         return false;
     }
     const auto header = text.substr(3, end - 3);
-    std::string kind_raw;
-    std::string version;
-    std::string id;
-    std::string title;
-    std::string updated;
+    std::vector<std::string> header_lines;
     std::istringstream lines{std::string(header)};
     std::string line;
-    std::set<std::string> keys;
     while (std::getline(lines, line)) {
-        if (!line.empty() && line.back() == '\r') {
+        if (!line.empty() && line.back() == '\r')
             line.pop_back();
-        }
-        if (Trim(line).empty()) continue;
-        const auto colon = line.find(':');
-        if (colon == std::string::npos) {
-            out->extra_header.push_back(line);
-            continue;
-        }
-        const auto key = Trim(line.substr(0, colon));
-        const auto value = Trim(line.substr(colon + 1));
-        if (!keys.insert(key).second) { if (error) *error = "duplicate header key"; return false; }
-        auto scalar = [&] { std::string decoded; return JsonUnquote(value, &decoded) ? decoded : value; };
-        if (key == "capsule") {
-            kind_raw = value;
-        } else if (key == "version") {
-            version = value;
-        } else if (key == "id") {
-            if (!JsonUnquote(value, &id)) {
-                id = value;
-            }
-        } else if (key == "title") {
-            if (!JsonUnquote(value, &title)) {
-                title = value;
-            }
-        } else if (key == "updated_at") {
-            if (!JsonUnquote(value, &updated)) {
-                updated = value;
-            }
-        } else if (key == "summary") out->summary = scalar();
-        else if (key == "capsule_note_format") out->note_format = scalar();
-        else if (key == "capsule_resource_type") out->resource_type = scalar();
-        else if (key == "capsule_linux_asset") out->attachment = scalar();
-        else out->extra_header.push_back(line);
+        header_lines.push_back(line);
     }
+    const auto properties = ParseFrontMatter(header_lines);
+    if (!properties) { if (error) *error = "invalid header properties"; return false; }
+    auto scalar = [&](const char* key) { return properties->Scalar(key).value_or(""); };
+    const auto kind_raw = scalar("capsule"), version = scalar("version"), id = scalar("id"),
+               title = scalar("title"), updated = scalar("updated_at");
+    out->summary = NormalizeSummary(scalar("summary"));
+    out->note_format = scalar("capsule_note_format");
+    if (out->note_format != "bullet" && out->note_format != "rich-text")
+        out->note_format = "other";
+    out->resource_type = scalar("capsule_resource_type");
+    if (out->resource_type != "document" && out->resource_type != "project")
+        out->resource_type = "other";
+    out->attachment = scalar("capsule_linux_asset");
+    out->extra_header = properties->Preserved();
+    out->header_fields = properties->Fields();
     if (IsRetiredRaw(kind_raw)) {
         if (error != nullptr) {
             *error = "retired";
@@ -171,9 +166,13 @@ bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
         return false;
     }
     const auto kind = KindFromRaw(kind_raw);
+    if (kind == Kind::Password) {
+        if (error)
+            *error = "password";
+        return false;
+    }
     if (version != "1" || kind == Kind::Retired || kind == Kind::Password ||
-        !LooksLikeUuid(id) || title.empty() ||
-        static_cast<int>(title.size()) > kMaxTitleChars) {
+        !LooksLikeUuid(id) || title.empty() || CharacterCount(title) > kMaxTitleChars) {
         if (error != nullptr) {
             *error = "malformed front matter";
         }
@@ -192,7 +191,7 @@ bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
     } else if (!body.empty() && body.front() == '\n') {
         body.remove_prefix(1);
     }
-    if (body.size() > static_cast<std::size_t>(kMaxContentChars) ||
+    if (CharacterCount(body) > static_cast<std::size_t>(kMaxContentChars) ||
         body.find('\0') != std::string_view::npos || body.empty()) {
         if (error != nullptr) {
             *error = "invalid body";
@@ -206,8 +205,28 @@ bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
     out->kind = kind;
     out->title = title;
     out->content = std::string(body);
+    if (kind == Kind::Note && out->note_format == "rich-text") {
+        const auto asset = Base64Decode(scalar("capsule_rich_asset"));
+        if (scalar("capsule_rich_version") != "1" || !asset || asset->empty() ||
+            scalar("capsule_rich_hash") != Sha256Hex(*asset))
+            return false;
+        out->rich_asset = *asset;
+        out->projection_conflict = scalar("capsule_projection_hash") != Sha256Hex(out->content);
+    }
     out->updated_at = updated;
     return true;
+}
+
+bool ParseMarkdown(std::string_view text, Record* out, std::string* error) {
+    try {
+        return ParseMarkdownUnchecked(text, out, error);
+    } catch (const std::exception&) {
+        if (out)
+            *out = {};
+        if (error)
+            *error = "invalid Capsule document";
+        return false;
+    }
 }
 
 std::filesystem::path ContentStore::DefaultRoot() {
@@ -292,20 +311,38 @@ StoreStatus ContentStore::Get(std::string_view id, Record* out, std::string* err
 }
 StoreStatus ContentStore::Put(const Record& request, std::string expected_revision, Record* out, std::string* error) {
     if (request.kind == Kind::Retired || request.kind == Kind::Password) return InvalidFail(error, "passwords require the encrypted store");
-    if (Trim(request.title).empty() || request.title.size() > kMaxTitleChars || request.content.empty() ||
-        request.content.size() > kMaxContentChars || request.title.find('\0') != request.title.npos ||
-        request.content.find('\0') != request.content.npos) return InvalidFail(error, "invalid title or content");
+    try {
+        (void)NormalizeSummary(request.summary);
+        if (TrimText(request.title).empty() || CharacterCount(request.title) > kMaxTitleChars || request.content.empty() || CharacterCount(request.content) > kMaxContentChars)
+            return InvalidFail(error, "invalid title or content");
+    } catch (const std::exception&) {
+        return InvalidFail(error, "invalid title or content");
+    }
+    try {
+        const auto metadata = ParseFrontMatter(request.extra_header);
+        if (!metadata || metadata->Preserved() != request.extra_header)
+            return InvalidFail(error, "invalid extra metadata");
+    } catch (const std::exception&) {
+        return InvalidFail(error, "invalid extra metadata");
+    }
+    if (request.kind == Kind::Note && request.note_format == "rich-text" &&
+        (request.rich_asset.empty() || request.rich_asset.size() > kMaxDocumentBytes / 2))
+        return InvalidFail(error, "rich text asset missing or too large");
     return WithLock([&] {
         Record record = request;
         if (record.id.empty()) record.id = NewUuidV4();
         if (!LooksLikeUuid(record.id)) return InvalidFail(error, "invalid id");
-        record.title = Trim(record.title); record.updated_at = Iso8601UtcNow();
+        record.title = TrimText(record.title);
+        record.summary = NormalizeSummary(record.summary); record.updated_at = Iso8601UtcNow();
         const auto path = EntryPath(record.id);
         Record existing;
         const auto status = ParseFile(path, &existing, error);
         if (status == StoreStatus::Ok) {
             // Editing is always compare-and-swap, including CLI and GUI writers.
             if (expected_revision != existing.revision) return StoreStatus::RevisionConflict;
+            if (existing.projection_conflict && !request.resolve_projection)
+                return StoreStatus::RevisionConflict;
+            record.extra_header = existing.extra_header;
         } else if (status != StoreStatus::NotFound) return status;
         else if (!expected_revision.empty()) return StoreStatus::RevisionConflict;
         const auto raw = RenderMarkdown(record);
@@ -339,8 +376,11 @@ StoreStatus ContentStore::ReadAll(std::vector<Record>* out, std::string* error) 
         Record record;
         if (ParseFile(entry.path(), &record, error) != StoreStatus::Ok) continue;
         if (out->size() >= kMaxRecords) return InvalidFail(error, "too many Capsule entries");
-        bytes += record.content.size() + record.title.size() + record.summary.size();
-        for(const auto& line:record.extra_header) bytes += line.size();
+        bytes += record.content.size() + record.title.size() + record.summary.size() +
+                 record.rich_asset.size();
+        for(const auto& line:record.extra_header) bytes += line.size() + sizeof(std::string);
+        for (const auto& field : record.header_fields)
+            bytes += field.label.size() + field.value.size() + sizeof(DetailRow);
         if (bytes > 64 * 1024 * 1024) { out->clear(); return InvalidFail(error, "Capsule library exceeds memory budget"); }
         out->push_back(std::move(record));
     }
@@ -353,7 +393,43 @@ StoreStatus ContentStore::ParseFile(const std::filesystem::path& path, Record* o
     try {
         const auto bytes = runtime::PrivateDirectory(entries_).Read(path.filename().string(), kMaxDocumentBytes);
         if (!bytes) return StoreStatus::NotFound;
-        if (!ParseMarkdown(*bytes, out, error) || EntryPath(out->id) != path) return StoreStatus::Invalid;
+        // A malformed password/retired header must never be exposed through
+        // the recoverable-note fallback, including invalid UTF-8 in its body.
+        if (bytes->rfind("---", 0) == 0) {
+            std::istringstream header(*bytes);
+            std::string line;
+            std::getline(header, line);
+            while (std::getline(header, line) && Trim(line) != "---") {
+                const auto colon = line.find(':');
+                if (colon == std::string::npos || Trim(line.substr(0, colon)) != "capsule") continue;
+                const auto value = DecodeScalar(Trim(line.substr(colon + 1)));
+                if (value && (*value == "password" || IsRetiredRaw(*value))) return StoreStatus::Invalid;
+            }
+        }
+        std::string parse_error;
+        if (!ParseMarkdown(*bytes, out, &parse_error) || EntryPath(out->id) != path) {
+            if (parse_error == "retired" || parse_error == "password")
+                return StoreStatus::Invalid;
+            *out = {};
+            out->id = path.stem().string();
+            out->kind = Kind::Note;
+            out->title = "未命名笔记";
+            out->content = SalvageText(*bytes, kMaxContentChars);
+            if (out->content.empty())
+                out->content = " ";
+            std::istringstream lines(out->content);
+            std::string line;
+            while (std::getline(lines, line))
+                if (line.rfind("title:", 0) == 0) {
+                    const auto title = DecodeScalar(line.substr(6));
+                    if (title && !title->empty())
+                        out->title = SalvageText(*title, kMaxTitleChars);
+                    break;
+                }
+            out->summary = "格式待整理：打开编辑并保存即可修复";
+            out->format_issue = "这条笔记的文件格式无法识别，下面是原文。编辑并保存会"
+                                "把它整理为标准格式。";
+        }
         out->path = path; out->revision = Sha256Hex(*bytes);
         return StoreStatus::Ok;
     } catch (const std::exception&) { return IoFail(error, "unsafe or unreadable Capsule entry"); }

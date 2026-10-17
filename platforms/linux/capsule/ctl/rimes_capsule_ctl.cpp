@@ -13,6 +13,7 @@
 
 #include "buffer_protocol.hpp"
 #include "capsule_protocol.hpp"
+#include "capsule_transport.hpp"
 
 namespace {
 
@@ -48,7 +49,7 @@ int Connect(const std::string& path, int tries) {
 
 bool SendJson(int fd, const std::string& json) {
     std::string frame;
-    if (!rimes::buffer::EncodeFrame(json, &frame)) {
+    if (!rimes::capsule::EncodeFrame(json, &frame)) {
         return false;
     }
     return send(fd, frame.data(), frame.size(), 0) == static_cast<ssize_t>(frame.size());
@@ -75,7 +76,7 @@ bool ReadSnapshot(int fd, std::string* json, int timeout_ms) {
             continue;
         }
         std::uint32_t length = 0;
-        if (!rimes::buffer::DecodeFrameHeader(incoming.data(), &length)) {
+        if (!rimes::capsule::DecodeFrameHeader(incoming.data(), &length)) {
             return false;
         }
         incoming.erase(0, 4);
@@ -83,7 +84,15 @@ bool ReadSnapshot(int fd, std::string* json, int timeout_ms) {
         while (incoming.size() < length) {
             char chunk[4096];
             const auto need = length - incoming.size();
-            const auto n = recv(fd, chunk, need > sizeof(chunk) ? sizeof(chunk) : need, 0);
+            if (std::chrono::steady_clock::now() >= deadline)
+                return false;
+            const auto n = recv(fd, chunk, need > sizeof(chunk) ? sizeof(chunk) : need, MSG_DONTWAIT);
+            if (n < 0 && errno == EINTR)
+                continue;
+            if (n < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+                continue;
+            }
             if (n <= 0) {
                 return false;
             }
@@ -97,9 +106,10 @@ bool ReadSnapshot(int fd, std::string* json, int timeout_ms) {
 
 void Usage() {
     std::cerr << "Usage: rimes-capsule-ctl [--socket PATH] "
-                 "hello|status|toggle|show|close|next|prev|activate|copy|manage|rail|refresh\n"
+                 "hello|status|toggle|show|close|next|prev|activate|copy|manage|rail|"
+                 "refresh|detail-close\n"
                  "       rimes-capsule-ctl [--socket PATH] module|filter|search TEXT\n"
-                 "       rimes-capsule-ctl [--socket PATH] select UUID\n";
+                 "       rimes-capsule-ctl [--socket PATH] select|detail UUID\n";
 }
 
 }  // namespace
@@ -125,7 +135,7 @@ int main(int argc, char** argv) {
         return 2;
     }
     nlohmann::json encoded{{"v",1},{"op",op}};
-    if(op=="select") encoded["id"]=argument;
+    if(op=="select" || op == "detail") encoded["id"]=argument;
     else if(op=="module" || op=="filter" || op=="search") encoded["text"]=argument;
     else if(!argument.empty()) { Usage(); return 2; }
     rimes::capsule::Command parsed;std::string error;

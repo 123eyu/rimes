@@ -370,6 +370,9 @@ GtkWidget *Icon(const std::string &name, int size) {
           cairo_line_to(cr, 9, 14);
           line(3, 9, 15, 9);
           cairo_curve_to(cr, 24, 9, 24, 21, 15, 21);
+        } else if (icon == "checkmark") {
+          line(5, 12, 10, 18);
+          cairo_line_to(cr, 20, 5);
         } else if (icon == "doc.on.doc") {
           cairo_rectangle(cr, 3, 3, 12, 14);
           cairo_rectangle(cr, 8, 8, 13, 14);

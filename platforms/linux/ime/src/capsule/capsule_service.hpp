@@ -2,11 +2,11 @@
 
 #include <atomic>
 #include <functional>
-#include <sys/types.h>
 #include <memory>
 #include <mutex>
 #include <string>
 #include <string_view>
+#include <sys/types.h>
 #include <thread>
 #include <vector>
 
@@ -15,10 +15,11 @@
 #include <fcitx/inputcontext.h>
 #include <fcitx/instance.h>
 
-#include "capsule_model.hpp"
 #include "background_jobs.hpp"
+#include "capsule_model.hpp"
 #include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
+#include "capsule_transport.hpp"
 
 namespace fcitx {
 
@@ -62,6 +63,13 @@ public:
 
 private:
     bool AllowsModule();
+    bool OpenDetail();
+    void ClearDetail();
+    bool RowAction(int index, std::string revision, bool insert);
+    std::optional<rimes::capsule::Record> detail_;
+    std::vector<rimes::capsule::DetailRow> detail_rows_;
+    std::vector<std::string> detail_headings_;
+    int detail_selected_ = -1;
     bool SelectIdentity(const rimes::capsule::Command& command);
     std::function<bool(rimes::capsule::Module)> validate_module_;
     rimes::runtime::BackgroundJobs storage_jobs_;
@@ -74,6 +82,7 @@ private:
     struct Client {
         int fd = -1;
         std::string incoming;
+        rimes::capsule::SnapshotWriter outgoing;
     };
 
     static std::string TokenFor(InputContext* ic);
@@ -97,9 +106,15 @@ private:
     void StopSocket();
     void SocketLoop();
     void AcceptClient();
+    void WatchStorage();
+    void StorageChanged();
+    int watch_fd_ = -1, watch_directory_ = -1;
+    std::unique_ptr<EventSourceTime> storage_timer_;
     void ReadClient(Client* client);
     void CloseClient(int fd);
-    void WriteAll(const std::string& payload);
+    void WriteAll(const std::string& payload, bool revoke = false);
+    std::string output_scope_;
+    bool output_has_copy_ = false;
     void ScheduleUiRespawn();
     void ArmUiRespawnTimer(int delay_us);
     bool HasUiClients();
@@ -111,7 +126,7 @@ private:
     std::string socket_path_;
     std::string dump_path_;
     bool enabled_ = true;
-    int listen_fd_ = -1;
+    int listen_fd_ = -1, wake_fd_ = -1;
     std::vector<Client> clients_;
     std::recursive_mutex clients_mu_;
     std::thread socket_thread_;

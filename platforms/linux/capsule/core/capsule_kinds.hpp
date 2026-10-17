@@ -12,8 +12,9 @@ inline constexpr const char* kDefaultEntryContent = "RIMES";
 inline constexpr int kPreviewLimit = 280;
 inline constexpr int kMaxTitleChars = 256;
 inline constexpr int kMaxContentChars = 256 * 1024;
+inline constexpr int kMaxDetailRows = kMaxContentChars + 20000;
 inline constexpr int kMaxRecords = 20000;
-inline constexpr int kMaxDocumentBytes = 1024 * 1024;
+inline constexpr int kMaxDocumentBytes = 8 * 1024 * 1024;
 inline constexpr int kRailWidth = 940;
 inline constexpr int kRailHeight = 208;
 

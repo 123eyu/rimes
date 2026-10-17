@@ -7,9 +7,10 @@ from pathlib import Path
 import re
 ROOT = Path(__file__).resolve().parents[3]
 SOURCES = ["OfficialPlugins/native/macos/CapsuleModules.swift", "Sources/RimeBuffer/CapsuleWindowController.swift",
-           "Sources/RimeBuffer/CapsuleRailSmoke.swift"]
+           "Sources/RimeBuffer/CapsuleRailSmoke.swift", "Sources/RimeBuffer/CapsuleRailDetailView.swift",
+           "Sources/RimeBuffer/CapsuleInteractionSmoke.swift"]
 def extract():
-    modules, window, smoke = [(ROOT / name).read_text() for name in SOURCES]
+    modules, window, smoke, detail, interaction = [(ROOT / name).read_text() for name in SOURCES]
     module_part = modules.split("enum CapsuleModuleID:")[1].split("enum CapsuleModuleFilter:")[0]
     names = re.search(r"case ([^\n]+)", module_part).group(1).split(", ")
     titles = dict(re.findall(r'case \.(\w+): return "([^"]+)"', module_part.split("var symbolName")[0]))
@@ -40,7 +41,17 @@ def extract():
     manager_preview = [{"title": title, "content": json.loads('"' + content + '"')}
                        for title, content in re.findall(r'\("([^"]+)", "((?:\\.|[^"\\])*)"\)', samples)]
     if len(manager_preview) != 3: raise ValueError("Review native Capsule preview fixtures")
-    return {"modules": navigation, "metrics": metrics, "managerPreview": manager_preview,
+    if "if !rowViews.isEmpty { select(0) }" not in detail:
+        raise ValueError("Review native detail initial selection")
+    detail_sample = re.search(r'preview: "([^"]+)",\s*updatedAt: Date\(\), payload: "((?:\\.|[^"\\])*)"', interaction)
+    if not detail_sample: raise ValueError("Review native detail fixture")
+    body = detail_sample.group(2).replace(r'\(index)', '1')
+    detail_title = re.search(r'kind: \.note, title: "((?:\\.|[^"\\])*)", preview:', interaction)
+    detail_header = re.search(r'headerFields: \[CapsuleField\(label: "([^"]+)", value: "([^"]+)"\)\]', interaction)
+    if not detail_title or not detail_header: raise ValueError("Review native detail identity/header")
+    detail_preview = {"title": detail_title.group(1).replace(r'\(index)', '1'), "preview": detail_sample.group(1),
+                      "body": json.loads('"'+body+'"'), "header": {"label":detail_header.group(1),"value":detail_header.group(2)}, "selected":1}
+    return {"detailPreview": detail_preview, "modules": navigation, "metrics": metrics, "managerPreview": manager_preview,
             "sources": {n: hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in SOURCES}}
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(); parser.add_argument("--output", type=Path, required=True); args = parser.parse_args()

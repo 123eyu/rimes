@@ -8,6 +8,7 @@
 
 #include "capsule_kinds.hpp"
 #include "capsule_modules.hpp"
+#include "capsule_structure.hpp"
 #include <map>
 
 namespace rimes::capsule {
@@ -26,6 +27,13 @@ struct Record {
     // Preserve unrecognized Markdown metadata on edits and imports.
     std::vector<std::string> extra_header;
     std::string attachment;
+    std::vector<DetailRow> header_fields;
+    std::string rich_asset;
+    bool projection_conflict = false;
+    std::string format_issue;
+    // A caller may set this only after explicitly importing the edited
+    // Markdown projection. It is never persisted or inferred from a read.
+    bool resolve_projection = false;
 
 };
 
