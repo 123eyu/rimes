@@ -20,7 +20,7 @@
 - `capsule-manager-ui`：真实 GTK 控件保存、940×660 与 620×430 的子控件坐标、尺寸与调整、保护态草稿恢复、停用后的保存拒绝、外部编辑冲突；新建空白草稿不会被宿主刷新替换；400 条库跨传输窗口的 End/PageUp 导航保持列表焦点。GTK critical 视为失败。
 - `rimes-capsule-fcitx-e2e`：真实 Fcitx 按键、精确目标 commitString、搜索、跨框撤权、敏感输入隐藏、重复复制、插件停用/重启配置/恢复及 Buffer 输入优先。
 - `rimes-capsule-respawn-e2e`：杀掉 UI 后保持单实例重连，不重放历史复制或 wl-copy。
-- 官方插件仓库检查与 8 项包测试通过。GitHub CI 对每个 PR 提交另行运行，不能由本地通过推断。
+- 官方插件仓库检查与 8 项包测试通过。GitHub CI 对每个 PR 提交另行运行，不能由本地通过推断；#194 基于 main 验证，依赖 #193 与官方插件 #11 的实现。
 
 本地日志在 `.build/linux-parity-20261017/task12-{final,layout-fix,submit}.log`，忽略目录不进入发布包。
 
