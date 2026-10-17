@@ -19,6 +19,7 @@
 #include "capsule/capsule_service.hpp"
 #include "engine/rime_engine.hpp"
 #include "plugin_registry.hpp"
+#include "package_binding.hpp"
 
 namespace fcitx {
 
@@ -51,6 +52,7 @@ public:
     BufferService& buffer() { return *buffer_; }
     CapsuleService& capsule() { return *capsule_; }
     rimes::plugins::Registry& plugins() { return plugins_; }
+    bool acceptsPluginResult(const rimes::plugins::Lease& lease);
 
     // Single commit path. Buffer intercepts here the way macOS intercepts
     // before Delivery.insert (see rime_hooks.hpp).
@@ -61,6 +63,7 @@ public:
 private:
     void HandleDeployReady();
     void OnDeployReady();
+    void WatchPluginPackages();
 
     RimesConfiguration config_;
     std::string imported_schema_;
@@ -75,6 +78,10 @@ private:
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;
     bool deploy_announced_ = false;
     rimes::plugins::Registry plugins_;
+    std::unique_ptr<rimes::plugins::PackageStore> plugin_store_;
+    std::unique_ptr<rimes::plugins::PackageBinding> plugin_binding_;
+    std::unique_ptr<EventSourceIO> plugin_watch_;
+    int plugin_watch_fd_ = -1;
 };
 
 class RimesImeFactory : public AddonFactory {

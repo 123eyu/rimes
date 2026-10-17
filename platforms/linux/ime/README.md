@@ -12,6 +12,11 @@ The host has a compiled plugin registry with capability checks and revocable
 task grants. Fcitx5 configuration can disable the existing Capsule notes module:
 disabling closes/disarms its rail without deleting notes or affecting typing.
 Catalog declarations alone never enable an unimplemented Linux adapter.
+The `rimes-plugins` companion lists the pinned official catalog and manages
+compatible packages; unsupported platform entries are visibly unavailable.
+Package installation, update and enablement are separate steps. Updates and
+uninstalls revoke running jobs and preserve user content. See the
+[plugin runtime guide](../runtime/README.md).
 Mailbox is still later. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in
@@ -83,6 +88,15 @@ lists. On Ubuntu 24.04:
 ```bash
 platforms/linux/ime/scripts/deps.sh --install
 ```
+
+Source builds also require the pinned official plugin dependency:
+
+```bash
+git submodule update --init OfficialPlugins
+```
+
+The build checks `plugins.lock.json` and generates its catalog from that exact
+revision. It never follows the plugin repository's latest branch automatically.
 
 The distro runtime still supports the built-in data. Original modern schemes may
 require newer Lua bindings than Ubuntu 24.04 supplies. Build a private pinned runtime

@@ -33,7 +33,7 @@
         "预装与下载共用生命周期；暂存验证后原子安装，失败保留旧版本，新装默认停用。",
         "覆盖损坏包、路径穿越、符号链接、断网、更新撤权与重装；插件卸载保留词库、会话和凭据。"
       ],
-      "status": "in_progress",
+      "status": "implemented_pending_ci",
       "issue": 152,
       "url": "https://github.com/scholay/xsime/issues/152"
     },
@@ -52,7 +52,7 @@
         "私有配置以 0700/0600 原子存储；拒绝不安全路径；凭据不进入 argv、日志或普通偏好。",
         "每次请求冻结配置；保存、迁移、重启、错误恢复和界面反馈均可验证。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 153,
       "url": "https://github.com/scholay/xsime/issues/153"
     },

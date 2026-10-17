@@ -108,6 +108,7 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 # Pinned Windows official plugin adapter imports
 /platforms/windows/native/src/workbench/official_features.hpp
 /platforms/windows/native/src/workbench/official_plugin_catalog.generated.hpp
+/platforms/linux/runtime/generated/
 /platforms/windows/native/resources/my_combo.schema.yaml
 
 # Locally built Linux Rime/Lua runtime

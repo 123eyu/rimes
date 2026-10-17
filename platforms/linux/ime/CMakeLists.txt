@@ -125,6 +125,7 @@ if(RIMES_BUILD_FCITX5)
     endif()
     target_compile_definitions(rimes PRIVATE
         RIMES_INSTALL_SHARED_DIR="${CMAKE_INSTALL_FULL_DATADIR}/rimes/data"
+        RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}"
     )
     set_target_properties(rimes PROPERTIES
         PREFIX ""

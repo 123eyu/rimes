@@ -2,6 +2,10 @@
 
 #include <filesystem>
 #include <functional>
+#include <array>
+#include <cerrno>
+#include <sys/inotify.h>
+#include <unistd.h>
 
 #include <fcitx-utils/log.h>
 #include <fcitx-config/iniparser.h>
@@ -12,6 +16,7 @@
 #include "engine/rime_hooks.hpp"
 #include "engine/rime_paths.hpp"
 #include "rimes_state.hpp"
+#include "official_catalog.hpp"
 
 #ifndef RIMES_INSTALL_SHARED_DIR
 #define RIMES_INSTALL_SHARED_DIR ""
@@ -76,6 +81,7 @@ RimesIme::RimesIme(Instance* instance)
         {[this] { capsule_->SetEnabled(true); }, [this] { capsule_->SetEnabled(false); }});
     capsule_->SetEnabled(false);
     plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
+    WatchPluginPackages();
 
     destroy_watch_ = instance_->watchEvent(
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
@@ -107,12 +113,14 @@ RimesIme::RimesIme(Instance* instance)
 
 void RimesIme::reloadConfig() {
     readAsIni(config_, "conf/rimes.conf");
-    if (capsule_) plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
+    if (capsule_ && (!plugin_binding_ || !plugin_binding_->Manages("builtin.capsule.notes")))
+        plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
 }
 void RimesIme::setConfig(const RawConfig& config) {
     config_.load(config, true);
     safeSaveAsIni(config_, "conf/rimes.conf");
-    plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
+    if (!plugin_binding_ || !plugin_binding_->Manages("builtin.capsule.notes"))
+        plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
     instance_->inputContextManager().foreachFocused([this](InputContext* ic) {
         if (auto* state = ic->propertyFor(&factory_)) state->refreshCandidates();
         return true;
@@ -120,6 +128,9 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    plugin_watch_.reset();
+    if (plugin_watch_fd_ >= 0) close(plugin_watch_fd_);
+    plugin_binding_.reset();
     plugins_.Shutdown();
     if (alive_) {
         alive_->store(false);
@@ -127,6 +138,48 @@ RimesIme::~RimesIme() {
     engine_.SetDeployReadyCallback(nullptr);
     engine_.Stop();
     dispatcher_.detach();
+}
+
+void RimesIme::WatchPluginPackages() {
+    try {
+        plugin_store_ = std::make_unique<rimes::plugins::PackageStore>(
+            rimes::runtime::UserRoot() / "plugins", rimes::plugins::OfficialCatalog(),
+            rimes::plugins::BundledPackages(), rimes::plugins::CompiledAdapters(), RIMES_PRODUCT_VERSION);
+        plugin_watch_fd_ = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+        if (plugin_watch_fd_ < 0 || inotify_add_watch(plugin_watch_fd_, plugin_store_->Path().c_str(),
+            IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF | IN_ATTRIB) < 0)
+            throw std::runtime_error("Plugin observer unavailable");
+        plugin_binding_ = std::make_unique<rimes::plugins::PackageBinding>(*plugin_store_, plugins_);
+        plugin_watch_ = instance_->eventLoop().addIOEvent(plugin_watch_fd_, IOEventFlag::In,
+            [this](EventSourceIO*, int fd, IOEventFlags) {
+                alignas(inotify_event) std::array<char, 16384> events{};
+                bool valid = true;
+                for (;;) {
+                    const auto count = read(fd, events.data(), events.size());
+                    if (count < 0 && errno == EINTR) continue;
+                    if (count < 0 && errno == EAGAIN) break;
+                    if (count <= 0) { valid = false; break; }
+                    for (std::size_t offset = 0; offset < static_cast<std::size_t>(count);) {
+                        const auto* event = reinterpret_cast<const inotify_event*>(events.data() + offset);
+                        if (event->mask & (IN_IGNORED | IN_DELETE_SELF | IN_MOVE_SELF)) valid = false;
+                        offset += sizeof(inotify_event) + event->len;
+                    }
+                }
+                if (valid) plugin_binding_->Refresh();
+                else plugin_binding_->Revoke();
+                return valid;
+            });
+        if (!plugin_watch_) throw std::runtime_error("Plugin observer unavailable");
+    } catch (const std::exception&) {
+        if (plugin_binding_) plugin_binding_->Revoke();
+        plugin_watch_.reset();
+        if (plugin_watch_fd_ >= 0) { close(plugin_watch_fd_); plugin_watch_fd_ = -1; }
+        FCITX_LOGC(rimes_log, Error) << "Official plugins unavailable; check private data permissions";
+    }
+}
+
+bool RimesIme::acceptsPluginResult(const rimes::plugins::Lease& lease) {
+    return plugin_binding_ && plugin_binding_->Accepts(lease);
 }
 
 void RimesIme::HandleDeployReady() {
