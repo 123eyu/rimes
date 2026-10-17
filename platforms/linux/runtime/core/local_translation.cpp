@@ -24,6 +24,6 @@ void LocalTranslationWorker::Run(std::string text, std::string source, std::stri
         } catch (const std::exception&) { valid = false; }
         complete(valid ? translated : "", valid);
     };
-    if (!jobs_.Run(std::move(cancelled), std::move(work))) complete("", false);
+    if (!jobs_.Run(std::move(cancelled), std::move(work), [complete] { complete("", false); })) complete("", false);
 }
 }
