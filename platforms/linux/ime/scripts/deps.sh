@@ -12,7 +12,7 @@ Debian / Ubuntu (Noble and later):
     fcitx5 fcitx5-modules fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
     librime-dev librime-plugin-lua librime-bin \
     libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
-    xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
+    xvfb xdotool x11-utils dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
     libgtk-layer-shell-dev libxcb1-dev libssl-dev libcurl4-openssl-dev \
     qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway
     # Runtime recommend for Wayland Capsule Ctrl+C (also a .deb Recommends):
@@ -40,7 +40,7 @@ if [[ "${1:-}" == "--install" ]]; then
             fcitx5 fcitx5-modules fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
             librime-dev librime-plugin-lua librime-bin \
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
-            xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
+            xvfb xdotool x11-utils dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev libxcb1-dev libssl-dev libcurl4-openssl-dev \
             qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway
     else
