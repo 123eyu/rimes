@@ -177,6 +177,9 @@ struct Settings {
       Add(segments, b);
     }
     feedback = Label(message, "tiny");
+    // A long validation message must not change the native window geometry.
+    gtk_label_set_ellipsize(GTK_LABEL(feedback), PANGO_ELLIPSIZE_END);
+    gtk_widget_set_tooltip_text(feedback, message.c_str());
     gtk_widget_set_margin_start(feedback, 16);
     gtk_widget_set_margin_end(feedback, 24);
     Add(tabs, feedback, true);
@@ -830,11 +833,16 @@ int SettingsSmoke() {
     }
     phase = "layout";
     app.Select("core.appearance", "theme");
+    gtk_window_resize(GTK_WINDOW(app.window), Settings::Metric("settingsWidth"),
+                      Settings::Metric("settingsHeight"));
     SettleLayout();
-    check(gtk_widget_get_allocated_width(app.root) ==
-          Settings::Metric("settingsWidth"));
-    check(gtk_widget_get_allocated_height(app.root) ==
-          Settings::Metric("settingsHeight"));
+    const int width = gtk_widget_get_allocated_width(app.root);
+    const int height = gtk_widget_get_allocated_height(app.root);
+    if (width != Settings::Metric("settingsWidth") ||
+        height != Settings::Metric("settingsHeight")) {
+      std::cerr << "Settings allocation: " << width << 'x' << height << '\n';
+      check(false);
+    }
     gtk_widget_destroy(app.window);
     ConfigurationStore reopened(root / "user" / "configuration");
     check(reopened.Load().at("theme") == "day");
