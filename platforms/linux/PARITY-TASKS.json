@@ -317,9 +317,10 @@
         "图片/视频保存到私有内容库，支持预览、复制、收藏和来源标注；收藏不受临时清理影响。",
         "覆盖 X11 与 Wayland portal，验证取消/锁屏/失败的资源释放、声音和格式能力边界。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 166,
-      "url": "https://github.com/scholay/xsime/issues/166"
+      "url": "https://github.com/scholay/xsime/issues/166",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 17,

@@ -59,6 +59,7 @@ bool ValidateResource(const Record& record, std::string* error) {
     if (record.kind == Kind::Pdf)
         valid = regular &&
                 LowerText(std::filesystem::path(record.content).extension().string()) == ".pdf";
+    if (record.kind == Kind::Image || record.kind == Kind::Video) valid = regular;
     if (record.kind == Kind::Skill || record.kind == Kind::Resource)
         valid = regular || directory;
     if (!valid && error)

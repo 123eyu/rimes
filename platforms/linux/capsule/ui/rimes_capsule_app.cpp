@@ -2,6 +2,9 @@
 #include "background_jobs.hpp"
 #include "buffer_protocol.hpp"
 #include "capsule_click.hpp"
+#include "capsule_capture.hpp"
+#include "capsule_resources.hpp"
+#include "capture_controller.hpp"
 #include "capsule_clipboard.hpp"
 #include "capsule_kinds.hpp"
 #include "capsule_manager.hpp"
@@ -54,12 +57,14 @@ struct App {
     GtkWidget* filter_box = nullptr;
     std::unique_ptr<rimes::capsule::ManagerWindow> manager;
     std::unique_ptr<rimes::capsule::ClipboardController> clipboard;
+    std::unique_ptr<rimes::capsule::CaptureController> capture;
     GtkWidget* count = nullptr;
     GtkWidget* card_box = nullptr;
     GtkWidget*card_scroll = nullptr, *detail_box = nullptr;
     GtkWidget* hint = nullptr;
     GtkWidget* query = nullptr;
     GtkWidget* clear_history = nullptr;
+    GtkWidget* capture_button = nullptr;
     GtkWidget* search_shell = nullptr;
     GtkWidget* history_menu = nullptr;
     std::string scrolled_selection;
@@ -78,7 +83,7 @@ struct App {
         alive->store(false);
         thumbnail_epoch.fetch_add(1);
         thumbnails.Shutdown();
-        clipboard.reset();
+        capture.reset();clipboard.reset();
     }
     int socket_fd = -1;
     guint io_id = 0, reconnect_id = 0;
@@ -90,6 +95,7 @@ struct App {
     rimes::capsule::Snapshot snapshot;
     bool wayland_layer = false;
     bool preview = false;
+    std::string preview_image;
     bool placed = false;
     std::string theme;
     std::unique_ptr<rimes::desktop::PanelWindow> panel;
@@ -216,7 +222,7 @@ void ShowHistoryMenu(App* app, int index) {
         index >= static_cast<int>(app->snapshot.cards.size()))
         return;
     const auto card = app->snapshot.cards[index];
-    if (card.module != rimes::capsule::Module::Temporary)
+    if (card.module != rimes::capsule::Module::Temporary && card.module != rimes::capsule::Module::Capture)
         return;
     if (app->history_menu)
         gtk_widget_destroy(app->history_menu);
@@ -228,9 +234,11 @@ void ShowHistoryMenu(App* app, int index) {
                      app);
     for (const auto& action : std::vector<std::pair<const char*, std::string>>{
              {"复制", "copy"},
-             {card.favorite ? "取消收藏" : "收藏", "favorite"},
+             {card.module == rimes::capsule::Module::Capture ? (card.favorite ? "已收藏到 Capsule" : "收藏到 Capsule") : (card.favorite ? "取消收藏" : "收藏"), "favorite"},
              {"删除", "remove"}}) {
         auto* item = gtk_menu_item_new_with_label(action.first);
+        if (card.module == rimes::capsule::Module::Capture && card.favorite && action.second != "copy")
+            gtk_widget_set_sensitive(item, FALSE);
         auto* callback = new std::function<void()>([app, card, op = action.second,
                                                     life = app->alive] {
             if (life->load() && app->snapshot.visible && !app->snapshot.password_field)
@@ -308,11 +316,11 @@ void UpdateCardsInPlace(App* app) {
         const auto& card = app->snapshot.cards[static_cast<std::size_t>(i)];
         gtk_label_set_text(
             GTK_LABEL(row.title),
-            (card.module == rimes::capsule::Module::Temporary ? card.source : card.title).c_str());
+            (card.module == rimes::capsule::Module::Temporary ? card.source : card.module == rimes::capsule::Module::Capture ? rimes::capsule::CharacterPrefix(card.title,25) : card.title).c_str());
         if (row.menu)
             gtk_widget_set_visible(row.menu, i == app->snapshot.selected);
         if (row.marker)
-            gtk_widget_set_visible(row.marker, card.favorite);
+            gtk_widget_set_visible(row.marker, card.favorite && card.module != rimes::capsule::Module::Capture);
         gtk_label_set_text(GTK_LABEL(row.preview), card.preview.c_str());
         SetCardSelectedStyle(row.event, i == app->snapshot.selected);
         g_object_set_data(G_OBJECT(row.event), "index", GINT_TO_POINTER(i));
@@ -325,9 +333,11 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
     row.event = gtk_event_box_new();
     gtk_widget_set_name(row.event, "rimes-card");
     SetCardSelectedStyle(row.event, index == app->snapshot.selected);
-    if (card.module == rimes::capsule::Module::Temporary) {
+    if (card.module == rimes::capsule::Module::Temporary || card.module == rimes::capsule::Module::Capture) {
+        const bool capture = card.module == rimes::capsule::Module::Capture;
         using namespace rimes::desktop;
         Class(row.event, "clipboard-card");
+        if (capture) Class(row.event, "capture-card");
         auto* fixed = gtk_fixed_new();
         gtk_container_add(GTK_CONTAINER(row.event), fixed);
         auto place = [&](GtkWidget* widget, int x, int y, int w, int h) {
@@ -336,6 +346,7 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
         };
         auto* quick = Label(index < 9 ? "⌃" + std::to_string(index + 1) : "", "clipboard-quick");
         place(quick, 10, 9, 28, 15);
+        gtk_widget_set_no_show_all(quick, capture);
         auto* source_icon =
             gtk_image_new_from_icon_name("application-x-executable", GTK_ICON_SIZE_MENU);
         const auto app_icon = rimes::capsule::LowerText(card.source);
@@ -345,23 +356,28 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
             gtk_image_set_from_icon_name(GTK_IMAGE(source_icon), app_icon.c_str(),
                                          GTK_ICON_SIZE_MENU);
         place(source_icon, 43, 8, 16, 16);
-        row.title = Label(card.source, "clipboard-source");
+        gtk_widget_set_no_show_all(source_icon, capture);
+        row.title = Label(capture ? rimes::capsule::CharacterPrefix(card.title,25) : card.source, "clipboard-source");
         gtk_label_set_xalign(GTK_LABEL(row.title), 0);
         gtk_label_set_ellipsize(GTK_LABEL(row.title), PANGO_ELLIPSIZE_END);
         gtk_label_set_max_width_chars(GTK_LABEL(row.title), 1);
-        place(row.title, 64, 9, 73, 15);
+        if (capture) place(row.title, 8, 83, 190, 14);
+        else place(row.title, 64, 9, 73, 15);
         row.preview = Label(card.preview, "clipboard-preview");
         gtk_label_set_xalign(GTK_LABEL(row.preview), 0);
         gtk_label_set_yalign(GTK_LABEL(row.preview), 0);
         gtk_label_set_line_wrap(GTK_LABEL(row.preview), TRUE);
-        gtk_label_set_lines(GTK_LABEL(row.preview), 4);
+        gtk_label_set_lines(GTK_LABEL(row.preview), capture ? 1 : 4);
         gtk_label_set_max_width_chars(GTK_LABEL(row.preview), 1);
         gtk_label_set_ellipsize(GTK_LABEL(row.preview), PANGO_ELLIPSIZE_END);
-        place(row.preview, 11, 34, 184, 83);
+        if (capture) place(row.preview, 8, 100, 190, 14);
+        else place(row.preview, 11, 34, 184, 83);
         gtk_widget_show(row.preview);
         gtk_widget_set_no_show_all(row.preview, TRUE);
         row.picture = Class(gtk_drawing_area_new(), "clipboard-picture");
-        place(row.picture, 11, 34, 184, 83);
+        if (capture) place(row.picture, 8, 8, 186, 72);
+        else place(row.picture, 11, 34, 184, 83);
+        g_object_set_data(G_OBJECT(row.picture), "capture", GINT_TO_POINTER(capture));
         gtk_widget_set_no_show_all(row.picture, TRUE);
         auto* identity = new std::pair<App*, std::string>(app, card.id);
         g_signal_connect_data(
@@ -376,12 +392,25 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
                 auto* image = found->thumbnail.get();
                 const double w = gdk_pixbuf_get_width(image);
                 const double h = gdk_pixbuf_get_height(image);
-                const double scale = std::min(gtk_widget_get_allocated_width(widget) / w,
-                                              gtk_widget_get_allocated_height(widget) / h);
+                const auto scale_x = gtk_widget_get_allocated_width(widget) / w;
+                const auto scale_y = gtk_widget_get_allocated_height(widget) / h;
+                const double scale = g_object_get_data(G_OBJECT(widget), "capture")
+                    ? std::max(scale_x, scale_y) : std::min(scale_x, scale_y);
                 gtk_render_background(gtk_widget_get_style_context(widget), cr, 0, 0,
                                       gtk_widget_get_allocated_width(widget),
                                       gtk_widget_get_allocated_height(widget));
                 cairo_save(cr);
+                const double width = gtk_widget_get_allocated_width(widget);
+                const double height = gtk_widget_get_allocated_height(widget);
+                if (g_object_get_data(G_OBJECT(widget), "capture")) {
+                    constexpr double pi = 3.14159265358979323846;
+                    cairo_arc(cr, width - 6, 6, 6, -pi / 2, 0);
+                    cairo_arc(cr, width - 6, height - 6, 6, 0, pi / 2);
+                    cairo_arc(cr, 6, height - 6, 6, pi / 2, pi);
+                    cairo_arc(cr, 6, 6, 6, pi, 3 * pi / 2);
+                    cairo_close_path(cr);
+                } else cairo_rectangle(cr, 0, 0, width, height);
+                cairo_clip(cr);
                 cairo_translate(cr, (gtk_widget_get_allocated_width(widget) - w * scale) / 2,
                                 (gtk_widget_get_allocated_height(widget) - h * scale) / 2);
                 cairo_scale(cr, scale, scale);
@@ -402,7 +431,12 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
                     break;
                 }
         });
-        place(row.menu, 174, 5, 22, 22);
+        if (capture) {
+            auto* icon = gtk_bin_get_child(GTK_BIN(row.menu));
+            gtk_widget_set_size_request(icon, 11, 11);
+            place(row.menu, 176, 6, 24, 24);
+        }
+        else place(row.menu, 174, 5, 22, 22);
         gtk_widget_show_all(row.menu);
         gtk_widget_set_no_show_all(row.menu, TRUE);
         gtk_widget_set_visible(row.menu, index == app->snapshot.selected);
@@ -418,14 +452,17 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
                     break;
                 }
         });
-        place(row.copy, 174, 97, 22, 22);
+        if (capture) {
+            gtk_widget_set_size_request(gtk_bin_get_child(GTK_BIN(row.copy)), 11, 11);
+            place(row.copy, 176, 96, 24, 24);
+        } else place(row.copy, 174, 97, 22, 22);
         gtk_widget_show_all(row.copy);
         gtk_widget_hide(row.copy);
         gtk_widget_set_no_show_all(row.copy, TRUE);
         row.marker = Label("★", "clipboard-quick");
         place(row.marker, 154, 10, 13, 13);
         gtk_widget_set_no_show_all(row.marker, TRUE);
-        gtk_widget_set_visible(row.marker, card.favorite);
+        gtk_widget_set_visible(row.marker, card.favorite && card.module != rimes::capsule::Module::Capture);
         gtk_widget_add_events(row.event, GDK_ENTER_NOTIFY_MASK | GDK_LEAVE_NOTIFY_MASK);
         g_object_set_data(G_OBJECT(row.event), "copy", row.copy);
         g_signal_connect(
@@ -473,7 +510,7 @@ App::CardRow MakeCardRow(App* app, const rimes::capsule::Card& card, int index) 
 }
 
 void RequestThumbnails(App* app) {
-    if (app->snapshot.module != "temporary" || !app->snapshot.visible ||
+    if ((app->snapshot.module != "temporary" && app->snapshot.module != "capture") || !app->snapshot.visible ||
         app->snapshot.password_field)
         return;
     auto* scroll = gtk_scrolled_window_get_hadjustment(GTK_SCROLLED_WINDOW(app->card_scroll));
@@ -481,17 +518,21 @@ void RequestThumbnails(App* app) {
     for (int i = start; i < std::min(start + 6, static_cast<int>(app->snapshot.cards.size()));
          ++i) {
         const auto card = app->snapshot.cards[i];
-        if (card.kind != rimes::capsule::Kind::Image)
+        if (card.kind != rimes::capsule::Kind::Image && card.kind != rimes::capsule::Kind::Video)
             continue;
         const auto key = card.id + card.revision;
         auto apply = [app, card, key](std::shared_ptr<GdkPixbuf> image) {
+            if (!app->snapshot.visible || app->snapshot.password_field ||
+                std::none_of(app->snapshot.cards.begin(), app->snapshot.cards.end(),
+                    [&](const auto& current) { return current.id == card.id && current.revision == card.revision && current.module == card.module; }))
+                return;
             app->thumbnail_cache[key] = image;
             while (app->thumbnail_cache.size() > 32)
                 app->thumbnail_cache.erase(app->thumbnail_cache.begin());
             for (auto& row : app->card_rows)
                 if (row.id == card.id && row.picture) {
                     row.thumbnail = image;
-                    gtk_widget_set_visible(row.preview, !image);
+                    gtk_widget_set_visible(row.preview, card.module == rimes::capsule::Module::Capture || !image);
                     gtk_widget_set_visible(row.picture, bool(image));
                     gtk_widget_queue_draw(row.picture);
                 }
@@ -501,8 +542,8 @@ void RequestThumbnails(App* app) {
             continue;
         }
         if (app->preview) {
-            auto* image = gdk_pixbuf_new_from_file_at_scale("Logo/AppIcon.iconset/icon_256x256.png",
-                                                            256, 256, TRUE, nullptr);
+            auto* image = gdk_pixbuf_new_from_file_at_scale(app->preview_image.empty() ? "Logo/AppIcon.iconset/icon_256x256.png" : app->preview_image.c_str(),
+                                                            512, 512, TRUE, nullptr);
             apply({image, [](GdkPixbuf* value) {
                        if (value)
                            g_object_unref(value);
@@ -523,17 +564,38 @@ void RequestThumbnails(App* app) {
                         rimes::runtime::UserRoot() / "plugins", rimes::plugins::OfficialCatalog(),
                         rimes::plugins::BundledPackages(), rimes::plugins::CompiledAdapters(),
                         RIMES_PRODUCT_VERSION);
-                    const auto grant = packages.Inspect(
-                        rimes::capsule::ModulePlugin(rimes::capsule::Module::Temporary));
-                    packages.WithEnabledGrant(grant.id, grant.grant, [&] {
-                        if (!life->load() || app->thumbnail_epoch.load() != epoch)
-                            return;
-                        rimes::capsule::ClipboardHistoryStore store(
-                            rimes::capsule::ClipboardHistoryStore::DefaultRoot());
-                        auto archive = store.Read(card.id, card.revision);
-                        if (archive)
-                            image = rimes::capsule::ClipboardThumbnail(*archive);
-                    });
+                    const auto grant = packages.Inspect(rimes::capsule::ModulePlugin(card.module));
+                    if (!grant.enabled) throw std::runtime_error("插件已停用");
+                    if (card.module == rimes::capsule::Module::Temporary) {
+                        packages.WithEnabledGrant(grant.id, grant.grant, [&] {
+                            if (!life->load() || app->thumbnail_epoch.load() != epoch) return;
+                            rimes::capsule::ClipboardHistoryStore store(rimes::capsule::ClipboardHistoryStore::DefaultRoot());
+                            auto archive = store.Read(card.id, card.revision);
+                            if (archive) image = rimes::capsule::ClipboardThumbnail(*archive);
+                        });
+                    } else {
+                        rimes::capsule::ContentStore library(rimes::capsule::ContentStore::DefaultRoot());
+                        rimes::capsule::CaptureStore archive(rimes::capsule::CaptureStore::DefaultRoot());
+                        rimes::capsule::Record media;
+                        const auto asset = archive.Acquire(card.id, card.revision);
+                        if (asset) {
+                            media.kind = card.kind;
+                            media.content = asset->path.string();
+                        } else {
+                            std::string error;
+                            if (library.Get(card.id, &media, &error) != rimes::capsule::StoreStatus::Ok ||
+                                media.revision != card.revision || rimes::capsule::RecordModule(media) != rimes::capsule::Module::Capture)
+                                throw std::runtime_error("捕获已变化");
+                        }
+                        std::atomic<bool> cancelled{false};
+                        const auto preview = rimes::capsule::PreviewResource(media, library, cancelled);
+                        rimes::capsule::ClipboardArchive data;
+                        data.representations.push_back({"image/png", preview.png});
+                        packages.WithEnabledGrant(grant.id, grant.grant, [&] {
+                            if (life->load() && app->thumbnail_epoch.load() == epoch)
+                                image = rimes::capsule::ClipboardThumbnail(data);
+                        });
+                    }
                 } catch (const std::exception&) {
                 }
                 auto* completion = new std::function<void()>([app, life, epoch, key, apply, image] {
@@ -792,10 +854,13 @@ void ResetClear(App* app) {
     gtk_widget_set_tooltip_text(app->clear_history, "连续点击两次，清空未收藏的历史");
 }
 void ApplySnapshot(App* app) {
+    if(app->capture) app->capture->Apply(app->snapshot);
+    if(app->capture_button) gtk_widget_set_visible(app->capture_button,
+        !app->snapshot.password_field && std::find(app->snapshot.modules.begin(), app->snapshot.modules.end(), rimes::capsule::Module::Capture) != app->snapshot.modules.end());
     if (app->clipboard)
         app->clipboard->Apply(app->snapshot);
     if (!app->snapshot.visible || app->snapshot.password_field ||
-        app->snapshot.module != "temporary") {
+        (app->snapshot.module != "temporary" && app->snapshot.module != "capture")) {
         ResetClear(app);
         if (app->history_menu)
             gtk_widget_destroy(app->history_menu);
@@ -824,7 +889,7 @@ void ApplySnapshot(App* app) {
     if (app->snapshot.query != gtk_label_get_text(GTK_LABEL(app->query)))
         app->caret_visible = true;
     if (app->snapshot.password_field || !app->snapshot.visible ||
-        app->snapshot.module != "temporary") {
+        (app->snapshot.module != "temporary" && app->snapshot.module != "capture")) {
         app->thumbnail_epoch.fetch_add(1);
         app->thumbnail_pending.clear();
         app->thumbnail_cache.clear();
@@ -1069,6 +1134,12 @@ void LoadCss(const std::string& theme, GdkScreen* screen) {
         "solid " +
         c("borderStrong") + "; border-radius: 6px; background: " + c("surfaceSecondary") +
         "; }"
+        "#rimes-card.capture-card { border-radius: 11px; background: " + c("surfaceTertiary") + "; }"
+        "#rimes-card.capture-card.rimes-card-selected { border-width: 1px; background: " + c("surfaceTertiary") + "; }"
+        ".capture-card .clipboard-source { font-size: 11px; font-weight: 400; color: " + c("textPrimary") + "; }"
+        ".capture-card .clipboard-preview { font-size: 10px; color: " + c("textPrimary") + "; }"
+        ".capture-card .icon-button { border: 0; border-radius: 12px; box-shadow: none; background: " +
+        ((theme != "day" && theme != "liquidGlass") ? std::string("rgba(255,255,255,0.13)") : std::string("rgba(245,245,245,0.92)")) + "; }"
         ".capsule-detail-info { background: " +
         c("surfaceSecondary") +
         "; border-radius: 8px; padding: 0; }"
@@ -1220,6 +1291,10 @@ void BuildUi(App* app) {
     ResetClear(app);
     gtk_widget_set_no_show_all(app->clear_history, TRUE);
     gtk_box_pack_start(GTK_BOX(header), app->clear_history, FALSE, FALSE, 0);
+    auto* capture = rimes::desktop::IconButton("camera", "截图 / 录屏", [app] {if(app->capture) app->capture->Open();});
+    app->capture_button=capture;gtk_widget_set_no_show_all(capture,TRUE);
+    gtk_widget_set_size_request(capture,24,24);gtk_widget_set_can_focus(capture,FALSE);
+    gtk_box_pack_start(GTK_BOX(header),capture,FALSE,FALSE,0);
     auto* manage = rimes::desktop::Button(
         "管理", [app] { SendCommand(app, R"({"v":1,"op":"manage"})"); }, "capsule-header-button");
     gtk_button_set_image(GTK_BUTTON(manage), rimes::desktop::Icon("gearshape", 13));
@@ -1271,9 +1346,10 @@ void BuildUi(App* app) {
     gtk_widget_set_margin_top(app->hint,8);
     gtk_widget_set_margin_bottom(app->hint, 8);
     gtk_box_pack_start(GTK_BOX(chrome), app->hint, FALSE, FALSE, 0);
+    app->capture=std::make_unique<rimes::capsule::CaptureController>([app](auto command){SendCommand(app,command);});
     app->manager = std::make_unique<rimes::capsule::ManagerWindow>([app](auto command) { SendCommand(app,command); },app->preview,
         [app](const rimes::capsule::Record& record) {if(app->clipboard) app->clipboard->CopyResource(record);},
-        [app](const std::string& text) {if(app->clipboard) app->clipboard->CopyText(text);});
+        [app](const std::string& text) {if(app->clipboard) app->clipboard->CopyText(text);},[app] {if(app->capture) app->capture->Open();});
 }
 
 }  // namespace
@@ -1281,7 +1357,8 @@ void BuildUi(App* app) {
 int main(int argc, char** argv) {
     gtk_init(&argc, &argv);
     std::string socket_path = DefaultSocketPath();
-    bool resources_preview = false;
+    bool resources_preview = false, capture_preview = false;
+    std::string capture_image, capture_kind="image";
     bool preview = false, manager_preview = false, detail_preview = false,
          clipboard_preview = false;
     std::string render_path, preview_theme = "night";
@@ -1290,6 +1367,10 @@ int main(int argc, char** argv) {
     for (int index = 1; index < argc; ++index) {
         if (std::strcmp(argv[index], "--socket") == 0 && index + 1 < argc) {
             socket_path = argv[++index];
+        } else if (std::strcmp(argv[index], "--capture-preview") == 0 && index + 1 < argc) {
+            preview = true;capture_preview = true;capture_image=argv[++index];
+        } else if (std::strcmp(argv[index], "--capture-kind") == 0 && index + 1 < argc) {
+            capture_kind=argv[++index];
         } else if (std::strcmp(argv[index], "--clipboard-preview") == 0) {
             preview = true;
             clipboard_preview = true;
@@ -1319,7 +1400,7 @@ int main(int argc, char** argv) {
     g_app = &app;
     app.dump_geometry = dump_geometry;
     app.quit_after_dump = quit_after_dump;
-    app.preview = preview;
+    app.preview = preview;app.preview_image=capture_image;
     app.socket_path = socket_path;
     BuildUi(&app);
 
@@ -1348,6 +1429,14 @@ int main(int argc, char** argv) {
         }
         app.snapshot.cards.push_back(demo); app.snapshot.selected_id=app.snapshot.cards.front().id;
         app.snapshot.count=static_cast<int>(app.snapshot.cards.size());
+        if (capture_preview) {
+            rimes::capsule::CaptureRecord record;record.id=demo.id;record.kind=capture_kind;
+            record.title=capture_kind=="video"?"录屏示例 👨‍👩‍👧‍👦":"截图示例";
+            record.source=capture_kind=="video"?"文件导入":"桌面捕获";record.duration=125.9;
+            if(capture_kind=="video") {record.collection_id=record.id;record.incomplete=true;}
+            app.snapshot.cards={rimes::capsule::CaptureCard(record)};app.snapshot.module="capture";
+            app.snapshot.count=1;app.snapshot.selected_id=record.id;
+        }
         if (resources_preview) {
             auto card=demo; card.kind=rimes::capsule::Kind::Pdf; card.module=rimes::capsule::Module::Resources;
             card.title="参考文献示例"; card.payload="/home/example/Documents/reference.pdf";
@@ -1411,7 +1500,7 @@ int main(int argc, char** argv) {
         if (!render_path.empty()) {
             if(manager_preview) gtk_window_set_focus(GTK_WINDOW(app.manager->Window()),nullptr);
             for (int i = 0; i < 30; ++i) { while (gtk_events_pending()) gtk_main_iteration(); g_usleep(10000); }
-            return rimes::desktop::Render(manager_preview ? app.manager->Root() : gtk_bin_get_child(GTK_BIN(app.window)), render_path) ? 0 : 1;
+            return rimes::desktop::Render(capture_preview ? app.card_rows.front().event : manager_preview ? app.manager->Root() : gtk_bin_get_child(GTK_BIN(app.window)), render_path) ? 0 : 1;
         }
         if (!app.dump_geometry.empty()) {
             g_timeout_add(

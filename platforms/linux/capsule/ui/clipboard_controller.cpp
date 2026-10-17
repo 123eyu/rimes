@@ -2,6 +2,7 @@
 #include "clipboard_controller.hpp"
 #include "clipboard_desktop.hpp"
 #include "capsule_resources.hpp"
+#include "capsule_capture.hpp"
 #include "configuration.hpp"
 #include "official_catalog.hpp"
 #include <algorithm>
@@ -150,6 +151,20 @@ struct ClipboardController::Impl {
                         std::optional<ClipboardArchive> archive;
                         if (module == Module::Temporary) {
                             ClipboardHistoryStore store(ClipboardHistoryStore::DefaultRoot()); archive = store.Read(id, revision);
+                        } else if (module == Module::Capture) {
+                            CaptureStore store(CaptureStore::DefaultRoot());
+                            const auto captured=store.Acquire(id,revision); Record value;
+                            if(captured) {
+                                value.kind=captured->record.kind=="video"?Kind::Video:Kind::Image; value.content=captured->path.string();
+                                archive=FileArchive(value);archive->resource_lease=captured->lease;
+                                if(value.kind==Kind::Image && captured->record.bytes<=32*1024*1024) {
+                                    std::atomic<bool> cancelled{false};
+                                    archive->representations.push_back({"image/png",ReadResource(value.content,32*1024*1024,cancelled)});
+                                }
+                            } else {
+                                ContentStore library(ContentStore::DefaultRoot());std::string error;
+                                if(library.Get(id,&value,&error)==StoreStatus::Ok && value.revision==revision && RecordModule(value)==Module::Capture) archive=FileArchive(value);
+                            }
                         } else if (module == Module::Resources) {
                             ContentStore store(ContentStore::DefaultRoot()); Record value; std::string error;
                             if (store.Get(id, &value, &error) == StoreStatus::Ok && value.revision == revision && RecordModule(value) == Module::Resources) archive = FileArchive(value);
@@ -203,7 +218,7 @@ struct ClipboardController::Impl {
         seen_restore = true;
         restore_seq = snapshot.restore_seq;
         if (edge && snapshot.visible && !snapshot.password_field && action_enabled &&
-            (snapshot.module == "temporary" || snapshot.module == "resources") && !snapshot.restore_id.empty())
+            (snapshot.module == "temporary" || snapshot.module == "resources" || snapshot.module == "capture") && !snapshot.restore_id.empty())
             Restore(snapshot);
     }
     void CopyText(const std::string& text) {

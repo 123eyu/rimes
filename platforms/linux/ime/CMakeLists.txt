@@ -70,6 +70,8 @@ add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_store.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_reference.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_resources.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_capture.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capture_process.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_model.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_transport.cpp"
@@ -82,6 +84,7 @@ target_include_directories(RimesCapsuleCore PUBLIC
 )
 target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess PkgConfig::CapsuleICU SQLite::SQLite3)
 target_compile_definitions(RimesCapsuleCore PRIVATE RIMES_CAPSULE_PREVIEW_PATH="${CMAKE_INSTALL_FULL_LIBEXECDIR}/rimes/rimes-capsule-preview")
+target_compile_definitions(RimesCapsuleCore PRIVATE RIMES_CAPSULE_CAPTURE_PATH="${CMAKE_INSTALL_FULL_LIBEXECDIR}/rimes/rimes-capsule-capture")
 set_target_properties(RimesCapsuleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesCapsuleCore)
 
@@ -133,6 +136,7 @@ if(RIMES_BUILD_FCITX5)
         src/buffer/buffer_delivery.cpp
         src/capsule/capsule_service.cpp
         src/capsule/capsule_history_service.cpp
+        src/capsule/capsule_capture_service.cpp
     )
     target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
@@ -246,13 +250,20 @@ if(RIMES_BUILD_FCITX5)
         target_link_libraries(RimesClipboardDesktop PUBLIC RimesCapsuleCore PkgConfig::CapsuleWayland PkgConfig::CapsuleXfixes)
         rimes_harden(RimesClipboardDesktop)
 
+        pkg_check_modules(CapsuleCapture REQUIRED IMPORTED_TARGET gstreamer-1.0 gstreamer-app-1.0 gstreamer-video-1.0 libportal gio-unix-2.0 x11)
+        add_executable(rimes-capsule-capture "${RIMES_CAPSULE_ROOT}/ui/capsule_capture_main.cpp")
+        target_include_directories(rimes-capsule-capture PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-capsule-capture PRIVATE RimesCapsuleCore PkgConfig::CapsuleCapture ${GTK3_LIBRARIES})
+        rimes_harden(rimes-capsule-capture)
+        install(TARGETS rimes-capsule-capture DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
         pkg_check_modules(CapsulePoppler REQUIRED IMPORTED_TARGET poppler-glib)
         add_executable(rimes-capsule-preview "${RIMES_CAPSULE_ROOT}/ui/capsule_preview_main.cpp")
         target_include_directories(rimes-capsule-preview PRIVATE ${GTK3_INCLUDE_DIRS})
-        target_link_libraries(rimes-capsule-preview PRIVATE RimesCapsuleCore PkgConfig::CapsulePoppler ${GTK3_LIBRARIES})
+        target_link_libraries(rimes-capsule-preview PRIVATE RimesCapsuleCore PkgConfig::CapsulePoppler PkgConfig::CapsuleCapture ${GTK3_LIBRARIES})
         rimes_harden(rimes-capsule-preview)
         install(TARGETS rimes-capsule-preview DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
         add_executable(rimes-capsule
+            "${RIMES_CAPSULE_ROOT}/ui/capture_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/clipboard_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
@@ -455,6 +466,40 @@ if(RIMES_BUILD_TESTS)
     rimes_harden(rimes-capsule-modules-tests)
     add_test(NAME RimesCapsuleModules COMMAND rimes-capsule-modules-tests)
     if(TARGET rimes-capsule)
+        set(pointer_protocol wlr-virtual-pointer-unstable-v1)
+        add_custom_command(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-client-protocol.h"
+                                  "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-protocol.c"
+            COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+            COMMAND "${CAPSULE_WAYLAND_SCANNER}" client-header "${RIMES_CAPSULE_ROOT}/protocols/${pointer_protocol}.xml" "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-client-protocol.h"
+            COMMAND "${CAPSULE_WAYLAND_SCANNER}" private-code "${RIMES_CAPSULE_ROOT}/protocols/${pointer_protocol}.xml" "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-protocol.c"
+            DEPENDS "${RIMES_CAPSULE_ROOT}/protocols/${pointer_protocol}.xml" VERBATIM)
+        add_executable(rimes-capture-pointer-fixture "${RIMES_CAPSULE_ROOT}/tests/capture_pointer_fixture.c"
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-client-protocol.h"
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/${pointer_protocol}-protocol.c")
+        target_include_directories(rimes-capture-pointer-fixture PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+        target_link_libraries(rimes-capture-pointer-fixture PRIVATE PkgConfig::CapsuleWayland)
+        find_program(RIMES_DESKTOP_TEST_PYTHON NAMES python3 PATHS /usr/bin NO_DEFAULT_PATH REQUIRED)
+        add_executable(rimes-capture-controller-tests "${RIMES_CAPSULE_ROOT}/tests/capture_controller_tests.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capture_controller.cpp" "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp" "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp")
+        target_include_directories(rimes-capture-controller-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
+        target_link_libraries(rimes-capture-controller-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
+        target_compile_definitions(rimes-capture-controller-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        add_dependencies(rimes-capture-controller-tests rimes-capsule-capture rimes-capsule-preview)
+        rimes_harden(rimes-capture-controller-tests)
+        add_test(NAME capsule-capture-controller COMMAND xvfb-run -a $<TARGET_FILE:rimes-capture-controller-tests>)
+        set_tests_properties(capsule-capture-controller PROPERTIES ENVIRONMENT "G_DEBUG=fatal-criticals")
+        add_executable(rimes-capsule-capture-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_capture_tests.cpp")
+        target_compile_definitions(rimes-capsule-capture-tests PRIVATE NATIVE_CAPTURE_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-capture.json")
+        add_test(NAME capsule-native-capture-fixtures COMMAND "${Python3_EXECUTABLE}" "${RIMES_CAPSULE_ROOT}/tests/verify_native_capture.py")
+        target_include_directories(rimes-capsule-capture-tests PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-capsule-capture-tests PRIVATE RimesCapsuleCore ${GTK3_LIBRARIES})
+        rimes_harden(rimes-capsule-capture-tests)
+        add_dependencies(rimes-capsule-capture-tests rimes-capsule-preview rimes-capsule-capture)
+        add_test(NAME RimesCapsuleCapture COMMAND rimes-capsule-capture-tests)
+        add_test(NAME capsule-capture-x11 COMMAND dbus-run-session -- xvfb-run -a -s "-screen 0 800x600x24" "${RIMES_DESKTOP_TEST_PYTHON}" "${RIMES_CAPSULE_ROOT}/tests/capture_backend_test.py" "$<TARGET_FILE:rimes-capsule-capture>")
+        add_test(NAME capsule-capture-portal COMMAND dbus-run-session -- "${RIMES_DESKTOP_TEST_PYTHON}" "${RIMES_CAPSULE_ROOT}/tests/capture_portal_test.py" "$<TARGET_FILE:rimes-capsule-capture>")
+        add_test(NAME capsule-capture-pipewire COMMAND dbus-run-session -- "${RIMES_DESKTOP_TEST_PYTHON}" "${RIMES_CAPSULE_ROOT}/tests/capture_pipewire_test.py" "$<TARGET_FILE:rimes-capsule-capture>")
         add_executable(rimes-capsule-resources-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_resources_tests.cpp")
         target_include_directories(rimes-capsule-resources-tests PRIVATE ${GTK3_INCLUDE_DIRS})
         target_link_libraries(rimes-capsule-resources-tests PRIVATE RimesCapsuleCore ${GTK3_LIBRARIES})
@@ -544,7 +589,7 @@ if(RIMES_BUILD_TESTS)
         target_link_libraries(rimes-desktop-shortcuts-tests PRIVATE Fcitx5::Core RimesPluginCore PkgConfig::RimesXCB)
         rimes_harden(rimes-desktop-shortcuts-tests)
         add_dependencies(rimes-desktop-shortcuts-tests rimes-launch)
-        add_test(NAME desktop-shortcuts-portal COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:rimes-desktop-shortcuts-tests> --portal $<TARGET_FILE:rimes-launch>)
+        add_test(NAME desktop-shortcuts-portal COMMAND ${DBUS_RUN_SESSION} --config-file=${CMAKE_CURRENT_SOURCE_DIR}/tests/portal_fixture_bus.conf -- $<TARGET_FILE:rimes-desktop-shortcuts-tests> --portal $<TARGET_FILE:rimes-launch>)
         set_tests_properties(desktop-shortcuts-portal PROPERTIES ENVIRONMENT "RIMES_PRIVATE_SESSION_TEST=1")
         find_program(RIMES_XDOTOOL xdotool)
         if(RIMES_BUFFER_XVFB_RUN AND RIMES_XDOTOOL)

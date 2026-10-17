@@ -55,10 +55,13 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
   notes, grouped detail rows and opt-in clipboard history. Text uses native
   `commitString` after an armed-IC recheck; rich clipboard items restore original
   MIME formats for explicit paste. The GTK manager exposes read-only history
-  previews, copy, favorite and delete. See [Capsule usage](../capsule/README.md).
+  previews, copy, favorite and delete. Resources add reference metadata, file/PDF
+  previews and explicit attachment copies. Capture adds PNG screenshots and silent
+  VP8 WebM recording through X11 or desktop portals, with a private archive.
+  See [Capsule usage](../capsule/README.md).
 
 macOS-only behaviour that is **not** reproduced here: custom candidate chrome,
-Mailbox, Capsule iCloud / password vault / capture and resource workflows,
+Mailbox, Capsule iCloud / password vault, advanced capture editing and audio,
 Buffer stream/music plugins, cross-batch chord pairing,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
@@ -306,9 +309,13 @@ platforms/linux/ime/scripts/package-deb.sh /tmp/rimes-deb
 
 writes `fcitx5-rimes_<version>_<arch>.deb` and its `.sha256` (addon + `rimes-buffer` +
 `rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + `rimes-schemes` + private Rime/Lua + reviewed data).
-The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.3_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
-The package `Recommends: libgtk-layer-shell0, wl-clipboard` so a wlroots
-session can keep the rail overlay and copy notes without a GTK serial.
+The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.5_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
+The package recommends `libgtk-layer-shell0`, `wl-clipboard` and the Inter/Noto
+fonts (including emoji). GStreamer base/good/PipeWire plugins and
+`xdg-desktop-portal` are runtime dependencies for capture. Install the portal
+backend appropriate to the desktop; GTK alone does not provide screen recording.
+A wlroots session can use `xdg-desktop-portal-wlr`. See
+[capture validation](../capsule/CAPTURE-VALIDATION.md) for tested paths and limits.
 Flatpak notes are in
 `packaging/flatpak/README.md`. The data preview tarball is a separate artifact
 and stays data-only.

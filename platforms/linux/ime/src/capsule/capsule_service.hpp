@@ -71,9 +71,10 @@ private:
     void MoveSelection(int delta);
     void SelectIndex(int index);
     bool HistoryAction(const std::string& action);
+    bool CaptureAction(const std::string& action);
     bool clipboard_capture_ = false;
     int history_offset_ = 0, history_count_ = 0;
-    std::string history_error_, history_scope_;
+    std::string history_error_, history_scope_, capture_error_;
     std::shared_ptr<std::atomic<bool>> history_action_cancel_;
     std::string restore_id_, restore_revision_;
     std::uint64_t restore_seq_ = 0;

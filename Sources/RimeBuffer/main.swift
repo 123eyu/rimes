@@ -614,6 +614,17 @@ if CommandLine.arguments.contains("buffer-smoke") {
 if CommandLine.arguments.contains("buffer-window-smoke") {
     exit(runBufferWindowSmokeTest() ? 0 : 1)
 }
+if let index = CommandLine.arguments.firstIndex(of: "capture-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    do {
+        try MainActor.assumeIsolated {
+            try CaptureLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        }
+        exit(0)
+    } catch { fputs("Capture fixture export failed: \(error)\n", stderr); exit(1) }
+}
+
 if let index = CommandLine.arguments.firstIndex(of: "capsule-resources-preview"),
    CommandLine.arguments.indices.contains(index + 1) {
     _ = NSApplication.shared

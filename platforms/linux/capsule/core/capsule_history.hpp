@@ -17,6 +17,9 @@ struct MimeData {
 };
 struct ClipboardArchive {
     std::vector<MimeData> representations;
+    // Runtime ownership only; never serialized into clipboard history. Keeps
+    // copied capture files alive until the desktop relinquishes the offer.
+    std::shared_ptr<void> resource_lease = {};
     void Validate() const;
     std::string Encode() const;
     static ClipboardArchive Decode(const std::string& bytes);

@@ -44,6 +44,7 @@ install(FILES program DESTINATION libexec/rimes/translation RENAME NOTICE.md)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-buffer)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-deploy)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-capsule-preview)
+install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-capsule-capture)
 install(PROGRAMS program DESTINATION lib/x86_64-linux-gnu/fcitx5 RENAME rimes.so)
 install(FILES program DESTINATION share/fcitx5/addon RENAME rimes.conf)
 install(FILES program DESTINATION share/fcitx5/inputmethod RENAME rimes.conf)
@@ -91,6 +92,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ca
             "share/rimes/schemes/learning/wanxiang.userdb/CURRENT",
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
             "share/rimes/capsule/clipboard/history-v1.sqlite3",
+            "share/rimes/capsule/captures/example/record.json", "share/rimes/capsule/captures/example/original.webm",
             "share/rimes/capsule/assets/reference.asset", "share/rimes/capsule/reference-style-v1",
             "share/rimes/data/personal.yaml", "share/fcitx5/addon/another.conf",
             "bin/another-program", ".engine/install/lib/librime.so",
@@ -103,6 +105,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ca
         self.assertIn("lib/x86_64-linux-gnu/fcitx5/rimes.so", installed)
         self.assertIn("libexec/rimes/rimes-deploy", installed)
         self.assertIn("libexec/rimes/rimes-capsule-preview", installed)
+        self.assertIn("libexec/rimes/rimes-capsule-capture", installed)
         self.assertIn("libexec/rimes/translation/runtime.py", installed)
         self.assertTrue(os.access(self.target / "bin/rimes-translation", os.X_OK))
         self.assertTrue(os.access(self.target / "bin/rimes-launch", os.X_OK))

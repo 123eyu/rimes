@@ -12,7 +12,7 @@ bool MatchesQuery(const Card& card, std::string_view query) {
     if (query.empty()) {
         return true;
     }
-    const auto haystack = LowerText(card.title + "\n" + card.payload);
+    const auto haystack = LowerText(card.title + "\n" + card.payload + "\n" + card.source + "\n" + card.preview);
     const auto needle = OneLine(LowerText(query));
     std::size_t start = 0;
     while (start < needle.size()) {
@@ -309,7 +309,7 @@ void CapsuleModel::RefreshHint() {
         return;
     }
     if (loading_) { hint_ = "正在读取 Capsule…"; return; }
-    if (managing_) { hint_ = "Ctrl+S SAVE   ESC BACK TO RAIL"; return; }
+    if (managing_) { hint_ = module_==Module::Capture ? "管理捕获 · Esc 返回底栏" : "Ctrl+S SAVE   ESC BACK TO RAIL"; return; }
     if (!armed_) {
         hint_ = "Disarmed — Ctrl+Shift+V on this field re-arms; press again to close";
         return;

@@ -1,4 +1,5 @@
 #include "capsule_service.hpp"
+#include "capsule_capture.hpp"
 #include "session/protected_input.hpp"
 
 #include <algorithm>
@@ -202,18 +203,35 @@ void CapsuleService::ReloadNotes(std::string selected_id) {
     const auto cancelled = reload_cancel_;
     model_.set_loading(true);
     const auto root = store_.root();
-    storage_jobs_.Run(cancelled, [this, root, cancelled, alive = alive_, post = post_, selected_id] {
+    const bool load_captures = model_.module() == rimes::capsule::Module::Capture;
+    storage_jobs_.Run(cancelled, [this, root, cancelled, alive = alive_, post = post_, selected_id, load_captures] {
         rimes::capsule::ContentStore store(root);
         std::vector<rimes::capsule::Record> records;
         std::string error;
+        std::vector<rimes::capsule::Card> captures;
         auto status = store.SeedIfNeeded(&error);
         if (status == rimes::capsule::StoreStatus::Ok) status = store.ListAll(&records, &error);
+        try {
+          if (load_captures) {
+            rimes::capsule::CaptureStore archive(root/"captures");
+            archive.Prune(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count());
+            for(const auto& capture:archive.List()) captures.push_back(rimes::capsule::CaptureCard(capture));
+            for(const auto& entry:records) if(rimes::capsule::RecordModule(entry)==rimes::capsule::Module::Capture &&
+                std::none_of(captures.begin(),captures.end(),[&](const auto& card){return card.id==entry.id;})) {
+                rimes::capsule::Card card;card.id=entry.id;card.revision=entry.revision;card.title=entry.title;
+                card.module=rimes::capsule::Module::Capture;card.source=entry.summary;
+                card.kind=entry.kind;card.filter=entry.kind==rimes::capsule::Kind::Video?"video":"image";
+                card.preview=entry.summary;card.favorite=true;captures.push_back(std::move(card));
+            }
+          }
+        } catch(const std::exception&) {}
         if (!alive->load() || cancelled->load()) return;
-        post([this, alive, cancelled, status, selected_id, records = std::move(records)] {
+        post([this, alive, cancelled, status, selected_id, records = std::move(records), captures = std::move(captures)] {
             if (!alive->load() || cancelled->load()) return;
             model_.set_loading(false);
             if (status == rimes::capsule::StoreStatus::Ok) model_.LoadCards(records);
             else model_.LoadCards({});
+            if(model_.module()==rimes::capsule::Module::Capture) model_.LoadModuleCards(rimes::capsule::Module::Capture,std::move(captures));
             if (!selected_id.empty()) { rimes::capsule::Command selection; selection.id = selected_id; SelectIdentity(selection); }
             Publish();
         });
@@ -369,6 +387,7 @@ bool CapsuleService::Activate() {
     if (card->module == rimes::capsule::Module::Temporary)
         return HistoryAction("activate");
     if (card->module == rimes::capsule::Module::Resources) return CopyResource(true);
+    if (card->module == rimes::capsule::Module::Capture) { Manage(); return true; }
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
@@ -387,7 +406,7 @@ bool CapsuleService::Activate() {
 
 bool CapsuleService::CopyResource(bool close) {
     const auto* card = model_.Selected();
-    if (!AllowsModule() || !card || card->module != rimes::capsule::Module::Resources) return false;
+    if (!AllowsModule() || !card || (card->module != rimes::capsule::Module::Resources && card->module != rimes::capsule::Module::Capture)) return false;
     Publish(); // Establish the action scope before creating the one-shot intent.
     restore_id_ = card->id; restore_revision_ = card->revision;
     restore_close_ = close; ++restore_seq_; Publish(); return true;
@@ -397,7 +416,7 @@ bool CapsuleService::CopySelected() {
     const auto* card = model_.Selected();
     if (card && card->module == rimes::capsule::Module::Temporary)
         return HistoryAction("copy");
-    if (card && card->module == rimes::capsule::Module::Resources) return CopyResource(false);
+    if (card && (card->module == rimes::capsule::Module::Resources || card->module == rimes::capsule::Module::Capture)) return CopyResource(false);
     if (card == nullptr || card->kind != rimes::capsule::Kind::Note) {
         return false;
     }
@@ -418,7 +437,7 @@ bool CapsuleService::OpenDetail() {
     const auto* card = model_.Selected();
     if (card && card->module == rimes::capsule::Module::Temporary)
         return Activate();
-    if (card && card->module == rimes::capsule::Module::Resources) { Manage(); return true; }
+    if (card && (card->module == rimes::capsule::Module::Resources || card->module == rimes::capsule::Module::Capture)) { Manage(); return true; }
     if (!card || card->kind != rimes::capsule::Kind::Note)
         return false;
     rimes::capsule::Record record;
@@ -583,6 +602,11 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
     if (key.check(FcitxKey_BackSpace) || key.check(FcitxKey_Delete)) {
         if (model_.query().empty() && model_.module() == rimes::capsule::Module::Temporary) {
             HistoryAction("remove");
+            event.filterAndAccept();
+            return true;
+        }
+        if (model_.query().empty() && model_.module() == rimes::capsule::Module::Capture) {
+            CaptureAction("remove");
             event.filterAndAccept();
             return true;
         }
@@ -791,6 +815,10 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
         break;
     case rimes::capsule::CommandOp::Favorite:
     case rimes::capsule::CommandOp::Remove:
+        if (model_.module()==rimes::capsule::Module::Capture) {
+            if(SelectIdentity(command)) CaptureAction(command.op==rimes::capsule::CommandOp::Favorite?"favorite":"remove");
+            break;
+        }
         if (SelectIdentity(command))
             HistoryAction(command.op == rimes::capsule::CommandOp::Favorite ? "favorite"
                                                                             : "remove");
@@ -1231,6 +1259,8 @@ void CapsuleService::Publish() {
         snapshot.hint = "↑ ↓ SELECT   ↩ INSERT ROW   Ctrl+C COPY ROW   "
                         "DOUBLE-CLICK INSERT   ESC BACK";
     }
+    if (model_.module()==rimes::capsule::Module::Capture)
+        snapshot.hint = !capture_error_.empty() ? capture_error_ : "↩ PREVIEW   Ctrl+C COPY   DELETE REMOVE TEMPORARY   ESC CLOSE";
     snapshot.theme = theme_;
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::capsule::EncodeSnapshot(snapshot);

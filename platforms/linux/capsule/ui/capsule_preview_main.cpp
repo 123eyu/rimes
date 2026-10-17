@@ -5,10 +5,15 @@
 #include <algorithm>
 #include <cmath>
 #include <gdk-pixbuf/gdk-pixbuf.h>
+#include <gst/app/gstappsink.h>
+#include <gst/gst.h>
+#include <gst/video/video.h>
 #include <iostream>
 #include <nlohmann/json.hpp>
 #include <poppler.h>
 #include <sys/resource.h>
+#include <sys/stat.h>
+#include <unistd.h>
 using namespace rimes::capsule;
 namespace {
 void Limit(int resource, rlim_t value) {
@@ -72,6 +77,71 @@ int main(int argc, char** argv) {
                 throw std::runtime_error("PDF 预览超过限制");
             value["pages"] = pages;
             value["message"] = "第 1 页 / 共 " + std::to_string(pages) + " 页";
+        } else if (ext == ".webm" || ext == ".mp4" || ext == ".mov" || ext == ".mkv") {
+            const int fd = OpenResource(path);
+            struct stat info {};
+            if (fd < 0 || fstat(fd, &info) || !S_ISREG(info.st_mode) || info.st_size < 0 ||
+                info.st_size > 1024LL * 1024 * 1024) {
+                if (fd >= 0)
+                    close(fd);
+                throw std::runtime_error("视频不可用或超过 1 GiB");
+            }
+            gst_init(nullptr, nullptr);
+            GError* error = nullptr;
+            auto* pipeline =
+                gst_parse_launch("uridecodebin name=decoder ! videoconvert ! videoscale ! "
+                                 "video/x-raw,format=RGB,width=640,height=360,pixel-aspect-ratio=1/"
+                                 "1 ! appsink name=frame max-buffers=1 drop=true sync=false",
+                                 &error);
+            if (error || !pipeline) {
+                g_clear_error(&error);
+                if (pipeline)
+                    gst_object_unref(pipeline);
+                close(fd);
+                throw std::runtime_error("视频预览组件不可用");
+            }
+            auto* decoder = gst_bin_get_by_name(GST_BIN(pipeline), "decoder");
+            g_object_set(decoder, "uri", ("file:///proc/self/fd/" + std::to_string(fd)).c_str(),
+                         nullptr);
+            gst_object_unref(decoder);
+            auto* sink = gst_bin_get_by_name(GST_BIN(pipeline), "frame");
+            gst_element_set_state(pipeline, GST_STATE_PAUSED);
+            auto* sample = gst_app_sink_try_pull_preroll(GST_APP_SINK(sink), 6 * GST_SECOND);
+            if (sample) {
+                GstVideoInfo video{};
+                auto* buffer = gst_sample_get_buffer(sample);
+                GstMapInfo map{};
+                if (gst_video_info_from_caps(&video, gst_sample_get_caps(sample)) &&
+                    gst_buffer_map(buffer, &map, GST_MAP_READ)) {
+                    const bool valid =
+                        video.width == 640 && video.height == 360 &&
+                        GST_VIDEO_INFO_FORMAT(&video) == GST_VIDEO_FORMAT_RGB &&
+                        video.stride[0] >= 640 * 3 &&
+                        map.size >= static_cast<std::size_t>(video.stride[0]) * 359 + 640 * 3;
+                    auto* picture =
+                        valid
+                            ? gdk_pixbuf_new_from_data(map.data, GDK_COLORSPACE_RGB, FALSE, 8, 640,
+                                                       360, video.stride[0], nullptr, nullptr)
+                            : nullptr;
+                    char* bytes = nullptr;
+                    gsize length = 0;
+                    if (picture && gdk_pixbuf_save_to_buffer(picture, &bytes, &length, "png",
+                                                             nullptr, nullptr))
+                        png.assign(bytes, length);
+                    g_free(bytes);
+                    if (picture)
+                        g_object_unref(picture);
+                    gst_buffer_unmap(buffer, &map);
+                }
+                gst_sample_unref(sample);
+            }
+            gst_object_unref(sink);
+            gst_element_set_state(pipeline, GST_STATE_NULL);
+            gst_object_unref(pipeline);
+            close(fd);
+            if (png.empty())
+                throw std::runtime_error("视频首帧无法预览");
+            value["message"] = "视频首帧预览";
         } else if (ext == ".png" || ext == ".jpg" || ext == ".jpeg" || ext == ".gif" ||
                    ext == ".webp" || ext == ".bmp" || ext == ".tif" || ext == ".tiff" ||
                    ext == ".heic") {

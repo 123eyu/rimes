@@ -104,9 +104,10 @@ jobs:
             librime-dev librime-plugin-lua librime-bin \
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev \
             xvfb xdotool x11-utils dbus-x11 xfwm4 \
-            python3-gi gir1.2-gtk-3.0 libgtk-3-dev libicu-dev libsqlite3-dev libpoppler-glib-dev \
+            python3-gi gir1.2-gtk-3.0 libgtk-3-dev libicu-dev libsqlite3-dev libpoppler-glib-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libportal-dev \
+            gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-pipewire pipewire wireplumber xdg-desktop-portal \
             libgtk-layer-shell-dev libxcb1-dev libxcb-xfixes0-dev libwayland-dev libssl-dev libcurl4-openssl-dev \
-            qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway wl-clipboard patchelf dpkg-dev
+            qtbase5-dev fonts-inter fonts-noto-cjk fonts-noto-color-emoji weston wtype sway wl-clipboard xdg-desktop-portal-wlr xdg-desktop-portal-gtk grim slurp patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
         run: |
@@ -122,6 +123,9 @@ jobs:
 
       - name: Unit tests
         run: ctest --test-dir platforms/linux/ime/build --output-on-failure
+
+      - name: Real Wayland capture portal and PipeWire
+        run: dbus-run-session -- /usr/bin/python3 platforms/linux/capsule/tests/capture_wayland_test.py platforms/linux/ime/build/rimes-capsule-capture --allow-headless-no-dmabuf
 
       - name: Real pinned offline translation engine
         run: |

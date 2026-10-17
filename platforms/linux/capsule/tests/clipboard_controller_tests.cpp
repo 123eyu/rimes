@@ -2,6 +2,7 @@
 #include "clipboard_controller.hpp"
 #include "configuration.hpp"
 #include "capsule_resources.hpp"
+#include "capsule_capture.hpp"
 #include <fstream>
 #include "official_catalog.hpp"
 #include <chrono>
@@ -186,6 +187,22 @@ int main(int argc, char** argv) {
         resource_grant=packages.Inspect(resource_grant.id); packages.Enable(resource_grant.id,false,resource_grant.grant);
         snapshot.restore_seq=12; controller.Apply(snapshot);
         Check(spin(3000,[&] {return status.find("未恢复")!=status.npos;}),"revoked resource module copied file");
+        auto capture_grant = packages.Inspect("builtin.capsule.capture");
+        if (!capture_grant.enabled) packages.Enable(capture_grant.id,true,capture_grant.grant);
+        const auto image_path=root/"screen.png";
+        auto* surface=cairo_image_surface_create(CAIRO_FORMAT_RGB24,32,24);
+        cairo_surface_write_to_png(surface,image_path.c_str());cairo_surface_destroy(surface);
+        CaptureStore captures(CaptureStore::DefaultRoot());CaptureRecord image;image.width=32;image.height=24;image.source="X11 fixture";
+        std::atomic<bool> cancelled{false};image=captures.Import(image_path,image,cancelled);
+        snapshot.modules={Module::Capture};snapshot.module="capture";snapshot.selected_id=image.id;
+        snapshot.restore_id=image.id;snapshot.restore_revision=image.revision;snapshot.restore_seq=13;
+        status.clear();controller.Apply(snapshot);
+        Check(spin(3000,[&] {return status.find("已复制")!=status.npos;}),"capture restore not acknowledged");
+        Check(read("image/png")==ReadResource(image_path,1024*1024,cancelled),"capture PNG bytes changed");
+        Check(read("text/uri-list")==ResourceUri(captures.File(image))+"\r\n","capture file URI mismatch");
+        Check(captures.Prune(99999999999.0,0,0)==0,"clipboard offer lost capture file lease");
+        producer->Restore(initial);spin(150);
+        Check(captures.Prune(99999999999.0,0,0)==1,"clipboard selection loss retained capture lease");
         std::cout
             << "GTK clipboard controller: opt-in background capture, MIME persistence, privacy "
                "baseline, reconnect/no replay, revision and package revocation passed\n";

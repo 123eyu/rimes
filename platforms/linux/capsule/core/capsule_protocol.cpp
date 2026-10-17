@@ -50,7 +50,7 @@ std::string EncodeSnapshot(const Snapshot& value) {
         s.detail_offset = 0;
         s.detail_selected = -1;
     }
-    if (s.password_field || !s.visible || (s.module != "temporary" && s.module != "resources")) {
+    if (s.password_field || !s.visible || (s.module != "temporary" && s.module != "resources" && s.module != "capture")) {
         s.restore_id.clear();
         s.restore_revision.clear();
     }
@@ -184,7 +184,7 @@ bool DecodeSnapshot(std::string_view json, Snapshot* out) {
              s.detail_revision.find_first_not_of("0123456789abcdef") != s.detail_revision.npos ||
              !LooksLikeUuid(s.selected_id)))
             return false;
-        if (!s.visible || (s.module != "temporary" && s.module != "resources") || s.password_field) {
+        if (!s.visible || (s.module != "temporary" && s.module != "resources" && s.module != "capture") || s.password_field) {
             s.restore_id.clear();
             s.restore_revision.clear();
         }

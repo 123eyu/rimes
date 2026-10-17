@@ -1,5 +1,8 @@
 #include "background_jobs.hpp"
 #include "capsule_history.hpp"
+#include "capsule_capture.hpp"
+#include "capsule_resources.hpp"
+#include "clipboard_preview.hpp"
 #include "capsule_manager.hpp"
 #include "capsule_note_editor.hpp"
 #include "capsule_resource_editor.hpp"
@@ -35,6 +38,9 @@ struct ManagerWindow::Impl {
     Send send;
     CopyFile copy_file;
     CopyText copy_text;
+    std::function<void()> open_capture;
+    GtkWidget *capture_form=nullptr,*capture_title=nullptr,*capture_meta=nullptr,*capture_picture=nullptr,*capture_collect=nullptr,*capture_remove=nullptr;
+    std::shared_ptr<GdkPixbuf> capture_image;
     std::unique_ptr<ResourceEditor> resource_editor;
     std::optional<Record> suspended_resource;
     std::string suspended_resource_key;
@@ -117,7 +123,7 @@ struct ManagerWindow::Impl {
         updating=false;
         gtk_label_set_text(GTK_LABEL(heading),draft.id.empty()?"新建笔记":"编辑笔记"); Controls();
     }
-    Impl(Send callback, bool fixture, CopyFile file, CopyText text) : send(std::move(callback)), copy_file(std::move(file)), copy_text(std::move(text)), preview(fixture) {
+    Impl(Send callback, bool fixture, CopyFile file, CopyText text, std::function<void()> capture) : send(std::move(callback)), copy_file(std::move(file)), copy_text(std::move(text)), open_capture(std::move(capture)), preview(fixture) {
         if (!preview) packages=std::make_unique<plugins::PackageStore>(runtime::UserRoot()/"plugins", plugins::OfficialCatalog(), plugins::BundledPackages(), plugins::CompiledAdapters(), RIMES_PRODUCT_VERSION);
         window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(window), "Capsule");
@@ -282,6 +288,27 @@ struct ManagerWindow::Impl {
         Add(clipboard_form, menu);
         Add(clipboard_form, clipboard_status);
         Add(editor, clipboard_form, true);
+        capture_form=Column(12);gtk_widget_set_margin_start(capture_form,16);gtk_widget_set_margin_end(capture_form,16);
+        gtk_widget_set_margin_top(capture_form,16);gtk_widget_set_margin_bottom(capture_form,16);
+        capture_title=Label("", "capsule-clipboard-heading");capture_meta=Label("", "caption");
+        gtk_label_set_line_wrap(GTK_LABEL(capture_meta),TRUE);gtk_label_set_max_width_chars(GTK_LABEL(capture_meta),1);
+        capture_picture=gtk_drawing_area_new();gtk_widget_set_size_request(capture_picture,-1,240);
+        g_signal_connect(capture_picture,"draw",G_CALLBACK(+[](GtkWidget* widget,cairo_t* cr,gpointer raw)->gboolean {
+            auto* self=static_cast<Impl*>(raw);if(!self->capture_image) return FALSE;
+            const int w=gdk_pixbuf_get_width(self->capture_image.get());const int h=gdk_pixbuf_get_height(self->capture_image.get());
+            const auto scale=std::min(double(gtk_widget_get_allocated_width(widget))/w,double(gtk_widget_get_allocated_height(widget))/h);
+            cairo_save(cr);cairo_translate(cr,(gtk_widget_get_allocated_width(widget)-w*scale)/2,(gtk_widget_get_allocated_height(widget)-h*scale)/2);
+            cairo_scale(cr,scale,scale);gdk_cairo_set_source_pixbuf(cr,self->capture_image.get(),0,0);cairo_paint(cr);cairo_restore(cr);return FALSE;
+        }),this);
+        Add(capture_form,capture_title);Add(capture_form,capture_meta);Add(capture_form,capture_picture,true);
+        auto* capture_actions=Row(8);
+        auto* capture_copy=Button("复制",[this]{CaptureCommand("copy");});Add(capture_actions,capture_copy);
+        capture_collect=Button("收藏到 Capsule",[this]{CaptureCommand("favorite");});Add(capture_actions,capture_collect);
+        capture_remove=Button("删除",[this]{if(ConfirmCurrent("删除这条捕获？","未收藏的捕获文件会从本机历史移除。")) CaptureCommand("remove");});Add(capture_actions,capture_remove);
+        Add(capture_form,capture_actions);
+        Add(capture_form,Button("截图 / 录屏…",[this]{if(open_capture) open_capture();}));
+        for(auto pair:{std::pair<GtkWidget*,const char*>{capture_form,"capsule-capture-form"},{capture_title,"capsule-capture-title"},{capture_meta,"capsule-capture-meta"},{capture_copy,"capsule-capture-copy"},{capture_collect,"capsule-capture-collect"},{capture_remove,"capsule-capture-remove"}}) gtk_widget_set_name(pair.first,pair.second);
+        gtk_widget_show_all(capture_form);gtk_widget_set_no_show_all(capture_form,TRUE);gtk_widget_hide(capture_form);Add(editor,capture_form,true);
         for (auto* group : {note_form, note_actions, clipboard_form}) {
             gtk_widget_show_all(group);
             gtk_widget_set_no_show_all(group, TRUE);
@@ -479,6 +506,8 @@ struct ManagerWindow::Impl {
         if (read_cancel) read_cancel->store(true);
         draft=Record{}; detail_key.clear(); dirty=false;
         if (resource_editor) resource_editor->Conceal();
+        capture_image.reset();
+        if(capture_picture) {gtk_widget_queue_draw(capture_picture);gtk_label_set_text(GTK_LABEL(capture_title),"");gtk_label_set_text(GTK_LABEL(capture_meta),"");}
         updating = true;
         gtk_entry_set_text(GTK_ENTRY(title), ""); gtk_entry_set_text(GTK_ENTRY(summary), "");
         if (note_editor) note_editor->LoadPlain("");
@@ -502,17 +531,19 @@ struct ManagerWindow::Impl {
                                std::find(state.modules.begin(), state.modules.end(),
                                          Module::Temporary) != state.modules.end();
         const bool resources = state.module == "resources" && std::find(state.modules.begin(),state.modules.end(),Module::Resources)!=state.modules.end();
-        gtk_widget_set_visible(note_form, !temporary && !resources);
+        const bool captures=state.module=="capture" && std::find(state.modules.begin(),state.modules.end(),Module::Capture)!=state.modules.end();
+        gtk_widget_set_visible(capture_form,captures);
+        gtk_widget_set_visible(note_form, !temporary && !resources && !captures);
         if (resource_editor) {
             gtk_widget_set_visible(resource_editor->Widget(), resources);
             resource_editor->SetEditable(resources && state.visible && state.managing && !state.password_field && !writing);
         }
-        gtk_widget_set_visible(note_actions, !temporary);
+        gtk_widget_set_visible(note_actions, !temporary && !captures);
         gtk_widget_set_visible(clipboard_form, temporary);
         gtk_widget_set_sensitive(clipboard_copy, temporary && !state.selected_id.empty());
         const bool editable=(notes || resources) && state.visible && state.managing && !state.password_field && !writing;
         gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable && rich_supported);
-        gtk_widget_set_sensitive(create,(notes || resources) && !writing); gtk_widget_set_sensitive(save,editable);
+        gtk_widget_set_sensitive(create,(notes || resources || captures) && !writing); gtk_widget_set_sensitive(save,editable);
         gtk_widget_set_sensitive(remove,!draft.id.empty() && !writing && (notes || resources));
         gtk_editable_set_editable(GTK_EDITABLE(summary),editable);
         gtk_widget_set_sensitive(format, editable && rich_supported && !draft.projection_conflict);
@@ -663,7 +694,38 @@ struct ManagerWindow::Impl {
             });
         })) gtk_label_set_text(GTK_LABEL(clipboard_status), "读取正忙，请重新选择此条目");
     }
+    void CaptureCommand(const std::string& op) {
+        if(state.module!="capture" || !state.visible || state.password_field || state.selected_id.empty()) return;
+        for(const auto& card:state.cards) if(card.id==state.selected_id)
+            send(Json{{"v",1},{"op",op},{"id",card.id},{"revision",card.revision}}.dump());
+    }
+    void CaptureDetail(const Card& card) {
+        gtk_label_set_text(GTK_LABEL(capture_title),card.title.c_str());gtk_label_set_text(GTK_LABEL(capture_meta),card.preview.c_str());
+        gtk_widget_set_sensitive(capture_collect,!card.favorite);gtk_widget_set_sensitive(capture_remove,!card.favorite);
+        if(preview) return;
+        read_cancel=std::make_shared<std::atomic<bool>>(false);const auto cancelled=read_cancel,life=alive;const auto key=detail_key;
+        jobs.Run(cancelled,[this,cancelled,life,key,card] {
+            std::shared_ptr<GdkPixbuf> picture;std::string message;
+            try {
+                const auto grant=packages->Inspect(ModulePlugin(Module::Capture));
+                if(!grant.enabled || cancelled->load()) return;
+                CaptureStore store(CaptureStore::DefaultRoot());const auto captured=store.Acquire(card.id,card.revision);
+                ContentStore library(ContentStore::DefaultRoot());Record record;
+                if(captured) {record.kind=captured->record.kind=="video"?Kind::Video:Kind::Image;record.content=captured->path.string();}
+                else {std::string error;if(library.Get(card.id,&record,&error)!=StoreStatus::Ok || record.revision!=card.revision || RecordModule(record)!=Module::Capture) throw std::runtime_error("捕获已变化，请重新选择");}
+                const auto preview=PreviewResource(record,library,*cancelled);message=preview.message;
+                if(!preview.png.empty()) picture=ClipboardThumbnail(ClipboardArchive{{{"image/png",preview.png}}},1000);
+                const auto after=packages->Inspect(grant.id);if(!after.enabled || after.grant!=grant.grant) return;
+            } catch(const std::exception& e) {message=e.what();}
+            Post([this,life,cancelled,key,picture,message] {
+                if(!life->load() || cancelled->load() || key!=detail_key || state.module!="capture" || state.password_field || !state.visible) return;
+                capture_image=picture;gtk_widget_queue_draw(capture_picture);
+                gtk_label_set_text(GTK_LABEL(capture_meta),(state.selected_preview+"\n"+message).c_str());
+            });
+        });
+    }
     void NewNote() {
+        if(state.module=="capture") {if(open_capture) open_capture();return;}
         if ((state.module!="notes" && state.module!="resources") || !Discard()) return;
         ClearDraft(); draft.kind=Kind::Note;
         if (state.module == "resources") {
@@ -683,6 +745,7 @@ struct ManagerWindow::Impl {
             ClipboardDetail(*card);
             return;
         }
+        if (card->module == Module::Capture) {CaptureDetail(*card);return;}
         if (card->module == Module::Passwords) {
             gtk_label_set_text(GTK_LABEL(status),card->preview.c_str()); return;
         }
@@ -816,7 +879,7 @@ struct ManagerWindow::Impl {
             ClearDraft(); gtk_widget_hide(window); return;
         }
         const bool enabled=std::any_of(state.modules.begin(),state.modules.end(),[&](auto module){return state.module==ModuleRaw(module);});
-        if (!enabled || (state.module != "notes" && state.module != "temporary" && state.module != "resources")) {
+        if (!enabled || (state.module != "notes" && state.module != "temporary" && state.module != "resources" && state.module != "capture")) {
             if(write_cancel) write_cancel->store(true);
             ClearDraft();
         } else if (state.module == "notes" && suspended_draft && !writing) {
@@ -880,7 +943,7 @@ struct ManagerWindow::Impl {
         if(list_focused && selected_row) gtk_widget_grab_focus(selected_row);
     }
 };
-ManagerWindow::ManagerWindow(Send send,bool preview,CopyFile file,CopyText text):impl_(std::make_unique<Impl>(std::move(send),preview,std::move(file),std::move(text))){}
+ManagerWindow::ManagerWindow(Send send,bool preview,CopyFile file,CopyText text,std::function<void()> capture):impl_(std::make_unique<Impl>(std::move(send),preview,std::move(file),std::move(text),std::move(capture))){}
 ManagerWindow::~ManagerWindow()=default;
 void ManagerWindow::Apply(const Snapshot& snapshot){impl_->Apply(snapshot);}
 void ManagerWindow::ClipboardStatus(const std::string& status) {

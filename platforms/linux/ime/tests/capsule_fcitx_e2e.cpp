@@ -1,4 +1,6 @@
 #include "capsule_history.hpp"
+#include "capsule_capture.hpp"
+#include "capsule_rich_text.hpp"
 #include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
 #include "capsule_transport.hpp"
@@ -133,6 +135,91 @@ void ExpectNoZwsp(fcitx::InputContext* ic, const char* where) {
     }
 }
 
+std::unique_ptr<fcitx::EventSourceTime> capture_timer;
+void RunCaptureSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
+                     fcitx::InputContext* ic, const std::string& dump_path) {
+    using namespace rimes::capsule;
+    struct State {
+        int fd=-1, phase=0; CaptureRecord image, other; std::uint64_t sequence=0;
+        ~State() {if(fd>=0) close(fd);}
+    };
+    auto state=std::make_shared<State>();CaptureStore archive(CaptureStore::DefaultRoot());
+    const auto file=archive.root().parent_path()/"fixture.png";
+    const auto bytes=Base64Decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=");
+    std::ofstream(file,std::ios::binary)<<*bytes;
+    CaptureRecord record;record.title="Host capture";record.source="捕获来源";record.width=1;record.height=1;
+    std::atomic<bool> cancelled{false};state->image=archive.Import(file,record,cancelled);
+    record.title="Temporary capture";state->other=archive.Import(file,record,cancelled);
+    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});
+    SendKey(frontend,uuid,"Control+Shift+V");
+    state->fd=socket(AF_UNIX,SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC,0);
+    sockaddr_un address{};address.sun_family=AF_UNIX;
+    std::strncpy(address.sun_path,std::getenv("RIMES_CAPSULE_SOCKET"),sizeof(address.sun_path)-1);
+    if(state->fd<0 || connect(state->fd,reinterpret_cast<sockaddr*>(&address),sizeof(address))) Die("capture socket");
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(15);
+    capture_timer=instance.eventLoop().addTimeEvent(CLOCK_MONOTONIC,fcitx::now(CLOCK_MONOTONIC)+20000,20000,
+        [&,frontend,uuid,ic,dump_path,state,deadline](fcitx::EventSourceTime* timer,uint64_t) {
+            try {
+                if(std::chrono::steady_clock::now()>deadline) Die("capture timeout phase "+std::to_string(state->phase));
+                char buffer[65536];while(recv(state->fd,buffer,sizeof(buffer),MSG_DONTWAIT)>0) {}
+                auto send=[&](nlohmann::json command) {
+                    command["v"]=1;std::string frame;EncodeFrame(command.dump(),&frame);
+                    if(::send(state->fd,frame.data(),frame.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(frame.size())) Die("capture socket send");
+                };
+                const auto snapshot=nlohmann::json::parse(ReadDump(dump_path));
+                switch(state->phase) {
+                case 0: send({{"op","module"},{"text","capture"}});state->phase=1;break;
+                case 1:
+                    if(snapshot.at("module")!="capture" || snapshot.at("loading").get<bool>() || snapshot.at("count")!=2) break;
+                    send({{"op","search"},{"text","Host 捕获来源"}});state->phase=2;break;
+                case 2:
+                    if(snapshot.at("query")!="Host 捕获来源") break;
+                    if(snapshot.at("count")!=1 || snapshot.at("selected_id")!=state->image.id) Die("capture source/title search failed");
+                    send({{"op","copy"},{"id",state->image.id},{"revision",state->image.revision}});state->phase=3;break;
+                case 3:
+                    if(snapshot.at("restore_id")!=state->image.id) break;
+                    if(snapshot.at("restore_revision")!=state->image.revision || !snapshot.at("last_copied").get<std::string>().empty()) Die("capture copied text instead of media intent");
+                    SendKey(frontend,uuid,"Return");state->phase=4;break;
+                case 4:
+                    if(!snapshot.at("managing").get<bool>() || snapshot.at("loading").get<bool>()) break;
+                    send({{"op","favorite"},{"id",state->image.id},{"revision",state->image.revision}});state->phase=5;break;
+                case 5: {
+                    if(snapshot.at("loading").get<bool>() || snapshot.at("cards").empty() || !snapshot.at("cards").at(0).at("favorite").get<bool>()) break;
+                    CaptureStore archive(CaptureStore::DefaultRoot());state->image=*archive.Get(state->image.id);
+                    ContentStore library(ContentStore::DefaultRoot());Record saved;std::string error;
+                    if(library.Get(state->image.id,&saved,&error)!=StoreStatus::Ok || saved.content!=archive.File(state->image)) Die("capture favorite missing permanent entry");
+                    send({{"op","remove"},{"id",state->image.id},{"revision",state->image.revision}});state->phase=6;break;
+                }
+                case 6:
+                    if(snapshot.at("hint").get<std::string>().find("已收藏")==std::string::npos) break;
+                    send({{"op","search"},{"text","Temporary"}});state->phase=7;break;
+                case 7:
+                    if(snapshot.at("selected_id")!=state->other.id || snapshot.at("loading").get<bool>()) break;
+                    send({{"op","remove"},{"id",state->other.id},{"revision",state->other.revision}});state->phase=8;break;
+                case 8:
+                    if(snapshot.at("loading").get<bool>() || snapshot.at("count")!=0) break;
+                    if(CaptureStore(CaptureStore::DefaultRoot()).Get(state->other.id)) Die("capture temporary media not removed");
+                    send({{"op","search"},{"text","Host"}});state->phase=9;break;
+                case 9:
+                    if(snapshot.at("selected_id")!=state->image.id) break;
+                    state->sequence=snapshot.at("restore_seq");
+                    send({{"op","copy"},{"id",state->image.id},{"revision",std::string(64,'b')}});
+                    send({{"op","search"},{"text","Host capture"}});state->phase=10;break;
+                case 10:
+                    if(snapshot.at("query")!="Host capture") break;
+                    if(snapshot.at("restore_seq")!=state->sequence) Die("stale capture revision restored");
+                    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit}|fcitx::CapabilityFlag::Password);state->phase=11;break;
+                case 11:
+                    if(!snapshot.at("password_field").get<bool>()) break;
+                    if(!snapshot.at("cards").empty() || !snapshot.at("restore_id").get<std::string>().empty()) Die("protected capture exposed metadata");
+                    std::cout<<"ok: Fcitx capture search, media-copy identity, Return preview, permanent favorite, temporary removal, stale revisions and protection passed\n";
+                    instance.exit();return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC)+20000);timer->setOneShot();return true;
+            } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';g_exit_status=EXIT_FAILURE;instance.exit();return true;}
+        });
+}
+
 std::unique_ptr<fcitx::EventSourceTime> resource_timer;
 void RunResourceSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
                       fcitx::InputContext* ic, const std::string& dump_path) {
@@ -195,7 +282,7 @@ void RunResourceSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
                     if(!snapshot.at("password_field").get<bool>()) break;
                     if(!snapshot.at("cards").empty() || !snapshot.at("restore_id").get<std::string>().empty()) Die("resource protection exposed path or restore intent");
                     std::cout<<"ok: Fcitx resource metadata search, file-copy identity, activation acknowledgment, management, stale revisions and protection passed\n";
-                    instance.exit();return true;
+                    RunCaptureSuite(instance,frontend,uuid,ic,dump_path);return true;
                 }
                 timer->setTime(fcitx::now(CLOCK_MONOTONIC)+20000);timer->setOneShot();return true;
             } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';g_exit_status=EXIT_FAILURE;instance.exit();return true;}
