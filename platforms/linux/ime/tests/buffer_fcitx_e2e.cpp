@@ -787,7 +787,41 @@ void RunProtectionSuite(SuiteCtx ctx, SessionFixture* session) {
                         ctx.ic->focusIn(); ++*phase; break;
                     case 13:
                         if (s.secure) Die("fresh non-sensitive focus did not recover");
-                        std::cout << "ok: production Fcitx sensitive/password focus, background events, sleep/lock/inactive overlap, IPC gates, source preservation and fresh-target delivery\n";
+                        SendBufferOp("show"); SendBufferOp("paste", "恢复"); ++*phase; break;
+                    case 14:
+                        if (!s.capturing || s.staged_text != "恢复") break;
+                        ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Return"), false);
+                        ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Password); ++*phase; break;
+                    case 15:
+                        if (!s.secure) Die("held Return password transition did not protect");
+                        ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Return"), true);
+                        ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit);
+                        SendBufferOp("show"); ++*phase; break;
+                    case 16:
+                        if (!s.capturing) break;
+                        ctx.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("恢复");
+                        SendKey(ctx.frontend, ctx.uuid, "Return"); ++*phase; break;
+                    case 17:
+                        if (!s.staged_text.empty()) Die("first Return after password recovery was swallowed");
+                        SendBufferOp("show"); SendBufferOp("paste", "唤醒"); ++*phase; break;
+                    case 18:
+                        if (!s.capturing || s.staged_text != "唤醒") break;
+                        ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Return"), false);
+                        session->Sleep(true); ++*phase; break;
+                    case 19:
+                        if (!s.secure) break;
+                        ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Return"), true);
+                        session->Sleep(false); ++*phase; break;
+                    case 20:
+                        if (s.secure) break;
+                        SendBufferOp("show"); ++*phase; break;
+                    case 21:
+                        if (!s.capturing) break;
+                        ctx.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("唤醒");
+                        SendKey(ctx.frontend, ctx.uuid, "Return"); ++*phase; break;
+                    case 22:
+                        if (!s.staged_text.empty()) Die("first Return after session recovery was swallowed");
+                        std::cout << "ok: production Fcitx sensitive/password focus, background events, sleep/lock/inactive overlap, IPC gates, source preservation, fresh-target delivery and held-Return recovery\n";
                         ctx.instance->exit(); return true;
                 }
                 timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 100000); timer->setOneShot();

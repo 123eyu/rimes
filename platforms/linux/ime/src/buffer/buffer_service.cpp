@@ -235,6 +235,10 @@ void BufferService::EndDrag() {
     // in Firefox's shared IC. Never retain a time window that consumes it.
     dragging_ = false;
     CancelDragHardTimer();
+    if (model_.capture_enabled() && !LiveTarget()) {
+        DropCaptureForSwitch("drag-ended-without-target");
+        Publish();
+    }
 }
 
 void BufferService::ConsumeDragBlip() {
@@ -687,14 +691,17 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     if (!model_.captures(TokenFor(ic))) {
         return;
     }
-    focus_suspended_ = true;
-    ++focus_epoch_;
-    CancelDerived();
     gesture_.cancel(); CancelHoldTimer();
     if (dragging_) {
+        // A window-manager move temporarily deactivates the same IC. Keep
+        // generation ownership until this drag ends or another IC activates;
+        // native delivery still requires LiveTarget() on every commit.
         Publish();
         return;
     }
+    focus_suspended_ = true;
+    ++focus_epoch_;
+    CancelDerived();
     // Do not drop capture yet. A toolbar drag or a brief WM grab will
     // activate this same IC again; a real field switch activates another.
     pending_unfocus_token_ = TokenFor(ic);
@@ -728,6 +735,7 @@ void BufferService::OnPasswordField(InputContext* ic, bool password) {
     // active workspace. null is used by the host's isolated policy tests.
     if (ic && !ic->hasFocus()) return;
     if (password) {
+        eat_return_until_release_ = false;
         if (!model_.password_field()) {
             ++focus_epoch_;
             CancelDerived(); translation_.Clear();
@@ -752,6 +760,8 @@ void BufferService::OnPasswordField(InputContext* ic, bool password) {
 void BufferService::OnSessionProtection(bool protected_session) {
     if (model_.secure() == protected_session) return;
     if (protected_session) {
+        // Protected key events bypass Buffer, including a held Return's key-up.
+        eat_return_until_release_ = false;
         restore_after_session_ = model_.visible();
         model_.set_secure(true);
         ++focus_epoch_;
