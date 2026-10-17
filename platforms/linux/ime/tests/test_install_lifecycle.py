@@ -35,6 +35,11 @@ cmake_minimum_required(VERSION 3.16)
 project(InstallFixture NONE)
 install(PROGRAMS program DESTINATION bin RENAME rimes-schemes)
 install(PROGRAMS program DESTINATION bin RENAME rimes-settings)
+install(PROGRAMS program DESTINATION bin RENAME rimes-translation)
+install(FILES program DESTINATION libexec/rimes/translation RENAME runtime.py)
+install(FILES program DESTINATION libexec/rimes/translation RENAME translation_core.py)
+install(FILES program DESTINATION libexec/rimes/translation RENAME resources.lock.json)
+install(FILES program DESTINATION libexec/rimes/translation RENAME NOTICE.md)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-buffer)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-deploy)
 install(PROGRAMS program DESTINATION lib/x86_64-linux-gnu/fcitx5 RENAME rimes.so)
@@ -83,6 +88,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.se
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
             "share/rimes/data/personal.yaml", "share/fcitx5/addon/another.conf",
             "bin/another-program", ".engine/install/lib/librime.so",
+            "share/rimes/translation/current.json", "share/rimes/translation/cache/model.argosmodel",
         )]
         before = {p: p.read_bytes() for p in personal}
         self.install()
@@ -90,6 +96,8 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.se
         self.assertIn("share/rimes/data/default.yaml", installed)
         self.assertIn("lib/x86_64-linux-gnu/fcitx5/rimes.so", installed)
         self.assertIn("libexec/rimes/rimes-deploy", installed)
+        self.assertIn("libexec/rimes/translation/runtime.py", installed)
+        self.assertTrue(os.access(self.target / "bin/rimes-translation", os.X_OK))
         self.assertTrue(os.access(self.target / "libexec/rimes/rimes-deploy", os.X_OK))
         self.assertTrue(os.access(self.target / "bin/rimes-schemes", os.X_OK))
         shutil.rmtree(self.build)

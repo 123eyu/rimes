@@ -16,6 +16,10 @@
     "native/android/OfflineDictionary.java": "f1f5fd399243f22bd78fef82e023161bb3f97484521c4dbbba38914d664a8d87",
     "native/android/OpenAiChatCodec.java": "0ea916e2b42477130c57d246e2fd1c7811a331cf791e97655088a479aba08bae",
     "native/ios/Support/BufferPlugins.swift": "52317c3575e042b4991a53542c845928e147c2a7709892b7725c05516a8b1eaf",
+    "native/linux/translation/NOTICE.md": "5eee3f64af272a595085cccef7d09a507a4051aa9d63e659c52c68b95f184fff",
+    "native/linux/translation/resources.lock.json": "cbe9daee8bfc20e885ec409d4049e61450f7af2dfc0388d8fa5dc31951bfd8d7",
+    "native/linux/translation/runtime.py": "f78157614941ac99f3433939ba4d1790bad7e828fd86fb647672cb6fb658878e",
+    "native/linux/translation/test_runtime.py": "5558784f38ff1da2aee94e4f2e3992062c175d252c5fa039db15de6b457f30ad",
     "native/macos/AppleTranslationPlugin.swift": "85875c9e00c53646a4a5db6bdf5634c2737424993d7c9cc046c651fd6054240d",
     "native/macos/BufferMusicAudio.swift": "aeb3c9058389da56dfac156e18ebf98e8ff204b3c090fb897ecdabf3de5b0eb8",
     "native/macos/BufferMusicPlugin.swift": "8cfddc898fe976493f1e2a39488b6dc981ba5184e500c461e195e8c338b12f95",
@@ -60,6 +64,7 @@
     "native/macos/TypingTestSession.swift": "c8be4b4b6276ed59f3a52e000f64b27ca49ed0af204eab378cb40c3c04536ae3",
     "native/macos/TypingTestTextView.swift": "178dcbb834a7dc2238068c7eebfe401f81d60b24df3a37f2489d3f331f12f7c8",
     "native/macos/YearHistoryHeatmapView.swift": "516de52a2376cec08dc532f7834b6c72de9411b049ff2107038ebb816558a1f0",
+    "native/shared-python/local_translation.py": "6e02338cd08ab5d8219f01df7ed5b02fb839e443dcab7c336ea00683a3de9859",
     "native/shared/AIPoem.swift": "741697805c71a0163104a391969711485417c2d86881fff2b6fb220773a70309",
     "native/shared/Chord.swift": "2f241f8c8d9e0320992596665f5662445cf1a7acbcb37e561c2c69c463b7087c",
     "native/shared/ChordEncoding.swift": "b7d16dbd81ed70ea4c005afa62a38f427e97aa7988c5e77b50e17885ecfad0b1",
@@ -90,9 +95,9 @@
     "plugins/statistics/plugin.json": "199d67d2df5aec4fb240595345efeb568d5a8913b0f3a86f63ce63fdc4600361",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "eb2f031f4488628e3aa90900d0eadcea4ddd8d7faa0f782b01b8655e051a5f44",
-    "source-map.json": "5ae358c2fe0c6a5e389dc89dca8bec3f1e7ca7ac0dc8ac2bf43f69af1d464912"
+    "source-map.json": "0043a08f5d44b788434dae873d8c0e2e9c2cc853d6d99efaefcc002aa7829f27"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "75859624e38308ae9536a9b4d1754df09d29b802",
+  "revision": "fb29999cfbdca3b60b7a4a2e075273f2a473fb38",
   "schemaVersion": 1
 }

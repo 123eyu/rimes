@@ -117,7 +117,7 @@ Section: utils
 Priority: optional
 Architecture: $ARCH
 Installed-Size: $SIZE
-Depends: fcitx5, $DEPS
+Depends: fcitx5, python3.12, $DEPS
 Recommends: libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk
 Maintainer: XSIME contributors <https://github.com/scholay/xsime>
 Homepage: https://xsime.com

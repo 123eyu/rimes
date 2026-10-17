@@ -21,6 +21,11 @@ uninstalls revoke running jobs and preserve user content. See the
 private provider credentials, themes and live Buffer preferences. The settings
 surface is undergoing macOS pixel comparison; unported module pages are marked
 as pending. See [the visual acceptance contract](../VISUAL-PARITY.md).
+The translation card also provides pinned offline Chinese/English resource
+installation, status, cancellation and repair; see the
+[resource instructions](../runtime/README.md#local-translation-resources).
+Its Python 3.12 runtime is included in deb dependencies. Downloaded resources
+remain in the user directory when either source or deb installation is removed.
 Mailbox is still later. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in

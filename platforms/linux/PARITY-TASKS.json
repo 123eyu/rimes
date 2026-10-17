@@ -93,9 +93,10 @@
         "首次资源安装、摘要检查、进度、取消、失败重试和离线可用状态真实可见。",
         "用真实本地引擎验证双向中英文，覆盖缺失/损坏模型与取消；不把 AI 云翻译冒充本地翻译。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 155,
-      "url": "https://github.com/scholay/xsime/issues/155"
+      "url": "https://github.com/scholay/xsime/issues/155",
+      "visual_status": "pending"
     },
     {
       "order": 6,

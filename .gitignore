@@ -113,3 +113,7 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 
 # Locally built Linux Rime/Lua runtime
 platforms/linux/ime/.engine/
+
+# Pinned translation interpreter and Linux resource imports
+/platforms/windows/translation/translate.py
+/platforms/linux/translation/

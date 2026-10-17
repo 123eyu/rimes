@@ -113,6 +113,9 @@ jobs:
       - name: Unit tests
         run: ctest --test-dir platforms/linux/ime/build --output-on-failure
 
+      - name: Real pinned offline translation engine
+        run: python3 platforms/linux/runtime/tests/translation_engine_smoke.py platforms/linux/ime/build/runtime/rimes-translation
+
       - name: Render native settings with an isolated profile
         run: |
           RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
