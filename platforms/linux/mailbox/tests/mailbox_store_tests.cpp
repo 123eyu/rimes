@@ -1,11 +1,18 @@
 #include "capsule_text.hpp"
 #include "inbox_actions.hpp"
 #include "mailbox_store.hpp"
+#include <cerrno>
 #include <chrono>
 #include <fstream>
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
+// Export must work on filesystems such as vfat/exFAT which reject hard links.
+// Interpose the unsupported operation while exercising real file publication.
+extern "C" int linkat(int, const char*, int, const char*, int) noexcept {
+    errno = EOPNOTSUPP;
+    return -1;
+}
 using namespace rimes::mailbox;
 using rimes::runtime::PrivateDirectory;
 namespace {

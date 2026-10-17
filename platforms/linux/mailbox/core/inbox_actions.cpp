@@ -3,7 +3,9 @@
 #include "inbox_actions.hpp"
 #include <cerrno>
 #include <fcntl.h>
+#include <linux/fs.h>
 #include <sys/stat.h>
+#include <sys/syscall.h>
 #include <unistd.h>
 namespace rimes::mailbox {
 namespace {
@@ -98,9 +100,11 @@ void ExportImage(Store& store, const std::string& thread, const std::string& rev
                     Need(!renameat(folder.value, temporary.c_str(), folder.value, name.c_str()),
                          "无法保存图片");
                 else
-                    Need(!linkat(folder.value, temporary.c_str(), folder.value, name.c_str(), 0),
+                    Need(!syscall(SYS_renameat2, folder.value, temporary.c_str(), folder.value,
+                                  name.c_str(), RENAME_NOREPLACE),
                          "无法保存图片");
-                // Rename/link is the commit point. A directory fsync failure must not
+                // Atomic no-replace rename also works on vfat/exFAT without hard links.
+                // Rename is the commit point. A directory fsync failure must not
                 // report cancellation after the user-visible file was published.
                 (void)fsync(folder.value);
             });
