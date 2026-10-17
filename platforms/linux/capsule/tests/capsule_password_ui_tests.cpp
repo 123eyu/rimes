@@ -181,7 +181,11 @@ int main(int argc, char** argv) {
                 focus();
                 stage = "unlock " + std::to_string(focus_count);
                 attempt(code);
-                Wait([&] { return gtk_widget_get_sensitive(get("vault-edit")); });
+                try {
+                    Wait([&] { return gtk_widget_get_sensitive(get("vault-edit")); });
+                } catch (...) {
+                    throw std::runtime_error(stage + ": " + gtk_label_get_text(GTK_LABEL(get("vault-status"))));
+                }
             };
             auto absent = [&] {
                 return VisibleText(view.Widget()).find("public-fixture-secret") ==
@@ -413,10 +417,15 @@ int main(int argc, char** argv) {
             Wait([&] { return refreshes == before_new + 1 && store.List().size() == 2; });
             Wait([&] { return refreshes >= 3; });
             unlock();
+            stage = "delete confirmation";
             click("vault-remove");
             Check(store.List().size() == 2, "first delete click removed record");
+            const int before_delete = refreshes;
             click("vault-remove");
-            Wait([&] { return store.List().size() == 1; });
+            // Observe the UI acknowledgement before inspecting storage. Repeated
+            // List() calls hold the same nonblocking lock as the delete worker.
+            Wait([&] { return refreshes > before_delete; });
+            Check(store.List().size() == 1, "confirmed delete did not remove the record");
             state.selected_id = entry.id;
             state.cards = {PasswordCard(entry)};
             view.Apply(state);
