@@ -33,12 +33,18 @@ struct Settings {
   uint64_t page_revision = 0;
   guint shortcut_poll = 0;
   bool rendering = false, busy = false;
+  bool application_window = false;
   GSubprocess *operation = nullptr;
   GCancellable *cancel = g_cancellable_new();
   std::shared_ptr<std::atomic<bool>> alive =
       std::make_shared<std::atomic<bool>>(true);
   ~Settings() {
     alive->store(false);
+    if (window) {
+      g_signal_handlers_disconnect_by_data(window, this);
+      gtk_widget_destroy(window);
+      window = nullptr;
+    }
     if (shortcut_poll) g_source_remove(shortcut_poll);
     if (operation) {
       g_subprocess_force_exit(operation);
@@ -65,14 +71,15 @@ struct Settings {
     Theme(saved.at("theme"));
     Message(cleaned ? "已保存" : "已保存；旧密钥清理未完成，请检查目录权限。");
   }
-  void Build(bool offscreen) {
+  void Build(bool offscreen, GtkApplication *application = nullptr) {
     rendering = offscreen;
+    application_window = application != nullptr;
     if (offscreen)
       g_object_set(gtk_settings_get_default(), "gtk-enable-animations", FALSE,
                    nullptr);
     Theme(saved.at("theme"));
     window = offscreen ? gtk_offscreen_window_new()
-                       : gtk_window_new(GTK_WINDOW_TOPLEVEL);
+                       : application ? gtk_application_window_new(application) : gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "XSIME 设置");
     gtk_window_set_default_size(GTK_WINDOW(window), Metric("settingsWidth"),
                                 Metric("settingsHeight"));
@@ -91,7 +98,8 @@ struct Settings {
                      G_CALLBACK(+[](GtkWidget *, gpointer p) {
                        auto *self = static_cast<Settings *>(p);
                        self->alive->store(false);
-                       if (!self->rendering)
+                       self->window = nullptr;
+                       if (!self->rendering && !self->application_window)
                          gtk_main_quit();
                      }),
                      this);
@@ -1104,6 +1112,32 @@ int main(int argc, char **argv) {
     }
     if (smoke)
       return SettingsSmoke();
+    if (!render) {
+      struct Session { std::unique_ptr<Settings> settings; bool failed = false; } session;
+      // Isolate test/user roots; normal launches in the same desktop session
+      // share one settings window, including activations from the IME.
+      const auto identity = "org.scholay.rimes.settings.u" + Sha256(UserRoot().string()).substr(0, 16);
+      auto *application = gtk_application_new(identity.c_str(), static_cast<GApplicationFlags>(0));
+      g_signal_connect(application, "activate", G_CALLBACK(+[](GtkApplication *application, gpointer data) {
+        auto *session = static_cast<Session *>(data);
+        try {
+          if (!session->settings || !session->settings->window) {
+            session->settings = std::make_unique<Settings>();
+            session->settings->Build(false, application);
+          }
+          gtk_widget_show_all(session->settings->window);
+          gtk_window_present(GTK_WINDOW(session->settings->window));
+        } catch (const std::exception &) {
+          session->failed = true;
+          g_printerr("XSIME 设置无法启动；现有配置已保留。\n");
+          g_application_quit(G_APPLICATION(application));
+        }
+      }), &session);
+      const int result = g_application_run(G_APPLICATION(application), argc, argv);
+      session.settings.reset();
+      g_object_unref(application);
+      return session.failed ? 1 : result;
+    }
     Settings app;
     app.Build(render);
     if (render) {
@@ -1127,8 +1161,6 @@ int main(int argc, char **argv) {
       file << manifest.dump(2) << '\n';
       return file ? 0 : 1;
     }
-    gtk_widget_show_all(app.window);
-    gtk_main();
     return 0;
   } catch (const std::exception &) {
     std::cerr

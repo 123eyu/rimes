@@ -48,7 +48,13 @@ rimes::buffer::CaretRect CaretFromIc(InputContext* ic) {
     caret.y = rect.top();
     caret.width = rect.width();
     caret.height = rect.height();
-    caret.valid = caret.width >= 0 && caret.height >= 0 &&
+    // A Wayland/RelativeRect cursor is surface-local. It is never an absolute
+    // monitor anchor, and the client scale does not turn it into one.
+    caret.valid = ic->display().rfind("x11:", 0) == 0 &&
+                  !ic->capabilityFlags().test(CapabilityFlag::RelativeRect) &&
+                  std::abs(static_cast<std::int64_t>(caret.x)) < 1000000 &&
+                  std::abs(static_cast<std::int64_t>(caret.y)) < 1000000 &&
+                  caret.width >= 0 && caret.width < 100000 && caret.height >= 0 && caret.height < 100000 &&
                   (caret.width > 0 || caret.height > 0 || caret.x != 0 || caret.y != 0);
     return caret;
 }
@@ -999,6 +1005,12 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             if ((!plugins_ || plugins_->SelectedBuffer().empty()) && !model_.secure() && cycle_auto_send_) {
                 try { cycle_auto_send_(); }
                 catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "自动发送设置未保存，请重新加载设置后重试")); }
+            }
+            break;
+        case rimes::buffer::CommandOp::ToggleCloseAfterLast:
+            if ((!plugins_ || plugins_->SelectedBuffer().empty()) && !model_.secure() && toggle_close_after_last_) {
+                try { toggle_close_after_last_(); }
+                catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "发送完关闭设置未保存，请重新加载设置后重试")); }
             }
             break;
         case rimes::buffer::CommandOp::RemoveLast:

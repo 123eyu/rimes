@@ -18,6 +18,7 @@ on:
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
@@ -47,6 +48,7 @@ on:
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
@@ -97,7 +99,7 @@ jobs:
             fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
             librime-dev librime-plugin-lua librime-bin \
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev \
-            xvfb xdotool dbus-x11 \
+            xvfb xdotool dbus-x11 xfwm4 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev libxcb1-dev libssl-dev libcurl4-openssl-dev \
             qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway patchelf dpkg-dev
@@ -135,6 +137,13 @@ jobs:
 
       - name: Render Buffer states for macOS comparison
         run: xvfb-run -a platforms/linux/ime/build/rimes-buffer --render "$RUNNER_TEMP/buffer-render"
+
+      - name: Desktop focus, first click, window movement and scale
+        run: |
+          xvfb-run -a dbus-run-session -- python3 platforms/linux/runtime/tests/desktop_windows_test.py platforms/linux/ime/build
+          GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" dbus-run-session -- \
+            python3 platforms/linux/runtime/tests/desktop_windows_test.py platforms/linux/ime/build
+          dbus-run-session -- python3 platforms/linux/runtime/tests/panel_wayland_test.py platforms/linux/ime/build
 
       - name: Upload settings for macOS comparison
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2

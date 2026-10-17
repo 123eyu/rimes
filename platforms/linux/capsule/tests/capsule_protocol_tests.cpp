@@ -35,6 +35,10 @@ int main() {
     Expect(decoded.visible && decoded.armed, "decoded flags");
     Expect(decoded.cards.size() == 1, "decoded card");
     Expect(decoded.cards[0].title == rimes::capsule::kDefaultEntryTitle, "decoded title");
+    auto themed = rimes::capsule::MakeSnapshot(model);
+    themed.theme = "rasta";
+    Expect(rimes::capsule::DecodeSnapshot(rimes::capsule::EncodeSnapshot(themed), &decoded) && decoded.theme == "rasta", "shared theme propagation");
+    Expect(rimes::capsule::DecodeSnapshot(R"({"visible":true})", &decoded) && decoded.theme == "night", "legacy snapshot theme fallback");
 
     model.set_last_copied("private-clipboard");
     model.set_query("private-query");

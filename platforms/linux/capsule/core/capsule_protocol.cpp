@@ -122,6 +122,7 @@ std::string EncodeSnapshot(const Snapshot& value) {
         << ",\"visible\":" << (snapshot.visible ? "true" : "false")
         << ",\"armed\":" << (snapshot.armed ? "true" : "false")
         << ",\"password_field\":" << (snapshot.password_field ? "true" : "false")
+        << ",\"theme\":" << rimes::buffer::JsonEscape(snapshot.theme)
         << ",\"tab\":" << rimes::buffer::JsonEscape(snapshot.tab)
         << ",\"query\":" << rimes::buffer::JsonEscape(snapshot.query)
         << ",\"hint\":" << rimes::buffer::JsonEscape(snapshot.hint)
@@ -164,6 +165,8 @@ bool DecodeSnapshot(std::string_view json, Snapshot* snapshot) {
     snapshot->visible = ReadBool(json, "visible");
     snapshot->armed = ReadBool(json, "armed");
     snapshot->password_field = ReadBool(json, "password_field");
+    const auto theme = ReadString(json, "theme");
+    snapshot->theme = theme == "day" || theme == "quiet" || theme == "rasta" || theme == "liquidGlass" ? theme : "night";
     snapshot->tab = ReadString(json, "tab");
     snapshot->query = ReadString(json, "query");
     snapshot->hint = ReadString(json, "hint");

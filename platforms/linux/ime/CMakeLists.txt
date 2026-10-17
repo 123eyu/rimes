@@ -214,7 +214,7 @@ if(RIMES_BUILD_FCITX5)
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
         )
         target_include_directories(rimes-capsule PRIVATE ${GTK3_INCLUDE_DIRS})
-        target_link_libraries(rimes-capsule PRIVATE RimesCapsuleCore ${GTK3_LIBRARIES})
+        target_link_libraries(rimes-capsule PRIVATE RimesCapsuleCore RimesDesktopUI ${GTK3_LIBRARIES})
         target_compile_options(rimes-capsule PRIVATE ${GTK3_CFLAGS_OTHER})
         if(GTK_LAYER_SHELL_FOUND)
             target_include_directories(rimes-capsule PRIVATE ${GTK_LAYER_SHELL_INCLUDE_DIRS})

@@ -104,6 +104,8 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsRouting.swift"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/BufferWindowController.swift"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/BufferInlineView.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ShortcutPreferences.swift"
     "${RIMES_REPOSITORY_ROOT}/Catalog/buffer-plugins.json"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/chatgpt.png"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/claude.png"
@@ -114,8 +116,19 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/gen
 if(NOT RIMES_VISUAL_IMPORT_RESULT EQUAL 0)
     message(FATAL_ERROR "Review the native macOS visual contract before building Linux UI")
 endif()
-add_library(RimesDesktopUI STATIC ui/desktop.cpp ui/translation_resources.cpp ui/launcher_client.cpp)
+add_library(RimesWindowGeometry STATIC core/window_geometry.cpp)
+target_link_libraries(RimesWindowGeometry PUBLIC RimesPluginCore)
+target_compile_options(RimesWindowGeometry PRIVATE -Wall -Wextra -Wpedantic -Werror)
+set_target_properties(RimesWindowGeometry PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+add_library(RimesDesktopUI STATIC ui/desktop.cpp ui/translation_resources.cpp ui/launcher_client.cpp ui/panel_window.cpp)
 target_include_directories(RimesDesktopUI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ui" PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(RimesDesktopUI PUBLIC RimesWindowGeometry)
+pkg_check_modules(DesktopLayerShell IMPORTED_TARGET gtk-layer-shell-0)
+if(DesktopLayerShell_FOUND)
+    target_link_libraries(RimesDesktopUI PRIVATE PkgConfig::DesktopLayerShell)
+    target_compile_definitions(RimesDesktopUI PRIVATE HAVE_GTK_LAYER_SHELL=1)
+endif()
 target_link_libraries(RimesDesktopUI PUBLIC RimesPluginCore PkgConfig::RuntimeGtk)
 target_compile_options(RimesDesktopUI PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_executable(rimes-settings ui/settings.cpp)
@@ -133,6 +146,9 @@ install(FILES ui/org.scholay.rimes.buffer.desktop ui/org.scholay.rimes.capsule.d
     DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 
 if(BUILD_TESTING OR RIMES_BUILD_TESTS)
+    add_executable(rimes-window-geometry-tests tests/window_geometry_tests.cpp)
+    target_link_libraries(rimes-window-geometry-tests PRIVATE RimesWindowGeometry)
+    add_test(NAME window-geometry COMMAND rimes-window-geometry-tests)
     add_executable(rimes-ai-codec-tests ../ai/chat_codec_tests.cpp)
     target_link_libraries(rimes-ai-codec-tests PRIVATE RimesAI)
     add_test(NAME ai-codec COMMAND rimes-ai-codec-tests)
@@ -157,6 +173,12 @@ if(BUILD_TESTING OR RIMES_BUILD_TESTS)
     add_test(NAME configuration COMMAND rimes-configuration-tests)
     find_program(RIMES_XVFB_RUN xvfb-run)
     if(RIMES_XVFB_RUN)
+        add_executable(rimes-panel-window-tests tests/panel_window_tests.cpp)
+        target_link_libraries(rimes-panel-window-tests PRIVATE RimesDesktopUI)
+        target_compile_options(rimes-panel-window-tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+        add_test(NAME panel-window-x11 COMMAND "${RIMES_XVFB_RUN}" -a $<TARGET_FILE:rimes-panel-window-tests>)
+        add_test(NAME panel-window-hidpi COMMAND "${RIMES_XVFB_RUN}" -a -s "-screen 0 2560x1600x24"
+            "${CMAKE_COMMAND}" -E env GDK_SCALE=2 $<TARGET_FILE:rimes-panel-window-tests>)
         add_executable(rimes-translation-ui-tests tests/translation_ui_tests.cpp)
         target_link_libraries(rimes-translation-ui-tests PRIVATE RimesDesktopUI)
         add_dependencies(rimes-translation-ui-tests rimes-translation)

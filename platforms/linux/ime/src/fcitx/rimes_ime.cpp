@@ -112,6 +112,13 @@ RimesIme::RimesIme(Instance* instance)
         configuration_->Save(config, config.at("revision"));
         ApplyConfiguration();
     });
+    buffer_->BindCloseAfterLast([this] {
+        if (!configuration_) throw std::runtime_error("Configuration unavailable");
+        auto config = configuration_->Load();
+        config["closeAfterLast"] = !config.at("closeAfterLast").get<bool>();
+        configuration_->Save(config, config.at("revision"));
+        ApplyConfiguration();
+    });
     buffer_->BindPlugins(plugins_, [this](const auto& lease) { return acceptsPluginResult(lease); },
         [this](std::string_view id) {
             if (!configuration_) throw std::runtime_error("Configuration unavailable");
@@ -280,6 +287,7 @@ void RimesIme::ApplyConfiguration() {
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
         buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
         buffer_->ConfigureAutoSend(config.at("autoSend"), config.at("autoSendSeconds"));
+        capsule_->ConfigureTheme(config.at("theme"));
         if (launcher_) launcher_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
         if (desktop_shortcuts_) desktop_shortcuts_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
     } catch (const std::exception&) {

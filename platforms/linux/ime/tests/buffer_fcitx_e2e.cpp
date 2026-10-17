@@ -916,8 +916,21 @@ void RunAutoSendSuite(SuiteCtx ctx) {
                                 resumed.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(block.text);
                             AfterUs(resumed, 900000, [](SuiteCtx done) {
                                 ExpectContains(ReadDump(done.dump_path), "\"visible\":false", "resumed timer did not drain and close");
-                                std::cout << "ok: Default automatic native delivery, toolbar persistence, composition gate, hidden pause and close-after-last\n";
-                                done.instance->exit();
+                                unsetenv("RIMES_BUFFER_CLOSE_AFTER_LAST");
+                                SendBufferOp("toggle_close_after_last");
+                                AfterUs(done, 100000, [](SuiteCtx off) {
+                                    rimes::runtime::ConfigurationStore settings(rimes::runtime::UserRoot() / "configuration");
+                                    ExpectContains(ReadDump(off.dump_path), "\"close_after_last\":false", "toolbar switch did not update host");
+                                    if (settings.Load().at("closeAfterLast").get<bool>()) Die("toolbar switch was not persisted");
+                                    SendBufferOp("toggle_close_after_last");
+                                    AfterUs(off, 100000, [](SuiteCtx on) {
+                                        rimes::runtime::ConfigurationStore settings(rimes::runtime::UserRoot() / "configuration");
+                                        ExpectContains(ReadDump(on.dump_path), "\"close_after_last\":true", "toolbar switch did not restore host");
+                                        if (!settings.Load().at("closeAfterLast").get<bool>()) Die("toolbar switch restore was not persisted");
+                                        std::cout << "ok: Default automatic native delivery, both toolbar controls persist, composition gate, hidden pause and close-after-last\n";
+                                        on.instance->exit();
+                                    });
+                                });
                             });
                         });
                     });

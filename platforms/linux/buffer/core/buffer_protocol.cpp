@@ -222,7 +222,8 @@ bool ParseCommand(std::string_view text, Command* command, std::string* error) {
             {"drag_end", CommandOp::DragEnd}, {"select_plugin", CommandOp::SelectPlugin},
             {"generate", CommandOp::Generate}, {"cancel_generation", CommandOp::CancelGeneration},
             {"return_to_edit", CommandOp::ReturnToEdit}, {"select_result", CommandOp::SelectResult},
-            {"copy_result", CommandOp::CopyResult}, {"cycle_auto_send", CommandOp::CycleAutoSend}};
+            {"copy_result", CommandOp::CopyResult}, {"cycle_auto_send", CommandOp::CycleAutoSend},
+            {"toggle_close_after_last", CommandOp::ToggleCloseAfterLast}};
         Command next;
         for (const auto& [name, code] : ops) if (op == name) next.op = code;
         if (next.op == CommandOp::Unknown) throw std::runtime_error("Unknown operation");

@@ -32,6 +32,7 @@ enum class CommandOp {
     SelectResult,
     CopyResult,
     CycleAutoSend,
+    ToggleCloseAfterLast,
     Unknown,
 };
 

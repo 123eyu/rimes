@@ -73,6 +73,7 @@ public:
                    std::string revision, std::string theme);
     void ConfigureAutoSend(bool enabled, int seconds);
     void BindAutoSend(std::function<void()> cycle) { cycle_auto_send_ = std::move(cycle); }
+    void BindCloseAfterLast(std::function<void()> toggle) { toggle_close_after_last_ = std::move(toggle); }
     void BindPlugins(rimes::plugins::Registry& registry,
         std::function<bool(const rimes::plugins::Lease&)> validate,
         std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze);
@@ -149,6 +150,7 @@ private:
     rimes::buffer::AutoSendClock auto_send_clock_;
     std::unique_ptr<EventSourceTime> auto_send_timer_;
     std::function<void()> cycle_auto_send_;
+    std::function<void()> toggle_close_after_last_;
     bool auto_send_ = false;
     bool auto_send_scheduled_ = false;
     int auto_send_seconds_ = 1;

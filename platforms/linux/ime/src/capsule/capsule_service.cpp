@@ -824,6 +824,7 @@ void CapsuleService::Publish() {
         EnsureUi();
     }
     auto snapshot = rimes::capsule::MakeSnapshot(model_);
+    snapshot.theme = theme_;
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::capsule::EncodeSnapshot(snapshot);
     WriteAll(json);

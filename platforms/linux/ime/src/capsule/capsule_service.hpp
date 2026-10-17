@@ -41,6 +41,7 @@ public:
     void OnPasswordField(InputContext* ic, bool password);
     void OnSessionProtection(bool protected_session);
     void SetManagedHotkey() { managed_hotkey_ = true; }
+    void ConfigureTheme(std::string theme) { if (theme_ != theme) { theme_ = std::move(theme); Publish(); } }
     void ShowDetached();
 
     void Toggle(InputContext* ic);
@@ -58,6 +59,7 @@ private:
     bool session_protected_ = false;
     bool field_protected_ = false;
     bool managed_hotkey_ = false;
+    std::string theme_ = "night";
     struct Client {
         int fd = -1;
         std::string incoming;

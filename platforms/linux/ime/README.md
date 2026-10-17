@@ -277,6 +277,22 @@ Environment overrides used by tests and unusual layouts:
 | `RIMES_USER_DIR` | Isolated user dir (must not be the stock fcitx5-rime path) |
 | `RIMES_LOG_DIR` | librime log directory |
 
+## Desktop windows
+
+Buffer's empty toolbar folds/unfolds its content; drag it to move the panel.
+The function menu restores its position or moves it to a selected display.
+The number button cycles automatic delivery and the adjacent switch controls
+closing after the last delivered block. Both share the settings configuration.
+Repeated settings launches activate the existing settings window.
+
+X11 and Wayland layer-shell panels keep a fixed logical width and preserve
+their bottom edge when the second rail opens. Positions live in the private
+user-data `windows/` directory and survive upgrades and uninstall. A compositor
+without layer-shell uses XWayland when available. Without either placement
+backend, the compositor controls the window; return to the input field and
+reopen Buffer to capture it. See [window validation](../runtime/WINDOWS-VALIDATION.md)
+for tested environments and outstanding desktop/pixel comparisons.
+
 ## Packaging
 
 ```bash
