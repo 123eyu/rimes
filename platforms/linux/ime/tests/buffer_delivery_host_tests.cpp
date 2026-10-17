@@ -2,13 +2,31 @@
 #include <fcitx-utils/eventdispatcher.h>
 #include <fcitx/addonmanager.h>
 #include <fcitx/inputcontextmanager.h>
+#include <algorithm>
 #include <filesystem>
 #include <iostream>
+#include <mutex>
 #include <stdexcept>
+#include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 using namespace rimes::buffer;
 void Check(bool value, const char* detail) { if (!value) throw std::runtime_error(detail); }
+
+void BeginDrag(const fcitx::BufferService& host) {
+    const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+    Check(fd >= 0, "drag socket");
+    sockaddr_un address{}; address.sun_family = AF_UNIX;
+    const auto path = host.SocketPath();
+    if (path.size() >= sizeof(address.sun_path)) { close(fd); Check(false, "drag socket path"); }
+    std::copy(path.begin(), path.end(), address.sun_path);
+    std::string frame;
+    const bool sent = connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0 &&
+        EncodeFrame(R"({"v":1,"op":"drag_begin"})", &frame) &&
+        send(fd, frame.data(), frame.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(frame.size());
+    close(fd); Check(sent, "drag command");
+}
 
 // Exercise the production Buffer service and native commit boundary without a
 // translation model, HTTP server, window server or the user's configuration.
@@ -61,7 +79,15 @@ int main() {
                 }));
         };
         std::vector<std::function<void()>> posted;
-        auto drain = [&] { while (!posted.empty()) { auto fn = std::move(posted.front()); posted.erase(posted.begin()); fn(); } };
+        std::mutex posted_mutex;
+        auto post = [&](auto fn) { std::lock_guard lock(posted_mutex); posted.push_back(std::move(fn)); };
+        auto drain = [&] {
+            for (;;) {
+                std::function<void()> fn;
+                { std::lock_guard lock(posted_mutex); if (posted.empty()) break; fn = std::move(posted.front()); posted.erase(posted.begin()); }
+                fn();
+            }
+        };
         auto key = [&](bool release) {
             fcitx::KeyEvent event(client.get(), fcitx::Key("Return"), release);
             Check(host->HandleEarlyKey(event, false) && event.accepted(), "Return escaped Buffer");
@@ -75,7 +101,7 @@ int main() {
         const auto revision = config.Load().at("revision").get<std::string>();
         auto prepare = [&] {
             host.reset();
-            host = std::make_unique<fcitx::BufferService>(&instance, [&](auto fn) { posted.push_back(std::move(fn)); });
+            host = std::make_unique<fcitx::BufferService>(&instance, post);
             host->Configure(false, false, 760, revision, "night");
             host->BindPlugins(registry, [&](const auto& lease) { return registry.Accepts(lease); },
                               [&](auto id) { return config.Freeze(id); });
@@ -83,6 +109,8 @@ int main() {
         };
         std::vector<fcitx::BufferService::ResultFn> replies;
         std::vector<std::shared_ptr<std::atomic<bool>>> cancelled;
+        fcitx::BufferService::ResultFn drag_reply;
+        std::shared_ptr<std::atomic<bool>> drag_cancelled;
         std::string prefix, pending_id;
         startup.schedule([&] { guarded([&] {
             client = std::make_unique<Client>(instance.inputContextManager());
@@ -141,8 +169,26 @@ int main() {
                         Check(std::filesystem::last_write_time(root / "buffer.json") == modified, "aborted hold kept publishing");
                         key(true);
                         Check(host->model().staged_text() == "保留", "aborted hold delivered source");
-                        std::cout << "Buffer delivery host: ready-result Return, commit conflict, held ready prefix, late tail and stopped hold passed\n";
-                        instance.exit();
+                        prepare();
+                        host->RegisterDerivedAdapter(ai, "ai.generate", [&](auto, auto, auto stop, auto receive) {
+                            drag_reply = receive; drag_cancelled = stop;
+                        });
+                        Check(host->SelectPlugin(ai), "drag AI selection");
+                        host->model().append("拖动", Origin::Rime); Check(host->Generate(), "drag generation");
+                        BeginDrag(*host);
+                        after(150, [&] {
+                            drain();
+                            client->focusOut(); host->OnDeactivate(client.get(), false);
+                            Check(!drag_cancelled->load(), "toolbar drag cancelled the in-flight request");
+                            drag_reply({0, "Drag result", true, true}); drain();
+                            Check(host->derived().CopyText() == "Drag result" && !host->SendNext(), "drag lost output or delivered without focus");
+                            client->focusIn(); host->OnActivate(client.get());
+                            Check(host->model().capture_enabled() && host->derived().CopyText() == "Drag result", "same-IC drag return replaced output");
+                            client->focusOut(); host->OnDeactivate(client.get(), false);
+                            Check(host->derived().Results().empty(), "later non-drag focus loss retained authority");
+                            std::cout << "Buffer delivery host: ready-result Return, commit conflict, held ready prefix, late tail, stopped hold and drag ownership passed\n";
+                            instance.exit();
+                        });
                     });
                 });
             });

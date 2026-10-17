@@ -182,6 +182,11 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    // Closing a companion UI can synchronously reactivate a client. Retire
+    // every observer before stopping the engine or destroying either service.
+    focus_watch_.reset();
+    capability_watch_.reset();
+    destroy_watch_.reset();
     session_monitor_.reset();
     configuration_watch_.reset();
     if (configuration_watch_fd_ >= 0) close(configuration_watch_fd_);
