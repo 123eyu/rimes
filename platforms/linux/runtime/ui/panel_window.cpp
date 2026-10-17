@@ -11,6 +11,23 @@ namespace rimes::desktop {
 namespace {
 std::string Text(const char* value) { return value ? value : ""; }
 runtime::WindowRect Rectangle(const GdkRectangle& r) { return {r.x, r.y, r.width, r.height}; }
+GdkDisplay* FallbackDisplay() {
+    // Displays belong to GDK, not to an individual panel. Reuse the connection
+    // so recreating a panel neither leaks connections nor tears down GTK's
+    // display-scoped settings while other widgets still reference them.
+    auto* displays = gdk_display_manager_list_displays(gdk_display_manager_get());
+    GdkDisplay* found = nullptr;
+    for (auto* at = displays; at; at = at->next) {
+        auto* display = GDK_DISPLAY(at->data);
+        if (GDK_IS_X11_DISPLAY(display) && !gdk_display_is_closed(display)) { found = display; break; }
+    }
+    g_slist_free(displays);
+    if (found) return found;
+    gdk_set_allowed_backends("x11");
+    auto* display = gdk_display_open(g_getenv("DISPLAY"));
+    gdk_set_allowed_backends("*");
+    return display;
+}
 }
 PanelWindow::PanelWindow(GtkWindow* window, std::string identity, int bottom_offset, bool persist)
     : window_(window), bottom_(bottom_offset) {
@@ -35,9 +52,7 @@ PanelWindow::PanelWindow(GtkWindow* window, std::string identity, int bottom_off
     if (wayland && !layer_ && g_getenv("DISPLAY")) {
         // A compositor without layer-shell cannot promise a non-activating
         // xdg_toplevel. Prefer its XWayland utility-window support when present.
-        gdk_set_allowed_backends("x11");
-        fallback_display_ = gdk_display_open(g_getenv("DISPLAY"));
-        gdk_set_allowed_backends("*");
+        fallback_display_ = FallbackDisplay();
         if (fallback_display_) gtk_window_set_screen(window_, gdk_display_get_default_screen(fallback_display_));
     }
     display = gtk_widget_get_display(GTK_WIDGET(window_));
@@ -87,7 +102,8 @@ PanelWindow::~PanelWindow() {
     g_signal_handlers_disconnect_by_data(display_, this);
     for (auto* monitor : watched_monitors_) { g_signal_handlers_disconnect_by_data(monitor, this); g_object_unref(monitor); }
     g_object_unref(window_); g_object_unref(screen_); g_object_unref(display_);
-    if (fallback_display_) { gdk_display_close(fallback_display_); g_object_unref(fallback_display_); }
+    // display_ is our one owned reference. fallback_display_ is borrowed from
+    // GDK's display manager and may also be used by another panel.
 }
 std::string PanelWindow::Backend() const {
     if (layer_) return "Wayland layer-shell";

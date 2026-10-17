@@ -95,3 +95,18 @@ Record actual state-matched screenshots, diffs, font/material differences and
 remaining target-indicator/toolbar details before visual acceptance. Capsule's
 full native management surface belongs to tasks #162–#167; its existing rail
 size is not a claim that those pages have already been implemented.
+
+## No-layer-shell display teardown follow-up (2026-10-18)
+
+GTK owns the display returned by `gdk_display_open`. Passive panels now reuse
+that display through GDK's manager and release only their own explicit
+reference; destroying a panel cannot close a connection used by other GTK
+widgets. This removes the extra unref reported in PR #193 and also avoids
+GTK display-scoped teardown during panel recreation. See the
+[GTK ownership contract](https://docs.gtk.org/gdk3/type_func.Display.open.html).
+
+A real Weston X11-backend compositor without layer-shell, nested in private
+Xvfb, exercises Wayland-to-X11 fallback, placement and repeated panel teardown
+with `G_DEBUG=fatal-criticals`. The test verifies a reused connection and passes
+on Ubuntu 24.04 arm64. Linux CI runs the same fixture; this is separate from
+GNOME/KDE desktop acceptance.

@@ -21,9 +21,9 @@ int main(int argc, char** argv) {
         Check(gtk_init_check(&argc, &argv), "display unavailable");
         auto* window = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
         gtk_window_set_decorated(window, FALSE);
-        const bool x11 = GDK_IS_X11_DISPLAY(gdk_display_get_default());
         {
             PanelWindow panel(window, "fixture", 120);
+            const bool x11 = GDK_IS_X11_DISPLAY(gtk_widget_get_display(GTK_WIDGET(window)));
             Check(!gtk_window_get_accept_focus(window) && !gtk_window_get_focus_on_map(window), "panel may steal focus");
             int seen_x = -1;
             const auto placement = [&](const auto&, const auto& caret) {
@@ -70,6 +70,9 @@ int main(int argc, char** argv) {
             }
             gtk_widget_destroy(GTK_WIDGET(window));
         }
+        auto* displays = gdk_display_manager_list_displays(gdk_display_manager_get());
+        Check(g_slist_length(displays) <= 2, "panel recreation leaked display connections");
+        g_slist_free(displays);
         auto* restored = GTK_WINDOW(gtk_window_new(GTK_WINDOW_TOPLEVEL));
         gtk_window_set_decorated(restored, FALSE);
         {
