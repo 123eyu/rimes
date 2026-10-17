@@ -65,6 +65,13 @@ int main(int argc, char** argv) {
                 Check(changed.wait_for(lock, std::chrono::seconds(5), [&] { return started == 4; }), "AI streams did not start");
             }
             worker.CancelAll();
+            unsigned cancelled_queued = 0;
+            AIError queued_error = AIError::None;
+            worker.Run("queued", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(false), [&](AIUpdate update) {
+                if(update.finished) { ++cancelled_queued; queued_error=update.error; }
+            });
+            worker.CancelAll();
+            Check(cancelled_queued==1 && queued_error==AIError::Cancelled, "queued AI cancellation lost its terminal callback");
             worker.Run("原文🙂", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(false), [&](AIUpdate update) {
                 if (update.finished) {
                     std::lock_guard lock(mutex);

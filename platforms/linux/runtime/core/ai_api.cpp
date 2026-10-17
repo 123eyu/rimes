@@ -163,6 +163,7 @@ void AIWorker::Run(std::string text, RequestConfiguration configuration,
         try { RunAIRequest(text, configuration, *cancelled, receive); }
         catch (...) { try { receive({"", true, AIError::Network, {}}); } catch (...) {} }
     };
-    if (!jobs_.Run(std::move(cancelled), std::move(work))) receive({"", true, AIError::Busy, {}});
+    if (!jobs_.Run(std::move(cancelled), std::move(work), [receive] { receive({"", true, AIError::Cancelled, {}}); }))
+        receive({"", true, AIError::Busy, {}});
 }
 } // namespace rimes::runtime
