@@ -81,12 +81,20 @@ RimesIme::RimesIme(Instance* instance)
         {[this] { capsule_->SetEnabled(true); }, [this] { capsule_->SetEnabled(false); }});
     capsule_->SetEnabled(false);
     plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.apple-translation"),
+        {[] {}, [this] { translation_worker_.CancelAll(); }});
     WatchPluginPackages();
     WatchConfiguration();
     buffer_->BindPlugins(plugins_, [this](const auto& lease) { return acceptsPluginResult(lease); },
         [this](std::string_view id) {
             if (!configuration_) throw std::runtime_error("Configuration unavailable");
             return configuration_->Freeze(id);
+        });
+    buffer_->RegisterDerivedAdapter("builtin.apple-translation", "translation.generate",
+        [this](auto request, auto configuration, auto cancelled, auto receive) {
+            translation_worker_.Run(std::move(request.text), configuration.plugin.at("sourceLanguage").template get<std::string>(),
+                configuration.plugin.at("targetLanguage").template get<std::string>(), std::move(cancelled),
+                [receive = std::move(receive)](std::string text, bool success) { receive(0, std::move(text), true, success); });
         });
 
     destroy_watch_ = instance_->watchEvent(
@@ -175,6 +183,7 @@ void RimesIme::WatchPluginPackages() {
                 }
                 if (valid) plugin_binding_->Refresh();
                 else plugin_binding_->Revoke();
+                if (buffer_) buffer_->Publish();
                 return valid;
             });
         if (!plugin_watch_) throw std::runtime_error("Plugin observer unavailable");
