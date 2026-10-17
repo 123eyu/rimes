@@ -59,7 +59,6 @@ bool BufferService::CanDeliverDerived() {
 bool BufferService::DeliverDerived(bool all) {
     SynchronizeDerived();
     if (!CanDeliverDerived()) return false;
-    if (TranslationActive() && all && !translation_.Complete()) return false;
     auto* const target = LiveTarget();
     const auto epoch = focus_epoch_;
     const bool translating = TranslationActive();
@@ -69,7 +68,9 @@ bool BufferService::DeliverDerived(bool all) {
         SynchronizeDerived();
         if (!CanDeliverDerived() || LiveTarget() != target || focus_epoch_ != epoch) break;
         if (translating) {
-            if (!TranslationActive() || translation_scope_ != scope || (all && !translation_.Complete())) break;
+            // Head() and CanDeliverDerived() stop at the first unfinished unit.
+            // A running tail must not prevent delivery of the ready prefix.
+            if (!TranslationActive() || translation_scope_ != scope) break;
             const auto head = translation_.Head().value();
             try { target->commitString(head.text); }
             catch (const std::exception&) { delivery_conflict_ = true; break; }
