@@ -86,7 +86,7 @@
 | 终端 | `builtin.mailbox.terminal` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 摩斯电码 | `builtin.morse` | 0.1.0 | 设置中按需下载 | 禁用 |
 | 电音演奏 | `builtin.music` | 0.2.3 | 设置中按需下载 | 禁用 |
-| AI API | `builtin.openai-compatible` | 1.0.0 | 设置中按需下载 | 禁用 |
+| AI API | `builtin.openai-compatible` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Polisher | `builtin.polisher` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Reference | `builtin.scholay` | 0.1.0 | 设置中按需下载 | 禁用 |
 | 统计 | `builtin.statistics` | 2.0.0 | 随 XSIME 预装 | 启用 |

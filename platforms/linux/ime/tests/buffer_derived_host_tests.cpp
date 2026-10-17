@@ -49,10 +49,10 @@ int main() {
             };
             prepare();
             Check(frozen.text == "原文🙂", "source not frozen");
-            late(0, "Translated", false, true); drain();
+            late({0, "Translated", false, true}); drain();
             Check(host.derived().Phase() == DerivedPhase::Running && host.derived().CopyText().empty(), "stream became sendable");
-            late(1, "Alternative", false, true); drain();
-            late(0, "Translated🙂", true, true); drain();
+            late({1, "Alternative", false, true}); drain();
+            late({0, "Translated🙂", true, true}); drain();
             Check(host.derived().CopyText() == "Translated🙂" && host.derived().Results().size() == 2, "results not retained");
             Check(host.model().staged_text() == "原文🙂", "generation consumed source");
             unavailable_configuration = true;
@@ -72,20 +72,20 @@ int main() {
                 host.Publish();
                 if (scenario == 5) Check(host.model().visible(), "protected workbench lost its visible chrome");
                 Check(cancelled->load(), "worker was not cancelled");
-                previous(0, "late", true, true); drain();
+                previous({0, "late", true, true}); drain();
                 Check(host.derived().Results().empty(), "late result regained authority");
             }
             prepare();
-            late(0, "partial", false, true); drain();
-            late(0, "", true, false); drain();
+            late({0, "partial", false, true}); drain();
+            late({0, "", true, false}); drain();
             Check(host.derived().Phase() == DerivedPhase::Failed && host.derived().Results().empty(), "failed worker result survived");
             prepare();
-            late(0, "partial", false, true); drain();
-            late(0, "\xED\xA0\x80", true, true); drain();
+            late({0, "partial", false, true}); drain();
+            late({0, "\xED\xA0\x80", true, true}); drain();
             Check(host.derived().Phase() == DerivedPhase::Failed, "malformed output published partial success");
             prepare(); // callback after host destruction must be harmless
         }
-        late(0, "after shutdown", true, true); drain();
+        late({0, "after shutdown", true, true}); drain();
         std::cout << "Derived host: frozen configuration/source, alternatives, revocation, failures and shutdown passed\n";
     } catch (const std::exception& error) {
         std::cerr << error.what() << '\n';

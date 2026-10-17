@@ -83,6 +83,8 @@ RimesIme::RimesIme(Instance* instance)
     plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.apple-translation"),
         {[] {}, [this] { translation_worker_.CancelAll(); }});
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.openai-compatible"),
+        {[] {}, [this] { ai_worker_.CancelAll(); }});
     WatchPluginPackages();
     WatchConfiguration();
     buffer_->BindAutoSend([this] {
@@ -104,7 +106,15 @@ RimesIme::RimesIme(Instance* instance)
         [this](auto request, auto configuration, auto cancelled, auto receive) {
             translation_worker_.Run(std::move(request.text), configuration.plugin.at("sourceLanguage").template get<std::string>(),
                 configuration.plugin.at("targetLanguage").template get<std::string>(), std::move(cancelled),
-                [receive = std::move(receive)](std::string text, bool success) { receive(0, std::move(text), true, success); });
+                [receive = std::move(receive)](std::string text, bool success) { receive({0, std::move(text), true, success}); });
+        });
+    buffer_->RegisterDerivedAdapter("builtin.openai-compatible", "ai.generate",
+        [this](auto request, auto configuration, auto cancelled, auto receive) {
+            ai_worker_.Run(std::move(request.text), std::move(configuration), std::move(cancelled),
+                [receive = std::move(receive)](rimes::runtime::AIUpdate update) {
+                    receive({0, std::move(update.text), update.finished, update.error == rimes::runtime::AIError::None,
+                             rimes::runtime::AIErrorMessage(update.error), std::move(update.blocks)});
+                });
         });
 
     destroy_watch_ = instance_->watchEvent(

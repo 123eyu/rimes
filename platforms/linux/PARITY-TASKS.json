@@ -154,9 +154,10 @@
         "网络任务不阻塞 Fcitx；支持 SSE 流式、取消、超时、鉴权失败、限流和有界响应。",
         "使用隔离协议服务器覆盖真实传输、碎片流、错误及失效任务；联通实际可用渠道时记录独立验收。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 158,
-      "url": "https://github.com/scholay/xsime/issues/158"
+      "url": "https://github.com/scholay/xsime/issues/158",
+      "visual_status": "pending"
     },
     {
       "order": 9,

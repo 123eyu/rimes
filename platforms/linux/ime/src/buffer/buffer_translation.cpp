@@ -79,7 +79,10 @@ bool BufferService::TranslationTick(bool force) {
     request.lease = lease; request.focus = {model_.capture_token(), focus_epoch_};
     request.source = model_.blocks(); request.source_revision = model_.generation(); request.text = unit->source;
     auto receive = [this, alive = alive_, post = post_, scope, lease, id = unit->id, ticket = unit->ticket,
-                    target = config.plugin.value("targetLanguage", std::string("en"))](unsigned alternative, std::string text, bool finished, bool success) {
+                    target = config.plugin.value("targetLanguage", std::string("en"))](ResultUpdate update) {
+        const auto alternative = update.alternative;
+        const auto finished = update.finished, success = update.success;
+        auto text = std::move(update.text);
         if (!finished || alternative || !alive->load()) return;
         post([this, alive, scope, lease, id, ticket, target, text = std::move(text), success] {
             if (!alive->load()) return;

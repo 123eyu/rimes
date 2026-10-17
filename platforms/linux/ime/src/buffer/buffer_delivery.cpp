@@ -21,7 +21,14 @@ void BufferService::SynchronizeResultDelivery() {
     }
     if (result_pending_id_ == result->id) return;
     result_pending_.clear();
-    auto segments = model_.SplitSegments(result->text);
+    std::vector<std::string> segments;
+    const auto logical = derived_logical_blocks_.find(result->alternative);
+    if (logical != derived_logical_blocks_.end()) {
+        for (const auto& block : logical->second) {
+            const auto children = model_.SplitSegments(block);
+            segments.insert(segments.end(), children.begin(), children.end());
+        }
+    } else segments = model_.SplitSegments(result->text);
     if (segments.size() > 200) {
         for (std::size_t i = 200; i < segments.size(); ++i) segments[199] += segments[i];
         segments.resize(200);

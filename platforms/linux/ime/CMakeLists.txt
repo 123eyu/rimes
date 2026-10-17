@@ -119,7 +119,7 @@ if(RIMES_BUILD_FCITX5)
         src/buffer/buffer_delivery.cpp
         src/capsule/capsule_service.cpp
     )
-    target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation)
+    target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
     target_link_libraries(rimes PRIVATE PkgConfig::GTK3)

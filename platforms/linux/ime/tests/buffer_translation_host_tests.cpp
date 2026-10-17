@@ -36,16 +36,16 @@ int main() {
         host.model().append("第一句。第二", Origin::Rime);
         Check(host.SelectPlugin(plugin) && host.Generate(), "translation selection and generation");
         Check(requests[0].text == "第一句。", "first sentence owns exact source");
-        replies[0](0, "First.", true, true); drain();
+        replies[0]({0, "First.", true, true}); drain();
         Check(host.translation().Preview() == "First. ", "ready prefix visible");
         Check(host.Generate() && requests[1].text == "第二", "pending tail generation");
         host.model().append("句。", Origin::Rime); host.Publish();
         Check(cancellations[1]->load(), "editing the running tail cancels it");
         Check(host.translation().Preview() == "First. ", "stable ready prefix survives tail edit");
-        replies[1](0, "stale tail", true, true); drain();
+        replies[1]({0, "stale tail", true, true}); drain();
         Check(host.translation().Preview() == "First. ", "stale tail callback rejected");
         Check(host.Generate() && requests[2].text == "第二句。", "only changed sentence is regenerated");
-        replies[2](0, "Second.", true, true); drain();
+        replies[2]({0, "Second.", true, true}); drain();
         Check(host.translation().Complete() && host.translation().Preview() == "First. Second. ", "whole translation completes");
         Check(host.model().staged_text() == "第一句。第二句。", "generation never consumes source");
         host.model().append("第三句", Origin::Rime); host.Publish(); host.Generate();
@@ -53,9 +53,9 @@ int main() {
         host.CancelDerived();
         Check(old_cancel->load(), "explicit cancellation stops worker");
         Check(host.Generate(), "cancelled unit can be retried");
-        old(0, "late after retry", true, true); drain();
+        old({0, "late after retry", true, true}); drain();
         Check(host.translation().Running(), "old request cannot finish replacement");
-        replies.back()(0, "", true, false); drain();
+        replies.back()({0, "", true, false}); drain();
         Check(host.translation().Failed() && host.translation().Preview() == "First. Second. ", "failure keeps successful prefix");
         auto settings = config.Load(); settings["plugins"][plugin] = {{"continuous", false}};
         config.Save(settings, revision); revision = config.Load().at("revision").get<std::string>();
@@ -65,12 +65,12 @@ int main() {
         Check(host.Generate(), "manual requests remain available");
         const auto private_reply = replies.back();
         host.OnPasswordField(nullptr, true);
-        private_reply(0, "must be hidden", true, true); drain();
+        private_reply({0, "must be hidden", true, true}); drain();
         Check(host.translation().All().empty(), "protection scrubs plaintext and old results");
         host.model().set_password_field(false); host.model().activate_capture("new-field"); host.model().set_visible(true);
         host.model().append("新原文", Origin::Rime); host.Publish(); host.Generate();
         invalid_grant = true;
-        replies.back()(0, "invalid permission", true, true); drain();
+        replies.back()({0, "invalid permission", true, true}); drain();
         Check(host.translation().All().empty(), "permission error closes authorization without escaping event loop");
         std::cout << "Translation host: incremental reuse, exact source, cancel/retry, configuration and protection passed\n";
     } catch (const std::exception& error) { std::cerr << error.what() << '\n'; std::filesystem::remove_all(root); return 1; }

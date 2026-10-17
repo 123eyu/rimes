@@ -203,14 +203,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.openai-compatible",
             nameZH: "AI API",
             nameEN: "AI API",
-            version: "1.0.0",
+            version: "1.1.0",
             summaryZH: "把源缓冲区原样作为请求发给通用 Open API（OpenAI 兼容），回复进入独立目标缓冲区。",
             summaryEN: "AI API official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: false,
             defaultEnabled: false,
-            downloadAssetName: "preset-plugin-builtin.openai-compatible-1.0.0.json",
-            sha256: "9d4b1e16d0db3dc70cd30fd7ffb8e122968bcab321e2e2061f368a51d12f52a9"
+            downloadAssetName: "preset-plugin-builtin.openai-compatible-1.1.0.json",
+            sha256: "01550f3450571af0810fbf7332a95e1a099dd78dabce17100d9a63f80cb2396c"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.polisher",

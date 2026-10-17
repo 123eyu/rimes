@@ -515,6 +515,7 @@ void BufferService::CancelDerived() {
     derived_request_.reset();
     derived_.Cancel();
     result_pending_.clear(); result_pending_id_.clear();
+    derived_logical_blocks_.clear(); derived_error_.clear();
 }
 
 void BufferService::SynchronizeDerived() {
@@ -536,6 +537,7 @@ void BufferService::SynchronizeDerived() {
     CancelTranslation(true);
     if (derived_request_ && !derived_.Owns(*derived_request_, grant)) CancelDerived();
     SynchronizeResultDelivery();
+    if (derived_.Phase() != rimes::buffer::DerivedPhase::Failed) derived_error_.clear();
     synchronizing_derived_ = false;
 }
 
@@ -562,23 +564,32 @@ bool BufferService::Generate() {
         const auto request = derived_.Begin(*lease);
         if (!request) return false;
         started = true;
+        derived_error_.clear(); derived_logical_blocks_.clear();
         if (derived_cancel_) derived_cancel_->store(true);
         derived_request_ = request;
         derived_cancel_ = std::make_shared<std::atomic<bool>>(false);
-        auto receive = [this, alive = alive_, post = post_, request = *request](unsigned alternative,
-                            std::string text, bool finished, bool success) {
+        auto receive = [this, alive = alive_, post = post_, request = *request](ResultUpdate update) {
             if (!alive->load()) return;
-            post([this, alive, request, alternative, text = std::move(text), finished, success] {
+            post([this, alive, request, update = std::move(update)] {
                 if (!alive->load()) return;
+                const auto& [alternative, text, finished, success, message, blocks] = update;
                 SynchronizeDerived();
                 bool grant = false;
                 try { grant = validate_ && validate_(request.lease); } catch (const std::exception&) {}
                 if (!derived_.Accepts(request, grant)) return;
                 const bool valid = text.empty() || derived_.Update(request, grant, alternative, text);
+                if (finished && success && !blocks.empty()) {
+                    std::string joined;
+                    for (const auto& block : blocks) joined += block;
+                    if (blocks.size() <= 20 && joined == text) derived_logical_blocks_[alternative] = blocks;
+                }
                 if (finished || !valid) {
                     derived_.Finish(request, grant, success && valid);
                     if (derived_cancel_) derived_cancel_->store(true);
-                    if (derived_.Phase() == rimes::buffer::DerivedPhase::Failed) derived_request_.reset();
+                    if (derived_.Phase() == rimes::buffer::DerivedPhase::Failed) {
+                        derived_request_.reset();
+                        derived_error_ = message.size() <= 512 && message.find('\0') == message.npos ? message : "生成失败，原文已保留";
+                    }
                 }
                 Publish();
             });
@@ -1285,6 +1296,7 @@ void BufferService::Publish() {
     const auto adapter = derived_adapters_.find(snapshot.active_plugin);
     snapshot.live_expand = adapter == derived_adapters_.end() || adapter->second.live_expand;
     snapshot.phase = derived_.Phase();
+    snapshot.message = derived_error_;
     snapshot.can_generate = derived_.CanGenerate();
     snapshot.results = derived_.Results();
     snapshot.result_blocks = result_pending_;

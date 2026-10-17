@@ -30,7 +30,14 @@ namespace fcitx {
 class BufferService {
 public:
     using PostFn = std::function<void(std::function<void()>)>;
-    using ResultFn = std::function<void(unsigned, std::string, bool, bool)>;
+    struct ResultUpdate {
+        unsigned alternative = 0;
+        std::string text;
+        bool finished = false, success = true;
+        std::string message;
+        std::vector<std::string> logical_blocks;
+    };
+    using ResultFn = std::function<void(ResultUpdate)>;
     using RunDerived = std::function<void(rimes::buffer::DerivedRequest,
         rimes::runtime::RequestConfiguration, std::shared_ptr<std::atomic<bool>>, ResultFn)>;
 
@@ -159,6 +166,8 @@ private:
     bool translation_source_invalid_ = false;
     std::vector<rimes::buffer::Block> result_pending_;
     std::string result_pending_id_;
+    std::map<unsigned, std::vector<std::string>> derived_logical_blocks_;
+    std::string derived_error_;
     bool delivery_conflict_ = false;
     std::optional<rimes::plugins::Lease> translation_lease_;
     std::optional<rimes::runtime::RequestConfiguration> translation_configuration_;

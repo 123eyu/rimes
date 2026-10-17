@@ -111,7 +111,7 @@ func runPluginDistributionSmokeTest() -> Bool {
     ]
     let expectedVersions = [
         BuiltInPluginID.codexCLI: "1.1.1", BuiltInPluginID.claudeCodeCLI: "1.1.0",
-        BuiltInPluginID.openAICompatible: "1.0.0", BuiltInPluginID.scholay: "0.1.0",
+        BuiltInPluginID.openAICompatible: "1.1.0", BuiltInPluginID.scholay: "0.1.0",
         BuiltInPluginID.polisher: "1.1.0", BuiltInPluginID.latex: "1.1.0",
         BuiltInPluginID.appleTranslation: "2.3.0", BuiltInPluginID.streamInput: "1.4.0",
         BuiltInPluginID.music: "0.2.3", BuiltInPluginID.morse: "0.1.0",

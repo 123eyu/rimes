@@ -16,6 +16,7 @@
 
 #include "buffer_protocol.hpp"
 #include "configuration.hpp"
+#include "official_catalog.hpp"
 
 #include <fcitx-utils/capabilityflags.h>
 #include <fcitx-utils/event.h>
@@ -87,6 +88,22 @@ std::string IsolateDirs() {
     setenv("RIMES_BUFFER_AUTO_CAPTURE", "0", 1);
     setenv("RIMES_BUFFER_CLOSE_AFTER_LAST", "1", 1);
     setenv("RIMES_BUFFER_FOCUS_GRACE_MS", "200", 1);
+    if (const auto* endpoint = std::getenv("RIMES_TEST_AI_API")) {
+        rimes::runtime::ConfigurationStore config(root / "user/configuration");
+        auto settings = config.Load();
+        auto provider = rimes::runtime::FieldDefaults(rimes::runtime::ProviderFields());
+        const auto id = rimes::runtime::RandomID();
+        provider["id"] = id; provider["name"] = "Loopback fixture";
+        provider["baseURL"] = std::string(endpoint) + "/fragmented"; provider["model"] = "fixture-model";
+        settings["providers"].push_back(provider); settings["activeProvider"] = id;
+        config.Save(settings, settings.at("revision"), {{id, "fixture-credential"}});
+        const auto packages = rimes::plugins::BundledPackages();
+        rimes::plugins::PackageStore store(root / "user/plugins", rimes::plugins::OfficialCatalog(), packages,
+                                           rimes::plugins::CompiledAdapters(), "1.1.0");
+        const auto plugin = "builtin.openai-compatible";
+        store.Install(plugin, packages.at(plugin), store.Inspect(plugin).grant);
+        store.Enable(plugin, true, store.Inspect(plugin).grant);
+    }
     if (const auto* resources = std::getenv("RIMES_TEST_TRANSLATION_RESOURCES")) {
         // Copy only the active verified bundle, never a real user profile.
         const auto source = std::filesystem::path(resources);
@@ -607,6 +624,60 @@ void RunBufferSuite(fcitx::Instance& instance,
 
 }  // namespace
 
+void RunAISuite(SuiteCtx ctx) {
+    ctx.ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});
+    EnsureCapturing(ctx.frontend, ctx.uuid, ctx.dump_path);
+    SendBufferOp("select_plugin", "builtin.openai-compatible"); SendBufferOp("paste", "原文🙂");
+    struct Progress { int phase = 0; bool preview = false; std::string remaining; std::chrono::steady_clock::time_point closed; };
+    auto progress = std::make_shared<Progress>();
+    const auto started = std::chrono::steady_clock::now();
+    ctx.timers->emplace_back(ctx.instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 50000, 0,
+        [ctx, progress, started](fcitx::EventSourceTime* timer, std::uint64_t) {
+            try {
+                rimes::buffer::Snapshot s;
+                if (!rimes::buffer::ParseSnapshot(ReadDump(ctx.dump_path), &s)) Die("AI snapshot malformed");
+                const auto elapsed = std::chrono::steady_clock::now() - started;
+                if (elapsed > std::chrono::seconds(15)) Die("AI workbench deadline");
+                if (s.phase == rimes::buffer::DerivedPhase::Failed) Die("AI workbench request failed: " + s.message);
+                if (progress->phase == 0 && elapsed > std::chrono::milliseconds(250)) {
+                    if (s.active_plugin != "builtin.openai-compatible" || s.phase != rimes::buffer::DerivedPhase::Idle || !s.results.empty())
+                        Die("AI requested network before explicit generation");
+                    SendBufferOp("generate"); progress->phase = 1;
+                } else if (progress->phase == 1) {
+                    if (s.phase == rimes::buffer::DerivedPhase::Running && !s.results.empty()) {
+                        progress->preview = true;
+                        if (s.can_deliver || s.results[0].ready) Die("AI stream preview became deliverable");
+                    }
+                    if (s.phase == rimes::buffer::DerivedPhase::Ready) {
+                        if (!progress->preview || s.results.size() != 1 || s.results[0].text != "First 🙂.第二段。" ||
+                            s.result_blocks.size() < 2 || s.staged_text != "原文🙂") Die("AI stream or source preservation differs");
+                        ctx.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(s.result_blocks.front().text);
+                        progress->remaining = s.results[0].text.substr(s.result_blocks.front().text.size());
+                        SendBufferOp("send_next"); progress->phase = 2;
+                    }
+                } else if (progress->phase == 2 && !s.results.empty() && s.results[0].text == progress->remaining) {
+                    if (s.staged_text != "原文🙂") Die("AI source consumed before final output child");
+                    for (const auto& block : s.result_blocks) ctx.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(block.text);
+                    SendBufferOp("send_all"); progress->phase = 3;
+                } else if (progress->phase == 3 && !s.visible) {
+                    if (!s.staged_text.empty() || !s.results.empty()) Die("AI final native delivery did not consume source");
+                    EnsureCapturing(ctx.frontend, ctx.uuid, ctx.dump_path);
+                    SendBufferOp("paste", "原文🙂"); progress->phase = 4;
+                } else if (progress->phase == 4 && s.can_generate) {
+                    SendBufferOp("generate"); progress->phase = 5;
+                } else if (progress->phase == 5 && s.phase == rimes::buffer::DerivedPhase::Running && !s.results.empty()) {
+                    SendBufferOp("close"); progress->closed = std::chrono::steady_clock::now(); progress->phase = 6;
+                } else if (progress->phase == 6 && std::chrono::steady_clock::now() - progress->closed > std::chrono::milliseconds(500)) {
+                    if (s.visible || !s.results.empty() || s.staged_text != "原文🙂") Die("closed AI request restored output or consumed source");
+                    std::cout << "ok: production AI adapter, explicit HTTP, stream preview, final-only delivery, source consumption and close cancellation\n";
+                    ctx.instance->exit(); return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000); timer->setOneShot();
+            } catch (const std::exception& error) { std::cerr << error.what() << '\n'; g_exit_status = EXIT_FAILURE; ctx.instance->exit(); }
+            return true;
+        }));
+}
+
 void RunAutoSendSuite(SuiteCtx ctx) {
     ctx.ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});
     EnsureCapturing(ctx.frontend, ctx.uuid, ctx.dump_path);
@@ -797,7 +868,9 @@ int main(int argc, char** argv) {
                     suite_started = true;
                     std::cout << "ok: buffer testfrontend left Deploying\n";
                     try {
-                        if (std::getenv("RIMES_TEST_AUTO_SEND"))
+                        if (std::getenv("RIMES_TEST_AI_API"))
+                            RunAISuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});
+                        else if (std::getenv("RIMES_TEST_AUTO_SEND"))
                             RunAutoSendSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});
                         else if (std::getenv("RIMES_TEST_TRANSLATION_RESOURCES"))
                             RunTranslationSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});

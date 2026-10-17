@@ -71,6 +71,22 @@ target_link_libraries(RimesLocalTranslation PUBLIC RimesPluginCore RimesProcess 
 target_compile_options(RimesLocalTranslation PRIVATE -Wall -Wextra -Wpedantic -Werror)
 set_target_properties(RimesLocalTranslation PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/AITextPlugins.swift"
+    "${CMAKE_CURRENT_SOURCE_DIR}/generate_ai_contract.py")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_ai_contract.py"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_ai_contract.hpp"
+    RESULT_VARIABLE RIMES_AI_IMPORT_RESULT)
+if(NOT RIMES_AI_IMPORT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Review the native macOS AI API request contract")
+endif()
+add_library(RimesAI STATIC core/ai_api.cpp ../ai/chat_codec.cpp)
+target_compile_features(RimesAI PUBLIC cxx_std_17)
+target_include_directories(RimesAI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../ai")
+target_link_libraries(RimesAI PUBLIC RimesPluginCore Threads::Threads PRIVATE PkgConfig::RuntimeCurl)
+target_compile_options(RimesAI PRIVATE -Wall -Wextra -Wpedantic -Werror)
+set_target_properties(RimesAI PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
 
 pkg_check_modules(RuntimeGtk REQUIRED IMPORTED_TARGET gtk+-3.0)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
@@ -102,6 +118,12 @@ install(TARGETS rimes-settings DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES ui/org.scholay.rimes.settings.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 
 if(BUILD_TESTING OR RIMES_BUILD_TESTS)
+    add_executable(rimes-ai-codec-tests ../ai/chat_codec_tests.cpp)
+    target_link_libraries(rimes-ai-codec-tests PRIVATE RimesAI)
+    add_test(NAME ai-codec COMMAND rimes-ai-codec-tests)
+    add_executable(rimes-ai-api-tests tests/ai_api_tests.cpp)
+    target_link_libraries(rimes-ai-api-tests PRIVATE RimesAI)
+    add_test(NAME ai-http COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/tests/ai_http_fixture.py" $<TARGET_FILE:rimes-ai-api-tests>)
     add_executable(rimes-translation-units-tests ../translation/units_tests.cpp)
     target_link_libraries(rimes-translation-units-tests PRIVATE RimesTranslationUnits)
     add_test(NAME translation-units COMMAND rimes-translation-units-tests)
