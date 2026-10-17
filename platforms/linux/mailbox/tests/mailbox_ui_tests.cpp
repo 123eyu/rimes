@@ -145,6 +145,43 @@ int main(int argc, char** argv) {
             Check(Stable([&] { return store.Get(inbox); }).at("messages").back().at("kind") ==
                       "localNote",
                   "note became a remote reply");
+            Wait([&] {
+                return host.Inspect().at("revision") == store.Read().revision &&
+                       host.Inspect().at("busy") == false;
+            });
+            stage = "committed draft cleared after navigation";
+            gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)),
+                                     "已保存后立即切换", -1);
+            Click(Find(host.Content(), "mailbox-send"));
+            // Observe the durable write without dispatching its GTK completion.
+            const auto durable_deadline =
+                std::chrono::steady_clock::now() + std::chrono::seconds(4);
+            while (store.Get(inbox).at("messages").back().at("body") != "已保存后立即切换") {
+                Check(std::chrono::steady_clock::now() < durable_deadline, "note did not persist");
+                std::this_thread::sleep_for(std::chrono::milliseconds(5));
+            }
+            host.Hide();
+            Pump(100);
+            Check(host.Open("inbox", inbox), "could not reopen saved receipt");
+            Check(Text(composer).empty(),
+                  "published note remained as a duplicate draft after navigation");
+            Wait([&] {
+                return host.Inspect().at("revision") == store.Read().revision &&
+                       host.Inspect().at("busy") == false;
+            });
+            stage = "saving preserves newer draft";
+            gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)),
+                                     "正在保存的旧草稿", -1);
+            Wait([&] { return gtk_widget_is_sensitive(Find(host.Content(), "mailbox-send")); });
+            Click(Find(host.Content(), "mailbox-send"));
+            gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)),
+                                     "保存期间继续写的新草稿", -1);
+            Wait([&] {
+                return store.Get(inbox).at("messages").back().at("body") == "正在保存的旧草稿" &&
+                       gtk_widget_is_sensitive(Find(host.Content(), "mailbox-send"));
+            });
+            Check(Text(composer) == "保存期间继续写的新草稿", "completion discarded newer text");
+            gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)), "", 0);
             stage = "search no result";
             gtk_entry_set_text(GTK_ENTRY(Find(host.Content(), "mailbox-search")),
                                "无法匹配的测试查询");

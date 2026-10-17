@@ -251,6 +251,7 @@ struct Workspace::Impl {
     GtkWidget* badge = nullptr;
     std::map<std::string, GtkWidget*> nav;
     std::map<std::string, std::string> grants, selections, drafts, queries, filter_values;
+    std::map<std::string, std::uint64_t> draft_revisions;
     std::map<std::string, std::optional<bool>> sidebar_preferences;
     Snapshot state{{{"schemaVersion", 1}, {"nextSequence", 1}, {"threads", Json::array()}}, ""};
     std::string module = "inbox", selected, theme = "night", rendered_revision;
@@ -488,8 +489,10 @@ struct Workspace::Impl {
         g_signal_connect(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)), "changed",
                          G_CALLBACK(+[](GtkTextBuffer*, gpointer p) {
                              auto* self = static_cast<Impl*>(p);
-                             if (!self->restoring)
+                             if (!self->restoring) {
                                  self->drafts[self->DraftKey()] = Text(self->composer);
+                                 ++self->draft_revisions[self->DraftKey()];
+                             }
                              self->ComposerState();
                          }),
                          this);
@@ -848,7 +851,7 @@ struct Workspace::Impl {
         atk_object_set_name(gtk_widget_get_accessible(composer), note ? "本地备注" : "消息输入框");
     }
     void Mutate(std::function<void(Store&, const Json&)> action,
-                std::function<void()> completed = {}) {
+                std::function<void()> completed = {}, std::function<void()> committed = {}) {
         if (!Allowed() || busy || !Selected())
             return;
         const auto row = *Selected();
@@ -864,7 +867,7 @@ struct Workspace::Impl {
         ComposerState();
         auto token = std::make_shared<std::atomic<bool>>(false);
         if (!jobs.Run(token, [this, life, authorization, epoch, row, grant, plugin, action,
-                              completed] {
+                              completed, committed] {
                 bool ok = false;
                 try {
                     packages.WithEnabledGrant(
@@ -884,10 +887,12 @@ struct Workspace::Impl {
                         false);
                 } catch (const std::exception&) {
                 }
-                Post([this, life, authorization, epoch, ok, completed] {
+                Post([this, life, authorization, epoch, ok, completed, committed] {
                     if (!life->load())
                         return;
                     busy = false;
+                    if (ok && committed)
+                        committed();
                     bool current;
                     {
                         std::lock_guard<std::mutex> lock(authorization->mutex);
@@ -914,11 +919,20 @@ struct Workspace::Impl {
         if (capsule::TrimText(body).empty())
             return;
         const auto key = DraftKey();
+        const auto draft_revision = draft_revisions[key];
         Mutate([body](Store& store,
                       const Json& row) { store.AddNote(row.at("id"), Revision(row), body); },
-               [this, key] {
-                   drafts.erase(key);
-                   RestoreDraft();
+               {},
+               [this, key, body, draft_revision] {
+                   // Consume only the published draft, including after navigation.
+                   // Text typed while saving belongs to a newer draft.
+                   const auto saved = drafts.find(key);
+                   if (saved != drafts.end() && saved->second == body &&
+                       draft_revisions[key] == draft_revision) {
+                       drafts.erase(saved);
+                       if (DraftKey() == key && Text(composer) == body)
+                           RestoreDraft();
+                   }
                });
     }
     void Rename() {
@@ -1272,6 +1286,8 @@ void Workspace::Fixture(Snapshot state, const std::string& theme, const std::str
 Json Workspace::Inspect() const {
     return {{"module", impl_->module},
             {"thread", impl_->selected},
+            {"revision", impl_->state.revision},
+            {"busy", impl_->busy},
             {"unread", Unread(impl_->state)},
             {"ready", impl_->ready},
             {"protected", impl_->Protected()},
