@@ -362,12 +362,19 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
             SynchronizeDerived();
             const bool derived = plugins_ && !plugins_->SelectedBuffer().empty();
             if (derived && !CanDeliverDerived()) {
-                if (!is_repeat) { gesture_.cancel(); CancelHoldTimer(); Generate(); }
+                if (!is_repeat) {
+                    gesture_.cancel(); CancelHoldTimer();
+                    // Return requests generation only when there is no ready
+                    // output to send. A missing target or a commit conflict is
+                    // not permission to replace an existing result.
+                    if (!delivery_conflict_ && derived_.Phase() != rimes::buffer::DerivedPhase::Ready &&
+                        !(Translating() && translation_.Head())) Generate();
+                }
                 event.filterAndAccept(); return true;
             }
             ApplyReturnAction(gesture_.on_press(false, is_repeat, now, derived), ic, composing);
             return_generation_ = model_.generation();
-            if (!is_repeat && !gesture_.settle_only()) {
+            if (!is_repeat && gesture_.pending() && !gesture_.settle_only()) {
                 ArmHoldTimer();
             }
         }
@@ -1348,6 +1355,10 @@ void BufferService::ArmHoldTimer() {
     hold_timer_ = instance_->eventLoop().addTimeEvent(
         CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + kHoldTickUs, kHoldTickUs,
         [this](EventSourceTime* source, uint64_t) {
+            // Rearm explicitly only while this gesture is live. Retain the
+            // disabled source until release instead of destroying its callback
+            // from inside an aborted tick.
+            source->setEnabled(false);
             if (model_.generation() != return_generation_ || !model_.preedit().empty()) {
                 gesture_.cancel(); model_.set_hold_progress(0); Publish(); return true;
             }
