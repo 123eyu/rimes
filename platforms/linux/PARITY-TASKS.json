@@ -15,9 +15,10 @@
         "停用、卸载和更新撤销授权与在途任务；停用当前 Buffer 插件退回 Default，保留用户数据。",
         "Fcitx 宿主接入注册表；验证重启恢复、能力拒绝、旧任务失效及普通输入不受影响。"
       ],
-      "status": "implemented_pending_ci",
+      "status": "completed",
       "issue": 151,
-      "url": "https://github.com/scholay/xsime/issues/151"
+      "url": "https://github.com/scholay/xsime/issues/151",
+      "visual_status": "no_visual_surface"
     },
     {
       "order": 2,
@@ -33,9 +34,10 @@
         "预装与下载共用生命周期；暂存验证后原子安装，失败保留旧版本，新装默认停用。",
         "覆盖损坏包、路径穿越、符号链接、断网、更新撤权与重装；插件卸载保留词库、会话和凭据。"
       ],
-      "status": "implemented_pending_ci",
+      "status": "completed",
       "issue": 152,
-      "url": "https://github.com/scholay/xsime/issues/152"
+      "url": "https://github.com/scholay/xsime/issues/152",
+      "visual_status": "no_visual_surface"
     },
     {
       "order": 3,
@@ -54,7 +56,8 @@
       ],
       "status": "in_progress",
       "issue": 153,
-      "url": "https://github.com/scholay/xsime/issues/153"
+      "url": "https://github.com/scholay/xsime/issues/153",
+      "visual_status": "pending"
     },
     {
       "order": 4,
@@ -649,5 +652,10 @@
   "milestone": {
     "number": 1,
     "url": "https://github.com/scholay/xsime/milestone/1"
-  }
+  },
+  "cross_cutting_acceptance": [
+    "2026-10-17 追加：以当前 macOS 原生产品为视觉基准，组件、设置及管理界面要求像素级对齐；覆盖布局、尺寸、间距、颜色、字体度量、图标、边框、圆角及全部交互状态。",
+    "相同内容、窗口逻辑尺寸、主题和缩放下生成 macOS/Linux 截图，保存并排图与差异图；平台渲染差异须逐项记录，不能笼统宣布像素一致。",
+    "业务规则、状态迁移、数据与投递语义按共享行为样例验收；外观接近不能替代逻辑对齐。"
+  ]
 }

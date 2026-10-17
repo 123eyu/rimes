@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=XSIME Settings
+Name[zh_CN]=XSIME 设置
+Comment=Configure XSIME workspaces, appearance and plugins
+Exec=rimes-settings
+Icon=rimes
+Terminal=false
+Type=Application
+Categories=Settings;Utility;
+StartupNotify=true

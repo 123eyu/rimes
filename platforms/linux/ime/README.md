@@ -17,6 +17,10 @@ compatible packages; unsupported platform entries are visibly unavailable.
 Package installation, update and enablement are separate steps. Updates and
 uninstalls revoke running jobs and preserve user content. See the
 [plugin runtime guide](../runtime/README.md).
+`rimes-settings` adds a native settings entry for plugin/package management,
+private provider credentials, themes and live Buffer preferences. The settings
+surface is undergoing macOS pixel comparison; unported module pages are marked
+as pending. See [the visual acceptance contract](../VISUAL-PARITY.md).
 Mailbox is still later. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in

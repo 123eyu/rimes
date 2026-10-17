@@ -82,6 +82,7 @@ RimesIme::RimesIme(Instance* instance)
     capsule_->SetEnabled(false);
     plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
     WatchPluginPackages();
+    WatchConfiguration();
 
     destroy_watch_ = instance_->watchEvent(
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
@@ -128,6 +129,8 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    configuration_watch_.reset();
+    if (configuration_watch_fd_ >= 0) close(configuration_watch_fd_);
     plugin_watch_.reset();
     if (plugin_watch_fd_ >= 0) close(plugin_watch_fd_);
     plugin_binding_.reset();
@@ -179,7 +182,59 @@ void RimesIme::WatchPluginPackages() {
 }
 
 bool RimesIme::acceptsPluginResult(const rimes::plugins::Lease& lease) {
+    ApplyConfiguration(); // Close the same notification-order race as receipts.
     return plugin_binding_ && plugin_binding_->Accepts(lease);
+}
+
+void RimesIme::ApplyConfiguration() {
+    try {
+        if (!configuration_) throw std::runtime_error("Configuration unavailable");
+        const auto config = configuration_->Load();
+        const auto revision = config.at("revision").get<std::string>();
+        if (revision == configuration_revision_) return;
+        configuration_revision_ = revision;
+        for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
+        buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"));
+    } catch (const std::exception&) {
+        configuration_revision_.clear();
+        for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
+    }
+}
+
+void RimesIme::WatchConfiguration() {
+    try {
+        configuration_ = std::make_unique<rimes::runtime::ConfigurationStore>(rimes::runtime::UserRoot() / "configuration");
+        configuration_watch_fd_ = inotify_init1(IN_NONBLOCK | IN_CLOEXEC);
+        if (configuration_watch_fd_ < 0 || inotify_add_watch(configuration_watch_fd_, configuration_->Path().c_str(),
+            IN_CLOSE_WRITE | IN_MOVED_TO | IN_DELETE | IN_DELETE_SELF | IN_MOVE_SELF | IN_ATTRIB) < 0)
+            throw std::runtime_error("Configuration observer unavailable");
+        configuration_watch_ = instance_->eventLoop().addIOEvent(configuration_watch_fd_, IOEventFlag::In,
+            [this](EventSourceIO*, int fd, IOEventFlags) {
+                alignas(inotify_event) std::array<char, 16384> events{};
+                bool valid = true;
+                for (;;) {
+                    const auto count = read(fd, events.data(), events.size());
+                    if (count < 0 && errno == EINTR) continue;
+                    if (count < 0 && errno == EAGAIN) break;
+                    if (count <= 0) { valid = false; break; }
+                    for (std::size_t offset = 0; offset < static_cast<std::size_t>(count);) {
+                        const auto* event = reinterpret_cast<const inotify_event*>(events.data() + offset);
+                        if (event->mask & (IN_IGNORED | IN_DELETE_SELF | IN_MOVE_SELF)) valid = false;
+                        offset += sizeof(inotify_event) + event->len;
+                    }
+                }
+                if (!valid) configuration_.reset();
+                ApplyConfiguration();
+                return valid;
+            });
+        if (!configuration_watch_) throw std::runtime_error("Configuration observer unavailable");
+        ApplyConfiguration();
+    } catch (const std::exception&) {
+        configuration_.reset();
+        configuration_watch_.reset();
+        if (configuration_watch_fd_ >= 0) { close(configuration_watch_fd_); configuration_watch_fd_ = -1; }
+        FCITX_LOGC(rimes_log, Error) << "Plugin configuration unavailable; check private data permissions";
+    }
 }
 
 void RimesIme::HandleDeployReady() {

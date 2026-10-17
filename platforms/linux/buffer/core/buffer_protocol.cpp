@@ -155,6 +155,7 @@ std::string EncodeSnapshot(const Snapshot& snapshot) {
     std::ostringstream out;
     out << "{\"v\":" << kProtocolVersion << ",\"type\":\"snapshot\"";
     out << ",\"generation\":" << snapshot.generation;
+    out << ",\"width\":" << snapshot.width;
     out << ",\"visible\":" << (snapshot.visible ? "true" : "false");
     out << ",\"capturing\":" << (snapshot.capturing ? "true" : "false");
     out << ",\"enabled\":" << (snapshot.enabled ? "true" : "false");

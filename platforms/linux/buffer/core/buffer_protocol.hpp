@@ -33,6 +33,7 @@ struct Command {
 };
 
 struct Snapshot {
+    int width = 760;
     std::uint64_t generation = 0;
     bool visible = false;
     bool capturing = false;

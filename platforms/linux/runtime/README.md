@@ -47,3 +47,49 @@ ctest --test-dir /tmp/xsime-runtime --output-on-failure
 These checks cover receipt races, invalid packages, offline failures, unsafe
 paths, lifecycle revocation and data retention. Desktop interaction and release
 package acceptance remain separately tracked in [the parity plan](../PARITY.md).
+
+## Native settings and private configuration
+
+Open **XSIME 设置** from the application menu or Fcitx's XSIME configuration,
+or run `rimes-settings`. The settings host provides official plugin management,
+declarative plugin forms, API provider configuration, theme previews and Buffer
+preferences. Unported module pages remain explicitly unavailable while their
+tasks are in progress; a catalog card does not imply Linux runtime support.
+
+Configuration lives under `$XDG_DATA_HOME/rimes/configuration`: `preferences.json`
+holds ordinary fields and opaque credential references, while `credentials/`
+holds separately owned `0600` credential files inside `0700` directories. Keys
+never enter command arguments, status text or ordinary preference fields. A
+blank key field retains the saved value; **清除密钥…** explicitly removes it.
+Concurrent saves reject stale revisions. Invalid or unsafe files are preserved
+for recovery instead of silently replaced with defaults. Reload settings after
+restoring a private backup. If credential cleanup fails after a successful save,
+the UI reports that distinction.
+
+Each request receives an immutable configuration snapshot. Saving preferences
+invalidates outstanding plugin grants. The running Fcitx addon observes atomic
+updates; Buffer width, close-after-last and app-switch behavior take effect
+without restart. App-switch clearing defaults to **off**, matching macOS; when
+enabled it clears local typing only and preserves staged external content.
+
+`generate_visual_tokens.py` imports native macOS palettes, Settings chrome,
+dimensions, navigation, catalog labels and existing brand images at build time.
+The current GTK implementation is still undergoing the
+[pixel comparison acceptance](../VISUAL-PARITY.md); screenshots do not establish
+finished visual parity. Linux currently uses Inter/Noto Sans CJK and drawn
+semantic icons; Liquid Glass uses a solid fallback pending compositor work.
+
+Render only into an isolated test profile and compare with the actual native
+macOS `settings-render` output:
+
+```bash
+RIMES_USER_DIR=/tmp/xsime-visual-fixture xvfb-run -a rimes-settings --render /tmp/linux-render
+python3 platforms/linux/runtime/compare_visuals.py --macos /tmp/macos-render \
+  --linux /tmp/linux-render --output /tmp/visual-comparison
+```
+
+The comparison tool requires Pillow, converts embedded monitor ICC profiles to
+sRGB, writes pairs/difference maps and records unresolved review status. It never
+turns a similarity percentage into an automatic acceptance. `rimes-settings
+--smoke` creates its own disposable profile and exercises real controls, rejected
+saves, credential redaction, restart and layout dimensions under Xvfb.

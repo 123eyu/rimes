@@ -20,12 +20,14 @@
 #include "engine/rime_engine.hpp"
 #include "plugin_registry.hpp"
 #include "package_binding.hpp"
+#include "configuration.hpp"
 
 namespace fcitx {
 
 FCITX_CONFIGURATION(RimesConfiguration,
     Option<bool> verticalCandidates{this, "VerticalCandidates", "竖向排列候选", true};
     Option<bool> capsuleNotes{this, "CapsuleNotes", "启用 Capsule 笔记", true};
+    ExternalOption settings{this, "Settings", "XSIME 设置", "rimes-settings"};
     ExternalOption schemes{this, "Schemes", "导入与管理输入方案", "rimes-schemes"};)
 class RimesState;
 
@@ -64,6 +66,8 @@ private:
     void HandleDeployReady();
     void OnDeployReady();
     void WatchPluginPackages();
+    void WatchConfiguration();
+    void ApplyConfiguration();
 
     RimesConfiguration config_;
     std::string imported_schema_;
@@ -82,6 +86,10 @@ private:
     std::unique_ptr<rimes::plugins::PackageBinding> plugin_binding_;
     std::unique_ptr<EventSourceIO> plugin_watch_;
     int plugin_watch_fd_ = -1;
+    std::unique_ptr<rimes::runtime::ConfigurationStore> configuration_;
+    std::unique_ptr<EventSourceIO> configuration_watch_;
+    int configuration_watch_fd_ = -1;
+    std::string configuration_revision_;
 };
 
 class RimesImeFactory : public AddonFactory {

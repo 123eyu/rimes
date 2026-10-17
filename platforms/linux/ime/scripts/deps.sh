@@ -14,7 +14,7 @@ Debian / Ubuntu (Noble and later):
     libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
     xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
     libgtk-layer-shell-dev libssl-dev libcurl4-openssl-dev \
-    qtbase5-dev fonts-noto-cjk weston wtype sway
+    qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway
     # Runtime recommend for Wayland Capsule Ctrl+C (also a .deb Recommends):
     #   wl-clipboard
 
@@ -42,7 +42,7 @@ if [[ "${1:-}" == "--install" ]]; then
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev git \
             xvfb xdotool dbus-x11 python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev libssl-dev libcurl4-openssl-dev \
-            qtbase5-dev fonts-noto-cjk weston wtype sway
+            qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway
     else
         echo "Use --print and install the matching packages for this distro." >&2
         exit 1

@@ -21,7 +21,7 @@ target_link_libraries(RimesRuntimeStorage PUBLIC OpenSSL::Crypto)
 set_target_properties(RimesRuntimeStorage PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(RimesRuntimeStorage PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp)
+add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp core/configuration.cpp)
 target_compile_features(RimesPluginCore PUBLIC cxx_std_17)
 target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core")
 target_include_directories(RimesPluginCore PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/generated")
@@ -41,6 +41,33 @@ target_compile_definitions(rimes-plugins PRIVATE RIMES_PRODUCT_VERSION="${RIMES_
 include(GNUInstallDirs)
 install(TARGETS rimes-plugins DESTINATION "${CMAKE_INSTALL_BINDIR}")
 
+pkg_check_modules(RuntimeGtk REQUIRED IMPORTED_TARGET gtk+-3.0)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/RimeUI.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsWindow.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsRouting.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/BufferWindowController.swift"
+    "${RIMES_REPOSITORY_ROOT}/Catalog/buffer-plugins.json"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/chatgpt.png"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/claude.png"
+    "${CMAKE_CURRENT_SOURCE_DIR}/generate_visual_tokens.py")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_visual_tokens.py"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_visual_tokens.hpp"
+    RESULT_VARIABLE RIMES_VISUAL_IMPORT_RESULT)
+if(NOT RIMES_VISUAL_IMPORT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Review the native macOS visual contract before building Linux UI")
+endif()
+add_library(RimesDesktopUI STATIC ui/desktop.cpp)
+target_include_directories(RimesDesktopUI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ui" PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_link_libraries(RimesDesktopUI PUBLIC RimesPluginCore PkgConfig::RuntimeGtk)
+target_compile_options(RimesDesktopUI PRIVATE -Wall -Wextra -Wpedantic -Werror)
+add_executable(rimes-settings ui/settings.cpp)
+target_link_libraries(rimes-settings PRIVATE RimesDesktopUI)
+target_compile_definitions(rimes-settings PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+target_compile_options(rimes-settings PRIVATE -Wall -Wextra -Wpedantic -Werror)
+install(TARGETS rimes-settings DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(FILES ui/org.scholay.rimes.settings.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+
 if(BUILD_TESTING OR RIMES_BUILD_TESTS)
     add_executable(rimes-plugin-registry-tests tests/plugin_registry_tests.cpp)
     target_link_libraries(rimes-plugin-registry-tests PRIVATE RimesPluginCore)
@@ -48,4 +75,11 @@ if(BUILD_TESTING OR RIMES_BUILD_TESTS)
     add_executable(rimes-plugin-store-tests tests/plugin_store_tests.cpp)
     target_link_libraries(rimes-plugin-store-tests PRIVATE RimesPluginCore)
     add_test(NAME plugin-store COMMAND rimes-plugin-store-tests)
+    add_executable(rimes-configuration-tests tests/configuration_tests.cpp)
+    target_link_libraries(rimes-configuration-tests PRIVATE RimesPluginCore)
+    add_test(NAME configuration COMMAND rimes-configuration-tests)
+    find_program(RIMES_XVFB_RUN xvfb-run)
+    if(RIMES_XVFB_RUN)
+        add_test(NAME settings-ui COMMAND "${RIMES_XVFB_RUN}" -a $<TARGET_FILE:rimes-settings> --smoke)
+    endif()
 endif()

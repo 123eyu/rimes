@@ -371,6 +371,7 @@ if(RIMES_BUILD_TESTS)
 
         add_executable(rimes-buffer-fcitx-e2e tests/buffer_fcitx_e2e.cpp)
         target_link_libraries(rimes-buffer-fcitx-e2e PRIVATE
+            RimesPluginCore
             Fcitx5::Core
             Fcitx5::Module::TestFrontend
             RimesEngine

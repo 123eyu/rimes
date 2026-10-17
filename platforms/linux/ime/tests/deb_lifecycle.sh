@@ -27,8 +27,11 @@ sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
 [[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
+[[ -x /usr/bin/rimes-settings && -x /usr/bin/rimes-plugins ]]
+[[ -f /usr/share/applications/org.scholay.rimes.settings.desktop ]]
+/usr/bin/rimes-settings --help
 [[ -f /usr/share/rimes/data/default.yaml ]]
-for program in /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule; do
+for program in /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins; do
     ldd "$program" > "$WORK/ldd.txt"
     if grep -q 'not found' "$WORK/ldd.txt"; then
         cat "$WORK/ldd.txt" >&2

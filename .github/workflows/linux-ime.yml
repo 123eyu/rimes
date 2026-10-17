@@ -13,6 +13,12 @@ on:
       - "Shared/CandidateMatrix/**"
       - "OfficialPlugins"
       - "plugins.lock.json"
+      - "Catalog/buffer-plugins.json"
+      - "Sources/RimeBuffer/RimeUI.swift"
+      - "Sources/RimeBuffer/SettingsWindow.swift"
+      - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/BufferWindowController.swift"
+      - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
       - "scripts/input-schemes/repair-rime-table.py"
@@ -33,6 +39,12 @@ on:
       - "Shared/CandidateMatrix/**"
       - "OfficialPlugins"
       - "plugins.lock.json"
+      - "Catalog/buffer-plugins.json"
+      - "Sources/RimeBuffer/RimeUI.swift"
+      - "Sources/RimeBuffer/SettingsWindow.swift"
+      - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/BufferWindowController.swift"
+      - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
       - "scripts/input-schemes/repair-rime-table.py"
@@ -82,7 +94,7 @@ jobs:
             xvfb xdotool dbus-x11 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
             libgtk-layer-shell-dev libssl-dev libcurl4-openssl-dev \
-            qtbase5-dev fonts-noto-cjk weston wtype sway patchelf dpkg-dev
+            qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
         run: |
@@ -98,6 +110,18 @@ jobs:
 
       - name: Unit tests
         run: ctest --test-dir platforms/linux/ime/build --output-on-failure
+
+      - name: Render native settings with an isolated profile
+        run: |
+          RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
+            platforms/linux/ime/build/runtime/rimes-settings --render "$RUNNER_TEMP/settings-render"
+
+      - name: Upload settings for macOS comparison
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-settings-native-${{ github.run_id }}
+          path: ${{ runner.temp }}/settings-render
+          retention-days: 14
 
       - name: Original source import and native typing
         run: |
