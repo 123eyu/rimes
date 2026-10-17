@@ -1,5 +1,6 @@
 #include "buffer/buffer_service.hpp"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <unistd.h>
@@ -11,6 +12,8 @@ int main() {
     if (!root) return 1;
     setenv("RIMES_BUFFER_SOCKET", (std::filesystem::path(root) / "buffer.sock").c_str(), 1);
     setenv("RIMES_BUFFER_HEADLESS", "1", 1);
+    const auto dump_path = std::filesystem::path(root) / "snapshot.json";
+    setenv("RIMES_BUFFER_DUMP", dump_path.c_str(), 1);
     std::vector<std::function<void()>> posted;
     auto drain = [&] { while (!posted.empty()) { auto fn = std::move(posted.front()); posted.erase(posted.begin()); fn(); } };
     try {
@@ -71,10 +74,17 @@ int main() {
         private_reply(0, "must be hidden", true, true); drain();
         Check(host.translation().All().empty(), "protection scrubs plaintext and old results");
         host.model().set_password_field(false); host.model().activate_capture("new-field"); host.model().set_visible(true);
-        host.model().append("新原文", Origin::Rime); host.Publish(); host.Generate();
+        host.model().append("新原文。后半句", Origin::Rime); host.Publish(); host.Generate();
+        replies.back()(0, "Visible prefix.", true, true); drain();
+        Check(host.Generate(), "revocation fixture tail did not start");
         invalid_grant = true;
         replies.back()(0, "invalid permission", true, true); drain();
         Check(host.translation().All().empty(), "permission error closes authorization without escaping event loop");
+        std::ifstream file(dump_path);
+        const std::string published((std::istreambuf_iterator<char>(file)), std::istreambuf_iterator<char>());
+        Snapshot snapshot;
+        Check(ParseSnapshot(published, &snapshot) && snapshot.results.empty() &&
+              snapshot.phase != DerivedPhase::Running, "revoked translation remained in published UI snapshot");
         std::cout << "Translation host: incremental reuse, exact source, cancel/retry, configuration and protection passed\n";
     } catch (const std::exception& error) { std::cerr << error.what() << '\n'; std::filesystem::remove_all(root); return 1; }
     std::filesystem::remove_all(root);
