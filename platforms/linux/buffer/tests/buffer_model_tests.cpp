@@ -3,6 +3,7 @@
 #include <string>
 
 #include "buffer_model.hpp"
+#include "buffer_application.hpp"
 
 namespace {
 
@@ -18,6 +19,10 @@ void Expect(bool condition, const char* message) {
 }  // namespace
 
 int main() {
+    for (const auto* program : {"rimes-settings", "/usr/bin/rimes-settings", "org.scholay.rimes.settings", "org.scholay.rimes.settings.desktop", "/usr/libexec/rimes/rimes-buffer", "rimes-schemes"})
+        Expect(rimes::buffer::IsCompanionApplication(program), "companion identity must preserve staging");
+    for (const auto* program : {"", "editor", "rimes-settings-other", "org.scholay.rimes.settings.other", "/rimes-settings/editor"})
+        Expect(!rimes::buffer::IsCompanionApplication(program), "external application identity must not match a prefix");
     using rimes::buffer::BufferModel;
     using rimes::buffer::InputRoute;
     using rimes::buffer::Origin;

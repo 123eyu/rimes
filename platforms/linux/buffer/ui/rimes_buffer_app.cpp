@@ -169,6 +169,8 @@ void RebuildChips(App* app) {
     g_list_free(children);
 
     if (app->snapshot.secure) {
+        gtk_label_set_text(GTK_LABEL(app->placeholder), "");
+        gtk_label_set_text(GTK_LABEL(app->preedit), "");
         gtk_widget_hide(app->placeholder);
         gtk_widget_hide(app->preedit);
         return;
@@ -203,6 +205,7 @@ void RebuildChips(App* app) {
 
 void LoadCss(const std::string& theme);
 void Paste(App* app) {
+    if (app->snapshot.secure || !app->snapshot.visible) return;
     auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     auto* text = gtk_clipboard_wait_for_text(clipboard);
     if (text && *text) SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "paste"}, {"text", text}}.dump());
@@ -215,13 +218,13 @@ void Refresh(App* app) {
     const bool derived = !s.active_plugin.empty();
     const bool output = s.phase == rimes::buffer::DerivedPhase::Running ||
                         s.phase == rimes::buffer::DerivedPhase::Failed || !s.results.empty();
-    const bool source = !derived || (s.live_expand ? !s.blocks.empty() || !output : !output);
-    const bool target = derived && (output || (s.live_expand && !s.blocks.empty()));
-    const int height = source && target ? rimes::native::bufferDerivedHeight : kWindowHeight;
+    const bool source = s.secure ? gtk_widget_get_visible(app->source_row) : !derived || (s.live_expand ? !s.blocks.empty() || !output : !output);
+    const bool target = s.secure ? gtk_widget_get_visible(app->result_row) : derived && (output || (s.live_expand && !s.blocks.empty()));
+    const int height = s.secure ? app->height : source && target ? rimes::native::bufferDerivedHeight : kWindowHeight;
     gtk_widget_set_size_request(app->window, s.width, height);
     gtk_window_resize(GTK_WINDOW(app->window), s.width, height);
     app->height = height;
-    if (s.visible && !s.secure) {
+    if (s.visible) {
         gtk_widget_show_all(app->window);
         gtk_window_set_keep_above(GTK_WINDOW(app->window), TRUE);
         if (!app->wayland_layer && !app->placed && !app->render) PlaceOnX11(app);
@@ -230,6 +233,9 @@ void Refresh(App* app) {
         app->placed = false;
     }
     RebuildChips(app);
+    if (s.secure) app->pending_copy.clear();
+    gtk_widget_set_sensitive(app->source_actions, !s.secure);
+    gtk_widget_set_sensitive(app->result_actions, !s.secure);
     gtk_widget_set_visible(app->caret, s.capturing && !s.secure);
     gtk_widget_set_visible(app->source_row, source);
     gtk_widget_set_visible(app->result_row, target);
@@ -257,7 +263,7 @@ void Refresh(App* app) {
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(app->progress), CLAMP(s.hold_progress, 0.0, 1.0));
     gtk_widget_set_visible(app->progress, s.hold_progress > 0);
     const auto result = std::find_if(s.results.begin(), s.results.end(), [&](const auto& r) { return r.id == s.selected_result; });
-    const std::string text = result == s.results.end() ? (s.phase == rimes::buffer::DerivedPhase::Failed ? "生成失败，可重试" : "等待结果…") : result->text;
+    const std::string text = s.secure ? "" : result == s.results.end() ? (s.phase == rimes::buffer::DerivedPhase::Failed ? "生成失败，可重试" : "等待结果…") : result->text;
     gtk_label_set_text(GTK_LABEL(app->result_text), text.c_str());
     gtk_widget_set_tooltip_text(app->result_text, text.c_str());
     gtk_widget_set_visible(app->copy, result != s.results.end());
@@ -715,8 +721,9 @@ int RenderFixtures(App* app, const std::filesystem::path& output) {
     s.blocks = {{"fixture-source", "同一窗口先展开为双轨", rimes::buffer::Origin::Rime, 0}};
     rimes::runtime::Json manifest = rimes::runtime::Json::array();
     for (const std::string theme : {"night", "day", "quiet", "rasta", "liquidGlass"}) {
-        for (const std::string state : {"standard", "dual", "running", "failed", "alternatives", "exchange", "return-to-edit", "restored", "hold"}) {
+        for (const std::string state : {"standard", "dual", "protected", "running", "failed", "alternatives", "exchange", "return-to-edit", "restored", "hold"}) {
             s.theme = theme;
+            s.secure = state == "protected";
             s.active_plugin = state == "standard" || state == "restored" || state == "hold" ? "" : "fixture.transform";
             s.hold_progress = state == "hold" ? 0.5 : 0;
             s.plugins = {{"fixture.transform", "Default"}};
@@ -731,6 +738,10 @@ int RenderFixtures(App* app, const std::filesystem::path& output) {
             s.selected_result = s.results.empty() ? "" : s.results.front().id;
             s.can_generate = !s.active_plugin.empty() && s.phase != rimes::buffer::DerivedPhase::Running;
             Refresh(app);
+            if (s.secure && (!gtk_widget_get_visible(app->window) || app->height != rimes::native::bufferDerivedHeight ||
+                std::strlen(gtk_label_get_text(GTK_LABEL(app->result_text))) || std::strlen(gtk_label_get_text(GTK_LABEL(app->target))))) {
+                g_printerr("Protected Buffer must retain geometry and scrub content\n"); return 1;
+            }
             auto* loop = g_main_loop_new(nullptr, FALSE);
             g_timeout_add(80, +[](gpointer p) -> gboolean { g_main_loop_quit(static_cast<GMainLoop*>(p)); return G_SOURCE_REMOVE; }, loop);
             g_main_loop_run(loop);
