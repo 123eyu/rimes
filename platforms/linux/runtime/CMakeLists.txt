@@ -43,6 +43,17 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/gen
 if(NOT RIMES_SHORTCUT_IMPORT_RESULT EQUAL 0)
     message(FATAL_ERROR "Review the macOS shortcut contract before building Linux")
 endif()
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RIMES_REPOSITORY_ROOT}/OfficialPlugins/native/macos/CapsuleModules.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleWindowController.swift"
+    "${CMAKE_CURRENT_SOURCE_DIR}/generate_capsule_contract.py"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleRailSmoke.swift")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_capsule_contract.py"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_capsule_contract.hpp"
+    RESULT_VARIABLE RIMES_CAPSULE_IMPORT_RESULT)
+if(NOT RIMES_CAPSULE_IMPORT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Review the native macOS Capsule contract")
+endif()
 add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp core/configuration.cpp core/shortcuts.cpp)
 target_compile_features(RimesPluginCore PUBLIC cxx_std_17)
 target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core" "${CMAKE_CURRENT_BINARY_DIR}/generated")

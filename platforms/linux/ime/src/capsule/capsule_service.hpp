@@ -16,6 +16,7 @@
 #include <fcitx/instance.h>
 
 #include "capsule_model.hpp"
+#include "background_jobs.hpp"
 #include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
 
@@ -48,7 +49,11 @@ public:
     void Show(InputContext* ic);
     void Close();
     void SetEnabled(bool enabled);
-    bool Enabled() const { return enabled_; }
+    bool Enabled() const { return enabled_ && !model_.enabled_modules().empty(); }
+    void SetModuleEnabled(rimes::capsule::Module module, bool enabled);
+    void BindModuleValidation(std::function<bool(rimes::capsule::Module)> validate) { validate_module_ = std::move(validate); }
+    void Manage();
+    void ReturnToRail();
     bool Activate();
     bool CopySelected();
 
@@ -56,6 +61,12 @@ public:
     void Publish();
 
 private:
+    bool AllowsModule();
+    bool SelectIdentity(const rimes::capsule::Command& command);
+    std::function<bool(rimes::capsule::Module)> validate_module_;
+    rimes::runtime::BackgroundJobs storage_jobs_;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+    std::shared_ptr<std::atomic<bool>> reload_cancel_;
     bool session_protected_ = false;
     bool field_protected_ = false;
     bool managed_hotkey_ = false;
@@ -72,7 +83,7 @@ private:
 
     InputContext* LiveTarget() const;
     bool ArmedFor(InputContext* ic) const;
-    void ReloadNotes();
+    void ReloadNotes(std::string selected_id = {});
     void DropSession(std::string_view reason);
     void ArmFocusGraceTimer();
     void CancelFocusGraceTimer();

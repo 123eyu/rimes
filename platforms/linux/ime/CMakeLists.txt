@@ -61,6 +61,7 @@ rimes_harden(RimesBufferCore)
 add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_hash.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_kinds.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_modules.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_store.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_model.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
@@ -70,7 +71,7 @@ target_include_directories(RimesCapsuleCore PUBLIC
     "${RIMES_CAPSULE_ROOT}/core"
     "${RIMES_BUFFER_ROOT}/core"
 )
-target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore)
+target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess)
 set_target_properties(RimesCapsuleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesCapsuleCore)
 
@@ -211,10 +212,12 @@ if(RIMES_BUILD_FCITX5)
 
 
         add_executable(rimes-capsule
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
         )
         target_include_directories(rimes-capsule PRIVATE ${GTK3_INCLUDE_DIRS})
         target_link_libraries(rimes-capsule PRIVATE RimesCapsuleCore RimesDesktopUI ${GTK3_LIBRARIES})
+        target_compile_definitions(rimes-capsule PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         target_compile_options(rimes-capsule PRIVATE ${GTK3_CFLAGS_OTHER})
         if(GTK_LAYER_SHELL_FOUND)
             target_include_directories(rimes-capsule PRIVATE ${GTK_LAYER_SHELL_INCLUDE_DIRS})
@@ -367,6 +370,23 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesCapsuleProtocol COMMAND rimes-capsule-protocol-tests)
     add_test(NAME RimesCapsuleClick COMMAND rimes-capsule-click-tests)
     add_test(NAME RimesCapsuleClipboard COMMAND rimes-capsule-clipboard-tests)
+    add_executable(rimes-capsule-modules-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_modules_tests.cpp")
+    target_link_libraries(rimes-capsule-modules-tests PRIVATE RimesCapsuleCore)
+    target_compile_definitions(rimes-capsule-modules-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+    rimes_harden(rimes-capsule-modules-tests)
+    add_test(NAME RimesCapsuleModules COMMAND rimes-capsule-modules-tests)
+    if(TARGET rimes-capsule)
+        add_executable(rimes-capsule-manager-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_manager_tests.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp")
+        target_include_directories(rimes-capsule-manager-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
+        target_link_libraries(rimes-capsule-manager-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
+        target_compile_definitions(rimes-capsule-manager-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-capsule-manager-tests)
+        if(RIMES_XVFB_RUN)
+            add_test(NAME capsule-manager-ui COMMAND ${RIMES_XVFB_RUN} -a $<TARGET_FILE:rimes-capsule-manager-tests>)
+            set_tests_properties(capsule-manager-ui PROPERTIES ENVIRONMENT "G_DEBUG=fatal-criticals")
+        endif()
+    endif()
 
     pkg_check_modules(GTK3 gtk+-3.0)
     if(GTK3_FOUND)
@@ -467,6 +487,7 @@ if(RIMES_BUILD_TESTS)
             RimesEngine
             RimesCapsuleCore
         )
+        target_compile_definitions(rimes-capsule-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         rimes_harden(rimes-capsule-fcitx-e2e)
 
         add_executable(rimes-capsule-ui-stub tests/capsule_ui_stub.cpp)

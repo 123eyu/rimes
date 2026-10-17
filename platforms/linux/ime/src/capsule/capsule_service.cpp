@@ -117,14 +117,13 @@ CapsuleService::CapsuleService(Instance* instance, PostFn post)
       dump_path_(std::getenv("RIMES_CAPSULE_DUMP") ? std::getenv("RIMES_CAPSULE_DUMP") : ""),
       focus_grace_ms_(FocusGraceMsFromEnv()),
       headless_(EnvFlag("RIMES_CAPSULE_HEADLESS")) {
-    std::string error;
-    store_.SeedIfNeeded(&error);
     ReloadNotes();
     StartSocket();
     Publish();
 }
 
 CapsuleService::~CapsuleService() {
+    alive_->store(false); storage_jobs_.Shutdown();
     CancelFocusGraceTimer();
     ui_respawn_timer_.reset();
     StopSocket();
@@ -174,6 +173,7 @@ bool CapsuleService::IsPrintableAscii(const KeyEvent& event, char* out) {
 
 InputContext* CapsuleService::LiveTarget() const {
     InputContext* found = nullptr;
+    if (!instance_) return nullptr;
     instance_->inputContextManager().foreachFocused([&](InputContext* ic) {
         if (model_.arms(TokenFor(ic))) {
             found = ic;
@@ -188,11 +188,56 @@ bool CapsuleService::ArmedFor(InputContext* ic) const {
     return ic != nullptr && model_.arms(TokenFor(ic));
 }
 
-void CapsuleService::ReloadNotes() {
-    std::vector<rimes::capsule::Record> records;
-    std::string error;
-    store_.List(rimes::capsule::Kind::Note, &records, &error);
-    model_.LoadCards(records);
+void CapsuleService::ReloadNotes(std::string selected_id) {
+    if (reload_cancel_) reload_cancel_->store(true);
+    reload_cancel_ = std::make_shared<std::atomic<bool>>(false);
+    const auto cancelled = reload_cancel_;
+    model_.set_loading(true);
+    const auto root = store_.root();
+    storage_jobs_.Run(cancelled, [this, root, cancelled, alive = alive_, post = post_, selected_id] {
+        rimes::capsule::ContentStore store(root);
+        std::vector<rimes::capsule::Record> records;
+        std::string error;
+        auto status = store.SeedIfNeeded(&error);
+        if (status == rimes::capsule::StoreStatus::Ok) status = store.ListAll(&records, &error);
+        if (!alive->load() || cancelled->load()) return;
+        post([this, alive, cancelled, status, selected_id, records = std::move(records)] {
+            if (!alive->load() || cancelled->load()) return;
+            model_.set_loading(false);
+            if (status == rimes::capsule::StoreStatus::Ok) model_.LoadCards(records);
+            else model_.LoadCards({});
+            if (!selected_id.empty()) { rimes::capsule::Command selection; selection.id = selected_id; SelectIdentity(selection); }
+            Publish();
+        });
+    });
+}
+void CapsuleService::SetModuleEnabled(rimes::capsule::Module module, bool enabled) {
+    model_.EnableModule(module, enabled);
+    if (enabled) ReloadNotes();
+    Publish();
+}
+bool CapsuleService::AllowsModule() {
+    if (!Enabled() || !model_.ModuleEnabled(model_.module()) || model_.password_field()) return false;
+    if (!validate_module_) return true;
+    try { return validate_module_(model_.module()) && model_.ModuleEnabled(model_.module()); }
+    catch (const std::exception&) { return false; }
+}
+void CapsuleService::Manage() {
+    if (!Enabled() || model_.password_field()) return;
+    model_.set_managing(true); model_.Disarm("manage");
+    pending_unfocus_token_.clear(); CancelFocusGraceTimer();
+    ReloadNotes(); model_.set_visible(true); EnsureUi(); Publish();
+}
+void CapsuleService::ReturnToRail() {
+    model_.set_managing(false); model_.Disarm("rail");
+    pending_unfocus_token_.clear(); CancelFocusGraceTimer();
+    ReloadNotes(); model_.set_visible(true); EnsureUi(); Publish();
+}
+bool CapsuleService::SelectIdentity(const rimes::capsule::Command& command) {
+    if (command.id.empty()) { if (command.index >= 0) model_.Select(command.index); return true; }
+    const auto& cards = model_.cards();
+    for (std::size_t i = 0; i < cards.size(); ++i) if (cards[i].id == command.id) { model_.Select(static_cast<int>(i)); return true; }
+    return false;
 }
 
 void CapsuleService::DropSession(std::string_view reason) {
@@ -242,6 +287,7 @@ void CapsuleService::Toggle(InputContext* ic) {
 }
 
 void CapsuleService::Show(InputContext* ic) {
+    model_.set_managing(false);
     if (!enabled_ || ic == nullptr) {
         return;
     }
@@ -268,7 +314,8 @@ void CapsuleService::Close() {
 }
 
 void CapsuleService::ShowDetached() {
-    if (!enabled_ || model_.password_field()) return;
+    model_.set_managing(false);
+    if (!Enabled() || model_.password_field()) return;
     model_.Disarm("detached-open");
     pending_unfocus_token_.clear(); CancelFocusGraceTimer();
     ReloadNotes(); model_.set_visible(true); EnsureUi(); Publish();
@@ -281,7 +328,7 @@ void CapsuleService::SetEnabled(bool enabled) {
 }
 
 bool CapsuleService::DeliverNote(const rimes::capsule::Card& card) {
-    if (!enabled_) return false;
+    if (!AllowsModule() || model_.managing()) return false;
     InputContext* ic = LiveTarget();
     if (ic == nullptr || card.payload.empty() || card.kind != rimes::capsule::Kind::Note) {
         return false;
@@ -297,7 +344,7 @@ bool CapsuleService::DeliverNote(const rimes::capsule::Card& card) {
 }
 
 bool CapsuleService::Activate() {
-    if (!enabled_ || model_.password_field()) return false;
+    if (!AllowsModule() || model_.managing()) { Publish(); return false; }
     const auto* card = model_.Selected();
     if (card == nullptr) {
         return false;
@@ -307,6 +354,7 @@ bool CapsuleService::Activate() {
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
         return false;
     }
+    if (record.revision != card->revision) { ReloadNotes(); return false; }
     rimes::capsule::Card fresh = *card;
     fresh.payload = record.content;
     fresh.kind = record.kind;
@@ -318,7 +366,7 @@ bool CapsuleService::Activate() {
 }
 
 bool CapsuleService::CopySelected() {
-    if (!enabled_ || model_.password_field()) return false;
+    if (!AllowsModule()) { Publish(); return false; }
     const auto* card = model_.Selected();
     if (card == nullptr || card->kind != rimes::capsule::Kind::Note) {
         return false;
@@ -328,13 +376,14 @@ bool CapsuleService::CopySelected() {
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
         return false;
     }
+    if (record.revision != card->revision || !AllowsModule()) { ReloadNotes(); return false; }
     model_.set_last_copied(record.content);
     Publish();
     return true;
 }
 
 bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
-    if (!enabled_) return false;
+    if (!Enabled() || model_.managing()) return false;
     InputContext* ic = event.inputContext();
     if (ic == nullptr) {
         return false;
@@ -361,10 +410,8 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
     }
     if (key.check(FcitxKey_Tab)) {
         const int offset = key.states().test(KeyState::Shift) ? -1 : 1;
-        model_.set_tab(rimes::capsule::CycleTab(model_.tab(), offset));
-        if (model_.tab() == rimes::capsule::Tab::Note) {
-            ReloadNotes();
-        }
+        model_.CycleModule(offset);
+        ReloadNotes();
         Publish();
         event.filterAndAccept();
         return true;
@@ -450,7 +497,7 @@ void CapsuleService::OnDeactivate(InputContext* ic, bool switching_im) {
     if (ic != nullptr) {
         OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
     }
-    if (switching_im) {
+    if (switching_im && !model_.managing()) {
         Close();
         return;
     }
@@ -496,7 +543,7 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
         Publish(); return;
     }
     InputContext* ic = LiveTarget();
-    if (ic == nullptr) {
+    if (ic == nullptr && instance_) {
         instance_->inputContextManager().foreachFocused([&](InputContext* focused) {
             ic = focused;
             return false;
@@ -506,7 +553,8 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
         case rimes::capsule::CommandOp::Hello:
             break;
         case rimes::capsule::CommandOp::Status:
-            ReloadNotes();
+        case rimes::capsule::CommandOp::Refresh:
+            ReloadNotes(command.id);
             break;
         case rimes::capsule::CommandOp::Toggle:
             Toggle(ic);
@@ -524,22 +572,33 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
             model_.Move(-1);
             break;
         case rimes::capsule::CommandOp::Select:
-            model_.Select(command.index);
+            SelectIdentity(command);
             break;
         case rimes::capsule::CommandOp::Tab:
             model_.set_tab(rimes::capsule::TabFromRaw(command.text));
-            if (model_.tab() == rimes::capsule::Tab::Note) {
-                ReloadNotes();
-            }
+            ReloadNotes();
             break;
         case rimes::capsule::CommandOp::Activate:
-            Activate();
+            if (SelectIdentity(command)) Activate();
             break;
         case rimes::capsule::CommandOp::Copy:
-            CopySelected();
+            if (SelectIdentity(command)) CopySelected();
             break;
         case rimes::capsule::CommandOp::Search:
             model_.set_query(command.text);
+            break;
+        case rimes::capsule::CommandOp::Module:
+            if (const auto module = rimes::capsule::ModuleFromRaw(command.text)) model_.set_module(*module);
+            ReloadNotes();
+            break;
+        case rimes::capsule::CommandOp::Filter:
+            model_.set_filter(command.text);
+            break;
+        case rimes::capsule::CommandOp::Manage:
+            Manage();
+            break;
+        case rimes::capsule::CommandOp::Rail:
+            ReturnToRail();
             break;
         case rimes::capsule::CommandOp::Unknown:
             break;
@@ -716,7 +775,7 @@ void CapsuleService::AcceptClient() {
         std::lock_guard<std::recursive_mutex> lock(clients_mu_);
         clients_.push_back(Client{fd, {}});
     }
-    post_([this] { Publish(); });
+    post_([this, alive = alive_] { if (alive->load()) Publish(); });
 }
 
 void CapsuleService::ReadClient(Client* client) {
@@ -744,7 +803,7 @@ void CapsuleService::ReadClient(Client* client) {
             WriteAll(rimes::buffer::EncodeError("bad_command", error));
             continue;
         }
-        post_([this, command] { HandleCommand(command); });
+        post_([this, alive = alive_, command] { if (alive->load()) HandleCommand(command); });
     }
 }
 
@@ -762,7 +821,7 @@ void CapsuleService::CloseClient(int fd) {
         }
     }
     if (clients_empty && !headless_) {
-        post_([this] { ScheduleUiRespawn(); });
+        post_([this, alive = alive_] { if (alive->load()) ScheduleUiRespawn(); });
     }
 }
 

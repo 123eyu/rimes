@@ -80,11 +80,11 @@
     "plugins/apple-translation/plugin.json": "220435a67821ddcf739579dddc1a359f5f565ecae266f80c81b4818a1d2f62d7",
     "plugins/art/plugin.json": "72df9fb903824590512865c435b631ff7aceb66c893b1377907630bdba3ad391",
     "plugins/ask/plugin.json": "875f4c3e400783efd35b169b29c13f9822f6957dbafc53ac1e5458f9f5ef4cd4",
-    "plugins/capsule.capture/plugin.json": "614b00e8590e996a6a2aaed5b8d55ed9595e169ea532862a9eb32a33745cd4ae",
-    "plugins/capsule.notes/plugin.json": "ccfb6f3e964f0de23351ab503b4ce3bfc1561d1dd236280ea9e325d9ea7018de",
-    "plugins/capsule.passwords/plugin.json": "f47b1546bd8fc14a60c800324680a40aaabd8365407a8ccae0dce4739934f301",
-    "plugins/capsule.resources/plugin.json": "8db35a0e912c431e2338a3aa235d180b603ea9af11482f70a9b23e1fe5c13ac9",
-    "plugins/capsule.temporary/plugin.json": "f465c27eed7d27674785cda7e581231ed4a43f0adfaede2baa0c5e27f36d0b20",
+    "plugins/capsule.capture/plugin.json": "93586090fe2c60c491144cabf648bca6da77df02499a2949c38e9ce0b2995618",
+    "plugins/capsule.notes/plugin.json": "ab8420b7a5ab164c739decc002115259d5c1712f85b2611e32327fa369081bab",
+    "plugins/capsule.passwords/plugin.json": "8980f756ea505731931e302e457c2bd86f0e8e562d704c2936d6b0f0f8e5f3c9",
+    "plugins/capsule.resources/plugin.json": "e173aeb482f581c0edc941407eeb8701027dd6151c7662abc21d58e2e281cde2",
+    "plugins/capsule.temporary/plugin.json": "364e9db20a95bfcf53f9059aeb54e4e481ef86b9895985000d8e5bb955cee57f",
     "plugins/claude-code-cli/plugin.json": "d2d514b2dadb14f014b498a54efc3fc8c72dbf4834606581f5caa3e512444e3c",
     "plugins/codex-cli/plugin.json": "ed57713a52a826f825ac60742c321216184ca39b8ea169c03ca1782805538d0f",
     "plugins/fly-chord-learning/plugin.json": "1c36b6fd323617ae85e159d76e9a1ade41e77c8163320fc882cd1571a257a031",
@@ -104,6 +104,6 @@
     "source-map.json": "aa2e4792f45a52e1ba78d42af7ac362cc12e44a6e308908d50edea377597ae84"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "ca21b5bd92fb8ac3b04143d85751608e374222af",
+  "revision": "04287a7bb8ee4a4679fe022d26796e35537d39fd",
   "schemaVersion": 1
 }

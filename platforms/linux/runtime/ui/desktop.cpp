@@ -404,8 +404,26 @@ GtkWidget *Icon(const std::string &name, int size) {
             const double h = (i == 2 ? 19 : i % 2 ? 11 : 6);
             line(4 + i * 4, 12 - h / 2, 4 + i * 4, 12 + h / 2);
           }
-        } else if (icon == "character.book.closed" || icon == "note.text" ||
-                   icon == "books.vertical") {
+        } else if (icon == "clock.arrow.circlepath") {
+          cairo_arc(cr, 12, 12, 9, -2.5, 2.7);
+          line(3, 6, 2, 12); cairo_line_to(cr, 7, 10);
+          line(12, 6, 12, 12); cairo_line_to(cr, 16, 16);
+        } else if (icon == "camera.viewfinder") {
+          for (int x : {3, 21}) for (int y : {3, 21}) {
+            line(x, y + (y == 3 ? 5 : -5), x, y); cairo_line_to(cr, x + (x == 3 ? 5 : -5), y);
+          }
+          cairo_new_sub_path(cr); cairo_arc(cr, 12, 12, 4, 0, 2 * M_PI);
+        } else if (icon == "lock") {
+          cairo_rectangle(cr, 5, 10, 14, 12);
+          cairo_move_to(cr, 8, 10); cairo_line_to(cr, 8, 6);
+          cairo_arc(cr, 12, 6, 4, M_PI, 2 * M_PI); cairo_line_to(cr, 16, 10);
+        } else if (icon == "note.text") {
+          cairo_rectangle(cr, 3, 4, 18, 16);
+          line(6, 8, 18, 8); line(6, 12, 18, 12); line(6, 16, 13, 16);
+        } else if (icon == "books.vertical") {
+          cairo_rectangle(cr, 2, 5, 4, 16); cairo_rectangle(cr, 8, 2, 4, 19);
+          line(14, 4, 18, 3); cairo_line_to(cr, 22, 20); cairo_line_to(cr, 18, 21); cairo_close_path(cr);
+        } else if (icon == "character.book.closed") {
           cairo_rectangle(cr, 5, 3, 15, 18);
           line(8, 3, 8, 21);
           line(11, 7, 16, 7);

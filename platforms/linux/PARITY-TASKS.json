@@ -216,9 +216,10 @@
         "实现 X11 与支持 layer-shell 的 Wayland 放置、多屏缩放及位置恢复；GNOME/KDE 提供明确可用的降级行为。",
         "验证拖动、首击、跨屏、全屏、缩放和遮挡；候选与 Buffer 不相互覆盖且目标身份不伪造。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 161,
-      "url": "https://github.com/scholay/xsime/issues/161"
+      "url": "https://github.com/scholay/xsime/issues/161",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 12,
@@ -237,9 +238,10 @@
         "扩展持久化类型及可靠附件存储，兼容既有 Markdown/UUID/revision；停用不删除用户数据。",
         "保持精确目标插入及复制分离，覆盖键鼠导航、关闭、重启和跨框失效。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 162,
-      "url": "https://github.com/scholay/xsime/issues/162"
+      "url": "https://github.com/scholay/xsime/issues/162",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 13,
