@@ -23,9 +23,13 @@ int main() {
         const auto revision = config.Load().at("revision").get<std::string>();
         {
             fcitx::BufferService host(nullptr, [&](auto action) { posted.push_back(std::move(action)); });
+            bool unavailable_configuration = false;
             host.Configure(false, false, 760, revision, "night");
             host.BindPlugins(plugins, [&](const auto& lease) { return plugins.Accepts(lease); },
-                [&](std::string_view id) { return config.Freeze(id); });
+                [&](std::string_view id) {
+                    if (unavailable_configuration) throw std::runtime_error("fixture configuration unavailable");
+                    return config.Freeze(id);
+                });
             std::shared_ptr<std::atomic<bool>> cancelled;
             DerivedRequest frozen;
             host.RegisterDerivedAdapter("builtin.fixture", "ai.generate", [&](auto request, auto settings, auto stop, auto receive) {
@@ -51,6 +55,10 @@ int main() {
             late(0, "Translated🙂", true, true); drain();
             Check(host.derived().CopyText() == "Translated🙂" && host.derived().Results().size() == 2, "results not retained");
             Check(host.model().staged_text() == "原文🙂", "generation consumed source");
+            unavailable_configuration = true;
+            Check(!host.Generate(), "invalid retry started");
+            Check(host.derived().CopyText() == "Translated🙂", "failed retry erased ready results");
+            unavailable_configuration = false;
             for (int scenario = 0; scenario < 7; ++scenario) {
                 prepare();
                 const auto previous = late;

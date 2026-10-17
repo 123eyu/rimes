@@ -485,12 +485,14 @@ bool BufferService::Generate() {
     const auto adapter = derived_adapters_.find(plugins_->SelectedBuffer());
     if (adapter == derived_adapters_.end()) return false;
     const auto lease = plugins_->Authorize(adapter->first, adapter->second.capability);
+    bool started = false;
     try {
         if (!lease || !validate_(*lease)) return false;
         const auto configuration = freeze_(adapter->first);
         if (configuration.revision != configuration_revision_) return false;
         const auto request = derived_.Begin(*lease);
         if (!request) return false;
+        started = true;
         if (derived_cancel_) derived_cancel_->store(true);
         derived_request_ = request;
         derived_cancel_ = std::make_shared<std::atomic<bool>>(false);
@@ -515,8 +517,9 @@ bool BufferService::Generate() {
         Publish();
         return true;
     } catch (const std::exception&) {
-        if (derived_request_) derived_.Finish(*derived_request_, false, false);
-        CancelDerived();
+        // A preflight failure must not erase an earlier ready result. Once
+        // Begin has transferred ownership, only the new job is cancelled.
+        if (started) CancelDerived();
         Publish();
         return false;
     }
