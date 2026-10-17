@@ -105,7 +105,7 @@ int main() {
     const auto source=root/"sample.pdf"; {std::ofstream out(source);out<<"fixture bytes";}
     std::string asset,bytes;
     Expect(store.ImportAttachment(source,&asset,&store_error)==rimes::capsule::StoreStatus::Ok,"import attachment");
-    auto resource=extra;resource.kind=rimes::capsule::Kind::Pdf;resource.content="reference";resource.attachment=asset;
+    auto resource=extra;resource.kind=rimes::capsule::Kind::Pdf;resource.content=(source.parent_path()/"reference.pdf").string();resource.attachment=asset;
     Expect(store.Put(resource,"",&written,&store_error)==rimes::capsule::StoreStatus::Ok,"persist attachment record");
     Expect(store.Remove(written.id,written.revision,&store_error)==rimes::capsule::StoreStatus::Ok,"remove record");
     Expect(store.ReadAttachment(asset,&bytes,&store_error)==rimes::capsule::StoreStatus::Ok && bytes=="fixture bytes","record removal preserves immutable attachment");

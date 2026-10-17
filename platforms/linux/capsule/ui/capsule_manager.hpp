@@ -7,7 +7,9 @@ namespace rimes::capsule {
 class ManagerWindow {
 public:
     using Send = std::function<void(std::string)>;
-    explicit ManagerWindow(Send send, bool preview = false);
+    using CopyFile = std::function<void(const Record&)>;
+    using CopyText = std::function<void(const std::string&)>;
+    explicit ManagerWindow(Send send, bool preview = false, CopyFile file = {}, CopyText text = {});
     ~ManagerWindow();
     void Apply(const Snapshot& snapshot);
     void ClipboardStatus(const std::string& status);

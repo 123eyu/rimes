@@ -58,6 +58,7 @@ public:
     void ReturnToRail();
     bool Activate();
     bool CopySelected();
+    bool CopyResource(bool close);
 
     std::string SocketPath() const { return socket_path_; }
     void Publish();

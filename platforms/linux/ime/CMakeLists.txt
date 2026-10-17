@@ -68,6 +68,8 @@ add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_structure.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_rich_text.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_store.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_reference.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_resources.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_model.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_transport.cpp"
@@ -79,6 +81,7 @@ target_include_directories(RimesCapsuleCore PUBLIC
     "${RIMES_BUFFER_ROOT}/core"
 )
 target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess PkgConfig::CapsuleICU SQLite::SQLite3)
+target_compile_definitions(RimesCapsuleCore PRIVATE RIMES_CAPSULE_PREVIEW_PATH="${CMAKE_INSTALL_FULL_LIBEXECDIR}/rimes/rimes-capsule-preview")
 set_target_properties(RimesCapsuleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesCapsuleCore)
 
@@ -243,10 +246,17 @@ if(RIMES_BUILD_FCITX5)
         target_link_libraries(RimesClipboardDesktop PUBLIC RimesCapsuleCore PkgConfig::CapsuleWayland PkgConfig::CapsuleXfixes)
         rimes_harden(RimesClipboardDesktop)
 
+        pkg_check_modules(CapsulePoppler REQUIRED IMPORTED_TARGET poppler-glib)
+        add_executable(rimes-capsule-preview "${RIMES_CAPSULE_ROOT}/ui/capsule_preview_main.cpp")
+        target_include_directories(rimes-capsule-preview PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-capsule-preview PRIVATE RimesCapsuleCore PkgConfig::CapsulePoppler ${GTK3_LIBRARIES})
+        rimes_harden(rimes-capsule-preview)
+        install(TARGETS rimes-capsule-preview DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
         add_executable(rimes-capsule
             "${RIMES_CAPSULE_ROOT}/ui/clipboard_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
         )
         target_include_directories(rimes-capsule PRIVATE ${GTK3_INCLUDE_DIRS})
@@ -445,6 +455,14 @@ if(RIMES_BUILD_TESTS)
     rimes_harden(rimes-capsule-modules-tests)
     add_test(NAME RimesCapsuleModules COMMAND rimes-capsule-modules-tests)
     if(TARGET rimes-capsule)
+        add_executable(rimes-capsule-resources-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_resources_tests.cpp")
+        target_include_directories(rimes-capsule-resources-tests PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-capsule-resources-tests PRIVATE RimesCapsuleCore ${GTK3_LIBRARIES})
+        target_compile_definitions(rimes-capsule-resources-tests PRIVATE NATIVE_REFERENCE_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-reference.json")
+        rimes_harden(rimes-capsule-resources-tests)
+        add_dependencies(rimes-capsule-resources-tests rimes-capsule-preview)
+        add_test(NAME RimesCapsuleResources COMMAND rimes-capsule-resources-tests)
+        add_test(NAME capsule-native-reference-fixtures COMMAND "${Python3_EXECUTABLE}" "${RIMES_CAPSULE_ROOT}/tests/verify_native_reference.py")
         add_executable(rimes-capsule-note-editor-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_note_editor_tests.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp")
         target_include_directories(rimes-capsule-note-editor-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
@@ -453,7 +471,8 @@ if(RIMES_BUILD_TESTS)
         rimes_harden(rimes-capsule-note-editor-tests)
         add_executable(rimes-capsule-manager-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_manager_tests.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
-            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp")
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp")
         target_include_directories(rimes-capsule-manager-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
         target_link_libraries(rimes-capsule-manager-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
         target_compile_definitions(rimes-capsule-manager-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}" NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")

@@ -9,6 +9,7 @@
 #include "capsule_kinds.hpp"
 #include "capsule_modules.hpp"
 #include "capsule_structure.hpp"
+#include "capsule_reference.hpp"
 #include <map>
 
 namespace rimes::capsule {
@@ -24,6 +25,7 @@ struct Record {
     std::string summary;
     std::string note_format = "other";
     std::string resource_type = "other";
+    Reference reference;
     // Preserve unrecognized Markdown metadata on edits and imports.
     std::vector<std::string> extra_header;
     std::string attachment;

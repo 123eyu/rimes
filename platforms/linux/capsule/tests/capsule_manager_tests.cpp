@@ -281,6 +281,50 @@ int main(int argc,char** argv) {
             Check(Text(text).empty() && !gtk_widget_get_visible(detail),
                   "switching modules retained clipboard plaintext");
         }
+        {
+            auto grant = packages.Inspect("builtin.capsule.resources");
+            if (!grant.enabled) packages.Enable(grant.id, true, grant.grant);
+            const auto file = root / "reference.pdf"; std::ofstream(file) << "%PDF-1.4\nfixture invalid for preview";
+            Record reference; reference.kind=Kind::Pdf; reference.title="文献标题"; reference.content=file.string();
+            reference.reference.fields={{"authors","张三; Alice"},{"year","2024"},{"publisher","示例出版社"}};
+            Check(store.Put(reference,"",&reference,&error)==StoreStatus::Ok,"resource manager fixture");
+            CapsuleModel resource_model; resource_model.EnableModule(Module::Resources,true); resource_model.set_module(Module::Resources);
+            resource_model.set_visible(true); resource_model.set_managing(true); resource_model.LoadCards({reference});
+            ManagerWindow* current=nullptr; int saved_count=0, copied_files=0; std::string copied_citation;
+            ManagerWindow resource_ui([&](const std::string& raw) {
+                const auto command=Json::parse(raw);
+                if (command.at("op")=="refresh") {
+                    ++saved_count; Check(store.Get(reference.id,&reference,&error)==StoreStatus::Ok,"read saved resource");
+                    resource_model.LoadCards({reference}); current->Apply(MakeSnapshot(resource_model));
+                }
+            },false,[&](const Record& item) {Check(item.content==file.string(),"file copy lost chosen path"); ++copied_files;},
+            [&](const std::string& text) {copied_citation=text;});
+            current=&resource_ui; resource_ui.Apply(MakeSnapshot(resource_model));
+            auto find=[&](const char* name) {auto* item=Find(resource_ui.Root(),name); Check(item,"missing resource control"); return item;};
+            auto* authors=find("capsule-resource-authors"); auto* citation=find("capsule-resource-citation"); auto* path=find("capsule-resource-path");
+            auto* import=find("capsule-resource-import"); auto* resource_save=find("capsule-save");
+            Wait([&] {return std::string(gtk_entry_get_text(GTK_ENTRY(authors)))=="张三; Alice";});
+            Check(gtk_widget_is_visible(find("capsule-resource-form")) && !gtk_widget_is_visible(find("capsule-body")),"resource uses note editor");
+            Check(std::string(gtk_label_get_text(GTK_LABEL(citation)))==*FormatReference(reference.title,reference.reference,"gbt7714"),"resource citation preview drift");
+            gtk_button_clicked(GTK_BUTTON(find("capsule-resource-citation-copy")));
+            Check(copied_citation==*FormatReference(reference.title,reference.reference,"gbt7714"),"citation button copied wrong text");
+            gtk_button_clicked(GTK_BUTTON(find("capsule-resource-copy"))); Check(copied_files==1,"resource file button disconnected");
+            gtk_entry_set_text(GTK_ENTRY(authors),"Changed Author"); gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(import),TRUE);
+            auto protected_state=MakeSnapshot(resource_model); protected_state.password_field=true; resource_ui.Apply(protected_state);
+            Check(std::string(gtk_entry_get_text(GTK_ENTRY(path))).empty() && !gtk_widget_get_visible(resource_ui.Window()),"resource path survived conceal");
+            gtk_button_clicked(GTK_BUTTON(find("capsule-resource-copy"))); Check(copied_files==1,"protected resource copied file");
+            resource_ui.Apply(MakeSnapshot(resource_model));
+            Check(std::string(gtk_entry_get_text(GTK_ENTRY(authors)))=="Changed Author" && gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(import)),"protection lost resource draft or attachment choice");
+            gtk_button_clicked(GTK_BUTTON(resource_save));
+            Wait([&] {return saved_count==1 && std::string(gtk_entry_get_text(GTK_ENTRY(authors)))=="Changed Author";});
+            Check(reference.reference.Get("authors")=="Changed Author" && !reference.attachment.empty(),"resource save failed metadata/import");
+            auto external=reference; external.title="External"; Check(store.Put(external,external.revision,&external,&error)==StoreStatus::Ok,"external reference edit");
+            gtk_entry_set_text(GTK_ENTRY(authors),"Local Draft"); gtk_button_clicked(GTK_BUTTON(resource_save));
+            Wait([&] {return std::string(gtk_label_get_text(GTK_LABEL(find("capsule-status")))).find("条目已被修改")!=std::string::npos;});
+            Check(std::string(gtk_entry_get_text(GTK_ENTRY(authors)))=="Local Draft","stale resource save lost draft");
+            // Unicode search includes reference metadata in the actual host model.
+            resource_model.set_query("Changed Author"); Check(resource_model.cards().size()==1,"resource metadata search failed");
+        }
         std::cout << "GTK manager save, protected draft recovery, clipboard detail, revocation and "
                      "concurrent-edit conflict passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';std::filesystem::remove_all(root);return 1;}

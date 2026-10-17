@@ -1,6 +1,8 @@
 #include "clipboard_backend.hpp"
 #include "clipboard_controller.hpp"
 #include "configuration.hpp"
+#include "capsule_resources.hpp"
+#include <fstream>
 #include "official_catalog.hpp"
 #include <chrono>
 #include <gtk/gtk.h>
@@ -166,6 +168,24 @@ int main(int argc, char** argv) {
         snapshot.modules = {Module::Notes};
         snapshot.clipboard_capture = false;
         controller.Apply(snapshot);
+        auto resource_grant = packages.Inspect("builtin.capsule.resources");
+        if (!resource_grant.enabled) packages.Enable(resource_grant.id,true,resource_grant.grant);
+        const auto resource_path=root/"file with 空格.txt"; std::ofstream(resource_path)<<"resource bytes";
+        Record resource; resource.kind=Kind::Resource; resource.title="Resource"; resource.content=resource_path.string();
+        ContentStore content(ContentStore::DefaultRoot()); std::string error;
+        Check(content.Put(resource,"",&resource,&error)==StoreStatus::Ok,"clipboard resource fixture");
+        snapshot.modules={Module::Resources}; snapshot.module="resources"; snapshot.selected_id=resource.id;
+        snapshot.restore_id=resource.id; snapshot.restore_revision=resource.revision; snapshot.restore_close=false;
+        snapshot.restore_seq=11; status.clear(); controller.Apply(snapshot);
+        Check(spin(3000,[&] {return status.find("已复制")!=status.npos;}),"resource restore not acknowledged");
+        Check(read("text/uri-list")==ResourceUri(resource_path)+"\r\n","resource file URI not exact");
+        Check(read("x-special/gnome-copied-files")=="copy\n"+ResourceUri(resource_path),"resource file copy marker absent");
+        snapshot.password_field=true; controller.Apply(snapshot); status.clear(); controller.CopyResource(resource); spin(100);
+        Check(status.empty(),"protected explicit file copy started");
+        snapshot.password_field=false; controller.Apply(snapshot);
+        resource_grant=packages.Inspect(resource_grant.id); packages.Enable(resource_grant.id,false,resource_grant.grant);
+        snapshot.restore_seq=12; controller.Apply(snapshot);
+        Check(spin(3000,[&] {return status.find("未恢复")!=status.npos;}),"revoked resource module copied file");
         std::cout
             << "GTK clipboard controller: opt-in background capture, MIME persistence, privacy "
                "baseline, reconnect/no replay, revision and package revocation passed\n";

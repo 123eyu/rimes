@@ -1,6 +1,7 @@
 #include "background_jobs.hpp"
 #include "clipboard_controller.hpp"
 #include "clipboard_desktop.hpp"
+#include "capsule_resources.hpp"
 #include "configuration.hpp"
 #include "official_catalog.hpp"
 #include <algorithm>
@@ -101,24 +102,58 @@ struct ClipboardController::Impl {
                 status(text);
         });
     }
+    ClipboardArchive FileArchive(const Record& record) {
+        const auto path = ResolveResource(record, ContentStore(ContentStore::DefaultRoot()));
+        const auto uri = ResourceUri(path);
+        return {{{"text/uri-list", uri + "\r\n"}, {"x-special/gnome-copied-files", "copy\n" + uri},
+                  {"application/x-kde-cutselection", "0"}, {"text/plain;charset=utf-8", path.string()}, {"UTF8_STRING", path.string()}}};
+    }
+    void CopyResource(const Record& record) {
+        if (!state.visible || state.password_field || state.module != "resources") return;
+        const auto epoch = scope.load(); const auto life = alive;
+        if (!jobs.Run(std::make_shared<std::atomic<bool>>(false), [this, life, epoch, record] {
+            auto current = [&] {return life->load() && scope.load() == epoch;};
+            bool queued = false;
+            try {
+                const auto grant = packages->Inspect(ModulePlugin(Module::Resources));
+                if (!current()) return;
+                if (!grant.enabled) throw std::runtime_error("resource grant revoked");
+                auto archive = FileArchive(record);
+                packages->WithEnabledGrant(grant.id, grant.grant, [&] {
+                    if (current()) queued = desktop->Restore(std::move(archive), false, [this, life, epoch](bool written) {
+                        Post([this, life, epoch, written] {
+                            if (life->load() && scope.load() == epoch) status(written?"已复制文件，可在目标应用中粘贴":"复制文件失败，请重试");
+                        });
+                    });
+                });
+            } catch (const std::exception&) {}
+            if (!queued) Post([this, life, epoch] {if (life->load() && scope.load() == epoch) status("文件不可用、授权已变化，或桌面未开放剪贴板接口");});
+        })) status("剪贴板正忙，请稍后重试复制");
+    }
     void Restore(const Snapshot& snapshot) {
         const auto epoch = scope.load(), sequence = snapshot.restore_seq;
         const auto id = snapshot.restore_id, revision = snapshot.restore_revision;
         const bool close = snapshot.restore_close;
+        const auto module = ModuleFromRaw(snapshot.module).value_or(Module::Temporary);
         auto life = alive;
         if (!jobs.Run(std::make_shared<std::atomic<bool>>(false), [this, life, epoch, sequence, id,
-                                                                   revision, close] {
+                                                                   revision, close, module] {
                 auto current = [&] { return life->load() && scope.load() == epoch; };
                 bool queued = false;
                 try {
                     if (!current())
                         return;
-                    const auto grant = packages->Inspect(ModulePlugin(Module::Temporary));
+                    const auto grant = packages->Inspect(ModulePlugin(module));
                     packages->WithEnabledGrant(grant.id, grant.grant, [&] {
                         if (!current())
                             return;
-                        ClipboardHistoryStore store(ClipboardHistoryStore::DefaultRoot());
-                        auto archive = store.Read(id, revision);
+                        std::optional<ClipboardArchive> archive;
+                        if (module == Module::Temporary) {
+                            ClipboardHistoryStore store(ClipboardHistoryStore::DefaultRoot()); archive = store.Read(id, revision);
+                        } else if (module == Module::Resources) {
+                            ContentStore store(ContentStore::DefaultRoot()); Record value; std::string error;
+                            if (store.Get(id, &value, &error) == StoreStatus::Ok && value.revision == revision && RecordModule(value) == Module::Resources) archive = FileArchive(value);
+                        }
                         if (!archive || !current())
                             return;
                         queued = desktop->Restore(
@@ -148,9 +183,10 @@ struct ClipboardController::Impl {
     void Apply(const Snapshot& snapshot) {
         const bool enabled = std::find(snapshot.modules.begin(), snapshot.modules.end(),
                                        Module::Temporary) != snapshot.modules.end();
+        const bool action_enabled = std::any_of(snapshot.modules.begin(), snapshot.modules.end(), [&](Module module) {return ModuleRaw(module) == snapshot.module;});
         const auto next = std::string(snapshot.visible ? "visible" : "hidden") + "/" +
                           (snapshot.password_field ? "protected" : "open") + "/" +
-                          (enabled ? "enabled" : "disabled") + "/" + snapshot.module + "/" +
+                          (action_enabled ? "enabled" : "disabled") + "/" + snapshot.module + "/" +
                           snapshot.selected_id + "/" + std::to_string(snapshot.restore_seq);
         if (next != action_scope) {
             scope.fetch_add(1);
@@ -166,8 +202,8 @@ struct ClipboardController::Impl {
         const bool edge = seen_restore && restore_seq != snapshot.restore_seq;
         seen_restore = true;
         restore_seq = snapshot.restore_seq;
-        if (edge && snapshot.visible && !snapshot.password_field && enabled &&
-            snapshot.module == "temporary" && !snapshot.restore_id.empty())
+        if (edge && snapshot.visible && !snapshot.password_field && action_enabled &&
+            (snapshot.module == "temporary" || snapshot.module == "resources") && !snapshot.restore_id.empty())
             Restore(snapshot);
     }
     void CopyText(const std::string& text) {
@@ -199,4 +235,5 @@ ClipboardController::ClipboardController(Send send, Status status)
 ClipboardController::~ClipboardController() = default;
 void ClipboardController::Apply(const Snapshot& state) { impl_->Apply(state); }
 void ClipboardController::CopyText(const std::string& text) { impl_->CopyText(text); }
+void ClipboardController::CopyResource(const Record& record) { impl_->CopyResource(record); }
 } // namespace rimes::capsule

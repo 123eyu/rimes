@@ -368,6 +368,7 @@ bool CapsuleService::Activate() {
     }
     if (card->module == rimes::capsule::Module::Temporary)
         return HistoryAction("activate");
+    if (card->module == rimes::capsule::Module::Resources) return CopyResource(true);
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
@@ -384,11 +385,19 @@ bool CapsuleService::Activate() {
     return true;
 }
 
+bool CapsuleService::CopyResource(bool close) {
+    const auto* card = model_.Selected();
+    if (!AllowsModule() || !card || card->module != rimes::capsule::Module::Resources) return false;
+    Publish(); // Establish the action scope before creating the one-shot intent.
+    restore_id_ = card->id; restore_revision_ = card->revision;
+    restore_close_ = close; ++restore_seq_; Publish(); return true;
+}
 bool CapsuleService::CopySelected() {
     if (!AllowsModule()) { Publish(); return false; }
     const auto* card = model_.Selected();
     if (card && card->module == rimes::capsule::Module::Temporary)
         return HistoryAction("copy");
+    if (card && card->module == rimes::capsule::Module::Resources) return CopyResource(false);
     if (card == nullptr || card->kind != rimes::capsule::Kind::Note) {
         return false;
     }
@@ -409,10 +418,9 @@ bool CapsuleService::OpenDetail() {
     const auto* card = model_.Selected();
     if (card && card->module == rimes::capsule::Module::Temporary)
         return Activate();
+    if (card && card->module == rimes::capsule::Module::Resources) { Manage(); return true; }
     if (!card || card->kind != rimes::capsule::Kind::Note)
         return false;
-    if (card->module == rimes::capsule::Module::Temporary)
-        return HistoryAction("activate");
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok ||
@@ -1166,7 +1174,7 @@ void CapsuleService::Publish() {
         (model_.password_field() ? "protected" : "open") + "/" +
         rimes::capsule::ModuleRaw(model_.module()) + "/" + model_.token() + "/" +
         (action_card ? action_card->id + action_card->revision : "") + "/" +
-        (model_.ModuleEnabled(rimes::capsule::Module::Temporary) ? "enabled" : "disabled");
+        (model_.ModuleEnabled(model_.module()) ? "enabled" : "disabled");
     if (action_scope != history_scope_) {
         if (history_action_cancel_)
             history_action_cancel_->store(true);

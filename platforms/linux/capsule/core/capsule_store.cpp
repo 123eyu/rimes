@@ -17,6 +17,7 @@
 #include "capsule_rich_text.hpp"
 #include "capsule_structure.hpp"
 #include "capsule_text.hpp"
+#include "capsule_resources.hpp"
 #include "private_files.hpp"
 #include <array>
 #include <set>
@@ -103,6 +104,8 @@ std::string RenderMarkdown(const Record& record) {
             << "\ncapsule_rich_asset: " << JsonQuote(Base64Encode(record.rich_asset)) << '\n';
     }
     if (!record.attachment.empty()) out << "capsule_linux_asset: " << JsonQuote(record.attachment) << '\n';
+    if (record.kind == Kind::Pdf)
+        for (const auto& line : ReferenceHeader(record.reference)) out << line << '\n';
     for (const auto& line : record.extra_header) out << line << '\n';
     out << "---\n\n" << record.content;
     return out.str();
@@ -203,6 +206,18 @@ static bool ParseMarkdownUnchecked(std::string_view text, Record* out, std::stri
     if (text.find('\0') != text.npos || out->summary.size() > 4096) return false;
     out->id = id;
     out->kind = kind;
+    if (kind == Kind::Pdf) {
+        out->reference = ReadReference(*properties);
+        out->extra_header.clear();
+        for (const auto& entry : properties->entries)
+            if (!ReferenceKey(entry.key)) {
+                FrontMatter single{{entry}};
+                const auto lines = single.Preserved();
+                out->extra_header.insert(out->extra_header.end(), lines.begin(), lines.end());
+            }
+        for (const auto* key : kReferenceFields)
+            if (out->reference.Get(key).size() > 4096) return false;
+    }
     out->title = title;
     out->content = std::string(body);
     if (kind == Kind::Note && out->note_format == "rich-text") {
@@ -328,6 +343,12 @@ StoreStatus ContentStore::Put(const Record& request, std::string expected_revisi
     if (request.kind == Kind::Note && request.note_format == "rich-text" &&
         (request.rich_asset.empty() || request.rich_asset.size() > kMaxDocumentBytes / 2))
         return InvalidFail(error, "rich text asset missing or too large");
+    if (RecordModule(request) == Module::Resources) {
+        const auto path = std::filesystem::path(request.content);
+        if (!path.is_absolute() || (request.kind == Kind::Pdf && LowerText(path.extension().string()) != ".pdf"))
+            return InvalidFail(error, "absolute resource path required; references need a PDF");
+        if (request.attachment.empty() && !ValidateResource(request, error)) return StoreStatus::Invalid;
+    }
     return WithLock([&] {
         Record record = request;
         if (record.id.empty()) record.id = NewUuidV4();
@@ -377,7 +398,7 @@ StoreStatus ContentStore::ReadAll(std::vector<Record>* out, std::string* error) 
         if (ParseFile(entry.path(), &record, error) != StoreStatus::Ok) continue;
         if (out->size() >= kMaxRecords) return InvalidFail(error, "too many Capsule entries");
         bytes += record.content.size() + record.title.size() + record.summary.size() +
-                 record.rich_asset.size();
+                 record.rich_asset.size() + record.reference.SearchText().size();
         for(const auto& line:record.extra_header) bytes += line.size() + sizeof(std::string);
         for (const auto& field : record.header_fields)
             bytes += field.label.size() + field.value.size() + sizeof(DetailRow);
@@ -458,7 +479,7 @@ StoreStatus ContentStore::ReadAttachment(std::string_view asset, std::string* by
 }
 StoreStatus ContentStore::ImportAttachment(const std::filesystem::path& source, std::string* asset, std::string* error) {
     if (!asset || !source.is_absolute()) return InvalidFail(error, "absolute attachment path required");
-    const int fd = open(source.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC);
+    const int fd = OpenResource(source);
     if (fd < 0) return IoFail(error, "cannot open attachment");
     struct Owner { int fd; ~Owner() { close(fd); } } owner{fd};
     struct stat before{}, after{};

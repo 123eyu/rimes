@@ -196,3 +196,5 @@ BeatBuddy recordings, MIDI content, or firmware are redistributed.
 ## Linux clipboard data-control protocols
 
 The Capsule clipboard backend uses unmodified ext-data-control-v1 (wayland-protocols 1.45) and wlr-data-control-unstable-v1 (swaywm/wlr-protocols b010a03648b88d143236de193bddbfea0c08bc84) XML descriptions. Their permissive licenses are retained in the XML and `LICENSES/Wayland-data-control.txt`; exact hashes and source locations are in `platforms/linux/capsule/protocols/README.md`. Generated bindings link against the system Wayland client library. Clipboard storage links the system SQLite library (public domain).
+
+The Linux Capsule resource preview helper links the distribution's Poppler GLib PDF renderer, GdkPixbuf and Cairo. Poppler's source and API documentation are at <https://poppler.freedesktop.org/>; the Ubuntu 24.04 package's copyright notice identifies the core license as GPL-2 or GPL-3. The distribution packages provide their license notices and corresponding source. These libraries are dynamically resolved by the deb dependencies; their binaries are not vendored in this repository.

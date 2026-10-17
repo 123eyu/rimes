@@ -2,6 +2,7 @@
 #include "capsule_history.hpp"
 #include "capsule_manager.hpp"
 #include "capsule_note_editor.hpp"
+#include "capsule_resource_editor.hpp"
 #include "capsule_text.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
@@ -32,6 +33,12 @@ GtkWidget* Scroll(GtkWidget* child) {
 } // namespace
 struct ManagerWindow::Impl {
     Send send;
+    CopyFile copy_file;
+    CopyText copy_text;
+    std::unique_ptr<ResourceEditor> resource_editor;
+    std::optional<Record> suspended_resource;
+    std::string suspended_resource_key;
+    bool suspended_resource_import = false;
     GtkWidget *window, *root, *header, *modules, *modules_scroll, *toolbar, *list, *list_scroll, *editor;
     GtkWidget *count, *search, *create, *hint, *title, *summary, *format, *body, *status, *save, *remove, *divider, *heading;
     GtkCssProvider* css = gtk_css_provider_new();
@@ -70,6 +77,7 @@ struct ManagerWindow::Impl {
         return result;
     }
     Record CaptureDraft() const {
+        if (state.module == "resources" && resource_editor) return resource_editor->Capture();
         Record value=draft;
         value.title=gtk_entry_get_text(GTK_ENTRY(title)); value.summary=gtk_entry_get_text(GTK_ENTRY(summary)); value.content=Text(body);
         const int selected =gtk_combo_box_get_active(GTK_COMBO_BOX(format));
@@ -88,6 +96,7 @@ struct ManagerWindow::Impl {
         return value;
     }
     void FillDraft() {
+        if (state.module == "resources" && resource_editor) { resource_editor->Load(draft); Controls(); return; }
         updating=true;
         gtk_entry_set_text(GTK_ENTRY(title),draft.title.c_str());
         gtk_entry_set_text(GTK_ENTRY(summary),draft.summary.c_str());
@@ -108,7 +117,7 @@ struct ManagerWindow::Impl {
         updating=false;
         gtk_label_set_text(GTK_LABEL(heading),draft.id.empty()?"新建笔记":"编辑笔记"); Controls();
     }
-    Impl(Send callback, bool fixture) : send(std::move(callback)), preview(fixture) {
+    Impl(Send callback, bool fixture, CopyFile file, CopyText text) : send(std::move(callback)), copy_file(std::move(file)), copy_text(std::move(text)), preview(fixture) {
         if (!preview) packages=std::make_unique<plugins::PackageStore>(runtime::UserRoot()/"plugins", plugins::OfficialCatalog(), plugins::BundledPackages(), plugins::CompiledAdapters(), RIMES_PRODUCT_VERSION);
         window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
         gtk_window_set_title(GTK_WINDOW(window), "Capsule");
@@ -201,6 +210,23 @@ struct ManagerWindow::Impl {
         Add(actions, save);
         Add(editor, actions);
         note_actions = actions;
+        resource_editor = std::make_unique<ResourceEditor>(GTK_WINDOW(window), [this] { Changed(); },
+            [this](const Record& value) {
+                if (state.visible && state.managing && !state.password_field && state.module == "resources" && copy_file) copy_file(value);
+            }, [this](const std::string& text) {
+                if (!state.visible || !state.managing || state.password_field || state.module != "resources" || preview) return;
+                try {
+                    if (!packages->Inspect(ModulePlugin(Module::Resources)).enabled) return;
+                    if (copy_text) copy_text(text);
+                    else gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), text.data(), text.size());
+                } catch (const std::exception&) {}
+            }, preview);
+        gtk_widget_set_name(resource_editor->Widget(), "capsule-resource-form");
+        gtk_widget_show_all(resource_editor->Widget());
+        gtk_widget_set_no_show_all(resource_editor->Widget(), TRUE);
+        gtk_widget_hide(resource_editor->Widget());
+        gtk_box_pack_start(GTK_BOX(editor), resource_editor->Widget(), TRUE, TRUE, 0);
+        gtk_box_reorder_child(GTK_BOX(editor), resource_editor->Widget(), 1);
         clipboard_form = Class(Column(10), "capsule-clipboard-detail");
         gtk_widget_set_margin_start(clipboard_form, 16);
         gtk_widget_set_margin_end(clipboard_form, 16);
@@ -333,6 +359,7 @@ struct ManagerWindow::Impl {
     ~Impl() {
         alive->store(false); jobs.Shutdown();
         g_signal_handlers_disconnect_by_data(window,this);
+        resource_editor.reset();
         note_editor.reset();
         gtk_widget_destroy(window); g_object_unref(css);
     }
@@ -382,6 +409,9 @@ struct ManagerWindow::Impl {
             ".capsule-manager .capsule-text { border: 1px solid " +
             c("border") +
             "; }"
+            ".capsule-resource-form entry { font-size: 11px; border-width: 1px; padding: 0 3px; }"
+            ".capsule-resource-form button { font-size: 10px; padding: 0 8px; min-height: 18px; }"
+            ".capsule-resource-form button label { font-size: 10px; }"
             ".capsule-form-heading,.capsule-field-label { font-family: monospace; "
             "font-size: 9px; font-weight: 600; color: " +
             c("textSecondary") +
@@ -447,7 +477,13 @@ struct ManagerWindow::Impl {
     void Changed() { if (!updating) { dirty=true; gtk_label_set_text(GTK_LABEL(status),"未保存的修改"); Controls(); } }
     void ClearDraft() {
         if (read_cancel) read_cancel->store(true);
-        draft=Record{}; detail_key.clear(); dirty=false; FillDraft();
+        draft=Record{}; detail_key.clear(); dirty=false;
+        if (resource_editor) resource_editor->Conceal();
+        updating = true;
+        gtk_entry_set_text(GTK_ENTRY(title), ""); gtk_entry_set_text(GTK_ENTRY(summary), "");
+        if (note_editor) note_editor->LoadPlain("");
+        updating = false;
+        FillDraft();
         if (clipboard_text) {
             gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(clipboard_text)), "",
                                      0);
@@ -465,14 +501,19 @@ struct ManagerWindow::Impl {
                                state.visible && state.managing &&
                                std::find(state.modules.begin(), state.modules.end(),
                                          Module::Temporary) != state.modules.end();
-        gtk_widget_set_visible(note_form, !temporary);
+        const bool resources = state.module == "resources" && std::find(state.modules.begin(),state.modules.end(),Module::Resources)!=state.modules.end();
+        gtk_widget_set_visible(note_form, !temporary && !resources);
+        if (resource_editor) {
+            gtk_widget_set_visible(resource_editor->Widget(), resources);
+            resource_editor->SetEditable(resources && state.visible && state.managing && !state.password_field && !writing);
+        }
         gtk_widget_set_visible(note_actions, !temporary);
         gtk_widget_set_visible(clipboard_form, temporary);
         gtk_widget_set_sensitive(clipboard_copy, temporary && !state.selected_id.empty());
-        const bool editable=notes && state.visible && state.managing && !state.password_field && !writing;
+        const bool editable=(notes || resources) && state.visible && state.managing && !state.password_field && !writing;
         gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable && rich_supported);
-        gtk_widget_set_sensitive(create,notes && !writing); gtk_widget_set_sensitive(save,editable);
-        gtk_widget_set_sensitive(remove,!draft.id.empty() && !writing && notes);
+        gtk_widget_set_sensitive(create,(notes || resources) && !writing); gtk_widget_set_sensitive(save,editable);
+        gtk_widget_set_sensitive(remove,!draft.id.empty() && !writing && (notes || resources));
         gtk_editable_set_editable(GTK_EDITABLE(summary),editable);
         gtk_widget_set_sensitive(format, editable && rich_supported && !draft.projection_conflict);
         const int selected = gtk_combo_box_get_active(GTK_COMBO_BOX(format));
@@ -623,10 +664,15 @@ struct ManagerWindow::Impl {
         })) gtk_label_set_text(GTK_LABEL(clipboard_status), "读取正忙，请重新选择此条目");
     }
     void NewNote() {
-        if (state.module!="notes" || !Discard()) return;
+        if ((state.module!="notes" && state.module!="resources") || !Discard()) return;
         ClearDraft(); draft.kind=Kind::Note;
+        if (state.module == "resources") {
+            draft.kind = (state.filter == "reference" || state.filter == "all") ? Kind::Pdf : state.filter == "skills" ? Kind::Skill : Kind::Resource;
+            draft.resource_type = state.filter == "document" || state.filter == "project" ? state.filter : "other";
+            FillDraft();
+        }
         dirty=true; Controls();
-        gtk_label_set_text(GTK_LABEL(status),"新建笔记"); gtk_widget_grab_focus(title);
+        gtk_label_set_text(GTK_LABEL(status),state.module=="resources"?"新建资源":"新建笔记"); if(state.module=="notes") gtk_widget_grab_focus(title);
     }
     void Detail(const Card* card) {
         if (!card) { if (!dirty) ClearDraft(); return; }
@@ -641,7 +687,12 @@ struct ManagerWindow::Impl {
             gtk_label_set_text(GTK_LABEL(status),card->preview.c_str()); return;
         }
         if (preview) {
-            draft.id=card->id; draft.title=card->title; draft.content=card->payload.empty()?card->preview:card->payload; FillDraft();
+            draft.id=card->id; draft.kind=card->kind; draft.title=card->title; draft.content=card->payload.empty()?card->preview:card->payload;
+            if (card->kind == Kind::Pdf) {
+                draft.reference.kind="journalArticle";
+                draft.reference.fields={{"authors","Ada Lovelace; Alan Turing"},{"year","2024"},{"container","Journal of Test Fixtures"},{"volume","12"},{"pages","10–20"},{"doi","10.1000/example"}};
+            }
+            FillDraft();
             gtk_label_set_text(GTK_LABEL(status),(std::to_string(state.count)+" 条本地记录").c_str()); return;
         }
         read_cancel=std::make_shared<std::atomic<bool>>(false);
@@ -652,7 +703,7 @@ struct ManagerWindow::Impl {
             const auto result=store.Get(id,&value,&error);
             if (!life->load() || cancelled->load()) return;
             Post([this,life,cancelled,key,revision,result,value=std::move(value)] {
-                if (!life->load() || cancelled->load() || !state.visible || !state.managing || state.password_field || detail_key!=key) return;
+                if (!life->load() || cancelled->load() || !state.visible || !state.managing || state.password_field || detail_key!=key || dirty) return;
                 if (result!=StoreStatus::Ok || value.revision!=revision) { gtk_label_set_text(GTK_LABEL(status),"条目已变动，请重新选择"); return; }
                 draft=value; FillDraft(); gtk_label_set_text(GTK_LABEL(status),
                                    !value.format_issue.empty() ? value.format_issue.c_str()
@@ -665,7 +716,7 @@ struct ManagerWindow::Impl {
         });
     }
     void Save() {
-        if (preview || writing || state.module!="notes" || state.password_field || !state.visible) return;
+        if (preview || writing || (state.module!="notes" && state.module!="resources") || state.password_field || !state.visible) return;
         Record value=CaptureDraft();
         if (draft.projection_conflict) {
             gtk_label_set_text(GTK_LABEL(status), "请先显式导入 Markdown 副本，草稿已保留");
@@ -679,22 +730,24 @@ struct ManagerWindow::Impl {
     }
     void Remove() {
         if (preview || writing || draft.id.empty() || !Discard() ||
-            !ConfirmCurrent("删除这条笔记？","仅删除当前条目，附件文件仍保留。")) return;
+            !ConfirmCurrent("删除这条内容？","仅删除当前条目，附件文件仍保留。")) return;
         Write(draft,true);
     }
     void Write(Record value,bool removing) {
         const auto storage=ContentStore::DefaultRoot(); auto life=alive;
-        const auto authority=packages->Inspect(ModulePlugin(Module::Notes));
-        if (!authority.enabled) { gtk_label_set_text(GTK_LABEL(status),"笔记插件已停用，草稿已保留"); return; }
+        const auto module = RecordModule(value);
+        const bool import_requested = module == Module::Resources && resource_editor->ImportRequested();
+        const auto authority=packages->Inspect(ModulePlugin(module));
+        if (!authority.enabled) { gtk_label_set_text(GTK_LABEL(status),"模块插件已停用，草稿已保留"); return; }
         write_cancel=std::make_shared<std::atomic<bool>>(false); const auto cancelled=write_cancel;
         writing=true; Controls(); gtk_label_set_text(GTK_LABEL(status),"正在保存…");
-        auto complete=[this,life,removing](StoreStatus result,Record saved) {
+        auto complete=[this,life,removing,module](StoreStatus result,Record saved,std::string error = {}) {
             if (!life->load()) return;
-            Post([this,life,result,saved=std::move(saved),removing] {
+            Post([this,life,result,saved=std::move(saved),removing,module,error=std::move(error)] {
                 if (!life->load()) return;
                 writing=false;
                 if (result==StoreStatus::Ok) {
-                    dirty=false; suspended_draft.reset();
+                    dirty=false; if (module == Module::Notes) suspended_draft.reset(); else suspended_resource.reset();
                     suspended_rich.reset();
                     ClearDraft();
                     if (state.visible && state.managing && !state.password_field) SendCommand("refresh",removing?"":saved.id);
@@ -709,20 +762,29 @@ struct ManagerWindow::Impl {
                         }
                         dirty=true; suspended_draft.reset();
                     }
-                    gtk_label_set_text(GTK_LABEL(status),result==StoreStatus::RevisionConflict?"条目已被修改，草稿已保留；重新读取后再保存":"保存失败，草稿已保留");
+                    if (suspended_resource && state.visible && state.managing && !state.password_field && state.module == "resources" && module == Module::Resources) {
+                        draft = *suspended_resource; detail_key = suspended_resource_key; FillDraft(); resource_editor->SetImportRequested(suspended_resource_import); dirty = true; suspended_resource.reset();
+                    }
+                    gtk_label_set_text(GTK_LABEL(status),result==StoreStatus::RevisionConflict?"条目已被修改，草稿已保留；重新读取后再保存":error.empty()?"保存失败，草稿已保留":error.c_str());
                 }
                 Controls();
             });
         };
-        auto work=[this,storage,value=std::move(value),removing,cancelled,grant=authority.grant,complete] {
+        auto work=[this,storage,value=std::move(value),removing,cancelled,module,import_requested,grant=authority.grant,complete]() mutable {
             ContentStore store(storage); Record saved; std::string error;
             auto result=StoreStatus::Invalid;
             try {
-                packages->WithEnabledGrant(ModulePlugin(Module::Notes),grant,[&] {
+                packages->WithEnabledGrant(ModulePlugin(module),grant,[&] {
+                    if (cancelled->load()) return;
+                    if (!removing && module == Module::Resources) {
+                        if (value.attachment.empty() && !ValidateResource(value, &error)) return;
+                        if (import_requested && value.attachment.empty() && store.ImportAttachment(value.content, &value.attachment, &error) != StoreStatus::Ok) return;
+                        if (!import_requested) value.attachment.clear();
+                    }
                     if (!cancelled->load()) result=removing?store.Remove(value.id,value.revision,&error):store.Put(value,value.revision,&saved,&error);
                 });
             } catch (const std::exception&) { /* Revoked operations retain the draft. */ }
-            complete(result,std::move(saved));
+            complete(result,std::move(saved),std::move(error));
         };
         if(!jobs.Run(cancelled,std::move(work),[complete]{complete(StoreStatus::Invalid,{});})) complete(StoreStatus::Invalid,{});
     }
@@ -734,8 +796,13 @@ struct ManagerWindow::Impl {
             if (gtk_combo_box_get_active(GTK_COMBO_BOX(format)) == 2 && rich_supported)
                 suspended_rich = note_editor->Capture();
         }
+        const bool resources_enabled = std::find(snapshot.modules.begin(),snapshot.modules.end(),Module::Resources)!=snapshot.modules.end();
+        if (dirty && state.module == "resources" && (!snapshot.visible || !snapshot.managing || snapshot.password_field || snapshot.module != "resources" || !resources_enabled)) {
+            suspended_resource = CaptureDraft(); suspended_resource_key = detail_key;
+            suspended_resource_import = resource_editor->ImportRequested();
+        }
         if (confirmation && (!snapshot.visible || !snapshot.managing || snapshot.password_field ||
-                             snapshot.module != "notes" || !notes_enabled))
+                             snapshot.module != state.module || (state.module=="notes"?!notes_enabled:!resources_enabled)))
             gtk_dialog_response(GTK_DIALOG(confirmation), GTK_RESPONSE_CANCEL);
         const bool changed_module = state.module != snapshot.module;
         state=snapshot;
@@ -749,7 +816,7 @@ struct ManagerWindow::Impl {
             ClearDraft(); gtk_widget_hide(window); return;
         }
         const bool enabled=std::any_of(state.modules.begin(),state.modules.end(),[&](auto module){return state.module==ModuleRaw(module);});
-        if (!enabled || (state.module != "notes" && state.module != "temporary")) {
+        if (!enabled || (state.module != "notes" && state.module != "temporary" && state.module != "resources")) {
             if(write_cancel) write_cancel->store(true);
             ClearDraft();
         } else if (state.module == "notes" && suspended_draft && !writing) {
@@ -762,6 +829,10 @@ struct ManagerWindow::Impl {
             }
             dirty=true;
             suspended_draft.reset(); gtk_label_set_text(GTK_LABEL(status),"已恢复未保存的草稿");
+        }
+        if (state.module == "resources" && resources_enabled && suspended_resource && !writing) {
+            draft=*suspended_resource; detail_key=suspended_resource_key; FillDraft(); resource_editor->SetImportRequested(suspended_resource_import); dirty=true;
+            suspended_resource.reset(); gtk_label_set_text(GTK_LABEL(status), "已恢复未保存的草稿");
         }
         updating=true;
         if (state.query!=gtk_entry_get_text(GTK_ENTRY(search))) gtk_entry_set_text(GTK_ENTRY(search),state.query.c_str());
@@ -792,7 +863,7 @@ struct ManagerWindow::Impl {
             auto* name = Label(card.title, "name");
             auto* summary =
                 Label(card.module == Module::Temporary ? card.source : card.preview, "caption");
-            std::string kind=KindRaw(card.kind); std::transform(kind.begin(),kind.end(),kind.begin(),[](unsigned char c){return std::toupper(c);});
+            std::string kind=card.kind==Kind::Pdf?"文献":card.kind==Kind::Resource?"资源":KindRaw(card.kind); std::transform(kind.begin(),kind.end(),kind.begin(),[](unsigned char c){return std::toupper(c);});
             Add(row_heading,Label(kind,"capsule-kind")); Add(row_heading,name,true);
             gtk_widget_set_valign(column,GTK_ALIGN_CENTER); gtk_widget_set_size_request(row,-1,56);
             for(auto* label:{name,summary}) { gtk_label_set_xalign(GTK_LABEL(label),0); gtk_label_set_ellipsize(GTK_LABEL(label),PANGO_ELLIPSIZE_END); gtk_label_set_max_width_chars(GTK_LABEL(label),1); }
@@ -809,12 +880,14 @@ struct ManagerWindow::Impl {
         if(list_focused && selected_row) gtk_widget_grab_focus(selected_row);
     }
 };
-ManagerWindow::ManagerWindow(Send send,bool preview):impl_(std::make_unique<Impl>(std::move(send),preview)){}
+ManagerWindow::ManagerWindow(Send send,bool preview,CopyFile file,CopyText text):impl_(std::make_unique<Impl>(std::move(send),preview,std::move(file),std::move(text))){}
 ManagerWindow::~ManagerWindow()=default;
 void ManagerWindow::Apply(const Snapshot& snapshot){impl_->Apply(snapshot);}
 void ManagerWindow::ClipboardStatus(const std::string& status) {
     if (impl_->state.module == "temporary" && !impl_->state.password_field)
         gtk_label_set_text(GTK_LABEL(impl_->clipboard_status), status.c_str());
+    else if (impl_->state.module == "resources" && !impl_->state.password_field)
+        gtk_label_set_text(GTK_LABEL(impl_->status), status.c_str());
 }
 GtkWidget* ManagerWindow::Window() const{return impl_->window;}
 GtkWidget* ManagerWindow::Root() const{return impl_->root;}

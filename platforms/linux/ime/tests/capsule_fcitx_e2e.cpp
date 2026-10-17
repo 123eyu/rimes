@@ -133,6 +133,75 @@ void ExpectNoZwsp(fcitx::InputContext* ic, const char* where) {
     }
 }
 
+std::unique_ptr<fcitx::EventSourceTime> resource_timer;
+void RunResourceSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
+                      fcitx::InputContext* ic, const std::string& dump_path) {
+    using namespace rimes::capsule;
+    struct State {
+        int fd=-1, phase=0; Record record; std::uint64_t sequence=0;
+        ~State() {if(fd>=0) close(fd);}
+    };
+    auto state=std::make_shared<State>(); ContentStore store(ContentStore::DefaultRoot()); std::string error;
+    const auto file=store.root().parent_path()/"reference.pdf"; std::ofstream(file)<<"%PDF-1.4\n";
+    state->record.kind=Kind::Pdf; state->record.title="Host reference"; state->record.content=file.string();
+    state->record.reference.fields={{"authors","资源作者"},{"year","2024"},{"publisher","本地出版社"}};
+    if(store.Put(state->record,"",&state->record,&error)!=StoreStatus::Ok) Die("resource fixture save");
+    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});
+    SendKey(frontend,uuid,"Control+Shift+V");
+    state->fd=socket(AF_UNIX,SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC,0);
+    sockaddr_un address{};address.sun_family=AF_UNIX;
+    std::strncpy(address.sun_path,std::getenv("RIMES_CAPSULE_SOCKET"),sizeof(address.sun_path)-1);
+    if(state->fd<0 || connect(state->fd,reinterpret_cast<sockaddr*>(&address),sizeof(address))) Die("resource socket");
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(15);
+    resource_timer=instance.eventLoop().addTimeEvent(CLOCK_MONOTONIC,fcitx::now(CLOCK_MONOTONIC)+20000,20000,
+        [&,frontend,uuid,ic,dump_path,state,deadline](fcitx::EventSourceTime* timer,uint64_t) {
+            try {
+                if(std::chrono::steady_clock::now()>deadline) Die("resource timeout phase "+std::to_string(state->phase));
+                char buffer[65536];while(recv(state->fd,buffer,sizeof(buffer),MSG_DONTWAIT)>0) {}
+                auto send=[&](nlohmann::json command) {
+                    command["v"]=1;std::string frame;EncodeFrame(command.dump(),&frame);
+                    if(::send(state->fd,frame.data(),frame.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(frame.size())) Die("resource socket send");
+                };
+                const auto snapshot=nlohmann::json::parse(ReadDump(dump_path));
+                switch(state->phase) {
+                case 0: send({{"op","module"},{"text","resources"}}); state->phase=1; break;
+                case 1:
+                    if(snapshot.at("module")!="resources" || snapshot.at("loading").get<bool>() || snapshot.at("count")!=1) break;
+                    send({{"op","search"},{"text","资源作者"}}); state->phase=2; break;
+                case 2:
+                    if(snapshot.at("query")!="资源作者") break;
+                    if(snapshot.at("count")!=1 || snapshot.at("selected_id")!=state->record.id) Die("resource metadata search lost record");
+                    send({{"op","copy"},{"id",state->record.id},{"revision",state->record.revision}}); state->phase=3; break;
+                case 3:
+                    if(snapshot.at("restore_id")!=state->record.id) break;
+                    if(snapshot.at("restore_revision")!=state->record.revision || snapshot.at("restore_close").get<bool>() || !snapshot.at("last_copied").get<std::string>().empty()) Die("resource copy lost file semantics");
+                    state->sequence=snapshot.at("restore_seq"); SendKey(frontend,uuid,"Return"); state->phase=4; break;
+                case 4:
+                    if(snapshot.at("restore_seq")==state->sequence) break;
+                    if(!snapshot.at("restore_close").get<bool>() || !snapshot.at("visible").get<bool>()) Die("resource activation closed before clipboard acknowledgement");
+                    send({{"op","detail"},{"id",state->record.id},{"revision",state->record.revision}}); state->phase=5; break;
+                case 5:
+                    if(!snapshot.at("managing").get<bool>() || snapshot.at("loading").get<bool>()) break;
+                    state->sequence=snapshot.at("restore_seq");
+                    send({{"op","copy"},{"id",state->record.id},{"revision",std::string(64,'b')}});
+                    // A rejected command does not change model generation. Use a subsequent
+                    // command on this socket as an ordered barrier before checking the intent.
+                    send({{"op","search"},{"text","Host reference"}}); state->phase=6; break;
+                case 6:
+                    if(snapshot.at("query")!="Host reference") break;
+                    if(snapshot.at("restore_seq")!=state->sequence) Die("stale resource copy accepted");
+                    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit}|fcitx::CapabilityFlag::Password); state->phase=7; break;
+                case 7:
+                    if(!snapshot.at("password_field").get<bool>()) break;
+                    if(!snapshot.at("cards").empty() || !snapshot.at("restore_id").get<std::string>().empty()) Die("resource protection exposed path or restore intent");
+                    std::cout<<"ok: Fcitx resource metadata search, file-copy identity, activation acknowledgment, management, stale revisions and protection passed\n";
+                    instance.exit();return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC)+20000);timer->setOneShot();return true;
+            } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';g_exit_status=EXIT_FAILURE;instance.exit();return true;}
+        });
+}
+
 std::unique_ptr<fcitx::EventSourceTime> history_timer;
 void RunHistorySuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
                      fcitx::InputContext* ic, const std::string& dump_path) {
@@ -307,7 +376,7 @@ void RunHistorySuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, 
                         Die("protected history/action exposure");
                     std::cout << "ok: Fcitx history text commits, rich explicit restore, favorite "
                                  "CAS, full-text search and protection passed\n";
-                    instance.exit();
+                    RunResourceSuite(instance, frontend, uuid, ic, dump_path);
                     return true;
                 }
                 timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000);

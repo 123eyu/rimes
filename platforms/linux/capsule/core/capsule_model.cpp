@@ -184,9 +184,19 @@ void CapsuleModel::LoadCards(const std::vector<Record>& records) {
         if (!ModuleEnabled(module) || record.kind == Kind::Password) continue;
         Card card;
         card.id = record.id; card.kind = record.kind; card.title = record.title;
-        card.payload = record.content; card.module = module; card.filter = RecordFilter(record);
+        card.payload = record.content + (record.kind == Kind::Pdf ? record.reference.SearchText() : ""); card.module = module; card.filter = RecordFilter(record);
         card.revision = record.revision; card.attachment = record.attachment;
         card.preview = record.summary.empty() ? NoteSummary(record.content) : record.summary;
+        if (record.kind == Kind::Pdf && record.summary.empty()) {
+            const auto& reference = record.reference;
+            bool empty = true; for (const auto* key : kReferenceFields) if (!TrimText(reference.Get(key)).empty()) empty = false;
+            if (empty) card.preview = "待补书目信息 · " + std::filesystem::path(record.content).filename().string();
+            else {
+                card.preview.clear();
+                const auto kind = reference.kind == "book" ? "图书" : reference.kind == "journalArticle" ? "期刊论文" : reference.kind == "conferencePaper" ? "会议论文" : "报告";
+                for (const auto& part : {reference.Get("authors"), reference.Get("year"), std::string(kind)}) if (!part.empty()) {if(!card.preview.empty()) card.preview += " · "; card.preview += part;}
+            }
+        } else if (record.kind == Kind::Resource && record.summary.empty()) card.preview = "本机资源 · " + std::filesystem::path(record.content).filename().string();
         all_.push_back(std::move(card));
     }
     ApplyFilter();
@@ -308,7 +318,7 @@ void CapsuleModel::RefreshHint() {
         hint_ = query_.empty() ? "暂无" + ModuleDefinition(module_).at("title").get<std::string>() + "条目" : "没有匹配的条目";
         return;
     }
-    hint_ = Selected() && Selected()->kind == Kind::Note ? "Return 插入 · Ctrl+C 复制 · Esc 关闭" : "当前条目不支持文本插入 · Esc 关闭";
+    hint_ = Selected() && Selected()->kind == Kind::Note ? "Return 插入 · Ctrl+C 复制 · Esc 关闭" : (module_ == Module::Resources ? "Return 复制文件 · 双击管理 · Esc 关闭" : "当前条目不支持文本插入 · Esc 关闭");
 }
 
 }  // namespace rimes::capsule

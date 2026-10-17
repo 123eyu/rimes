@@ -1271,7 +1271,9 @@ void BuildUi(App* app) {
     gtk_widget_set_margin_top(app->hint,8);
     gtk_widget_set_margin_bottom(app->hint, 8);
     gtk_box_pack_start(GTK_BOX(chrome), app->hint, FALSE, FALSE, 0);
-    app->manager = std::make_unique<rimes::capsule::ManagerWindow>([app](auto command) { SendCommand(app,command); },app->preview);
+    app->manager = std::make_unique<rimes::capsule::ManagerWindow>([app](auto command) { SendCommand(app,command); },app->preview,
+        [app](const rimes::capsule::Record& record) {if(app->clipboard) app->clipboard->CopyResource(record);},
+        [app](const std::string& text) {if(app->clipboard) app->clipboard->CopyText(text);});
 }
 
 }  // namespace
@@ -1279,6 +1281,7 @@ void BuildUi(App* app) {
 int main(int argc, char** argv) {
     gtk_init(&argc, &argv);
     std::string socket_path = DefaultSocketPath();
+    bool resources_preview = false;
     bool preview = false, manager_preview = false, detail_preview = false,
          clipboard_preview = false;
     std::string render_path, preview_theme = "night";
@@ -1293,6 +1296,8 @@ int main(int argc, char** argv) {
         } else if (std::strcmp(argv[index], "--detail-preview") == 0) {
             preview = true;
             detail_preview = true;
+        } else if (std::strcmp(argv[index], "--resources-preview") == 0) {
+            preview = true; manager_preview = true; resources_preview = true;
         } else if (std::strcmp(argv[index], "--manager-preview") == 0) {
             preview = true; manager_preview = true;
         } else if (std::strcmp(argv[index], "--render") == 0 && index + 1 < argc) {
@@ -1343,6 +1348,13 @@ int main(int argc, char** argv) {
         }
         app.snapshot.cards.push_back(demo); app.snapshot.selected_id=app.snapshot.cards.front().id;
         app.snapshot.count=static_cast<int>(app.snapshot.cards.size());
+        if (resources_preview) {
+            auto card=demo; card.kind=rimes::capsule::Kind::Pdf; card.module=rimes::capsule::Module::Resources;
+            card.title="参考文献示例"; card.payload="/home/example/Documents/reference.pdf";
+            card.preview="Ada Lovelace; Alan Turing · 2024 · 期刊论文";
+            app.snapshot.cards={card}; app.snapshot.module="resources"; app.snapshot.tab="pdf";
+            app.snapshot.count=1; app.snapshot.selected_id=card.id;
+        }
         if (detail_preview) {
             const auto& sample = rimes::capsule::ModuleContract().at("detailPreview");
             app.snapshot.count = 2;

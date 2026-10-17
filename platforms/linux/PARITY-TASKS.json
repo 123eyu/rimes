@@ -297,9 +297,10 @@
         "提供有界图片/文本/PDF 预览、导入与文件复制；引用元数据及单条文献格式与 macOS 当前范围对齐。",
         "验证丢失文件、路径/链接限制、附件持久化、搜索、备份恢复和旧 PDF/Skill 兼容。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 165,
-      "url": "https://github.com/scholay/xsime/issues/165"
+      "url": "https://github.com/scholay/xsime/issues/165",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 16,

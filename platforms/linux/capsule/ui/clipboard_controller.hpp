@@ -11,6 +11,7 @@ class ClipboardController {
     ~ClipboardController();
     void Apply(const Snapshot& snapshot);
     void CopyText(const std::string& text);
+    void CopyResource(const Record& record);
 
   private:
     struct Impl;

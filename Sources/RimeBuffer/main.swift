@@ -614,6 +614,22 @@ if CommandLine.arguments.contains("buffer-smoke") {
 if CommandLine.arguments.contains("buffer-window-smoke") {
     exit(runBufferWindowSmokeTest() ? 0 : 1)
 }
+if let index = CommandLine.arguments.firstIndex(of: "capsule-resources-preview"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        CapsuleReferenceLinuxFixtures.renderManager(to: CommandLine.arguments[index + 1])
+    } ? 0 : 1)
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "capsule-reference-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    do {
+        try CapsuleReferenceLinuxFixtures.export(to: CommandLine.arguments[index + 1])
+        exit(0)
+    } catch { fputs("Capsule reference fixture export failed\n", stderr); exit(1) }
+}
+
 if let index = CommandLine.arguments.firstIndex(of: "clipboard-linux-fixtures"),
    CommandLine.arguments.indices.contains(index + 1) {
     _ = NSApplication.shared
