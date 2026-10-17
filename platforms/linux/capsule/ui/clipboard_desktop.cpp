@@ -13,7 +13,9 @@ namespace rimes::capsule {
 struct DesktopClipboard::Impl {
     ClipboardBackendState state;
     std::thread worker;
-    Impl(Capture capture, Status status) {
+    Impl(Capture capture, Status status, Now now) {
+        if (now)
+            state.now = std::move(now);
         state.capture = std::move(capture);
         state.status = std::move(status);
         state.wake = eventfd(0, EFD_CLOEXEC | EFD_NONBLOCK);
@@ -40,13 +42,19 @@ struct DesktopClipboard::Impl {
                             write_epoch = state.restore_write_epoch;
                             if (!state.protected_input.load() && epoch == state.epoch.load())
                                 restore = std::move(state.restore);
+                            if (state.restore)
+                                WipeClipboard(*state.restore);
                             state.restore.reset();
                             completed = std::move(state.restore_complete);
+                            state.commit_gate = std::move(state.restore_gate);
                         }
                         bool written = false;
                         if (restore && !state.protected_input.load() &&
                             epoch == state.epoch.load() && write_epoch == state.write_epoch.load())
                             written = backend->Restore(std::move(*restore), epoch, write_epoch);
+                        if (restore)
+                            WipeClipboard(*restore);
+                        state.commit_gate = {};
                         if (completed) {
                             auto notify = std::move(completed);
                             notify(written && !state.protected_input.load() &&
@@ -98,8 +106,8 @@ struct DesktopClipboard::Impl {
         }
     }
 };
-DesktopClipboard::DesktopClipboard(Capture capture, Status status)
-    : impl_(std::make_unique<Impl>(std::move(capture), std::move(status))) {}
+DesktopClipboard::DesktopClipboard(Capture capture, Status status, Now now)
+    : impl_(std::make_unique<Impl>(std::move(capture), std::move(status), std::move(now))) {}
 DesktopClipboard::~DesktopClipboard() = default;
 void DesktopClipboard::Configure(bool capture, bool protected_input) {
     auto& state = impl_->state;
@@ -119,7 +127,10 @@ void DesktopClipboard::CancelWrites() {
     {
         std::lock_guard<std::mutex> lock(impl_->state.mutex);
         impl_->state.write_epoch.fetch_add(1);
+        if (impl_->state.restore)
+            WipeClipboard(*impl_->state.restore);
         impl_->state.restore.reset();
+        impl_->state.restore_gate = {};
         cancelled = std::move(impl_->state.restore_complete);
     }
     if (cancelled)
@@ -127,7 +138,16 @@ void DesktopClipboard::CancelWrites() {
     impl_->Wake();
 }
 bool DesktopClipboard::Restore(ClipboardArchive archive, bool sensitive,
-                               std::function<void(bool)> completed) {
+                               std::function<void(bool)> completed, WriteGate gate) {
+    struct Wipe {
+        ClipboardArchive& value;
+        bool sensitive;
+        ~Wipe() {
+            if (sensitive)
+                for (auto& item : value.representations)
+                    EraseSecret(item.bytes);
+        }
+    } wipe{archive, sensitive};
     archive.Validate();
     if (!Available())
         return false;
@@ -137,14 +157,27 @@ bool DesktopClipboard::Restore(ClipboardArchive archive, bool sensitive,
         archive.representations.end());
     archive.representations.push_back(
         {sensitive ? "application/x-rimes-sensitive" : "application/x-rimes-owned", "", 8});
+    if (sensitive) {
+        for (const char* marker : {"org.nspasteboard.ConcealedType",
+                                   "org.nspasteboard.TransientType", "x-kde-passwordManagerHint"}) {
+            archive.representations.erase(
+                std::remove_if(archive.representations.begin(), archive.representations.end(),
+                               [marker](const auto& value) { return value.type == marker; }),
+                archive.representations.end());
+            archive.representations.push_back({marker, "", 8});
+        }
+    }
     std::function<void(bool)> superseded;
     {
         std::lock_guard<std::mutex> lock(impl_->state.mutex);
         if (impl_->state.protected_input.load())
             return false;
         superseded = std::move(impl_->state.restore_complete);
+        if (impl_->state.restore)
+            WipeClipboard(*impl_->state.restore);
         impl_->state.restore = std::move(archive);
         impl_->state.restore_complete = std::move(completed);
+        impl_->state.restore_gate = std::move(gate);
         impl_->state.restore_epoch = impl_->state.epoch.load();
         impl_->state.restore_write_epoch = impl_->state.write_epoch.load();
     }

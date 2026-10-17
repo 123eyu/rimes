@@ -15,7 +15,7 @@ using Clock = std::chrono::steady_clock;
 template <class T> using Owned = std::unique_ptr<T, decltype(&std::free)>;
 class X11Backend final : public ClipboardBackend {
     xcb_connection_t* connection_ = nullptr;
-    xcb_window_t window_ = 0, owner_ = 0, read_window_ = 0, root_ = 0;
+    xcb_window_t window_ = 0, write_window_ = 0, owner_ = 0, read_window_ = 0, root_ = 0;
     xcb_visualid_t visual_ = 0;
     bool baseline_ = false;
     xcb_atom_t clipboard_ = 0, targets_ = 0, property_ = 0, incr_ = 0, timestamp_ = 0;
@@ -30,6 +30,7 @@ class X11Backend final : public ClipboardBackend {
     int format_ = 8;
     Clock::time_point deadline_;
     std::shared_ptr<ClipboardArchive> own_;
+    Clock::time_point secret_until_{};
     struct Transfer {
         xcb_window_t window;
         xcb_atom_t property, type;
@@ -70,6 +71,21 @@ class X11Backend final : public ClipboardBackend {
             xcb_get_selection_owner(connection_, clipboard_).sequence);
         return reply ? reply->owner : 0;
     }
+    void DropOwned() {
+        // Destroy only the object that owned this copy. A later copy from another
+        // client can never be cleared by an expired password, even in the same ms.
+        if (write_window_)
+            xcb_destroy_window(connection_, write_window_);
+        write_window_ = 0;
+        transfers_.clear();
+        own_.reset();
+        secret_until_ = {};
+    }
+    void Expire() {
+        if (own_ && SensitiveClipboard(*own_) &&
+            (state_.protected_input.load() || state_.now() >= secret_until_))
+            DropOwned();
+    }
     void Cancel() {
         capturing_ = false;
         targets_pending_ = false;
@@ -90,7 +106,7 @@ class X11Backend final : public ClipboardBackend {
     void Start() {
         Cancel();
         capture_epoch_ = state_.epoch.load();
-        if (baseline_ || !state_.Current(capture_epoch_) || !owner_ || owner_ == window_)
+        if (baseline_ || !state_.Current(capture_epoch_) || !owner_ || owner_ == write_window_)
             return;
         read_window_ = xcb_generate_id(connection_);
         const std::uint32_t mask = XCB_EVENT_MASK_PROPERTY_CHANGE;
@@ -246,7 +262,7 @@ class X11Backend final : public ClipboardBackend {
         reply.target = request.target;
         reply.property = XCB_ATOM_NONE;
         const auto property = request.property ? request.property : request.target;
-        if (own_ && request.selection == clipboard_) {
+        if (own_ && request.owner == write_window_ && request.selection == clipboard_) {
             if (request.target == targets_) {
                 std::vector<xcb_atom_t> types{targets_, timestamp_};
                 for (const auto& value : own_->representations)
@@ -338,6 +354,7 @@ class X11Backend final : public ClipboardBackend {
             xcb_disconnect(connection_);
     }
     void Tick() override {
+        Expire();
         if (xcb_connection_has_error(connection_))
             throw std::runtime_error("X11 disconnected");
         if (epoch_ != state_.epoch.load()) {
@@ -383,10 +400,8 @@ class X11Backend final : public ClipboardBackend {
             } else if (type == XCB_SELECTION_REQUEST)
                 Request(*reinterpret_cast<xcb_selection_request_event_t*>(raw));
             else if (type == XCB_SELECTION_CLEAR) {
-                if (Owner() != window_) {
-                    own_.reset();
-                    transfers_.clear();
-                }
+                if (Owner() != write_window_)
+                    DropOwned();
             }
         }
         baseline_ = false;
@@ -398,16 +413,21 @@ class X11Backend final : public ClipboardBackend {
     }
     bool Restore(ClipboardArchive archive, std::uint64_t epoch,
                  std::uint64_t write_epoch) override {
-        auto next = std::make_shared<ClipboardArchive>(std::move(archive));
+        auto next = OwnClipboard(std::move(archive));
         if (!state_.CommitWrite(epoch, write_epoch, [&] {
                 Cancel();
+                DropOwned();
                 own_ = std::move(next);
-                xcb_set_selection_owner(connection_, window_, clipboard_, XCB_CURRENT_TIME);
+                secret_until_ = state_.now() + std::chrono::seconds(60);
+                write_window_ = xcb_generate_id(connection_);
+                xcb_create_window(connection_, XCB_COPY_FROM_PARENT, write_window_, root_, 0, 0, 1,
+                                  1, 0, XCB_WINDOW_CLASS_INPUT_OUTPUT, visual_, 0, nullptr);
+                xcb_set_selection_owner(connection_, write_window_, clipboard_, XCB_CURRENT_TIME);
                 xcb_flush(connection_);
             }))
             return false;
-        if (Owner() != window_) {
-            own_.reset();
+        if (Owner() != write_window_) {
+            DropOwned();
             state_.status("剪贴板恢复失败，请重试");
             return false;
         }

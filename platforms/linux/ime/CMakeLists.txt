@@ -71,6 +71,8 @@ add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_reference.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_resources.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_capture.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_password.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_secret_security.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capture_process.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_model.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
@@ -266,6 +268,7 @@ if(RIMES_BUILD_FCITX5)
             "${RIMES_CAPSULE_ROOT}/ui/capture_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/clipboard_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_password_view.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
@@ -391,6 +394,11 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesBufferPlacement COMMAND rimes-buffer-placement-tests)
 
     if(TARGET RimesClipboardDesktop)
+        add_executable(rimes-clipboard-sensitive-tests "${RIMES_CAPSULE_ROOT}/tests/clipboard_sensitive_tests.cpp")
+        target_include_directories(rimes-clipboard-sensitive-tests PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-clipboard-sensitive-tests PRIVATE RimesClipboardDesktop ${GTK3_LIBRARIES})
+        rimes_harden(rimes-clipboard-sensitive-tests)
+        add_test(NAME capsule-clipboard-sensitive-x11 COMMAND "${RIMES_BUFFER_XVFB_RUN}" -a $<TARGET_FILE:rimes-clipboard-sensitive-tests>)
         add_executable(rimes-clipboard-desktop-tests "${RIMES_CAPSULE_ROOT}/tests/clipboard_desktop_tests.cpp")
         target_include_directories(rimes-clipboard-desktop-tests PRIVATE ${GTK3_INCLUDE_DIRS})
         target_link_libraries(rimes-clipboard-desktop-tests PRIVATE RimesClipboardDesktop ${GTK3_LIBRARIES})
@@ -460,6 +468,12 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesCapsuleProtocol COMMAND rimes-capsule-protocol-tests)
     add_test(NAME RimesCapsuleClick COMMAND rimes-capsule-click-tests)
     add_test(NAME RimesCapsuleClipboard COMMAND rimes-capsule-clipboard-tests)
+    add_executable(rimes-capsule-password-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_password_tests.cpp")
+    target_compile_definitions(rimes-capsule-password-tests PRIVATE NATIVE_PASSWORD_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-password.json")
+    target_link_libraries(rimes-capsule-password-tests PRIVATE RimesCapsuleCore)
+    rimes_harden(rimes-capsule-password-tests)
+    add_test(NAME RimesCapsulePassword COMMAND rimes-capsule-password-tests)
+    add_test(NAME capsule-native-password-fixtures COMMAND "${Python3_EXECUTABLE}" "${RIMES_CAPSULE_ROOT}/tests/verify_native_password.py")
     add_executable(rimes-capsule-modules-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_modules_tests.cpp")
     target_link_libraries(rimes-capsule-modules-tests PRIVATE RimesCapsuleCore)
     target_compile_definitions(rimes-capsule-modules-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
@@ -481,9 +495,10 @@ if(RIMES_BUILD_TESTS)
         find_program(RIMES_DESKTOP_TEST_PYTHON NAMES python3 PATHS /usr/bin NO_DEFAULT_PATH REQUIRED)
         add_executable(rimes-capture-controller-tests "${RIMES_CAPSULE_ROOT}/tests/capture_controller_tests.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capture_controller.cpp" "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_password_view.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp" "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp")
         target_include_directories(rimes-capture-controller-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
-        target_link_libraries(rimes-capture-controller-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
+        target_link_libraries(rimes-capture-controller-tests PRIVATE RimesCapsuleCore RimesDesktopUI RimesClipboardDesktop)
         target_compile_definitions(rimes-capture-controller-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         add_dependencies(rimes-capture-controller-tests rimes-capsule-capture rimes-capsule-preview)
         rimes_harden(rimes-capture-controller-tests)
@@ -514,12 +529,21 @@ if(RIMES_BUILD_TESTS)
         target_link_libraries(rimes-capsule-note-editor-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
         target_compile_definitions(rimes-capsule-note-editor-tests PRIVATE NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
         rimes_harden(rimes-capsule-note-editor-tests)
+        add_executable(rimes-capsule-password-ui-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_password_ui_tests.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_password_view.cpp")
+        target_include_directories(rimes-capsule-password-ui-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
+        target_link_libraries(rimes-capsule-password-ui-tests PRIVATE RimesCapsuleCore RimesDesktopUI RimesClipboardDesktop)
+        target_compile_definitions(rimes-capsule-password-ui-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-capsule-password-ui-tests)
+        add_test(NAME capsule-password-ui COMMAND dbus-run-session -- xvfb-run -a "${RIMES_DESKTOP_TEST_PYTHON}" "${RIMES_CAPSULE_ROOT}/tests/password_ui_test.py" $<TARGET_FILE:rimes-capsule-password-ui-tests>)
+        set_tests_properties(capsule-password-ui PROPERTIES ENVIRONMENT "G_DEBUG=fatal-criticals")
         add_executable(rimes-capsule-manager-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_manager_tests.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/capsule_password_view.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_resource_editor.cpp")
         target_include_directories(rimes-capsule-manager-tests PRIVATE "${RIMES_CAPSULE_ROOT}/ui")
-        target_link_libraries(rimes-capsule-manager-tests PRIVATE RimesCapsuleCore RimesDesktopUI)
+        target_link_libraries(rimes-capsule-manager-tests PRIVATE RimesCapsuleCore RimesDesktopUI RimesClipboardDesktop)
         target_compile_definitions(rimes-capsule-manager-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}" NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
         rimes_harden(rimes-capsule-manager-tests)
         if(RIMES_XVFB_RUN)

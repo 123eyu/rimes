@@ -1,5 +1,6 @@
 #include "capsule_history.hpp"
 #include "capsule_capture.hpp"
+#include "capsule_password.hpp"
 #include "capsule_rich_text.hpp"
 #include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
@@ -135,6 +136,65 @@ void ExpectNoZwsp(fcitx::InputContext* ic, const char* where) {
     }
 }
 
+std::unique_ptr<fcitx::EventSourceTime> password_timer;
+void RunPasswordSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
+                      fcitx::InputContext* ic,const std::string& dump_path) {
+    using namespace rimes::capsule;
+    struct State {int fd=-1,phase=0; PasswordSummary record;std::uint64_t copies=0,restores=0;~State(){if(fd>=0)close(fd);}};
+    auto state=std::make_shared<State>();PasswordRecord record;record.title="Host vault";record.summary="Public metadata";record.category="login";record.body="- 密码：host-private-fixture-secret\n- TOTP：JBSWY3DPEHPK3PXP";
+    state->record=PasswordStore(ContentStore::DefaultRoot()).Put(record,"");
+    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});SendKey(frontend,uuid,"Control+Shift+V");
+    state->fd=socket(AF_UNIX,SOCK_STREAM|SOCK_NONBLOCK|SOCK_CLOEXEC,0);sockaddr_un address{};address.sun_family=AF_UNIX;std::strncpy(address.sun_path,std::getenv("RIMES_CAPSULE_SOCKET"),sizeof(address.sun_path)-1);
+    if(state->fd<0||connect(state->fd,reinterpret_cast<sockaddr*>(&address),sizeof(address)))Die("vault socket");
+    const auto deadline=std::chrono::steady_clock::now()+std::chrono::seconds(15);
+    password_timer=instance.eventLoop().addTimeEvent(CLOCK_MONOTONIC,fcitx::now(CLOCK_MONOTONIC)+20000,20000,[&,frontend,uuid,ic,dump_path,state,deadline](fcitx::EventSourceTime* timer,uint64_t){
+        try {
+            if(std::chrono::steady_clock::now()>deadline)Die("vault host timeout phase "+std::to_string(state->phase));
+            char buffer[65536];while(recv(state->fd,buffer,sizeof(buffer),MSG_DONTWAIT)>0){}
+            auto send=[&](nlohmann::json command){command["v"]=1;std::string frame;EncodeFrame(command.dump(),&frame);if(::send(state->fd,frame.data(),frame.size(),MSG_NOSIGNAL)!=static_cast<ssize_t>(frame.size()))Die("vault socket send");};
+            const auto snapshot=nlohmann::json::parse(ReadDump(dump_path));
+            // The explicit search term is public input; inspect every returned field instead.
+            auto returned=snapshot;returned.erase("query");const auto raw=returned.dump();
+            if(raw.find("host-private-fixture-secret")!=raw.npos||raw.find("JBSWY3DPEHPK3PXP")!=raw.npos)Die("vault secret leaked into IPC snapshot");
+            switch(state->phase){
+            case 0:send({{"op","module"},{"text","passwords"}});state->phase=1;break;
+            case 1:
+                if(snapshot.at("module")!="passwords"||snapshot.at("loading").get<bool>())break;
+                if(snapshot.at("count")!=1||snapshot.at("selected_id")!=state->record.id)Die("vault metadata missing");
+                send({{"op","search"},{"text","host-private-fixture-secret"}});state->phase=2;break;
+            case 2:
+                if(snapshot.at("query")!="host-private-fixture-secret")break;
+                if(snapshot.at("count")!=0)Die("secret body was searchable");
+                send({{"op","search"},{"text","Public metadata"}});state->phase=3;break;
+            case 3:
+                if(snapshot.at("query")!="Public metadata")break;
+                if(snapshot.at("count")!=0)Die("vault search must match titles only");
+                send({{"op","search"},{"text","Host vault"}});state->phase=8;break;
+            case 8:
+                if(snapshot.at("query")!="Host vault"||snapshot.at("count")!=1)break;
+                if(snapshot.at("cards").at(0).at("preview")!="Public metadata")Die("vault public summary missing");
+                state->copies=snapshot.at("copy_seq");state->restores=snapshot.at("restore_seq");
+                send({{"op","copy"},{"id",state->record.id},{"revision",state->record.revision}});
+                send({{"op","row-insert"},{"id",state->record.id},{"revision",state->record.revision},{"index",0}});
+                send({{"op","search"},{"text","host vault"}});state->phase=4;break;
+            case 4:
+                if(snapshot.at("query")!="host vault")break;
+                if(snapshot.at("copy_seq")!=state->copies||snapshot.at("restore_seq")!=state->restores)Die("generic action bypassed vault verification");
+                if(!snapshot.at("armed").get<bool>())Die("vault hotkey lost input target");
+                SendKey(frontend,uuid,"Return");state->phase=6;break;
+            case 6:
+                if(!snapshot.at("managing").get<bool>()||snapshot.at("loading").get<bool>())break;
+                if(snapshot.at("copy_seq")!=state->copies)Die("Return inserted vault content");
+                ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit}|fcitx::CapabilityFlag::Password);state->phase=7;break;
+            case 7:
+                if(!snapshot.at("password_field").get<bool>())break;
+                if(!snapshot.at("cards").empty()||snapshot.at("visible").get<bool>())Die("protected host retained vault metadata");
+                std::cout<<"ok: Fcitx vault title-only search, generic-action rejection, Return opens verification and protected conceal passed\n";instance.exit();return true;
+            }
+            timer->setTime(fcitx::now(CLOCK_MONOTONIC)+20000);timer->setOneShot();return true;
+        }catch(const std::exception& e){std::cerr<<e.what()<<'\n';g_exit_status=EXIT_FAILURE;instance.exit();return true;}
+    });
+}
 std::unique_ptr<fcitx::EventSourceTime> capture_timer;
 void RunCaptureSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
                      fcitx::InputContext* ic, const std::string& dump_path) {
@@ -213,7 +273,7 @@ void RunCaptureSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, 
                     if(!snapshot.at("password_field").get<bool>()) break;
                     if(!snapshot.at("cards").empty() || !snapshot.at("restore_id").get<std::string>().empty()) Die("protected capture exposed metadata");
                     std::cout<<"ok: Fcitx capture search, media-copy identity, Return preview, permanent favorite, temporary removal, stale revisions and protection passed\n";
-                    instance.exit();return true;
+                    timer->setEnabled(false);RunPasswordSuite(instance,frontend,uuid,ic,dump_path);return true;
                 }
                 timer->setTime(fcitx::now(CLOCK_MONOTONIC)+20000);timer->setOneShot();return true;
             } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';g_exit_status=EXIT_FAILURE;instance.exit();return true;}

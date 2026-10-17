@@ -59,6 +59,10 @@ int main() {
         model.LoadModuleCards(Module::Passwords,{secret});model.set_module(Module::Passwords);
         Check(model.Selected()->payload.empty() && model.Selected()->preview=="••••••••","password projection leaked");
         Check(EncodeSnapshot(MakeSnapshot(model)).find("never serialize")==std::string::npos,"password wire leak");
+        secret.preview="public summary";model.LoadModuleCards(Module::Passwords,{secret});
+        Check(model.Selected()->preview=="public summary","public password summary missing");
+        model.set_query("public summary");Check(model.cards().empty(),"vault summary entered title-only search");
+        model.set_query("Account");Check(model.cards().size()==1,"vault title search failed");
         std::vector<Record> many;
         for(int i=0;i<300;++i) { auto record=records[0];record.id=NewUuidV4();many.push_back(record); }
         model.set_module(Module::Notes);model.LoadCards(many);model.Select(280);

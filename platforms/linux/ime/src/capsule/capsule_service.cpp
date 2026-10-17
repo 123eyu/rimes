@@ -1,5 +1,6 @@
 #include "capsule_service.hpp"
 #include "capsule_capture.hpp"
+#include "capsule_password.hpp"
 #include "session/protected_input.hpp"
 
 #include <algorithm>
@@ -204,14 +205,16 @@ void CapsuleService::ReloadNotes(std::string selected_id) {
     model_.set_loading(true);
     const auto root = store_.root();
     const bool load_captures = model_.module() == rimes::capsule::Module::Capture;
-    storage_jobs_.Run(cancelled, [this, root, cancelled, alive = alive_, post = post_, selected_id, load_captures] {
+    const bool load_passwords = model_.module() == rimes::capsule::Module::Passwords;
+    storage_jobs_.Run(cancelled, [this, root, cancelled, alive = alive_, post = post_, selected_id, load_captures, load_passwords] {
         rimes::capsule::ContentStore store(root);
         std::vector<rimes::capsule::Record> records;
         std::string error;
-        std::vector<rimes::capsule::Card> captures;
+        std::vector<rimes::capsule::Card> captures, passwords;
         auto status = store.SeedIfNeeded(&error);
         if (status == rimes::capsule::StoreStatus::Ok) status = store.ListAll(&records, &error);
         try {
+          if (load_passwords) for(const auto& value:rimes::capsule::PasswordStore(root).List()) passwords.push_back(rimes::capsule::PasswordCard(value));
           if (load_captures) {
             rimes::capsule::CaptureStore archive(root/"captures");
             archive.Prune(std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count());
@@ -226,12 +229,13 @@ void CapsuleService::ReloadNotes(std::string selected_id) {
           }
         } catch(const std::exception&) {}
         if (!alive->load() || cancelled->load()) return;
-        post([this, alive, cancelled, status, selected_id, records = std::move(records), captures = std::move(captures)] {
+        post([this, alive, cancelled, status, selected_id, records = std::move(records), captures = std::move(captures), passwords = std::move(passwords)] {
             if (!alive->load() || cancelled->load()) return;
             model_.set_loading(false);
             if (status == rimes::capsule::StoreStatus::Ok) model_.LoadCards(records);
             else model_.LoadCards({});
             if(model_.module()==rimes::capsule::Module::Capture) model_.LoadModuleCards(rimes::capsule::Module::Capture,std::move(captures));
+            if(model_.module()==rimes::capsule::Module::Passwords) model_.LoadModuleCards(rimes::capsule::Module::Passwords,std::move(passwords));
             if (!selected_id.empty()) { rimes::capsule::Command selection; selection.id = selected_id; SelectIdentity(selection); }
             Publish();
         });
@@ -387,7 +391,7 @@ bool CapsuleService::Activate() {
     if (card->module == rimes::capsule::Module::Temporary)
         return HistoryAction("activate");
     if (card->module == rimes::capsule::Module::Resources) return CopyResource(true);
-    if (card->module == rimes::capsule::Module::Capture) { Manage(); return true; }
+    if (card->module == rimes::capsule::Module::Capture || card->module == rimes::capsule::Module::Passwords) { Manage(); return true; }
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
@@ -437,7 +441,7 @@ bool CapsuleService::OpenDetail() {
     const auto* card = model_.Selected();
     if (card && card->module == rimes::capsule::Module::Temporary)
         return Activate();
-    if (card && (card->module == rimes::capsule::Module::Resources || card->module == rimes::capsule::Module::Capture)) { Manage(); return true; }
+    if (card && (card->module == rimes::capsule::Module::Resources || card->module == rimes::capsule::Module::Capture || card->module == rimes::capsule::Module::Passwords)) { Manage(); return true; }
     if (!card || card->kind != rimes::capsule::Kind::Note)
         return false;
     rimes::capsule::Record record;
@@ -1261,6 +1265,8 @@ void CapsuleService::Publish() {
     }
     if (model_.module()==rimes::capsule::Module::Capture)
         snapshot.hint = !capture_error_.empty() ? capture_error_ : "↩ PREVIEW   Ctrl+C COPY   DELETE REMOVE TEMPORARY   ESC CLOSE";
+    if(model_.module()==rimes::capsule::Module::Passwords)
+        snapshot.hint="↩ UNLOCK DETAILS   ESC CLOSE · 密码不会自动上屏";
     snapshot.theme = theme_;
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::capsule::EncodeSnapshot(snapshot);

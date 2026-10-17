@@ -17,7 +17,7 @@ VERSION=$(dpkg-deb -f "$DEB" Version)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 DATA="$WORK/user-data/rimes"
-mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule/clipboard" "$DATA/capsule/assets" "$DATA/capsule/captures/fixture" "$DATA/translation/cache"
+mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule/clipboard" "$DATA/capsule/passwords" "$DATA/capsule/assets" "$DATA/capsule/captures/fixture" "$DATA/translation/cache"
 printf '%s\n' 'keep learned dictionary' > "$DATA/rime_ice.userdb/CURRENT"
 printf '%s\n' 'keep imported learning' > "$DATA/schemes/learning/custom.userdb/CURRENT"
 printf '%s\n' 'keep notes' > "$DATA/capsule/note.md"
@@ -27,6 +27,9 @@ printf '%s\n' 'keep imported reference attachment' > "$DATA/capsule/assets/refer
 printf '%s\n' 'apa7' > "$DATA/capsule/reference-style-v1"
 printf '%s\n' 'keep capture metadata' > "$DATA/capsule/captures/fixture/record.json"
 printf '%s\n' 'keep original screen recording' > "$DATA/capsule/captures/fixture/original.webm"
+printf '%s\n' 'keep existing encryption master key' > "$DATA/capsule/master-key"
+printf '%s\n' 'keep salted reveal credential' > "$DATA/capsule/reveal-credential-v1"
+printf '%s\n' 'keep encrypted password record' > "$DATA/capsule/passwords/fixture.md"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
 sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"

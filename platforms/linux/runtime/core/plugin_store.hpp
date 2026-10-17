@@ -27,7 +27,9 @@ public:
     // Linearize a local host operation with enable/disable/update. The action
     // must not call back into this store or acquire the package lock again.
     void WithEnabledGrant(const std::string& id, const std::string& grant,
-                          const std::function<void()>& action) const;
+                          const std::function<void()>& action, bool wait = true) const;
+    void WithEnabledGrants(const std::vector<std::pair<std::string, std::string>>& grants,
+                           const std::function<void()>& action, bool wait = true) const;
     void Install(const std::string& id, std::string_view bytes, const std::string& expected_grant);
     void RestoreBundled(const std::string& id, const std::string& expected_grant);
     void Enable(const std::string& id, bool enabled, const std::string& expected_grant);

@@ -1357,7 +1357,7 @@ void BuildUi(App* app) {
 int main(int argc, char** argv) {
     gtk_init(&argc, &argv);
     std::string socket_path = DefaultSocketPath();
-    bool resources_preview = false, capture_preview = false;
+    bool resources_preview = false, capture_preview = false, password_preview = false;
     std::string capture_image, capture_kind="image";
     bool preview = false, manager_preview = false, detail_preview = false,
          clipboard_preview = false;
@@ -1379,6 +1379,8 @@ int main(int argc, char** argv) {
             detail_preview = true;
         } else if (std::strcmp(argv[index], "--resources-preview") == 0) {
             preview = true; manager_preview = true; resources_preview = true;
+        } else if (std::strcmp(argv[index], "--password-preview") == 0) {
+            preview = true; manager_preview = true; password_preview = true;
         } else if (std::strcmp(argv[index], "--manager-preview") == 0) {
             preview = true; manager_preview = true;
         } else if (std::strcmp(argv[index], "--render") == 0 && index + 1 < argc) {
@@ -1436,6 +1438,12 @@ int main(int argc, char** argv) {
             if(capture_kind=="video") {record.collection_id=record.id;record.incomplete=true;}
             app.snapshot.cards={rimes::capsule::CaptureCard(record)};app.snapshot.module="capture";
             app.snapshot.count=1;app.snapshot.selected_id=record.id;
+        }
+        if(password_preview) {
+            auto card=demo;card.kind=rimes::capsule::Kind::Password;card.module=rimes::capsule::Module::Passwords;
+            card.title="公开测试账号";card.preview="仅供测试";card.filter="login";card.revision=std::string(64,'a');card.payload.clear();
+            app.snapshot.cards={card};app.snapshot.module="passwords";app.snapshot.tab="password";app.snapshot.count=1;app.snapshot.selected_id=card.id;
+            app.snapshot.hint="↩ UNLOCK DETAILS   ESC CLOSE · 密码不会自动上屏";
         }
         if (resources_preview) {
             auto card=demo; card.kind=rimes::capsule::Kind::Pdf; card.module=rimes::capsule::Module::Resources;

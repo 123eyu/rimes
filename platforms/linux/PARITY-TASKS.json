@@ -338,9 +338,10 @@
         "机密默认脱敏；详情 60 秒授权、单字段 15 秒显示、显式复制后条件清理，禁止进入历史或云同步。",
         "覆盖 TOTP 标准向量、密码错误、凭据变更、失焦/睡眠遮蔽、并发写入及损坏数据；无明文日志。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 167,
-      "url": "https://github.com/scholay/xsime/issues/167"
+      "url": "https://github.com/scholay/xsime/issues/167",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 18,

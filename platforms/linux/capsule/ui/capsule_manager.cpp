@@ -4,6 +4,7 @@
 #include "capsule_resources.hpp"
 #include "clipboard_preview.hpp"
 #include "capsule_manager.hpp"
+#include "capsule_password_view.hpp"
 #include "capsule_note_editor.hpp"
 #include "capsule_resource_editor.hpp"
 #include "capsule_text.hpp"
@@ -42,6 +43,8 @@ struct ManagerWindow::Impl {
     GtkWidget *capture_form=nullptr,*capture_title=nullptr,*capture_meta=nullptr,*capture_picture=nullptr,*capture_collect=nullptr,*capture_remove=nullptr;
     std::shared_ptr<GdkPixbuf> capture_image;
     std::unique_ptr<ResourceEditor> resource_editor;
+    std::unique_ptr<PasswordView> password_view;
+    GtkWidget* migrate_password = nullptr;
     std::optional<Record> suspended_resource;
     std::string suspended_resource_key;
     bool suspended_resource_import = false;
@@ -216,6 +219,18 @@ struct ManagerWindow::Impl {
         Add(actions, save);
         Add(editor, actions);
         note_actions = actions;
+        migrate_password=Button("移入密码库…",[this] {
+            if(preview||state.module!="notes"||draft.id.empty()||writing||!state.visible||state.password_field)return;
+            if(dirty){gtk_label_set_text(GTK_LABEL(status),"请先保存笔记，再迁移到密码库");return;}
+            if(!ConfirmCurrent("将笔记加密移入密码库？","验证查看口令后，加密正文并删除原笔记；摘要不会带入。已有的外部备份不会被追溯删除。"))return;
+            if(state.module!="notes"||!state.visible||state.password_field)return;
+            password_view->PrepareMigration(draft.id,draft.revision);
+            send(Json{{"v",1},{"op","module"},{"text","passwords"}}.dump());
+        },"capsule-link");Add(actions,migrate_password);
+        password_view=std::make_unique<PasswordView>(GTK_WINDOW(window),send,preview);
+        gtk_widget_show_all(password_view->Widget());gtk_widget_set_no_show_all(password_view->Widget(),TRUE);gtk_widget_hide(password_view->Widget());
+        gtk_box_pack_start(GTK_BOX(editor),password_view->Widget(),TRUE,TRUE,0);
+        gtk_box_reorder_child(GTK_BOX(editor),password_view->Widget(),1);
         resource_editor = std::make_unique<ResourceEditor>(GTK_WINDOW(window), [this] { Changed(); },
             [this](const Record& value) {
                 if (state.visible && state.managing && !state.password_field && state.module == "resources" && copy_file) copy_file(value);
@@ -386,6 +401,7 @@ struct ManagerWindow::Impl {
     ~Impl() {
         alive->store(false); jobs.Shutdown();
         g_signal_handlers_disconnect_by_data(window,this);
+        password_view.reset();
         resource_editor.reset();
         note_editor.reset();
         gtk_widget_destroy(window); g_object_unref(css);
@@ -490,7 +506,16 @@ struct ManagerWindow::Impl {
             c("accentText") +
             "; }"
             ".capsule-divider { background: " +
-            c("border") + "; min-width: 1px; }";
+            c("border") + "; min-width: 1px; }"
+            ".capsule-password-form .capsule-field { font-size: 11px; }"
+            ".capsule-passcode-capture image { color: " + c("accentGreen") + "; }"
+            ".capsule-passcode-slot { border: 1px solid " + c("border") + "; border-radius: 7px; background: " + c("surfaceTertiary") + "; font-size: 15px; font-weight: 600; }"
+            ".capsule-passcode-slot.current { border-color: " + c("accentGreen") + "; }"
+            ".capsule-passcode-capture { border: 1px solid " + c("accentGreen") + "; border-radius: 7px; background: " + c("surfaceTertiary") + "; color: " + c("accentGreen") + "; padding: 0; }"
+            ".capsule-passcode-capture:focus { border-color: " + c("accentGreen") + "; }"
+            ".capsule-password-row { background: transparent; padding: 5px 8px; border-radius: 6px; }"
+            ".capsule-password-row:focus { background: alpha(" + c("accentGreen") + ",0.12); }"
+            ".capsule-password-value { font-family: monospace; font-size: 12px; }";
         gtk_css_provider_load_from_data(css,rules.c_str(),-1,nullptr);
         gtk_style_context_add_provider_for_screen(gtk_widget_get_screen(window),GTK_STYLE_PROVIDER(css),GTK_STYLE_PROVIDER_PRIORITY_APPLICATION+2);
     }
@@ -532,18 +557,21 @@ struct ManagerWindow::Impl {
                                          Module::Temporary) != state.modules.end();
         const bool resources = state.module == "resources" && std::find(state.modules.begin(),state.modules.end(),Module::Resources)!=state.modules.end();
         const bool captures=state.module=="capture" && std::find(state.modules.begin(),state.modules.end(),Module::Capture)!=state.modules.end();
+        const bool passwords=state.module=="passwords" && std::find(state.modules.begin(),state.modules.end(),Module::Passwords)!=state.modules.end();
+        if(password_view)gtk_widget_set_visible(password_view->Widget(),passwords);
+        if(migrate_password)gtk_widget_set_visible(migrate_password,notes && std::find(state.modules.begin(),state.modules.end(),Module::Passwords)!=state.modules.end());
         gtk_widget_set_visible(capture_form,captures);
-        gtk_widget_set_visible(note_form, !temporary && !resources && !captures);
+        gtk_widget_set_visible(note_form, !temporary && !resources && !captures && !passwords);
         if (resource_editor) {
             gtk_widget_set_visible(resource_editor->Widget(), resources);
             resource_editor->SetEditable(resources && state.visible && state.managing && !state.password_field && !writing);
         }
-        gtk_widget_set_visible(note_actions, !temporary && !captures);
+        gtk_widget_set_visible(note_actions, !temporary && !captures && !passwords);
         gtk_widget_set_visible(clipboard_form, temporary);
         gtk_widget_set_sensitive(clipboard_copy, temporary && !state.selected_id.empty());
         const bool editable=(notes || resources) && state.visible && state.managing && !state.password_field && !writing;
         gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable && rich_supported);
-        gtk_widget_set_sensitive(create,(notes || resources || captures) && !writing); gtk_widget_set_sensitive(save,editable);
+        gtk_widget_set_sensitive(create,(notes || resources || captures || passwords) && !writing); gtk_widget_set_sensitive(save,editable);
         gtk_widget_set_sensitive(remove,!draft.id.empty() && !writing && (notes || resources));
         gtk_editable_set_editable(GTK_EDITABLE(summary),editable);
         gtk_widget_set_sensitive(format, editable && rich_supported && !draft.projection_conflict);
@@ -725,6 +753,7 @@ struct ManagerWindow::Impl {
         });
     }
     void NewNote() {
+        if(state.module=="passwords") {if(password_view)password_view->New();return;}
         if(state.module=="capture") {if(open_capture) open_capture();return;}
         if ((state.module!="notes" && state.module!="resources") || !Discard()) return;
         ClearDraft(); draft.kind=Kind::Note;
@@ -853,6 +882,7 @@ struct ManagerWindow::Impl {
     }
 
     void Apply(const Snapshot& snapshot) {
+        if(password_view)password_view->Apply(snapshot);
         const bool notes_enabled=std::find(snapshot.modules.begin(),snapshot.modules.end(),Module::Notes)!=snapshot.modules.end();
         if (dirty && state.module=="notes" && (!snapshot.visible || !snapshot.managing || snapshot.password_field || snapshot.module!="notes" || !notes_enabled)) {
             suspended_draft=CaptureDraft(); suspended_key=detail_key;
@@ -879,7 +909,7 @@ struct ManagerWindow::Impl {
             ClearDraft(); gtk_widget_hide(window); return;
         }
         const bool enabled=std::any_of(state.modules.begin(),state.modules.end(),[&](auto module){return state.module==ModuleRaw(module);});
-        if (!enabled || (state.module != "notes" && state.module != "temporary" && state.module != "resources" && state.module != "capture")) {
+        if (!enabled || (state.module != "notes" && state.module != "temporary" && state.module != "resources" && state.module != "capture" && state.module != "passwords")) {
             if(write_cancel) write_cancel->store(true);
             ClearDraft();
         } else if (state.module == "notes" && suspended_draft && !writing) {
@@ -897,6 +927,7 @@ struct ManagerWindow::Impl {
             draft=*suspended_resource; detail_key=suspended_resource_key; FillDraft(); resource_editor->SetImportRequested(suspended_resource_import); dirty=true;
             suspended_resource.reset(); gtk_label_set_text(GTK_LABEL(status), "已恢复未保存的草稿");
         }
+        gtk_entry_set_placeholder_text(GTK_ENTRY(search), state.module == "passwords" ? "仅搜索密码标题" : "搜索标题或内容");
         updating=true;
         if (state.query!=gtk_entry_get_text(GTK_ENTRY(search))) gtk_entry_set_text(GTK_ENTRY(search),state.query.c_str());
         updating=false;

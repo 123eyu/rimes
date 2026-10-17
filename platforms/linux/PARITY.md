@@ -26,7 +26,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 14 | P1 | [#164 Capsule 临时剪贴板历史](https://github.com/scholay/xsime/issues/164) | 原始 MIME、X11/Wayland 与宿主测试通过，四主题像素对照待验收 |
 | 15 | P1 | [#165 Capsule 资源、文献和文件预览](https://github.com/scholay/xsime/issues/165) | 资源、引用与安装测试通过，四主题像素对照待验收 |
 | 16 | P1 | [#166 Capsule 截图、录屏与捕获归档](https://github.com/scholay/xsime/issues/166) | 捕获、归档、宿主及 deb 测试通过，真实桌面录屏与像素待验收 |
-| 17 | P1 | [#167 Capsule 密码库、结构化秘密与 TOTP](https://github.com/scholay/xsime/issues/167) | 待开发 |
+| 17 | P1 | [#167 Capsule 密码库、结构化秘密与 TOTP](https://github.com/scholay/xsime/issues/167) | 加密兼容、宿主及 deb 测试通过，底栏详情、桌面与像素待验收 |
 | 18 | P1 | [#168 Mailbox 窗口、模块宿主和持久化](https://github.com/scholay/xsime/issues/168) | 待开发 |
 | 19 | P1 | [#169 Mailbox 收件、附件与 Capsule/Buffer 流转](https://github.com/scholay/xsime/issues/169) | 待开发 |
 | 20 | P1 | [#170 本地 MCP/HTTP 网关与收件审核](https://github.com/scholay/xsime/issues/170) | 待开发 |

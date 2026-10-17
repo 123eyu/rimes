@@ -46,6 +46,7 @@ class WaylandBackend final : public ClipboardBackend {
     std::size_t type_ = 0, total_ = 0;
     Clock::time_point deadline_;
     std::shared_ptr<ClipboardArchive> owned_;
+    Clock::time_point secret_until_{};
     struct Transfer {
         int fd;
         std::shared_ptr<ClipboardArchive> archive;
@@ -53,6 +54,21 @@ class WaylandBackend final : public ClipboardBackend {
         Clock::time_point deadline;
     };
     std::vector<Transfer> transfers_;
+    void DropOwned() {
+        // Withdraw this exact source; never set a global null selection, which
+        // could overwrite a newer clipboard owner while cancellation is queued.
+        Destroy(source_, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
+        for (auto& transfer : transfers_)
+            close(transfer.fd);
+        transfers_.clear();
+        owned_.reset();
+        secret_until_ = {};
+    }
+    void Expire() {
+        if (owned_ && SensitiveClipboard(*owned_) &&
+            (state_.protected_input.load() || state_.now() >= secret_until_))
+            DropOwned();
+    }
     void CancelRead() {
         if (receive_ >= 0)
             close(receive_);
@@ -159,9 +175,9 @@ class WaylandBackend final : public ClipboardBackend {
         if (offer != self->current_)
             self->DropOffer(offer);
     }
-    static void Send(void* raw, wl_proxy*, const char* type, int fd) {
+    static void Send(void* raw, wl_proxy* source, const char* type, int fd) {
         auto* self = static_cast<WaylandBackend*>(raw);
-        if (!self->owned_ || self->transfers_.size() >= 8) {
+        if (source != self->source_ || !self->owned_ || self->transfers_.size() >= 8) {
             close(fd);
             return;
         }
@@ -177,8 +193,7 @@ class WaylandBackend final : public ClipboardBackend {
     static void Cancelled(void* raw, wl_proxy* source) {
         auto* self = static_cast<WaylandBackend*>(raw);
         if (source == self->source_) {
-            self->owned_.reset();
-            Destroy(self->source_, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
+            self->DropOwned();
         }
     }
     void Dispatch() {
@@ -296,8 +311,7 @@ class WaylandBackend final : public ClipboardBackend {
     bool Busy() const override { return receive_ >= 0 || !transfers_.empty(); }
     void Cleanup() {
         CancelRead();
-        for (auto& transfer : transfers_)
-            close(transfer.fd);
+        DropOwned();
         for (const auto& [offer, types] : offers_) {
             (void)types;
             auto* item = offer;
@@ -314,6 +328,7 @@ class WaylandBackend final : public ClipboardBackend {
             wl_display_disconnect(display_);
     }
     void Tick() override {
+        Expire();
         if (epoch_ != state_.epoch.load()) {
             epoch_ = state_.epoch.load();
             CancelRead();
@@ -393,7 +408,7 @@ class WaylandBackend final : public ClipboardBackend {
     }
     bool Restore(ClipboardArchive archive, std::uint64_t epoch,
                  std::uint64_t write_epoch) override {
-        auto next = std::make_shared<ClipboardArchive>(std::move(archive));
+        auto next = OwnClipboard(std::move(archive));
         auto* source =
             wl_proxy_marshal_flags(manager_, EXT_DATA_CONTROL_MANAGER_V1_CREATE_DATA_SOURCE,
                                    interfaces_.source, wl_proxy_get_version(manager_), 0, nullptr);
@@ -405,8 +420,9 @@ class WaylandBackend final : public ClipboardBackend {
                                    wl_proxy_get_version(source), 0, value.type.c_str());
         if (!state_.CommitWrite(epoch, write_epoch, [&] {
                 CancelRead();
-                Destroy(source_, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
+                DropOwned();
                 owned_ = std::move(next);
+                secret_until_ = state_.now() + std::chrono::seconds(60);
                 source_ = source;
                 wl_proxy_marshal_flags(device_, EXT_DATA_CONTROL_DEVICE_V1_SET_SELECTION, nullptr,
                                        wl_proxy_get_version(device_), 0, source_);

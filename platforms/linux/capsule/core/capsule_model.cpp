@@ -12,7 +12,7 @@ bool MatchesQuery(const Card& card, std::string_view query) {
     if (query.empty()) {
         return true;
     }
-    const auto haystack = LowerText(card.title + "\n" + card.payload + "\n" + card.source + "\n" + card.preview);
+    const auto haystack = LowerText(card.module == Module::Passwords ? card.title : card.title + "\n" + card.payload + "\n" + card.source + "\n" + card.preview);
     const auto needle = OneLine(LowerText(query));
     std::size_t start = 0;
     while (start < needle.size()) {
@@ -209,7 +209,7 @@ void CapsuleModel::LoadModuleCards(Module module, std::vector<Card> cards) {
     all_.erase(std::remove_if(all_.begin(), all_.end(), [module](const auto& card) { return card.module == module; }), all_.end());
     if (ModuleEnabled(module)) for (auto& card : cards) {
         card.module = module;
-        if (module == Module::Passwords) { card.payload.clear(); card.preview = "••••••••"; }
+        if (module == Module::Passwords) { card.payload.clear(); if (card.preview.empty()) card.preview = "••••••••"; }
         all_.push_back(std::move(card));
     }
     ApplyFilter();

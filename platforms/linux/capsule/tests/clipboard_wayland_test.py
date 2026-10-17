@@ -31,10 +31,11 @@ def main():
                     assert sway.poll() is None, (root / "sway.log").read_text()[-3000:]
                     time.sleep(0.05)
                 assert "WAYLAND_DISPLAY" in env, "Sway startup timed out"
-                result = subprocess.run([str(build / "rimes-clipboard-desktop-tests")], env=env,
-                                        capture_output=True, text=True, timeout=35)
-                assert result.returncode == 0, result.stdout + result.stderr
-                print(result.stdout.strip())
+                for binary in ("rimes-clipboard-desktop-tests", "rimes-clipboard-sensitive-tests"):
+                    result = subprocess.run([str(build / binary)], env=env,
+                                            capture_output=True, text=True, timeout=35)
+                    assert result.returncode == 0, result.stdout + result.stderr
+                    print(result.stdout.strip())
             finally:
                 sway.terminate()
                 try:

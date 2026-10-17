@@ -92,6 +92,8 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ca
             "share/rimes/schemes/learning/wanxiang.userdb/CURRENT",
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
             "share/rimes/capsule/clipboard/history-v1.sqlite3",
+            "share/rimes/capsule/master-key", "share/rimes/capsule/reveal-credential-v1",
+            "share/rimes/capsule/passwords/fixture.md",
             "share/rimes/capsule/captures/example/record.json", "share/rimes/capsule/captures/example/original.webm",
             "share/rimes/capsule/assets/reference.asset", "share/rimes/capsule/reference-style-v1",
             "share/rimes/data/personal.yaml", "share/fcitx5/addon/another.conf",
