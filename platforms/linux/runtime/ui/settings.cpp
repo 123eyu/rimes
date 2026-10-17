@@ -66,7 +66,11 @@ struct Settings {
     gtk_window_set_default_size(GTK_WINDOW(window), Metric("settingsWidth"),
                                 Metric("settingsHeight"));
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
-    gtk_widget_set_size_request(window, 860, 600);
+    // GtkOffscreenWindow can allocate its minimum instead of the requested
+    // default after a page switch. A render fixture has an exact canvas;
+    // interactive windows retain their independent resizable minimum.
+    gtk_widget_set_size_request(window, offscreen ? Metric("settingsWidth") : 860,
+                                offscreen ? Metric("settingsHeight") : 600);
     GdkGeometry geometry{};
     geometry.min_width = 860;
     geometry.min_height = 600;
