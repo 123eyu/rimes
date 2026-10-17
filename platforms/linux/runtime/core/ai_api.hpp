@@ -20,6 +20,7 @@ class AIWorker {
 public:
     ~AIWorker();
     void CancelAll();
+    void Shutdown();
     void Run(std::string text, RequestConfiguration configuration,
              std::shared_ptr<std::atomic<bool>> cancelled, AIReceive receive);
 private:

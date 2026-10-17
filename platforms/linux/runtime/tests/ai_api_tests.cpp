@@ -41,5 +41,16 @@ int main(int argc, char** argv) {
         RunAIRequest("原文🙂", config, cancelled, [&](AIUpdate event) { result = std::move(event); });
         Check(result.error == AIError::Configuration, "invalid configuration reached network");
     }
-    std::cout << "AI HTTP: native contract, fragmented stream, early DONE, cancellation, timeout, auth, limits, redirect and size guards passed\n";
+    {
+        AIWorker worker;
+        auto cancelled = std::make_shared<std::atomic<bool>>(false);
+        std::atomic<unsigned> callbacks{0};
+        worker.Run("原文🙂", configuration("/cancel"), cancelled, [&](AIUpdate) { ++callbacks; });
+        worker.Shutdown();
+        const auto final_callbacks = callbacks.load();
+        worker.Shutdown(); // teardown is explicitly idempotent
+        Check(cancelled->load() && final_callbacks == 1 && callbacks.load() == final_callbacks,
+              "shutdown returned before cancellation callback finished");
+    }
+    std::cout << "AI HTTP: native contract, fragmented stream, early DONE, cancellation, timeout, auth, limits, redirect, size guards and joined shutdown passed\n";
 }

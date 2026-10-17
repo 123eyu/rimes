@@ -66,6 +66,7 @@ RimesIme::RimesIme(Instance* instance)
     }
 
     auto post = [this, alive = alive_](std::function<void()> work) {
+        if (!alive->load()) return;
         dispatcher_.schedule([this, alive, work = std::move(work)]() {
             if (alive && alive->load()) {
                 work();
@@ -171,8 +172,14 @@ RimesIme::~RimesIme() {
     if (alive_) {
         alive_->store(false);
     }
+    // Join callbacks while the event dispatcher and service are still alive.
+    translation_worker_.Shutdown();
+    ai_worker_.Shutdown();
     engine_.SetDeployReadyCallback(nullptr);
     engine_.Stop();
+    // Socket readers also post to this dispatcher; join them before detach.
+    buffer_.reset();
+    capsule_.reset();
     dispatcher_.detach();
 }
 

@@ -53,6 +53,9 @@ int main() {
         host.CancelDerived();
         Check(old_cancel->load(), "explicit cancellation stops worker");
         Check(host.Generate(), "cancelled unit can be retried");
+        const auto running_count = replies.size();
+        Check(!host.Generate() && !host.TranslationTick(), "running unit was replaced by generate/debounce");
+        Check(replies.size() == running_count, "duplicate worker escaped ownership");
         old({0, "late after retry", true, true}); drain();
         Check(host.translation().Running(), "old request cannot finish replacement");
         replies.back()({0, "", true, false}); drain();
