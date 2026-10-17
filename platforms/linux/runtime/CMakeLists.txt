@@ -22,12 +22,17 @@ target_link_libraries(RimesRuntimeStorage PUBLIC OpenSSL::Crypto)
 set_target_properties(RimesRuntimeStorage PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(RimesRuntimeStorage PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_library(RimesProcess STATIC core/process.cpp)
+add_library(RimesProcess STATIC core/process.cpp core/background_jobs.cpp)
 target_compile_features(RimesProcess PUBLIC cxx_std_17)
 target_include_directories(RimesProcess PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core")
 target_link_libraries(RimesProcess PUBLIC Threads::Threads)
 set_target_properties(RimesProcess PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(RimesProcess PRIVATE -Wall -Wextra -Wpedantic -Werror)
+if(RIMES_BUILD_TESTS)
+    add_executable(rimes-background-jobs-tests tests/background_jobs_tests.cpp)
+    target_link_libraries(rimes-background-jobs-tests PRIVATE RimesProcess)
+    add_test(NAME background-jobs COMMAND rimes-background-jobs-tests)
+endif()
 
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ShortcutPreferences.swift"
