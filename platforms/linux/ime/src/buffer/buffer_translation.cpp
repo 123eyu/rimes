@@ -93,7 +93,11 @@ bool BufferService::TranslationTick(bool force) {
             SynchronizeDerived();
             bool grant = false;
             try { grant = validate_ && validate_(lease); } catch (const std::exception&) {}
-            if (!grant || scope != translation_scope_ || id != translation_unit_ || ticket != translation_ticket_) return;
+            if (!grant || scope != translation_scope_ || id != translation_unit_ || ticket != translation_ticket_) {
+                // Synchronization may already have cleared the old plaintext.
+                // Publish that revocation even though this reply is rejected.
+                Publish(); return;
+            }
             translation_.Finish(id, ticket, text, success, target);
             translation_unit_.clear(); translation_ticket_.clear(); translation_cancel_.reset();
             Publish();
