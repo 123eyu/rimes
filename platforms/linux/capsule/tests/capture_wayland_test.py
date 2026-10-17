@@ -40,6 +40,9 @@ def main():
                 time.sleep(.05)
             raise AssertionError('isolated Wayland startup timed out')
         try:
+            # Own the document portal too: its FUSE mount must be unmounted
+            # before TemporaryDirectory cleanup on CI hosts with /dev/fuse.
+            launch('documents', ['/usr/libexec/xdg-document-portal', '--replace'])
             launch('sway', ['sway', '--unsupported-gpu', '-c', str(root / 'sway.conf')])
             wait(lambda: any(path.is_socket() for path in root.glob('wayland-*')))
             env['WAYLAND_DISPLAY'] = next(path.name for path in root.glob('wayland-*') if path.is_socket())
@@ -110,6 +113,9 @@ def main():
                 if process.poll() is None: process.terminate()
                 try: process.wait(timeout=3)
                 except subprocess.TimeoutExpired: process.kill(); process.wait()
+            document_mount = root / 'doc'
+            if document_mount.is_mount():
+                subprocess.run(['fusermount3', '-u', str(document_mount)], check=True, timeout=5)
             for log in logs: log.close()
 
 if __name__ == '__main__':
