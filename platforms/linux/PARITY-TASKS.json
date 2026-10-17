@@ -133,9 +133,10 @@
         "翻译单元首个子块交付后原子退休精确原文，其余译文不可变且不被重复翻译。",
         "可选自动发送采用单调时间，隐藏/暂停/保护不计龄；不强制收束组字，不重复投递，失败保留。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 157,
-      "url": "https://github.com/scholay/xsime/issues/157"
+      "url": "https://github.com/scholay/xsime/issues/157",
+      "visual_status": "pending"
     },
     {
       "order": 8,

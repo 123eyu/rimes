@@ -10,6 +10,10 @@ std::int64_t MonotonicMs() { return std::chrono::duration_cast<std::chrono::mill
 bool BufferService::Translating() const {
     return plugins_ && plugins_->SelectedBuffer() == kTranslation && derived_adapters_.count(kTranslation);
 }
+bool BufferService::TranslationActive() const {
+    return Translating() && translation_lease_ && translation_configuration_ && !translation_scope_.empty() &&
+        model_.visible() && model_.processing_active() && !model_.secure() && !model_.password_field();
+}
 void BufferService::CancelTranslation(bool clear) {
     if (translation_cancel_) translation_cancel_->store(true);
     translation_cancel_.reset();
@@ -18,7 +22,7 @@ void BufferService::CancelTranslation(bool clear) {
     translation_explicit_ = false;
     translation_.Pause();
     if (clear) {
-        translation_.Clear(); translation_scope_.clear(); translation_result_id_.clear();
+        translation_.ResetMutable(); translation_scope_.clear(); translation_result_id_.clear();
         translation_source_invalid_ = false;
         translation_lease_.reset(); translation_configuration_.reset();
     }
@@ -46,6 +50,7 @@ void BufferService::SynchronizeTranslation() {
         std::vector<std::string> current;
         for (const auto& unit : translation_.All()) current.push_back(unit.id);
         if (old != current) { translation_result_id_ = rimes::buffer::NewBlockId(); translation_explicit_ = false; }
+        if (translation_result_id_.empty() && !translation_.Retired().empty()) translation_result_id_ = rimes::buffer::NewBlockId();
         if (!translation_unit_.empty() && !translation_.Find(translation_unit_)) {
             if (translation_cancel_) translation_cancel_->store(true);
             translation_cancel_.reset(); translation_unit_.clear(); translation_ticket_.clear();

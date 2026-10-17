@@ -85,6 +85,16 @@ RimesIme::RimesIme(Instance* instance)
         {[] {}, [this] { translation_worker_.CancelAll(); }});
     WatchPluginPackages();
     WatchConfiguration();
+    buffer_->BindAutoSend([this] {
+        if (!configuration_) throw std::runtime_error("Configuration unavailable");
+        auto config = configuration_->Load();
+        const bool enabled = config.at("autoSend");
+        const int current = config.at("autoSendSeconds");
+        config["autoSend"] = !enabled || current != 5;
+        config["autoSendSeconds"] = !enabled ? 1 : current == 1 ? 2 : current == 2 ? 3 : current == 3 ? 5 : 1;
+        configuration_->Save(config, config.at("revision"));
+        ApplyConfiguration();
+    });
     buffer_->BindPlugins(plugins_, [this](const auto& lease) { return acceptsPluginResult(lease); },
         [this](std::string_view id) {
             if (!configuration_) throw std::runtime_error("Configuration unavailable");
@@ -209,8 +219,10 @@ void RimesIme::ApplyConfiguration() {
         configuration_revision_ = revision;
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
         buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
+        buffer_->ConfigureAutoSend(config.at("autoSend"), config.at("autoSendSeconds"));
     } catch (const std::exception&) {
         configuration_revision_.clear();
+        buffer_->ConfigureAutoSend(false, 1);
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
     }
 }
