@@ -1,3 +1,4 @@
+#include "session/protected_input.hpp"
 #include "buffer_service.hpp"
 #include "buffer_ids.hpp"
 #include <algorithm>
@@ -42,7 +43,7 @@ void BufferService::SynchronizeResultDelivery() {
 bool BufferService::CanDeliverDerived() {
     auto* target = LiveTarget();
     if (!target || !model_.visible() || !model_.capture_enabled() || model_.secure() || model_.password_field() ||
-        target->capabilityFlags().test(CapabilityFlag::Password) || !model_.preedit().empty() || delivery_conflict_) return false;
+        ProtectedInput(target->capabilityFlags()) || !model_.preedit().empty() || delivery_conflict_) return false;
     try {
         if (TranslationActive()) {
             const auto lease = *translation_lease_;

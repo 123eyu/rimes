@@ -23,6 +23,7 @@
 #include "configuration.hpp"
 #include "local_translation.hpp"
 #include "ai_api.hpp"
+#include "session/session_monitor.hpp"
 
 namespace fcitx {
 
@@ -82,6 +83,8 @@ private:
     std::unique_ptr<CapsuleService> capsule_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> destroy_watch_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;
+    std::unique_ptr<HandlerTableEntry<EventHandler>> focus_watch_;
+    std::unique_ptr<SessionMonitor> session_monitor_;
     bool deploy_announced_ = false;
     rimes::plugins::Registry plugins_;
     std::unique_ptr<rimes::plugins::PackageStore> plugin_store_;

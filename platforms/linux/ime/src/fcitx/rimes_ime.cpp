@@ -1,3 +1,4 @@
+#include "session/protected_input.hpp"
 #include "rimes_ime.hpp"
 
 #include <filesystem>
@@ -66,6 +67,7 @@ RimesIme::RimesIme(Instance* instance)
     }
 
     auto post = [this, alive = alive_](std::function<void()> work) {
+        if (!alive->load()) return;
         dispatcher_.schedule([this, alive, work = std::move(work)]() {
             if (alive && alive->load()) {
                 work();
@@ -132,10 +134,11 @@ RimesIme::RimesIme(Instance* instance)
         EventType::InputContextCapabilityChanged, EventWatcherPhase::Default,
         [this](Event& event) {
             auto& cap = static_cast<CapabilityChangedEvent&>(event);
-            const bool password = cap.newFlags().test(CapabilityFlag::Password);
+            const bool password = ProtectedInput(cap.newFlags());
             if (password) {
                 if (auto* state = cap.inputContext()->propertyFor(&factory_)) state->reset();
             }
+            if (!cap.inputContext()->hasFocus()) return;
             if (buffer_) {
                 buffer_->OnPasswordField(cap.inputContext(), password);
             }
@@ -143,6 +146,23 @@ RimesIme::RimesIme(Instance* instance)
                 capsule_->OnPasswordField(cap.inputContext(), password);
             }
         });
+    // Password fields can disable the IM entirely, so engine activate() is
+    // not a reliable notification path (notably Firefox on Linux).
+    focus_watch_ = instance_->watchEvent(EventType::InputContextFocusIn, EventWatcherPhase::Default,
+        [this](Event& event) {
+            auto* ic = static_cast<InputContextEvent&>(event).inputContext();
+            const bool protected_field = ProtectedInput(ic->capabilityFlags());
+            buffer_->OnPasswordField(ic, protected_field);
+            capsule_->OnPasswordField(ic, protected_field);
+        });
+    session_monitor_ = std::make_unique<SessionMonitor>(instance_->eventLoop(), [this](bool protected_session) {
+        buffer_->OnSessionProtection(protected_session);
+        capsule_->OnSessionProtection(protected_session);
+        if (protected_session) instance_->inputContextManager().foreach([this](InputContext* ic) {
+            if (auto* state = ic->propertyFor(&factory_)) state->reset();
+            return true;
+        });
+    });
 }
 
 void RimesIme::reloadConfig() {
@@ -162,6 +182,7 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    session_monitor_.reset();
     configuration_watch_.reset();
     if (configuration_watch_fd_ >= 0) close(configuration_watch_fd_);
     plugin_watch_.reset();
@@ -171,8 +192,15 @@ RimesIme::~RimesIme() {
     if (alive_) {
         alive_->store(false);
     }
+    // Workers may already have passed the alive check. Join while the event
+    // dispatcher and service callbacks still exist, before detaching it.
+    translation_worker_.Shutdown();
+    ai_worker_.Shutdown();
     engine_.SetDeployReadyCallback(nullptr);
     engine_.Stop();
+    // Socket readers also post to this dispatcher; join them before detach.
+    buffer_.reset();
+    capsule_.reset();
     dispatcher_.detach();
 }
 
@@ -302,6 +330,8 @@ void RimesIme::OnDeployReady() {
 
 void RimesIme::keyEvent(const InputMethodEntry& entry, KeyEvent& keyEvent) {
     FCITX_UNUSED(entry);
+    if ((session_monitor_ && session_monitor_->protectedSession()) ||
+        ProtectedInput(keyEvent.inputContext()->capabilityFlags())) return;
     auto* state = keyEvent.inputContext()->propertyFor(&factory_);
     if (state == nullptr) {
         return;
@@ -317,6 +347,12 @@ void RimesIme::keyEvent(const InputMethodEntry& entry, KeyEvent& keyEvent) {
 
 void RimesIme::activate(const InputMethodEntry& entry, InputContextEvent& event) {
     FCITX_UNUSED(entry);
+    if ((session_monitor_ && session_monitor_->protectedSession()) ||
+        ProtectedInput(event.inputContext()->capabilityFlags())) {
+        buffer_->OnPasswordField(event.inputContext(), ProtectedInput(event.inputContext()->capabilityFlags()));
+        capsule_->OnPasswordField(event.inputContext(), ProtectedInput(event.inputContext()->capabilityFlags()));
+        return;
+    }
     auto* state = event.inputContext()->propertyFor(&factory_);
     if (state != nullptr) {
         state->activate();
@@ -369,7 +405,8 @@ std::string RimesIme::subMode(const InputMethodEntry& entry, InputContext& input
 
 void RimesIme::commitText(InputContext* ic, std::string_view text) {
     static_cast<void>(rimes::linuxime::kCommitHookNote);
-    if (ic == nullptr || text.empty()) {
+    if (ic == nullptr || text.empty() || !ic->hasFocus() || ProtectedInput(ic->capabilityFlags()) ||
+        (session_monitor_ && session_monitor_->protectedSession())) {
         return;
     }
     if (buffer_ && buffer_->OnCommit(ic, text)) {

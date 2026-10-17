@@ -18,7 +18,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 06 | P0 | [#156 实时增量翻译与连续输入](https://github.com/scholay/xsime/issues/156) | 增量翻译与宿主验证通过，验收中 |
 | 07 | P0 | [#157 派生结果投递、源消费与自动发送](https://github.com/scholay/xsime/issues/157) | 原生投递与计时测试通过，视觉待验收 |
 | 08 | P0 | [#158 AI API 插件与流式请求](https://github.com/scholay/xsime/issues/158) | HTTP 与 Fcitx 测试通过，外部渠道及视觉待验收 |
-| 09 | P0 | [#159 保护态、锁屏睡眠与会话生命周期](https://github.com/scholay/xsime/issues/159) | 待开发 |
+| 09 | P0 | [#159 保护态、锁屏睡眠与会话生命周期](https://github.com/scholay/xsime/issues/159) | D-Bus 与 Fcitx 保护测试通过，桌面及视觉待验收 |
 | 10 | P0 | [#160 全局快捷键与跨输入法唤起](https://github.com/scholay/xsime/issues/160) | 待开发 |
 | 11 | P0 | [#161 桌面窗口、主题与多屏交互](https://github.com/scholay/xsime/issues/161) | 待开发 |
 | 12 | P1 | [#162 Capsule 五模块宿主、管理页和底栏](https://github.com/scholay/xsime/issues/162) | 待开发 |

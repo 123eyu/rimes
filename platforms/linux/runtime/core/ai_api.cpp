@@ -154,7 +154,8 @@ void RunAIRequest(std::string text, RequestConfiguration configuration, std::ato
     }
     receive({"", true, error, {}});
 }
-AIWorker::~AIWorker() { CancelAll(); for (auto& job : jobs_) if (job.thread.joinable()) job.thread.join(); }
+AIWorker::~AIWorker() { Shutdown(); }
+void AIWorker::Shutdown() { CancelAll(); for (auto& job : jobs_) if (job.thread.joinable()) job.thread.join(); jobs_.clear(); }
 void AIWorker::CancelAll() { for (auto& job : jobs_) job.cancelled->store(true); }
 void AIWorker::Run(std::string text, RequestConfiguration configuration,
     std::shared_ptr<std::atomic<bool>> cancelled, AIReceive receive) {

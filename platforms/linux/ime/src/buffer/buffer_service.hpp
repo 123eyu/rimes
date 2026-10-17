@@ -58,6 +58,7 @@ public:
     void OnDeactivate(InputContext* ic, bool switching_im);
     void OnInputContextDestroyed(InputContext* ic);
     void OnPasswordField(InputContext* ic, bool password);
+    void OnSessionProtection(bool protected_session);
 
     void Toggle(InputContext* ic);
     void ShowAndCapture(InputContext* ic);
@@ -84,6 +85,8 @@ public:
     bool TranslationTick(bool force = false);
 
 private:
+    bool restore_after_session_ = false;
+    bool focus_suspended_ = false;
     struct Client {
         int fd = -1;
         std::string incoming;

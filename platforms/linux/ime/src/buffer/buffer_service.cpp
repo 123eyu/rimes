@@ -1,3 +1,4 @@
+#include "session/protected_input.hpp"
 #include "native_buffer_metrics.hpp"
 #include "buffer_service.hpp"
 #include "buffer_application.hpp"
@@ -274,7 +275,7 @@ bool BufferService::OnCommit(InputContext* ic, std::string_view text) {
     if (ic == nullptr || text.empty()) {
         return false;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password) || model_.secure() ||
+    if (ProtectedInput(ic->capabilityFlags()) || model_.secure() ||
         model_.password_field()) {
         return false;
     }
@@ -321,7 +322,7 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
         return true;
     }
 
-    const bool password = ic->capabilityFlags().test(CapabilityFlag::Password);
+    const bool password = ProtectedInput(ic->capabilityFlags());
     OnPasswordField(ic, password);
     if (password || model_.secure()) {
         return false;
@@ -528,7 +529,7 @@ void BufferService::SynchronizeDerived() {
     catch (const std::exception&) { grant = false; }
     derived_.Synchronize(model_.blocks(), plugins_ ? plugins_->SelectedBuffer() : "",
         configuration_revision_, {model_.capture_token(), focus_epoch_},
-        model_.visible() && model_.processing_active(), model_.secure() || model_.password_field());
+        model_.visible() && model_.processing_active() && !focus_suspended_, model_.secure() || model_.password_field());
     if (Translating()) {
         SynchronizeTranslation();
         synchronizing_derived_ = false;
@@ -610,6 +611,9 @@ void BufferService::OnActivate(InputContext* ic) {
     if (ic == nullptr) {
         return;
     }
+    OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
+    if (model_.secure() || model_.password_field()) return;
+    focus_suspended_ = false;
     const auto token = TokenFor(ic);
     FCITX_LOGC(rimes_buffer_log, Info)
         << "activate token=" << token << " capturing=" << model_.capture_enabled()
@@ -627,7 +631,7 @@ void BufferService::OnActivate(InputContext* ic) {
         if (dragging_) {
             ConsumeDragBlip();
             RefreshCaret(ic);
-            OnPasswordField(ic, ic->capabilityFlags().test(CapabilityFlag::Password));
+            OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
             Publish();
             return;
         }
@@ -652,8 +656,8 @@ void BufferService::OnActivate(InputContext* ic) {
         }
         last_external_program_ = program;
     }
-    OnPasswordField(ic, ic->capabilityFlags().test(CapabilityFlag::Password));
-    if (auto_capture_ && !ic->capabilityFlags().test(CapabilityFlag::Password)) {
+    OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
+    if (auto_capture_ && !ProtectedInput(ic->capabilityFlags())) {
         ShowAndCapture(ic);
     }
     Publish();
@@ -663,6 +667,11 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     FCITX_LOGC(rimes_buffer_log, Info)
         << "deactivate switch_im=" << switching_im << " capturing=" << model_.capture_enabled()
         << " drag=" << dragging_;
+    if (switching_im && ic && ProtectedInput(ic->capabilityFlags())) {
+        OnPasswordField(ic, true);
+        ClearClientPreedit(ic);
+        return;
+    }
     if (switching_im && model_.captures(TokenFor(ic))) {
         CloseAndPause();
         return;
@@ -671,13 +680,16 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     if (!model_.captures(TokenFor(ic))) {
         return;
     }
+    focus_suspended_ = true;
+    ++focus_epoch_;
+    CancelDerived();
+    gesture_.cancel(); CancelHoldTimer();
     if (dragging_) {
+        Publish();
         return;
     }
     // Do not drop capture yet. A toolbar drag or a brief WM grab will
     // activate this same IC again; a real field switch activates another.
-    ++focus_epoch_;
-    CancelDerived();
     pending_unfocus_token_ = TokenFor(ic);
     ArmFocusGraceTimer();
     Publish();
@@ -705,8 +717,18 @@ void BufferService::OnInputContextDestroyed(InputContext* ic) {
 }
 
 void BufferService::OnPasswordField(InputContext* ic, bool password) {
-    (void)ic;
+    // Capability events from background ICs must not shield or unshield the
+    // active workspace. null is used by the host's isolated policy tests.
+    if (ic && !ic->hasFocus()) return;
     if (password) {
+        if (!model_.password_field()) {
+            ++focus_epoch_;
+            CancelDerived(); translation_.Clear();
+            gesture_.cancel(); CancelHoldTimer(); CancelFocusGraceTimer();
+            dragging_ = false; CancelDragHardTimer(); pending_unfocus_token_.clear();
+            raw_input_.clear(); model_.set_preedit({});
+            target_token_.clear(); model_.set_target_name({});
+        }
         model_.set_password_field(true);
         if (model_.capture_enabled()) {
             model_.route_direct_preserving_content("password");
@@ -718,6 +740,29 @@ void BufferService::OnPasswordField(InputContext* ic, bool password) {
         model_.set_password_field(false);
         Publish();
     }
+}
+
+void BufferService::OnSessionProtection(bool protected_session) {
+    if (model_.secure() == protected_session) return;
+    if (protected_session) {
+        restore_after_session_ = model_.visible();
+        model_.set_secure(true);
+        ++focus_epoch_;
+        CancelDerived(); translation_.Clear();
+        gesture_.cancel(); CancelHoldTimer(); CancelFocusGraceTimer(); CancelDragHardTimer();
+        dragging_ = false; pending_unfocus_token_.clear(); raw_input_.clear();
+        target_token_.clear(); model_.set_target_name({});
+        auto_send_clock_.Reset(); focus_suspended_ = true;
+        // Keep source blocks and geometry, but retire all target association,
+        // preedit, results and automatic processing without calling an old IC.
+        model_.pause_capture_preserving_content();
+    } else {
+        model_.set_secure(false);
+        if (restore_after_session_) model_.set_visible(true);
+        restore_after_session_ = false;
+        // Showing chrome is not permission to reuse a previous input target.
+    }
+    Publish();
 }
 
 void BufferService::Toggle(InputContext* ic) {
@@ -733,23 +778,27 @@ void BufferService::Toggle(InputContext* ic) {
 }
 
 void BufferService::ShowAndCapture(InputContext* ic) {
-    if (ic == nullptr) {
+    if (model_.secure() || model_.password_field()) return;
+    if (ic == nullptr && instance_) {
+        focus_suspended_ = false;
         instance_->inputContextManager().foreachFocused([&](InputContext* focused) {
             ic = focused;
             return false;
         });
     }
     if (ic == nullptr) {
+        focus_suspended_ = false;
         model_.set_visible(true);
         model_.resume_workbench_processing();
         EnsureUi();
         Publish();
         return;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password)) {
+    if (ProtectedInput(ic->capabilityFlags())) {
         return;
     }
     RefreshCaret(ic);
+    focus_suspended_ = false;
     ++focus_epoch_;
     model_.activate_capture(TokenFor(ic));
     model_.set_visible(true);
@@ -760,6 +809,7 @@ void BufferService::ShowAndCapture(InputContext* ic) {
 }
 
 void BufferService::CloseAndPause() {
+    restore_after_session_ = false;
     ++focus_epoch_;
     CancelDerived();
     gesture_.cancel();
@@ -867,7 +917,7 @@ bool BufferService::Deliver(bool all) {
         FCITX_LOGC(rimes_buffer_log, Info) << "delivery rejected: no live target";
         return false;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password) || model_.secure() ||
+    if (ProtectedInput(ic->capabilityFlags()) || model_.secure() ||
         model_.password_field()) {
         return false;
     }
@@ -898,6 +948,10 @@ bool BufferService::Deliver(bool all) {
 }
 
 void BufferService::HandleCommand(const rimes::buffer::Command& command) {
+    if ((model_.secure() || model_.password_field()) && command.op != rimes::buffer::CommandOp::Hello &&
+        command.op != rimes::buffer::CommandOp::Query && command.op != rimes::buffer::CommandOp::Close) {
+        Publish(); return;
+    }
     InputContext* ic = LiveTarget();
     if (ic == nullptr) {
         instance_->inputContextManager().foreachFocused([&](InputContext* focused) {

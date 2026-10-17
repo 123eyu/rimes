@@ -175,9 +175,10 @@
         "焦点、输入源和 IC 退役立即撤销授权；恢复后不能复用旧任务/旧输入框。",
         "覆盖 Firefox 禁用 IM 的密码框、同 IC 换框、进程退出和锁屏恢复，记录平台可检测边界。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 159,
-      "url": "https://github.com/scholay/xsime/issues/159"
+      "url": "https://github.com/scholay/xsime/issues/159",
+      "visual_status": "pending"
     },
     {
       "order": 10,

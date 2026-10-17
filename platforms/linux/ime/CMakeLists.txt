@@ -114,6 +114,7 @@ if(RIMES_BUILD_FCITX5)
         src/fcitx/rimes_candidate.cpp
         src/fcitx/rimes_ime.cpp
         src/fcitx/rimes_state.cpp
+        src/session/session_monitor.cpp
         src/buffer/buffer_service.cpp
         src/buffer/buffer_translation.cpp
         src/buffer/buffer_delivery.cpp
@@ -400,6 +401,14 @@ if(RIMES_BUILD_TESTS)
         target_link_libraries(rimes-buffer-translation-host-tests PRIVATE Fcitx5::Core RimesBufferCore Threads::Threads)
         rimes_harden(rimes-buffer-translation-host-tests)
         add_test(NAME buffer-translation-host COMMAND rimes-buffer-translation-host-tests)
+
+        add_executable(rimes-session-monitor-tests tests/session_monitor_tests.cpp src/session/session_monitor.cpp)
+        target_include_directories(rimes-session-monitor-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+        target_link_libraries(rimes-session-monitor-tests PRIVATE Fcitx5::Core)
+        rimes_harden(rimes-session-monitor-tests)
+        find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
+        add_test(NAME session-protection-dbus COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:rimes-session-monitor-tests>)
+        set_tests_properties(session-protection-dbus PROPERTIES ENVIRONMENT "RIMES_PRIVATE_SESSION_TEST=1")
 
         add_executable(rimes-buffer-fcitx-e2e tests/buffer_fcitx_e2e.cpp)
         target_link_libraries(rimes-buffer-fcitx-e2e PRIVATE

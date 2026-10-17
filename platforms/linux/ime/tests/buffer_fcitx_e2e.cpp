@@ -17,6 +17,7 @@
 #include "buffer_protocol.hpp"
 #include "configuration.hpp"
 #include "official_catalog.hpp"
+#include "session_fixture.hpp"
 
 #include <fcitx-utils/capabilityflags.h>
 #include <fcitx-utils/event.h>
@@ -88,6 +89,11 @@ std::string IsolateDirs() {
     setenv("RIMES_BUFFER_AUTO_CAPTURE", "0", 1);
     setenv("RIMES_BUFFER_CLOSE_AFTER_LAST", "1", 1);
     setenv("RIMES_BUFFER_FOCUS_GRACE_MS", "200", 1);
+    if (std::getenv("RIMES_TEST_SESSION_PROTECTION")) {
+        setenv("RIMES_CAPSULE_HEADLESS", "1", 1);
+        setenv("RIMES_CAPSULE_SOCKET", (root / "capsule.sock").c_str(), 1);
+        setenv("RIMES_CAPSULE_DUMP", (root / "capsule.json").c_str(), 1);
+    }
     if (const auto* endpoint = std::getenv("RIMES_TEST_AI_API")) {
         rimes::runtime::ConfigurationStore config(root / "user/configuration");
         auto settings = config.Load();
@@ -624,6 +630,84 @@ void RunBufferSuite(fcitx::Instance& instance,
 
 }  // namespace
 
+void RunProtectionSuite(SuiteCtx ctx, SessionFixture* session) {
+    ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit);
+    EnsureCapturing(ctx.frontend, ctx.uuid, ctx.dump_path);
+    SendBufferOp("paste", "保留原文");
+    auto phase = std::make_shared<int>(0);
+    const auto started = fcitx::now(CLOCK_MONOTONIC);
+    ctx.timers->emplace_back(ctx.instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, started + 100000, 0,
+        [ctx, session, phase, started](fcitx::EventSourceTime* timer, std::uint64_t) {
+            try {
+                rimes::buffer::Snapshot s;
+                if (!rimes::buffer::ParseSnapshot(ReadDump(ctx.dump_path), &s)) Die("protection snapshot malformed");
+                if (fcitx::now(CLOCK_MONOTONIC) - started > 8000000) Die("protection suite deadline");
+                switch (*phase) {
+                    case 0:
+                        if (s.staged_text != "保留原文") break;
+                        ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Sensitive); ++*phase; break;
+                    case 1: {
+                        if (!s.secure || s.capturing || !s.staged_text.empty()) Die("Sensitive field was not shielded");
+                        const auto background = ctx.frontend->call<fcitx::ITestFrontend::createInputContext>("background-field");
+                        auto* ic = ctx.instance->inputContextManager().findByUUID(background);
+                        // createInputContext may focus its IC; restore the protected one
+                        // before emitting unrelated background capability changes.
+                        ctx.ic->focusIn(); ic->focusOut();
+                        ic->setCapabilityFlags(fcitx::CapabilityFlag::Password);
+                        ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit);
+                        SendBufferOp("paste", "must-reject"); SendBufferOp("show"); ++*phase; break;
+                    }
+                    case 2:
+                        if (!s.secure || s.capturing) Die("background capability or command removed protection");
+                        ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit); ++*phase; break;
+                    case 3:
+                        if (s.secure || s.staged_text != "保留原文" || s.capturing) Die("field recovery lost source/reused target");
+                        SendBufferOp("show"); ++*phase; break;
+                    case 4:
+                        if (!s.capturing) break;
+                        Type(ctx.frontend, ctx.uuid, "nihao"); session->Sleep(true); ++*phase; break;
+                    case 5:
+                        if (!s.secure || s.visible || s.capturing || !s.preedit.empty() || !s.staged_text.empty()) Die("sleep exposed state");
+                        SendBufferOp("paste", "must-reject"); SendBufferOp("show"); SendBufferOp("send_all");
+                        session->Property("LockedHint", true); session->Sleep(false); ++*phase; break;
+                    case 6:
+                        if (!s.secure || s.visible) Die("wake cleared lock");
+                        session->Property("Active", false); session->Property("LockedHint", false); ++*phase; break;
+                    case 7:
+                        if (!s.secure || s.visible) Die("unlock cleared inactive session");
+                        session->Property("Active", true); ++*phase; break;
+                    case 8:
+                        if (s.secure) break;
+                        if (!s.visible || s.capturing || s.staged_text != "保留原文" || !s.preedit.empty()) Die("resume reused old target/preedit or modified source");
+                        SendBufferOp("send_all"); ++*phase; break;
+                    case 9:
+                        if (s.staged_text != "保留原文") Die("resume delivered without fresh capture");
+                        SendBufferOp("show"); ++*phase; break;
+                    case 10:
+                        if (!s.capturing) break;
+                        ctx.frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("保留原文");
+                        SendBufferOp("send_all"); ++*phase; break;
+                    case 11: {
+                        if (!s.staged_text.empty()) break;
+                        const auto password = ctx.frontend->call<fcitx::ITestFrontend::createInputContext>("firefox-disabled-password");
+                        auto* ic = ctx.instance->inputContextManager().findByUUID(password);
+                        ic->focusOut(); ic->setCapabilityFlags(fcitx::CapabilityFlag::Password);
+                        ctx.ic->focusOut(); ic->focusIn(); ++*phase; break;
+                    }
+                    case 12:
+                        if (!s.secure) Die("password focus without engine activation was missed");
+                        ctx.ic->focusIn(); ++*phase; break;
+                    case 13:
+                        if (s.secure) Die("fresh non-sensitive focus did not recover");
+                        std::cout << "ok: production Fcitx sensitive/password focus, background events, sleep/lock/inactive overlap, IPC gates, source preservation and fresh-target delivery\n";
+                        ctx.instance->exit(); return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 100000); timer->setOneShot();
+            } catch (const std::exception& error) { std::cerr << error.what() << '\n'; g_exit_status = EXIT_FAILURE; ctx.instance->exit(); }
+            return true;
+        }));
+}
+
 void RunAISuite(SuiteCtx ctx) {
     ctx.ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit});
     EnsureCapturing(ctx.frontend, ctx.uuid, ctx.dump_path);
@@ -795,7 +879,7 @@ int main(int argc, char** argv) {
         struct FixtureCleanup {
             std::filesystem::path root;
             ~FixtureCleanup() { if (!root.empty()) { std::error_code error; std::filesystem::remove_all(root, error); } }
-        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") || std::getenv("RIMES_TEST_AI_API") ?
+        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") || std::getenv("RIMES_TEST_AI_API") || std::getenv("RIMES_TEST_SESSION_PROTECTION") ?
                   std::filesystem::path(dump_path).parent_path() : std::filesystem::path{}};
         fcitx::setupTestingEnvironment(argv[1], {argv[2]}, {argv[3]});
 
@@ -804,6 +888,8 @@ int main(int argc, char** argv) {
         char arg2[] = "--enable=testfrontend,testui,rimes";
         char* args[] = {arg0, arg1, arg2};
         fcitx::Instance instance(3, args);
+        std::unique_ptr<SessionFixture> session_fixture;
+        if (std::getenv("RIMES_TEST_SESSION_PROTECTION")) session_fixture = std::make_unique<SessionFixture>(instance.eventLoop());
         instance.addonManager().registerDefaultLoader(nullptr);
 
         fcitx::EventDispatcher dispatcher;
@@ -869,7 +955,9 @@ int main(int argc, char** argv) {
                     suite_started = true;
                     std::cout << "ok: buffer testfrontend left Deploying\n";
                     try {
-                        if (std::getenv("RIMES_TEST_AI_API"))
+                        if (session_fixture)
+                            RunProtectionSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer}, session_fixture.get());
+                        else if (std::getenv("RIMES_TEST_AI_API"))
                             RunAISuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});
                         else if (std::getenv("RIMES_TEST_AUTO_SEND"))
                             RunAutoSendSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});

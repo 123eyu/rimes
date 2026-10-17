@@ -3,9 +3,11 @@
 #include "process.hpp"
 #include "translation_command.hpp"
 namespace rimes::runtime {
-LocalTranslationWorker::~LocalTranslationWorker() {
+LocalTranslationWorker::~LocalTranslationWorker() { Shutdown(); }
+void LocalTranslationWorker::Shutdown() {
     CancelAll();
     for (auto& job : jobs_) if (job.thread.joinable()) job.thread.join();
+    jobs_.clear();
 }
 void LocalTranslationWorker::CancelAll() { for (auto& job : jobs_) job.cancelled->store(true); }
 void LocalTranslationWorker::Run(std::string text, std::string source, std::string target,

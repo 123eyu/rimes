@@ -12,7 +12,7 @@ bool BufferService::Translating() const {
 }
 bool BufferService::TranslationActive() const {
     return Translating() && translation_lease_ && translation_configuration_ && !translation_scope_.empty() &&
-        model_.visible() && model_.processing_active() && !model_.secure() && !model_.password_field();
+        model_.visible() && model_.processing_active() && !focus_suspended_ && !model_.secure() && !model_.password_field();
 }
 void BufferService::CancelTranslation(bool clear) {
     if (translation_cancel_) translation_cancel_->store(true);
@@ -28,7 +28,7 @@ void BufferService::CancelTranslation(bool clear) {
     }
 }
 void BufferService::SynchronizeTranslation() {
-    if (!Translating() || !model_.visible() || !model_.processing_active() || model_.secure() || model_.password_field()) { CancelTranslation(true); return; }
+    if (!Translating() || !model_.visible() || !model_.processing_active() || focus_suspended_ || model_.secure() || model_.password_field()) { CancelTranslation(true); return; }
     try {
         auto lease = plugins_->Authorize(kTranslation, "translation.generate");
         if (!lease || !validate_ || !validate_(*lease) || !freeze_) { CancelTranslation(true); return; }
@@ -64,11 +64,16 @@ void BufferService::SynchronizeTranslation() {
 }
 bool BufferService::TranslationTick(bool force) {
     SynchronizeDerived();
-    if (!Translating() || !translation_configuration_ || !translation_lease_) return false;
+    if (!TranslationActive() || !translation_configuration_ || !translation_lease_) return false;
+    // A scheduled debounce and an explicit Generate can meet in one event-loop
+    // turn. Never replace the sole cancellation handle of an in-flight unit.
+    if (translation_.Running()) return false;
     if (force) { translation_.Retry(); translation_explicit_ = true; }
     if (!force && !translation_explicit_ && !translation_configuration_->plugin.value("continuous", true)) return false;
     const auto unit = translation_.Begin(MonotonicMs(), force);
     if (!unit) { Publish(); return false; }
+    translation_timer_.reset();
+    if (translation_cancel_) translation_cancel_->store(true);
     translation_unit_ = unit->id; translation_ticket_ = unit->ticket;
     translation_cancel_ = std::make_shared<std::atomic<bool>>(false);
     const auto config = *translation_configuration_;
@@ -97,7 +102,7 @@ bool BufferService::TranslationTick(bool force) {
     };
     try { derived_adapters_.at(kTranslation).run(std::move(request), config, translation_cancel_, std::move(receive)); }
     catch (const std::exception&) {
-        translation_.Finish(unit->id, unit->ticket, "", false, "en");
+        translation_.Finish(unit->id, unit->ticket, "", false, config.plugin.value("targetLanguage", std::string("en")));
         if (translation_cancel_) translation_cancel_->store(true);
         translation_cancel_.reset(); translation_unit_.clear(); translation_ticket_.clear();
     }

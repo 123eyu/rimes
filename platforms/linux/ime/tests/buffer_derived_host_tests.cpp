@@ -83,7 +83,22 @@ int main() {
             late({0, "partial", false, true}); drain();
             late({0, "\xED\xA0\x80", true, true}); drain();
             Check(host.derived().Phase() == DerivedPhase::Failed, "malformed output published partial success");
-            prepare(); // callback after host destruction must be harmless
+            prepare();
+            const auto before_lock = late;
+            host.OnSessionProtection(true);
+            Check(cancelled->load() && host.model().secure() && !host.model().visible(), "lock did not cancel/hide");
+            Check(!host.model().staged_text().empty(), "lock erased source");
+            host.OnPasswordField(nullptr, false);
+            Check(host.model().secure(), "field update overrode session protection");
+            before_lock({0, "late under lock", true, true}); drain();
+            Check(host.derived().Results().empty(), "lock accepted late output");
+            host.OnSessionProtection(false);
+            Check(host.model().visible() && !host.model().capture_enabled() && !host.Generate(), "unlock reused processing/target");
+            before_lock({0, "late after unlock", true, true}); drain();
+            Check(host.derived().Results().empty(), "unlock accepted pre-lock output");
+            host.ShowAndCapture(nullptr);
+            Check(host.Generate(), "explicit fresh detached request was unavailable");
+            // callback after host destruction must be harmless
         }
         late({0, "after shutdown", true, true}); drain();
         std::cout << "Derived host: frozen configuration/source, alternatives, revocation, failures and shutdown passed\n";

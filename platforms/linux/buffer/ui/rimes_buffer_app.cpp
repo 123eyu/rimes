@@ -212,7 +212,8 @@ void Paste(App* app) {
     if (app->snapshot.secure || !app->snapshot.visible) return;
     auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
     auto* text = gtk_clipboard_wait_for_text(clipboard);
-    if (text && *text) SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "paste"}, {"text", text}}.dump());
+    if (text && *text && !app->snapshot.secure && app->snapshot.visible)
+        SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "paste"}, {"text", text}}.dump());
     g_free(text);
 }
 
