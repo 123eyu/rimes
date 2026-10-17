@@ -254,6 +254,30 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
     ExpectContains(snapshot, "\"last_copied\":\"RIMES\"", "second Ctrl+C must copy again");
     std::cout << "ok: Ctrl+C is edge-triggered and can copy the same card twice\n";
 
+    auto* engine = instance.inputMethodEngine(ic);
+    if (!engine || !engine->getConfig()) Die("missing plugin host configuration");
+    fcitx::RawConfig original;
+    engine->getConfig()->save(original);
+    fcitx::RawConfig disabled = original;
+    disabled.setValueByPath("CapsuleNotes", "False");
+    engine->setConfig(disabled);
+    snapshot = ReadDump(dump_path);
+    ExpectContains(snapshot, "\"visible\":false", "plugin disable must hide existing rail");
+    ExpectContains(snapshot, "\"armed\":false", "plugin disable must revoke insertion");
+    ExpectContains(snapshot, "\"last_copied\":\"\"", "plugin disable must clear clipboard intent");
+    engine->reloadConfig();
+    SendKey(frontend, uuid, "Control+Shift+V");
+    ExpectContains(ReadDump(dump_path), "\"visible\":false", "disabled plugin reopened after config reload");
+    frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("你好");
+    Type(frontend, uuid, "nihao");
+    SendKey(frontend, uuid, "space");
+    engine->setConfig(original);
+    SendKey(frontend, uuid, "Control+Shift+V");
+    snapshot = ReadDump(dump_path);
+    ExpectContains(snapshot, "\"armed\":true", "re-enabled plugin did not regain explicit capture");
+    ExpectContains(snapshot, "RIMES 默认词条", "disabling plugin deleted its persisted notes");
+    std::cout << "ok: plugin disable revokes the live rail, survives reload, preserves data and ordinary typing\n";
+
     SendKey(frontend, uuid, "Control+Shift+B");
     SendKey(frontend, uuid, "Return");
     snapshot = ReadDump(dump_path);
@@ -274,6 +298,14 @@ int main(int argc, char** argv) {
     try {
         const auto dump_path = IsolateDirs();
         fcitx::setupTestingEnvironment(argv[1], {argv[2]}, {argv[3]});
+        // setupTestingEnvironment deliberately disables config writes. This
+        // suite verifies a real saved plugin preference in its isolated root.
+        const auto config = std::filesystem::path(dump_path).parent_path() / "config";
+        std::filesystem::create_directories(config / "conf");
+        unsetenv("SKIP_FCITX_USER_PATH");
+        setenv("FCITX_CONFIG_HOME", config.c_str(), 1);
+        setenv("FCITX_DATA_HOME", (config / "data").c_str(), 1);
+        setenv("XDG_CACHE_HOME", (config / "cache").c_str(), 1);
 
         char arg0[] = "rimes-capsule-fcitx-e2e";
         char arg1[] = "--disable=all";

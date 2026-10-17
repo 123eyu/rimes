@@ -18,11 +18,13 @@
 #include "buffer/buffer_service.hpp"
 #include "capsule/capsule_service.hpp"
 #include "engine/rime_engine.hpp"
+#include "plugin_registry.hpp"
 
 namespace fcitx {
 
 FCITX_CONFIGURATION(RimesConfiguration,
     Option<bool> verticalCandidates{this, "VerticalCandidates", "竖向排列候选", true};
+    Option<bool> capsuleNotes{this, "CapsuleNotes", "启用 Capsule 笔记", true};
     ExternalOption schemes{this, "Schemes", "导入与管理输入方案", "rimes-schemes"};)
 class RimesState;
 
@@ -48,6 +50,7 @@ public:
     FactoryFor<RimesState>& factory() { return factory_; }
     BufferService& buffer() { return *buffer_; }
     CapsuleService& capsule() { return *capsule_; }
+    rimes::plugins::Registry& plugins() { return plugins_; }
 
     // Single commit path. Buffer intercepts here the way macOS intercepts
     // before Delivery.insert (see rime_hooks.hpp).
@@ -71,6 +74,7 @@ private:
     std::unique_ptr<HandlerTableEntry<EventHandler>> destroy_watch_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;
     bool deploy_announced_ = false;
+    rimes::plugins::Registry plugins_;
 };
 
 class RimesImeFactory : public AddonFactory {

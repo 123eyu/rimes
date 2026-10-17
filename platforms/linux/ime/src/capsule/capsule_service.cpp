@@ -230,7 +230,7 @@ void CapsuleService::Toggle(InputContext* ic) {
 }
 
 void CapsuleService::Show(InputContext* ic) {
-    if (ic == nullptr) {
+    if (!enabled_ || ic == nullptr) {
         return;
     }
     const bool password = ic->capabilityFlags().test(CapabilityFlag::Password);
@@ -255,7 +255,14 @@ void CapsuleService::Close() {
     Publish();
 }
 
+void CapsuleService::SetEnabled(bool enabled) {
+    if (enabled_ == enabled) return;
+    enabled_ = enabled;
+    if (!enabled_) Close();
+}
+
 bool CapsuleService::DeliverNote(const rimes::capsule::Card& card) {
+    if (!enabled_) return false;
     InputContext* ic = LiveTarget();
     if (ic == nullptr || card.payload.empty() || card.kind != rimes::capsule::Kind::Note) {
         return false;
@@ -271,6 +278,7 @@ bool CapsuleService::DeliverNote(const rimes::capsule::Card& card) {
 }
 
 bool CapsuleService::Activate() {
+    if (!enabled_) return false;
     const auto* card = model_.Selected();
     if (card == nullptr) {
         return false;
@@ -291,6 +299,7 @@ bool CapsuleService::Activate() {
 }
 
 bool CapsuleService::CopySelected() {
+    if (!enabled_) return false;
     const auto* card = model_.Selected();
     if (card == nullptr || card->kind != rimes::capsule::Kind::Note) {
         return false;
@@ -306,6 +315,7 @@ bool CapsuleService::CopySelected() {
 }
 
 bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
+    if (!enabled_) return false;
     InputContext* ic = event.inputContext();
     if (ic == nullptr) {
         return false;

@@ -1,5 +1,7 @@
 # Windows 与 Android 开发路线
 
+> **2026-10-17 Linux 范围更新**：维护者已授权 Linux 完整版对齐 macOS 的内置扩展、Buffer、Capsule、Mailbox 及核心插件。按 [30 项执行计划](platforms/linux/PARITY.md) 与 [GitHub 里程碑](https://github.com/scholay/xsime/milestone/1) 逐项实现和验收。以下“Linux 仅维护、不扩展 AI/翻译”等为历史阶段边界，由本条取代。Linux 保持 Fcitx5 原生投递和独立桌面验收，不复刻 Apple 专属 API。
+
 2026-09-29 起：**Windows 对标 macOS，Android 对标 iOS；Linux 收敛到维护。**
 沿用单一 `main` 集成、短开发分支、各平台独立构建与发布。行为与数据格式对齐，宿主接口按各
 平台实现；不把 Apple 专属 API、权限或桌面能力直接当作 Android/Windows 可用能力。
