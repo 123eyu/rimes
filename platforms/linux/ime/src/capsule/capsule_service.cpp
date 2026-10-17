@@ -806,7 +806,7 @@ void CapsuleService::StopSocket() {
     running_.store(false);
     if (wake_fd_ >= 0) {
         const std::uint64_t wake = 1;
-        (void)write(wake_fd_, &wake, sizeof(wake));
+        while (write(wake_fd_, &wake, sizeof(wake)) < 0 && errno == EINTR) {}
     }
     if (listen_fd_ >= 0) {
         shutdown(listen_fd_, SHUT_RDWR);
@@ -886,7 +886,7 @@ void CapsuleService::SocketLoop() {
         for (const auto& item : fds)
             if (item.fd == wake_fd_ && (item.revents & POLLIN)) {
                 std::uint64_t count;
-                (void)read(wake_fd_, &count, sizeof(count));
+                while (read(wake_fd_, &count, sizeof(count)) < 0 && errno == EINTR) {}
             }
         for (const auto& item : fds)
             if (item.fd == watch_fd_ && (item.revents & POLLIN))
@@ -1084,7 +1084,7 @@ void CapsuleService::WriteAll(const std::string& payload, bool revoke) {
     }
     if (wake_fd_ >= 0) {
         const std::uint64_t wake = 1;
-        (void)write(wake_fd_, &wake, sizeof(wake));
+        while (write(wake_fd_, &wake, sizeof(wake)) < 0 && errno == EINTR) {}
     }
 }
 
