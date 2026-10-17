@@ -37,6 +37,7 @@ Snapshot MakeSnapshot(const CapsuleModel& model) {
 }
 std::string EncodeSnapshot(const Snapshot& value) {
     auto s = value;
+    s.password_field = s.password_field || s.session_protected;
     if (s.password_field) {
         s.visible = false; s.armed = false; s.query.clear(); s.last_copied.clear(); s.cards.clear();
         s.selected_id.clear(); s.selected_title.clear(); s.selected_preview.clear(); s.count = 0; s.selected = 0; s.offset = 0;
@@ -61,6 +62,7 @@ std::string EncodeSnapshot(const Snapshot& value) {
         {"selected_id",s.selected_id},{"selected_title",s.selected_title},{"selected_preview",s.selected_preview},
         {"selected",s.selected},{"offset",s.offset},{"count",s.count},{"ui_clients",s.ui_clients},{"module",s.module},{"filter",s.filter},
         {"managing",s.managing},{"loading",s.loading},{"modules",Json::array()},{"cards",Json::array()}};
+    out["session_protected"] = s.session_protected;
     out["clipboard_capture"] = s.clipboard_capture;
     out["restore_id"] = s.restore_id;
     out["restore_revision"] = s.restore_revision;
@@ -102,6 +104,9 @@ bool DecodeSnapshot(std::string_view json, Snapshot* out) {
         Snapshot s;
         s.generation = data.value("generation", std::uint64_t{0}); s.visible = data.at("visible");
         s.armed = data.value("armed",false); s.password_field = data.value("password_field",false);
+        // Old hosts do not distinguish these reasons; keep their fail-closed behavior.
+        s.session_protected = data.value("session_protected", s.password_field);
+        s.password_field = s.password_field || s.session_protected;
         s.theme = data.value("theme", "night");
         if (s.theme != "day" && s.theme != "quiet" && s.theme != "rasta" && s.theme != "liquidGlass") s.theme = "night";
         s.tab = data.value("tab", "note"); s.query = data.value("query", ""); s.hint = data.value("hint", "");

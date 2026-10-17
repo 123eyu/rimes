@@ -1223,6 +1223,7 @@ void CapsuleService::Publish() {
          selected->id != detail_->id || selected->revision != detail_->revision))
         ClearDetail();
     auto snapshot = rimes::capsule::MakeSnapshot(model_);
+    snapshot.session_protected = session_protected_;
     snapshot.clipboard_capture = WantsClipboard();
     snapshot.restore_id = restore_id_;
     snapshot.restore_revision = restore_revision_;

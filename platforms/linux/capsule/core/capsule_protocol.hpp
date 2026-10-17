@@ -50,6 +50,9 @@ struct Snapshot {
     bool visible = false;
     bool armed = false;
     bool password_field = false;
+    // Desktop lock/sleep revokes published secrets. A password input only hides
+    // the workspace; an already accepted clipboard copy must remain pasteable.
+    bool session_protected = false;
     std::string theme = "night";
     std::string module = "notes";
     std::string filter = "all";

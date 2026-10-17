@@ -50,6 +50,16 @@ int main() {
     Expect(rimes::capsule::DecodeSnapshot(protected_json, &decoded) && decoded.cards.empty() &&
            !decoded.visible && !decoded.armed, "protected snapshot still actionable");
 
+    Expect(!decoded.session_protected, "password input was confused with desktop lock");
+    auto locked = rimes::capsule::MakeSnapshot(model);
+    locked.password_field = false;
+    locked.session_protected = true;
+    Expect(rimes::capsule::DecodeSnapshot(rimes::capsule::EncodeSnapshot(locked), &decoded) &&
+               decoded.session_protected && decoded.password_field && !decoded.visible && decoded.cards.empty(),
+           "desktop lock did not sanitize the snapshot");
+    Expect(rimes::capsule::DecodeSnapshot(R"({"visible":true,"password_field":true})", &decoded) &&
+               decoded.session_protected, "legacy protected snapshot must fail closed");
+
     rimes::capsule::Command command;
     std::string error;
     Expect(rimes::capsule::ParseCommand(R"({"v":1,"op":"activate"})", &command, &error),

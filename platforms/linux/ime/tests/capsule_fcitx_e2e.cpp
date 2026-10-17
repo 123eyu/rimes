@@ -822,6 +822,7 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
     snapshot = ReadDump(dump_path);
     ExpectContains(snapshot, "\"visible\":false", "password capability must hide the rail");
     ExpectContains(snapshot, "\"password_field\":true", "password flag missing");
+    ExpectContains(snapshot, "\"session_protected\":false", "password input incorrectly revoked a copied vault secret");
     SendKey(frontend, uuid, "Control+Shift+V");
     snapshot = ReadDump(dump_path);
     ExpectContains(snapshot, "\"visible\":false", "password field must refuse the rail");

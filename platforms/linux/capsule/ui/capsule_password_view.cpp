@@ -497,7 +497,7 @@ struct PasswordView::Impl {
         }
         if (clipboard)
             clipboard->Configure(false,
-                                 snapshot.password_field ||
+                                 snapshot.session_protected ||
                                      std::find(snapshot.modules.begin(), snapshot.modules.end(),
                                                Module::Passwords) == snapshot.modules.end());
         if (Allowed() && !migration_id.empty() && purpose != Purpose::Migrate)

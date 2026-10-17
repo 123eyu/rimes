@@ -233,6 +233,24 @@ int main(int argc, char** argv) {
                       gtk_clipboard_get(GDK_SELECTION_CLIPBOARD),
                       gdk_atom_intern("application/x-rimes-sensitive", FALSE)),
                   "vault clipboard marker missing");
+            stage = "paste into password field";
+            auto protected_field = state;
+            protected_field.password_field = true;
+            protected_field.visible = false;
+            Check(DecodeSnapshot(EncodeSnapshot(protected_field), &protected_field), "password field wire snapshot");
+            view.Apply(protected_field);
+            Check(absent(), "password field retained a revealed editor");
+            const auto copied_until = Clock::now() + std::chrono::milliseconds(100);
+            Wait([&] { return Clock::now() >= copied_until; });
+            copied = gtk_clipboard_wait_for_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD));
+            Check(copied && std::string(copied) == "public-fixture-secret", "password field revoked accepted clipboard copy");
+            g_free(copied);
+            protected_field.session_protected = true;
+            view.Apply(protected_field);
+            Wait([&] { return !gtk_clipboard_wait_is_target_available(
+                gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), gdk_atom_intern("application/x-rimes-sensitive", FALSE)); });
+            view.Apply(state);
+            unlock();
             click("vault-reveal-2");
             Check(VisibleText(view.Widget()).find("JBSWY3DPEHPK3PXP") == std::string::npos,
                   "TOTP reveal leaked seed");
@@ -431,6 +449,7 @@ int main(int argc, char** argv) {
             view.Apply(state);
             unlock();
             state.password_field = true;
+            state.session_protected = true;
             state.visible = false;
             view.Apply(state);
             Check(absent() && Text(get("vault-plaintext")).empty(),
