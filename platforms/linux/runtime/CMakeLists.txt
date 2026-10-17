@@ -88,7 +88,7 @@ endif()
 add_library(RimesAI STATIC core/ai_api.cpp ../ai/chat_codec.cpp)
 target_compile_features(RimesAI PUBLIC cxx_std_17)
 target_include_directories(RimesAI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../ai")
-target_link_libraries(RimesAI PUBLIC RimesPluginCore Threads::Threads PRIVATE PkgConfig::RuntimeCurl)
+target_link_libraries(RimesAI PUBLIC RimesPluginCore RimesProcess PRIVATE PkgConfig::RuntimeCurl)
 target_compile_options(RimesAI PRIVATE -Wall -Wextra -Wpedantic -Werror)
 set_target_properties(RimesAI PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
