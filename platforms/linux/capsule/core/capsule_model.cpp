@@ -271,12 +271,16 @@ void CapsuleModel::ApplyFilter() {
         return;
     }
     for (const auto& card : all_) {
-        if (card.module == module_ && (filter_ == "all" || card.filter == filter_) && MatchesQuery(card, query_)) {
+        if (card.module == module_ && (filter_ == "all" || card.filter == filter_) &&
+            (card.external_search || MatchesQuery(card, query_))) {
             // Filtered cards are projections. Full bodies stay in the search
             // index and are re-read by revision before explicit delivery.
             Card projected;
             projected.id=card.id; projected.kind=card.kind; projected.title=card.title; projected.preview=card.preview;
             projected.module=card.module; projected.filter=card.filter; projected.revision=card.revision; projected.attachment=card.attachment;
+            projected.external_search = card.external_search;
+            projected.favorite = card.favorite;
+            projected.source = card.source;
             cards_.push_back(std::move(projected));
         }
     }

@@ -304,11 +304,17 @@ void RimesIme::ApplyConfiguration() {
         buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
         buffer_->ConfigureAutoSend(config.at("autoSend"), config.at("autoSendSeconds"));
         capsule_->ConfigureTheme(config.at("theme"));
+        capsule_->ConfigureClipboard(rimes::runtime::ConfigurationStore::NormalizePlugin(
+                                         "builtin.capsule.temporary",
+                                         config.at("plugins").value("builtin.capsule.temporary",
+                                                                    rimes::runtime::Json::object()))
+                                         .at("captureEnabled"));
         if (launcher_) launcher_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
         if (desktop_shortcuts_) desktop_shortcuts_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
     } catch (const std::exception&) {
         configuration_revision_.clear();
         buffer_->ConfigureAutoSend(false, 1);
+        capsule_->ConfigureClipboard(false);
         if (launcher_) launcher_->Revoke();
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
     }

@@ -277,9 +277,10 @@
         "保护期间停止读取，恢复只建基线；机密/临时及本产品敏感复制不得进入历史。",
         "X11 与 Wayland 使用各自支持的读取/恢复机制；文本经原生输入提交，其他类型仅显式恢复剪贴板。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 164,
-      "url": "https://github.com/scholay/xsime/issues/164"
+      "url": "https://github.com/scholay/xsime/issues/164",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 15,

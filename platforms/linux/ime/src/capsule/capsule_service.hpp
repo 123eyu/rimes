@@ -43,6 +43,7 @@ public:
     void OnPasswordField(InputContext* ic, bool password);
     void OnSessionProtection(bool protected_session);
     void SetManagedHotkey() { managed_hotkey_ = true; }
+    void ConfigureClipboard(bool capture);
     void ConfigureTheme(std::string theme) { if (theme_ != theme) { theme_ = std::move(theme); Publish(); } }
     void ShowDetached();
 
@@ -63,6 +64,19 @@ public:
 
 private:
     bool AllowsModule();
+    bool WantsClipboard() const;
+    bool WantsUi() const { return model_.visible() || WantsClipboard(); }
+    void ReloadHistory(int selected = -1, std::string selected_id = {});
+    void MoveSelection(int delta);
+    void SelectIndex(int index);
+    bool HistoryAction(const std::string& action);
+    bool clipboard_capture_ = false;
+    int history_offset_ = 0, history_count_ = 0;
+    std::string history_error_, history_scope_;
+    std::shared_ptr<std::atomic<bool>> history_action_cancel_;
+    std::string restore_id_, restore_revision_;
+    std::uint64_t restore_seq_ = 0;
+    bool restore_close_ = false;
     bool OpenDetail();
     void ClearDetail();
     bool RowAction(int index, std::string revision, bool insert);

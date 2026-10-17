@@ -1,6 +1,8 @@
-#include "capsule_manager.hpp"
 #include "background_jobs.hpp"
+#include "capsule_history.hpp"
+#include "capsule_manager.hpp"
 #include "capsule_note_editor.hpp"
+#include "capsule_text.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
 #include "private_files.hpp"
@@ -38,6 +40,7 @@ struct ManagerWindow::Impl {
     bool dirty = false, updating = false, preview = false, writing = false;
     int layout_width = 0, layout_height = 0;
     std::string detail_key, theme;
+    std::shared_ptr<GdkPixbuf> clipboard_picture;
     std::unique_ptr<NoteEditor> note_editor;
     GtkWidget *rich_bar = nullptr, *bullet_bar = nullptr, *projection_warning = nullptr;
     bool rich_supported = true;
@@ -50,6 +53,9 @@ struct ManagerWindow::Impl {
     std::optional<Record> suspended_draft;
     std::string suspended_key;
     GtkWidget* confirmation = nullptr;
+    GtkWidget *note_form = nullptr, *note_actions = nullptr, *clipboard_form = nullptr,
+              *clipboard_title = nullptr, *clipboard_source = nullptr, *clipboard_text = nullptr,
+              *clipboard_image = nullptr, *clipboard_status = nullptr, *clipboard_copy = nullptr;
     bool ConfirmCurrent(const std::string& caption, const std::string& message) {
         confirmation =
             gtk_message_dialog_new(GTK_WINDOW(window), GTK_DIALOG_MODAL, GTK_MESSAGE_QUESTION,
@@ -186,11 +192,79 @@ struct ManagerWindow::Impl {
         auto* writing_hint=Label("写法：「- 标签：值」是字段，复制时只复制值；「## "
                                    "标题」分组；其余每行单独复制。","capsule-writing-hint");
         gtk_label_set_line_wrap(GTK_LABEL(writing_hint),TRUE); gtk_label_set_max_width_chars(GTK_LABEL(writing_hint),1); Add(form,writing_hint);
-        Add(editor,Scroll(form),true);
+        note_form = Scroll(form);
+        Add(editor, note_form, true);
         auto* actions=Row(8); gtk_widget_set_margin_start(actions,16); gtk_widget_set_margin_end(actions,16); gtk_widget_set_margin_bottom(actions,12);
         status=Label("选择一条 Capsule 内容","capsule-status"); Add(actions,status,true);
         remove=Button("删除",[this] { Remove(); },"capsule-link"); Add(actions,remove);
-        save=Button("保存",[this] { Save(); }); Add(actions,save); Add(editor,actions);
+        save = Button("保存", [this] { Save(); });
+        Add(actions, save);
+        Add(editor, actions);
+        note_actions = actions;
+        clipboard_form = Class(Column(10), "capsule-clipboard-detail");
+        gtk_widget_set_margin_start(clipboard_form, 16);
+        gtk_widget_set_margin_end(clipboard_form, 16);
+        gtk_widget_set_margin_top(clipboard_form, 16);
+        gtk_widget_set_margin_bottom(clipboard_form, 16);
+        clipboard_title = Label("", "capsule-clipboard-heading");
+        clipboard_source = Label("", "caption");
+        for (auto* label : {clipboard_title, clipboard_source}) {
+            gtk_label_set_xalign(GTK_LABEL(label), 0);
+            gtk_label_set_line_wrap(GTK_LABEL(label), TRUE);
+            gtk_label_set_max_width_chars(GTK_LABEL(label), 1);
+        }
+        clipboard_text = gtk_text_view_new();
+        gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(clipboard_text), GTK_WRAP_WORD_CHAR);
+        gtk_text_view_set_editable(GTK_TEXT_VIEW(clipboard_text), FALSE);
+        gtk_text_view_set_cursor_visible(GTK_TEXT_VIEW(clipboard_text), FALSE);
+        clipboard_image = gtk_drawing_area_new();
+        g_signal_connect(
+            clipboard_image, "draw",
+            G_CALLBACK(+[](GtkWidget* widget, cairo_t* cr, gpointer data) -> gboolean {
+                auto* self = static_cast<Impl*>(data);
+                if (!self->clipboard_picture)
+                    return FALSE;
+                auto* picture = self->clipboard_picture.get();
+                const double width = gdk_pixbuf_get_width(picture);
+                const double height = gdk_pixbuf_get_height(picture);
+                const double scale = std::min(gtk_widget_get_allocated_width(widget) / width,
+                                              gtk_widget_get_allocated_height(widget) / height);
+                cairo_save(cr);
+                cairo_translate(cr, (gtk_widget_get_allocated_width(widget) - width * scale) / 2,
+                                (gtk_widget_get_allocated_height(widget) - height * scale) / 2);
+                cairo_scale(cr, scale, scale);
+                gdk_cairo_set_source_pixbuf(cr, picture, 0, 0);
+                cairo_paint(cr);
+                cairo_restore(cr);
+                return FALSE;
+            }),
+            this);
+        gtk_widget_set_size_request(clipboard_image, -1, 220);
+        gtk_widget_set_no_show_all(clipboard_image, TRUE);
+        clipboard_status = Label("", "caption");
+        gtk_label_set_line_wrap(GTK_LABEL(clipboard_status), TRUE);
+        gtk_label_set_max_width_chars(GTK_LABEL(clipboard_status), 1);
+        clipboard_copy = Button("复制内容", [this] { ClipboardCommand("copy"); });
+        gtk_widget_set_halign(clipboard_copy, GTK_ALIGN_START);
+        auto* menu = Button("更多", [this] { ClipboardMenu(); }, "capsule-link");
+        gtk_widget_set_halign(menu, GTK_ALIGN_START);
+        Add(clipboard_form, clipboard_title);
+        Add(clipboard_form, clipboard_source);
+        Add(clipboard_form, Scroll(clipboard_text), true);
+        Add(clipboard_form, clipboard_image);
+        Add(clipboard_form, clipboard_copy);
+        Add(clipboard_form, menu);
+        Add(clipboard_form, clipboard_status);
+        Add(editor, clipboard_form, true);
+        for (auto* group : {note_form, note_actions, clipboard_form}) {
+            gtk_widget_show_all(group);
+            gtk_widget_set_no_show_all(group, TRUE);
+        }
+        gtk_widget_hide(clipboard_form);
+        gtk_widget_set_name(clipboard_form, "capsule-clipboard-detail");
+        gtk_widget_set_name(clipboard_text, "capsule-clipboard-text");
+        gtk_widget_set_name(clipboard_copy, "capsule-clipboard-copy");
+        gtk_widget_set_name(clipboard_status, "capsule-clipboard-status");
         for(const auto& item:std::initializer_list<std::pair<GtkWidget*,const char*>>{
             {title,"capsule-title"},{summary,"capsule-summary"},{body,"capsule-body"},{format,"capsule-format"},
             {save,"capsule-save"},{remove,"capsule-delete"},{create,"capsule-new"},{status,"capsule-status"},
@@ -278,46 +352,88 @@ struct ManagerWindow::Impl {
         theme=name; Theme(name,gtk_widget_get_screen(window));
         const auto& palette=Visuals().at("palettes").at(name=="liquidGlass"?"day":name);
         auto c=[&](const char* key){ return palette.at(key).get<std::string>(); };
-        const std::string rules=
-            ".capsule-manager { background: "+c("bufferBackground")+"; color: "+c("textPrimary")+"; border-radius: 14px; }"
+        const std::string rules =
+            ".capsule-manager { background: " + c("bufferBackground") +
+            "; color: " + c("textPrimary") +
+            "; border-radius: 14px; }"
             ".capsule-manager viewport { background: transparent; }"
+            ".capsule-clipboard-heading { font-size: 15px; font-weight: 600; }"
+            ".capsule-clipboard-detail textview { background: transparent; font-size: 11px; }"
             ".capsule-heading { font-family: monospace; font-size: 15px; "
             "font-weight: bold; }"
-            ".capsule-count { font-family: monospace; font-size: 10px; color: "+c("textSecondary")+"; }"
-            ".capsule-hint { font-family: monospace; font-size: 9px; color: "+c("textSecondary")+"; }"
-            ".capsule-list,.capsule-editor { background: "+c("surfaceSecondary")+"; border: 1px solid "+c("border")+"; border-radius: 6px; }"
+            ".capsule-count { font-family: monospace; font-size: 10px; color: " +
+            c("textSecondary") +
+            "; }"
+            ".capsule-hint { font-family: monospace; font-size: 9px; color: " +
+            c("textSecondary") +
+            "; }"
+            ".capsule-list,.capsule-editor { background: " +
+            c("surfaceSecondary") + "; border: 1px solid " + c("border") +
+            "; border-radius: 6px; }"
             ".capsule-modules { background: transparent; border: 0; }"
             ".capsule-manager textview,.capsule-manager textview text { "
-            "font-family: monospace; font-size: 12px; background: " +c("surfaceTertiary")+"; color: "+c("textPrimary")+"; }"
+            "font-family: monospace; font-size: 12px; background: " +
+            c("surfaceTertiary") + "; color: " + c("textPrimary") +
+            "; }"
             ".capsule-manager entry { min-height: 0; padding: 0 3px; font-family: "
             "monospace; font-size: 11px; }"
             ".capsule-manager .capsule-field { border-radius: 0; font-size: 12px; }"
             ".capsule-manager combobox button { min-height: 18px; padding: 0 5px; }"
-            ".capsule-manager .capsule-text { border: 1px solid "+c("border")+"; }"
+            ".capsule-manager .capsule-text { border: 1px solid " +
+            c("border") +
+            "; }"
             ".capsule-form-heading,.capsule-field-label { font-family: monospace; "
-            "font-size: 9px; font-weight: 600; color: " +c("textSecondary")+"; }"
-            ".capsule-form-heading { font-size: 10px; color: "+c("accentText")+"; }"
+            "font-size: 9px; font-weight: 600; color: " +
+            c("textSecondary") +
+            "; }"
+            ".capsule-form-heading { font-size: 10px; color: " +
+            c("accentText") +
+            "; }"
             ".capsule-writing-hint,.capsule-status { font-family: monospace; "
-            "font-size: 9px; color: " +c("textMuted")+"; }"
+            "font-size: 9px; color: " +
+            c("textMuted") +
+            "; }"
             ".capsule-writing-hint { font-size: 10px; }"
             ".capsule-manager .capsule-link label { font-family: monospace; "
-            "font-size: 9px; font-weight: 600; color: " +c("textSecondary")+"; }"
-            ".capsule-module,.capsule-filter,.capsule-link { background: alpha("+c("textSecondary")+",0.10); padding: 0 5px; min-height: 16px; border-radius: 12px; }"
+            "font-size: 9px; font-weight: 600; color: " +
+            c("textSecondary") +
+            "; }"
+            ".capsule-module,.capsule-filter,.capsule-link { background: alpha(" +
+            c("textSecondary") +
+            ",0.10); padding: 0 5px; min-height: 16px; border-radius: 12px; }"
             ".capsule-manager .capsule-gear { min-width: 22px; min-height: 22px; "
-            "background: alpha(" +c("accentGreen")+",0.2); border-radius: 6px; }"
+            "background: alpha(" +
+            c("accentGreen") +
+            ",0.2); border-radius: 6px; }"
             ".capsule-manager .capsule-close { min-width: 16px; min-height: 16px; }"
-            ".capsule-module label { font-size: 12px; font-weight: 500; color: "+c("textPrimary")+"; }"
+            ".capsule-module label { font-size: 12px; font-weight: 500; color: " +
+            c("textPrimary") +
+            "; }"
             ".capsule-module.selected label { font-weight: bold; } .capsule-filter "
-            "label { font-size: 10px; color: " +c("textSecondary")+"; }"
-            ".capsule-filter.selected label { color: "+c("accentText")+"; font-weight: 600; }"
+            "label { font-size: 10px; color: " +
+            c("textSecondary") +
+            "; }"
+            ".capsule-filter.selected label { color: " +
+            c("accentText") +
+            "; font-weight: 600; }"
             ".capsule-entry { background: transparent; border-radius: 0; padding: "
             "0 10px; min-height: 0; }"
-            ".capsule-entry.selected { background: alpha("+c("accentGreen")+",0.10); }"
-            ".capsule-entry label { font-family: monospace; color: "+c("textPrimary")+"; } .capsule-entry .caption { font-size: 9px; color: "+c("textSecondary")+"; }"
-            ".capsule-entry .capsule-kind { font-size: 8px; color: "+c("textSecondary")+"; }"
+            ".capsule-entry.selected { background: alpha(" +
+            c("accentGreen") +
+            ",0.10); }"
+            ".capsule-entry label { font-family: monospace; color: " +
+            c("textPrimary") +
+            "; } .capsule-entry .caption { font-size: 9px; color: " + c("textSecondary") +
+            "; }"
+            ".capsule-entry .capsule-kind { font-size: 8px; color: " +
+            c("textSecondary") +
+            "; }"
             ".capsule-entry.selected .name,.capsule-entry.selected .capsule-kind { "
-            "color: " +c("accentText")+"; }"
-            ".capsule-divider { background: "+c("border")+"; min-width: 1px; }";
+            "color: " +
+            c("accentText") +
+            "; }"
+            ".capsule-divider { background: " +
+            c("border") + "; min-width: 1px; }";
         gtk_css_provider_load_from_data(css,rules.c_str(),-1,nullptr);
         gtk_style_context_add_provider_for_screen(gtk_widget_get_screen(window),GTK_STYLE_PROVIDER(css),GTK_STYLE_PROVIDER_PRIORITY_APPLICATION+2);
     }
@@ -332,9 +448,27 @@ struct ManagerWindow::Impl {
     void ClearDraft() {
         if (read_cancel) read_cancel->store(true);
         draft=Record{}; detail_key.clear(); dirty=false; FillDraft();
+        if (clipboard_text) {
+            gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(clipboard_text)), "",
+                                     0);
+            gtk_label_set_text(GTK_LABEL(clipboard_title), "");
+            gtk_label_set_text(GTK_LABEL(clipboard_source), "");
+            clipboard_picture.reset();
+            gtk_widget_queue_draw(clipboard_image);
+            gtk_widget_hide(clipboard_image);
+            gtk_label_set_text(GTK_LABEL(clipboard_status), "");
+        }
     }
     void Controls() {
         const bool notes=state.module=="notes" && std::find(state.modules.begin(),state.modules.end(),Module::Notes)!=state.modules.end();
+        const bool temporary = state.module == "temporary" && !state.password_field &&
+                               state.visible && state.managing &&
+                               std::find(state.modules.begin(), state.modules.end(),
+                                         Module::Temporary) != state.modules.end();
+        gtk_widget_set_visible(note_form, !temporary);
+        gtk_widget_set_visible(note_actions, !temporary);
+        gtk_widget_set_visible(clipboard_form, temporary);
+        gtk_widget_set_sensitive(clipboard_copy, temporary && !state.selected_id.empty());
         const bool editable=notes && state.visible && state.managing && !state.password_field && !writing;
         gtk_editable_set_editable(GTK_EDITABLE(title),editable); gtk_text_view_set_editable(GTK_TEXT_VIEW(body),editable && rich_supported);
         gtk_widget_set_sensitive(create,notes && !writing); gtk_widget_set_sensitive(save,editable);
@@ -355,6 +489,139 @@ struct ManagerWindow::Impl {
         gtk_widget_set_sensitive(bullet_bar,editable);
         gtk_widget_set_sensitive(search,!writing);
     }
+    void ClipboardCommand(const char* op) {
+        if (state.module != "temporary" || !state.visible || state.password_field)
+            return;
+        const auto found =
+            std::find_if(state.cards.begin(), state.cards.end(),
+                         [&](const Card& card) { return card.id == state.selected_id; });
+        if (found == state.cards.end())
+            return;
+        send(Json{{"v", 1}, {"op", op}, {"id", found->id}, {"revision", found->revision}}.dump());
+    }
+    void ClipboardMenu() {
+        if (state.module != "temporary" || !state.visible || state.password_field)
+            return;
+        auto* menu = gtk_menu_new();
+        const auto found =
+            std::find_if(state.cards.begin(), state.cards.end(),
+                         [&](const Card& card) { return card.id == state.selected_id; });
+        if (found == state.cards.end()) {
+            gtk_widget_destroy(menu);
+            return;
+        }
+        for (const auto& action : std::vector<std::pair<const char*, std::string>>{
+                 {found->favorite ? "取消收藏" : "收藏", "favorite"}, {"删除", "remove"}}) {
+            auto* item = gtk_menu_item_new_with_label(action.first);
+            auto* callback = new std::function<void()>(
+                [this, op = action.second, id = found->id, revision = found->revision] {
+                    if (state.visible && !state.password_field && state.module == "temporary")
+                        send(Json{{"v", 1}, {"op", op}, {"id", id}, {"revision", revision}}.dump());
+                });
+            g_signal_connect_data(
+                item, "activate", G_CALLBACK(+[](GtkMenuItem*, gpointer raw) {
+                    (*static_cast<std::function<void()>*>(raw))();
+                }),
+                callback,
+                +[](gpointer raw, GClosure*) { delete static_cast<std::function<void()>*>(raw); },
+                GConnectFlags(0));
+            gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+        }
+        g_signal_connect(menu, "selection-done", G_CALLBACK(+[](GtkMenuShell* menu, gpointer) {
+                             gtk_widget_destroy(GTK_WIDGET(menu));
+                         }),
+                         nullptr);
+        gtk_widget_show_all(menu);
+        gtk_menu_popup_at_pointer(GTK_MENU(menu), nullptr);
+    }
+    void ClipboardDetail(const Card& card) {
+        gtk_label_set_text(GTK_LABEL(clipboard_title), card.title.c_str());
+        gtk_label_set_text(GTK_LABEL(clipboard_source), card.source.c_str());
+        gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(clipboard_text)),
+                                 card.preview.data(), card.preview.size());
+        if (preview)
+            return;
+        read_cancel = std::make_shared<std::atomic<bool>>(false);
+        const auto cancelled = read_cancel;
+        const auto life = alive;
+        const auto id = card.id, revision = card.revision, key = detail_key;
+        if (!jobs.Run(cancelled, [this, life, cancelled, id, revision, key] {
+            std::string text, types;
+            GdkPixbuf* image = nullptr;
+            bool ok = false;
+            try {
+                const auto grant = packages->Inspect(ModulePlugin(Module::Temporary));
+                packages->WithEnabledGrant(grant.id, grant.grant, [&] {
+                    if (!life->load() || cancelled->load())
+                        return;
+                    ClipboardHistoryStore store(ClipboardHistoryStore::DefaultRoot());
+                    const auto archive = store.Read(id, revision);
+                    if (!archive)
+                        return;
+                    const auto projection = ProjectClipboard(*archive);
+                    text = CharacterPrefix(projection.text, 16000);
+                    std::replace(text.begin(), text.end(), '\0', ' ');
+                    if (text.size() < projection.text.size())
+                        text += "\n…（完整内容保留，可复制恢复）";
+                    for (const auto& value : archive->representations) {
+                        if (!types.empty())
+                            types += " · ";
+                        types += value.type;
+                        if (!image && value.type.rfind("image/", 0) == 0 &&
+                            value.bytes.size() <= 32 * 1024 * 1024) {
+                            auto* loader = gdk_pixbuf_loader_new();
+                            g_signal_connect(
+                                loader, "size-prepared",
+                                G_CALLBACK(+[](GdkPixbufLoader* loader, int width, int height,
+                                               gpointer) {
+                                    const double scale = std::min({1.0, 1000.0 / std::max(1, width),
+                                                                   1000.0 / std::max(1, height)});
+                                    gdk_pixbuf_loader_set_size(
+                                        loader, std::max(1, static_cast<int>(width * scale)),
+                                        std::max(1, static_cast<int>(height * scale)));
+                                }),
+                                nullptr);
+                            if (gdk_pixbuf_loader_write(
+                                    loader, reinterpret_cast<const guchar*>(value.bytes.data()),
+                                    value.bytes.size(), nullptr) &&
+                                gdk_pixbuf_loader_close(loader, nullptr)) {
+                                image = gdk_pixbuf_loader_get_pixbuf(loader);
+                                if (image)
+                                    g_object_ref(image);
+                            } else
+                                gdk_pixbuf_loader_close(loader, nullptr);
+                            g_object_unref(loader);
+                        }
+                    }
+                    ok = true;
+                });
+            } catch (const std::exception&) {
+            }
+            auto picture = std::shared_ptr<GdkPixbuf>(image, [](GdkPixbuf* value) {
+                if (value)
+                    g_object_unref(value);
+            });
+            Post([this, life, cancelled, key, ok, text = std::move(text), types = std::move(types),
+                  picture] {
+                if (!life->load() || cancelled->load() || detail_key != key ||
+                    state.module != "temporary" || !state.visible || state.password_field)
+                    return;
+                if (!ok) {
+                    gtk_label_set_text(GTK_LABEL(clipboard_status), "条目已变化，请重新选择");
+                    return;
+                }
+                gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(clipboard_text)),
+                                         text.data(), text.size());
+                gtk_widget_set_tooltip_text(clipboard_copy, types.c_str());
+                if (picture) {
+                    clipboard_picture = picture;
+                    gtk_widget_queue_draw(clipboard_image);
+                    gtk_widget_show(clipboard_image);
+                }
+                gtk_label_set_text(GTK_LABEL(clipboard_status), "已加载临时条目");
+            });
+        })) gtk_label_set_text(GTK_LABEL(clipboard_status), "读取正忙，请重新选择此条目");
+    }
     void NewNote() {
         if (state.module!="notes" || !Discard()) return;
         ClearDraft(); draft.kind=Kind::Note;
@@ -366,7 +633,11 @@ struct ManagerWindow::Impl {
         const auto key=card->id+":"+card->revision;
         if (key==detail_key || dirty || writing) return;
         ClearDraft(); detail_key=key;
-        if (card->module==Module::Passwords || card->module==Module::Temporary) {
+        if (card->module == Module::Temporary) {
+            ClipboardDetail(*card);
+            return;
+        }
+        if (card->module == Module::Passwords) {
             gtk_label_set_text(GTK_LABEL(status),card->preview.c_str()); return;
         }
         if (preview) {
@@ -466,7 +737,10 @@ struct ManagerWindow::Impl {
         if (confirmation && (!snapshot.visible || !snapshot.managing || snapshot.password_field ||
                              snapshot.module != "notes" || !notes_enabled))
             gtk_dialog_response(GTK_DIALOG(confirmation), GTK_RESPONSE_CANCEL);
+        const bool changed_module = state.module != snapshot.module;
         state=snapshot;
+        if (changed_module)
+            ClearDraft();
         if (theme!=state.theme) SetTheme(state.theme);
         if (!state.visible || !state.managing || state.password_field) {
             // Ordinary close/navigation has already asked about drafts. A
@@ -475,10 +749,10 @@ struct ManagerWindow::Impl {
             ClearDraft(); gtk_widget_hide(window); return;
         }
         const bool enabled=std::any_of(state.modules.begin(),state.modules.end(),[&](auto module){return state.module==ModuleRaw(module);});
-        if (!enabled || state.module!="notes") {
+        if (!enabled || (state.module != "notes" && state.module != "temporary")) {
             if(write_cancel) write_cancel->store(true);
             ClearDraft();
-        } else if(suspended_draft && !writing) {
+        } else if (state.module == "notes" && suspended_draft && !writing) {
             draft=*suspended_draft; detail_key=suspended_key; FillDraft();
             if (suspended_rich) {
                 note_editor->Load(*suspended_rich);
@@ -513,7 +787,11 @@ struct ManagerWindow::Impl {
         GtkWidget* selected_row=nullptr;
         for(const auto& card:state.cards) {
             auto* row=Button("",[this,id=card.id] { Navigate({{"v",1},{"op","select"},{"id",id}}); },"capsule-entry");
-            auto* column=Column(4); auto* row_heading=Row(7); auto* name=Label(card.title,"name"); auto* summary=Label(card.preview,"caption");
+            auto* column = Column(4);
+            auto* row_heading = Row(7);
+            auto* name = Label(card.title, "name");
+            auto* summary =
+                Label(card.module == Module::Temporary ? card.source : card.preview, "caption");
             std::string kind=KindRaw(card.kind); std::transform(kind.begin(),kind.end(),kind.begin(),[](unsigned char c){return std::toupper(c);});
             Add(row_heading,Label(kind,"capsule-kind")); Add(row_heading,name,true);
             gtk_widget_set_valign(column,GTK_ALIGN_CENTER); gtk_widget_set_size_request(row,-1,56);
@@ -534,6 +812,10 @@ struct ManagerWindow::Impl {
 ManagerWindow::ManagerWindow(Send send,bool preview):impl_(std::make_unique<Impl>(std::move(send),preview)){}
 ManagerWindow::~ManagerWindow()=default;
 void ManagerWindow::Apply(const Snapshot& snapshot){impl_->Apply(snapshot);}
+void ManagerWindow::ClipboardStatus(const std::string& status) {
+    if (impl_->state.module == "temporary" && !impl_->state.password_field)
+        gtk_label_set_text(GTK_LABEL(impl_->clipboard_status), status.c_str());
+}
 GtkWidget* ManagerWindow::Window() const{return impl_->window;}
 GtkWidget* ManagerWindow::Root() const{return impl_->root;}
 } // namespace rimes::capsule

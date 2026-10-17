@@ -10,6 +10,7 @@ public:
     explicit ManagerWindow(Send send, bool preview = false);
     ~ManagerWindow();
     void Apply(const Snapshot& snapshot);
+    void ClipboardStatus(const std::string& status);
     GtkWidget* Window() const;
     GtkWidget* Root() const;
 private:

@@ -357,6 +357,15 @@ GtkWidget *Icon(const std::string &name, int size) {
                  12 + 10 * sin(a));
           }
           cairo_arc(cr, 12, 12, 7, 0, 2 * M_PI);
+        } else if (icon == "ellipsis") {
+          for (int x : {5, 12, 19}) {
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, x, 12, 1.35, 0, 2 * M_PI);
+            cairo_fill(cr);
+          }
+        } else if (icon == "magnifyingglass") {
+          cairo_arc(cr, 10, 10, 6.5, 0, 2 * M_PI);
+          line(15, 15, 21, 21);
         } else if (icon == "xmark") {
           line(6, 6, 18, 18);
           line(18, 6, 6, 18);

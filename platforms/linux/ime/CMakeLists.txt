@@ -59,6 +59,7 @@ target_link_libraries(RimesBufferCore PUBLIC RimesPluginCore RimesTranslationUni
 rimes_harden(RimesBufferCore)
 
 pkg_check_modules(CapsuleICU REQUIRED IMPORTED_TARGET icu-i18n)
+find_package(SQLite3 REQUIRED)
 add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_hash.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_kinds.cpp"
@@ -71,12 +72,13 @@ add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_protocol.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_transport.cpp"
     "${RIMES_CAPSULE_ROOT}/core/capsule_clipboard.cpp"
+    "${RIMES_CAPSULE_ROOT}/core/capsule_history.cpp"
 )
 target_include_directories(RimesCapsuleCore PUBLIC
     "${RIMES_CAPSULE_ROOT}/core"
     "${RIMES_BUFFER_ROOT}/core"
 )
-target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess PkgConfig::CapsuleICU)
+target_link_libraries(RimesCapsuleCore PUBLIC RimesBufferCore RimesProcess PkgConfig::CapsuleICU SQLite::SQLite3)
 set_target_properties(RimesCapsuleCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 rimes_harden(RimesCapsuleCore)
 
@@ -127,6 +129,7 @@ if(RIMES_BUILD_FCITX5)
         src/buffer/buffer_translation.cpp
         src/buffer/buffer_delivery.cpp
         src/capsule/capsule_service.cpp
+        src/capsule/capsule_history_service.cpp
     )
     target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
@@ -216,13 +219,38 @@ if(RIMES_BUILD_FCITX5)
         endif()
 
 
+        pkg_check_modules(CapsuleWayland REQUIRED IMPORTED_TARGET wayland-client)
+        pkg_check_modules(CapsuleXfixes REQUIRED IMPORTED_TARGET xcb xcb-xfixes)
+        find_program(CAPSULE_WAYLAND_SCANNER wayland-scanner REQUIRED)
+        set(CAPSULE_PROTOCOL_SOURCES)
+        foreach(protocol ext-data-control-v1 wlr-data-control-unstable-v1)
+            set(xml "${RIMES_CAPSULE_ROOT}/protocols/${protocol}.xml")
+            set(header "${CMAKE_CURRENT_BINARY_DIR}/generated/${protocol}-client-protocol.h")
+            set(source "${CMAKE_CURRENT_BINARY_DIR}/generated/${protocol}-protocol.c")
+            add_custom_command(OUTPUT "${header}" "${source}"
+                COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+                COMMAND "${CAPSULE_WAYLAND_SCANNER}" client-header "${xml}" "${header}"
+                COMMAND "${CAPSULE_WAYLAND_SCANNER}" private-code "${xml}" "${source}"
+                DEPENDS "${xml}" VERBATIM)
+            list(APPEND CAPSULE_PROTOCOL_SOURCES "${header}" "${source}")
+        endforeach()
+        add_library(RimesClipboardDesktop STATIC ${CAPSULE_PROTOCOL_SOURCES}
+            "${RIMES_CAPSULE_ROOT}/ui/clipboard_desktop.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/clipboard_x11.cpp"
+            "${RIMES_CAPSULE_ROOT}/ui/clipboard_wayland.cpp")
+        target_include_directories(RimesClipboardDesktop PUBLIC "${RIMES_CAPSULE_ROOT}/ui"
+            PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+        target_link_libraries(RimesClipboardDesktop PUBLIC RimesCapsuleCore PkgConfig::CapsuleWayland PkgConfig::CapsuleXfixes)
+        rimes_harden(RimesClipboardDesktop)
+
         add_executable(rimes-capsule
+            "${RIMES_CAPSULE_ROOT}/ui/clipboard_controller.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_manager.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/capsule_note_editor.cpp"
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
         )
         target_include_directories(rimes-capsule PRIVATE ${GTK3_INCLUDE_DIRS})
-        target_link_libraries(rimes-capsule PRIVATE RimesCapsuleCore RimesDesktopUI ${GTK3_LIBRARIES})
+        target_link_libraries(rimes-capsule PRIVATE RimesClipboardDesktop RimesCapsuleCore RimesDesktopUI ${GTK3_LIBRARIES})
         target_compile_definitions(rimes-capsule PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         target_compile_options(rimes-capsule PRIVATE ${GTK3_CFLAGS_OTHER})
         if(GTK_LAYER_SHELL_FOUND)
@@ -341,12 +369,35 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesBufferProcess COMMAND rimes-buffer-process-tests)
     add_test(NAME RimesBufferPlacement COMMAND rimes-buffer-placement-tests)
 
+    if(TARGET RimesClipboardDesktop)
+        add_executable(rimes-clipboard-desktop-tests "${RIMES_CAPSULE_ROOT}/tests/clipboard_desktop_tests.cpp")
+        target_include_directories(rimes-clipboard-desktop-tests PRIVATE ${GTK3_INCLUDE_DIRS})
+        target_link_libraries(rimes-clipboard-desktop-tests PRIVATE RimesClipboardDesktop ${GTK3_LIBRARIES})
+        rimes_harden(rimes-clipboard-desktop-tests)
+        add_test(NAME capsule-clipboard-x11 COMMAND "${RIMES_BUFFER_XVFB_RUN}" -a $<TARGET_FILE:rimes-clipboard-desktop-tests>)
+    endif()
+
+    if(TARGET RimesClipboardDesktop)
+        add_executable(rimes-clipboard-controller-tests "${RIMES_CAPSULE_ROOT}/tests/clipboard_controller_tests.cpp" "${RIMES_CAPSULE_ROOT}/ui/clipboard_controller.cpp")
+        target_link_libraries(rimes-clipboard-controller-tests PRIVATE RimesClipboardDesktop RimesDesktopUI)
+        target_compile_definitions(rimes-clipboard-controller-tests PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-clipboard-controller-tests)
+        add_test(NAME capsule-clipboard-controller COMMAND "${RIMES_BUFFER_XVFB_RUN}" -a $<TARGET_FILE:rimes-clipboard-controller-tests>)
+    endif()
+
+    add_executable(rimes-capsule-history-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_history_tests.cpp")
+    target_link_libraries(rimes-capsule-history-tests PRIVATE RimesCapsuleCore)
+    target_compile_definitions(rimes-capsule-history-tests PRIVATE NATIVE_CLIPBOARD_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-clipboard.json")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME capsule-native-clipboard-fixtures COMMAND "${Python3_EXECUTABLE}" "${RIMES_CAPSULE_ROOT}/tests/verify_native_clipboard.py")
+    rimes_harden(rimes-capsule-history-tests)
+    add_test(NAME RimesCapsuleHistory COMMAND rimes-capsule-history-tests)
+
     add_executable(rimes-capsule-notes-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_notes_tests.cpp")
     target_link_libraries(rimes-capsule-notes-tests PRIVATE RimesCapsuleCore)
     target_compile_definitions(rimes-capsule-notes-tests PRIVATE NATIVE_NOTES_FIXTURES="${RIMES_CAPSULE_ROOT}/tests/fixtures/native-notes.json")
     rimes_harden(rimes-capsule-notes-tests)
     add_test(NAME RimesCapsuleNotes COMMAND rimes-capsule-notes-tests)
-    find_package(Python3 REQUIRED COMPONENTS Interpreter)
     add_test(NAME capsule-native-fixtures COMMAND ${Python3_EXECUTABLE} "${RIMES_CAPSULE_ROOT}/tests/verify_native_notes.py")
     add_executable(rimes-capsule-transport-tests "${RIMES_CAPSULE_ROOT}/tests/capsule_transport_tests.cpp")
     target_link_libraries(rimes-capsule-transport-tests PRIVATE RimesCapsuleCore)

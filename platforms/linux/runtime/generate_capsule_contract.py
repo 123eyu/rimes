@@ -8,9 +8,10 @@ import re
 ROOT = Path(__file__).resolve().parents[3]
 SOURCES = ["OfficialPlugins/native/macos/CapsuleModules.swift", "Sources/RimeBuffer/CapsuleWindowController.swift",
            "Sources/RimeBuffer/CapsuleRailSmoke.swift", "Sources/RimeBuffer/CapsuleRailDetailView.swift",
-           "Sources/RimeBuffer/CapsuleInteractionSmoke.swift"]
+           "Sources/RimeBuffer/CapsuleInteractionSmoke.swift", "Sources/RimeBuffer/ClipboardHistoryModel.swift",
+           "Sources/RimeBuffer/ClipboardPasteboardArchive.swift", "Sources/RimeBuffer/ClipboardHistorySmoke.swift"]
 def extract():
-    modules, window, smoke, detail, interaction = [(ROOT / name).read_text() for name in SOURCES]
+    modules, window, smoke, detail, interaction = [(ROOT / name).read_text() for name in SOURCES[:5]]
     module_part = modules.split("enum CapsuleModuleID:")[1].split("enum CapsuleModuleFilter:")[0]
     names = re.search(r"case ([^\n]+)", module_part).group(1).split(", ")
     titles = dict(re.findall(r'case \.(\w+): return "([^"]+)"', module_part.split("var symbolName")[0]))
@@ -51,7 +52,25 @@ def extract():
     if not detail_title or not detail_header: raise ValueError("Review native detail identity/header")
     detail_preview = {"title": detail_title.group(1).replace(r'\(index)', '1'), "preview": detail_sample.group(1),
                       "body": json.loads('"'+body+'"'), "header": {"label":detail_header.group(1),"value":detail_header.group(2)}, "selected":1}
-    return {"detailPreview": detail_preview, "modules": navigation, "metrics": metrics, "managerPreview": manager_preview,
+    history = (ROOT / SOURCES[5]).read_text().split("struct ClipboardHistoryConfiguration:", 1)[1]
+    archive = (ROOT / SOURCES[6]).read_text()
+    def limit(source, key):
+        match = re.search(key + r": Int = ([0-9_* ]+)", source)
+        if not match: raise ValueError("Review native clipboard limit: " + key)
+        result = 1
+        for factor in match.group(1).split("*"):
+            result *= int(factor.strip().replace("_", ""))
+        return result
+    clipboard = {"items": limit(history, "maximumItems"), "bytes": limit(history, "maximumTotalBytes"),
+                 "archiveBytes": limit(archive, "maximumInflatedBytes"),
+                 "typeBytes": limit(archive, "maximumDataBytesPerType"),
+                 "totalBytes": limit(archive, "maximumTotalDataBytes")}
+    confidential = archive.split('private static let confidentialTypeNames:', 1)[1].split(']', 1)[0]
+    clipboard["confidentialTypes"] = re.findall(r'"([^"\n]+)"', confidential)
+    preview = (ROOT / SOURCES[7]).read_text().split('static func renderPreview', 1)[1].split('// Use a real project asset', 1)[0]
+    clipboard["previewTexts"] = [json.loads('"' + text + '"') for text in re.findall(r'model.ingest\("((?:\\.|[^"\\])*)"\)', preview)]
+    if len(clipboard["previewTexts"]) != 4: raise ValueError("Review native clipboard visual fixture")
+    return {"clipboard": clipboard, "detailPreview": detail_preview, "modules": navigation, "metrics": metrics, "managerPreview": manager_preview,
             "sources": {n: hashlib.sha256((ROOT/n).read_bytes()).hexdigest() for n in SOURCES}}
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(); parser.add_argument("--output", type=Path, required=True); args = parser.parse_args()

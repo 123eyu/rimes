@@ -49,7 +49,10 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${CMAKE_CURRENT_SOURCE_DIR}/generate_capsule_contract.py"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleRailSmoke.swift"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleRailDetailView.swift"
-    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleInteractionSmoke.swift")
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/CapsuleInteractionSmoke.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ClipboardHistoryModel.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ClipboardPasteboardArchive.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ClipboardHistorySmoke.swift")
 execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_capsule_contract.py"
     --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_capsule_contract.hpp"
     RESULT_VARIABLE RIMES_CAPSULE_IMPORT_RESULT)

@@ -22,7 +22,8 @@ struct Card {
     std::string filter = "other";
     std::string revision;
     std::string attachment;
-
+    bool external_search = false, favorite = false;
+    std::string source;
 };
 
 class CapsuleModel {

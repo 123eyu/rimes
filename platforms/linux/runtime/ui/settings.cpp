@@ -238,6 +238,8 @@ struct Settings {
       Connectors(body);
     else if (route == "core.appearance")
       Appearance(body);
+    else if (route == "core.capsule")
+        Capsule(body);
     else if (route == "core.buffer")
       Buffer(body);
     else if (route == "core.input-method") {
@@ -739,6 +741,26 @@ struct Settings {
       ++index;
     }
     Add(body, grid);
+  }
+  void Capsule(GtkWidget* body) {
+      const std::string id = "builtin.capsule.temporary";
+      auto form = std::make_shared<Form>(PluginFields(id), config.Plugin(id));
+      Add(body, form->Widget());
+      Add(body, Button("应用修改", [this, form, id] {
+              Try([&] {
+                  auto next = saved;
+                  next["plugins"][id] = form->Values();
+                  Save(next);
+              });
+          }));
+      Add(body,
+          Label("文字通过输入法直接上屏；图片、文件和富文本可复制后在目标应用粘贴。", "caption"));
+      Add(body, Label("本地资料库", "section"));
+      Add(body, Label("剪贴板原始格式与 Capsule 内容保存在本机，卸载程序时保留。", "caption"));
+      Add(body, Button("打开数据目录…", [this] { OpenPath(UserRoot() / "capsule"); }));
+      Add(body,
+          Label("X11 使用剪贴板所有权事件；Wayland 需要桌面开放 data-control 接口。", "caption"));
+      Add(body, Button("管理 Capsule 插件…", [this] { Select("core.plugins"); }));
   }
   void Buffer(GtkWidget *body) {
     auto form = std::make_shared<Form>(

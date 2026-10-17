@@ -51,12 +51,14 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
 - Default Buffer workbench (configurable, default `Ctrl+Shift+B`): Rime commits
   stage as blocks, Return tap/hold and the paper plane send through the same
   `commitText` → `commitString` path
-- Capsule rail (configurable, default `Ctrl+Shift+V`): local Markdown notes,
-  seed card `RIMES 默认词条`, Return inserts the selected note through
-  `commitString` after an armed-IC recheck
+- Capsule rail (configurable, default `Ctrl+Shift+V`): structured/Bullet/rich
+  notes, grouped detail rows and opt-in clipboard history. Text uses native
+  `commitString` after an armed-IC recheck; rich clipboard items restore original
+  MIME formats for explicit paste. The GTK manager exposes read-only history
+  previews, copy, favorite and delete. See [Capsule usage](../capsule/README.md).
 
 macOS-only behaviour that is **not** reproduced here: custom candidate chrome,
-Mailbox, Capsule clipboard history / iCloud / password vault / media kinds,
+Mailbox, Capsule iCloud / password vault / capture and resource workflows,
 Buffer stream/music plugins, cross-batch chord pairing,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
@@ -197,7 +199,8 @@ fcitx5 -r
 ```
 
 Remove XSIME from the Fcitx5 input-method list as well. User dictionaries,
-learning records, imported schemes and Capsule notes remain in
+learning records, imported schemes, Capsule notes and original-format clipboard
+history/favorites remain in
 `${XDG_DATA_HOME:-$HOME/.local/share}/rimes`. Do not delete this directory
 when removing the application. If a source installation already exists,
 uninstall it with the instructions below before switching to the deb.
@@ -248,6 +251,7 @@ whose SHA-256 still matches, and then empty directories. If a managed file
 was edited or replaced by a symlink, it stops before deleting anything;
 move or restore that file and retry. Unrecorded files are preserved, including
 user dictionaries (`*.userdb`), `schemes/learning`, imported schemes, notes,
+`capsule/clipboard/history-v1.sqlite3` (history and favorites),
 runtime configuration and logs. It never recursively removes `share/rimes`
 or `~/.local`, and it does not remove the private engine or restart Fcitx5.
 `DESTDIR` is supported for staged installs and uninstalls.

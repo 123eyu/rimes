@@ -193,6 +193,10 @@ bool CapsuleService::ArmedFor(InputContext* ic) const {
 }
 
 void CapsuleService::ReloadNotes(std::string selected_id) {
+    if (model_.module() == rimes::capsule::Module::Temporary) {
+        ReloadHistory(-1, std::move(selected_id));
+        return;
+    }
     if (reload_cancel_) reload_cancel_->store(true);
     reload_cancel_ = std::make_shared<std::atomic<bool>>(false);
     const auto cancelled = reload_cancel_;
@@ -238,9 +242,18 @@ void CapsuleService::ReturnToRail() {
     ReloadNotes(); model_.set_visible(true); EnsureUi(); Publish();
 }
 bool CapsuleService::SelectIdentity(const rimes::capsule::Command& command) {
-    if (command.id.empty()) { if (command.index >= 0) model_.Select(command.index); return true; }
+    if (command.id.empty()) {
+        if (command.index >= 0)
+            SelectIndex(command.index);
+        return true;
+    }
     const auto& cards = model_.cards();
-    for (std::size_t i = 0; i < cards.size(); ++i) if (cards[i].id == command.id) { model_.Select(static_cast<int>(i)); return true; }
+    for (std::size_t i = 0; i < cards.size(); ++i)
+        if (cards[i].id == command.id &&
+            (command.revision.empty() || cards[i].revision == command.revision)) {
+            model_.Select(static_cast<int>(i));
+            return true;
+        }
     return false;
 }
 
@@ -353,6 +366,8 @@ bool CapsuleService::Activate() {
     if (card == nullptr) {
         return false;
     }
+    if (card->module == rimes::capsule::Module::Temporary)
+        return HistoryAction("activate");
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok) {
@@ -372,6 +387,8 @@ bool CapsuleService::Activate() {
 bool CapsuleService::CopySelected() {
     if (!AllowsModule()) { Publish(); return false; }
     const auto* card = model_.Selected();
+    if (card && card->module == rimes::capsule::Module::Temporary)
+        return HistoryAction("copy");
     if (card == nullptr || card->kind != rimes::capsule::Kind::Note) {
         return false;
     }
@@ -390,8 +407,12 @@ bool CapsuleService::OpenDetail() {
     if (!AllowsModule() || model_.managing())
         return false;
     const auto* card = model_.Selected();
+    if (card && card->module == rimes::capsule::Module::Temporary)
+        return Activate();
     if (!card || card->kind != rimes::capsule::Kind::Note)
         return false;
+    if (card->module == rimes::capsule::Module::Temporary)
+        return HistoryAction("activate");
     rimes::capsule::Record record;
     std::string error;
     if (store_.Get(card->id, &record, &error) != rimes::capsule::StoreStatus::Ok ||
@@ -497,7 +518,14 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
         ClearDetail();
     }
     if (key.check(FcitxKey_Escape)) {
-        Close();
+        if (model_.query().empty())
+            Close();
+        else {
+            model_.set_query("");
+            if (model_.module() == rimes::capsule::Module::Temporary)
+                ReloadHistory(0);
+            Publish();
+        }
         event.filterAndAccept();
         return true;
     }
@@ -515,19 +543,44 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
         return true;
     }
     if (key.check(FcitxKey_Left) || key.check(FcitxKey_KP_Left)) {
-        model_.Move(-1);
+        MoveSelection(-1);
         Publish();
         event.filterAndAccept();
         return true;
     }
     if (key.check(FcitxKey_Right) || key.check(FcitxKey_KP_Right)) {
-        model_.Move(1);
+        MoveSelection(1);
         Publish();
         event.filterAndAccept();
         return true;
     }
-    if (key.check(FcitxKey_BackSpace)) {
+    if (key.check(FcitxKey_Up) || key.check(FcitxKey_Down)) {
+        const auto& filters = rimes::capsule::ModuleDefinition(model_.module()).at("filters");
+        int selected = 0;
+        for (std::size_t i = 0; i < filters.size(); ++i)
+            if (filters[i].at("id") == model_.filter())
+                selected = i;
+        if (!filters.empty()) {
+            const int next =
+                (selected + (key.check(FcitxKey_Up) ? -1 : 1) + static_cast<int>(filters.size())) %
+                static_cast<int>(filters.size());
+            model_.set_filter(filters[next].at("id"));
+            if (model_.module() == rimes::capsule::Module::Temporary)
+                ReloadHistory(0);
+        }
+        Publish();
+        event.filterAndAccept();
+        return true;
+    }
+    if (key.check(FcitxKey_BackSpace) || key.check(FcitxKey_Delete)) {
+        if (model_.query().empty() && model_.module() == rimes::capsule::Module::Temporary) {
+            HistoryAction("remove");
+            event.filterAndAccept();
+            return true;
+        }
         model_.backspace_query();
+        if (model_.module() == rimes::capsule::Module::Temporary)
+            ReloadHistory(0);
         Publish();
         event.filterAndAccept();
         return true;
@@ -547,7 +600,9 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
             digit = static_cast<int>(sym - FcitxKey_KP_1);
         }
         if (digit >= 0) {
-            model_.Select(digit);
+            SelectIndex(digit + (model_.module() == rimes::capsule::Module::Temporary
+                                     ? history_offset_
+                                     : 0));
             Activate();
             event.filterAndAccept();
             return true;
@@ -556,6 +611,8 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
     char printable = 0;
     if (IsPrintableAscii(event, &printable)) {
         model_.append_query(printable);
+        if (model_.module() == rimes::capsule::Module::Temporary)
+            ReloadHistory(0);
         Publish();
         event.filterAndAccept();
         return true;
@@ -652,7 +709,8 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
             break;
         case rimes::capsule::CommandOp::Status:
         case rimes::capsule::CommandOp::Refresh:
-            ReloadNotes(command.id);
+            if (command.text != "clipboard" || model_.module() == rimes::capsule::Module::Temporary)
+                ReloadNotes(command.id);
             break;
         case rimes::capsule::CommandOp::Toggle:
             Toggle(ic);
@@ -664,10 +722,10 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
             Close();
             break;
         case rimes::capsule::CommandOp::Next:
-            model_.Move(1);
+            MoveSelection(1);
             break;
         case rimes::capsule::CommandOp::Prev:
-            model_.Move(-1);
+            MoveSelection(-1);
             break;
         case rimes::capsule::CommandOp::Select:
             SelectIdentity(command);
@@ -684,6 +742,8 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
             break;
         case rimes::capsule::CommandOp::Search:
             model_.set_query(command.text);
+            if (model_.module() == rimes::capsule::Module::Temporary)
+                ReloadHistory(0);
             break;
         case rimes::capsule::CommandOp::Module:
             if (const auto module = rimes::capsule::ModuleFromRaw(command.text)) model_.set_module(*module);
@@ -691,6 +751,8 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
             break;
         case rimes::capsule::CommandOp::Filter:
             model_.set_filter(command.text);
+            if (model_.module() == rimes::capsule::Module::Temporary)
+                ReloadHistory(0);
             break;
         case rimes::capsule::CommandOp::Manage:
             Manage();
@@ -719,6 +781,15 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
                           command.op == rimes::capsule::CommandOp::RowInsert);
         }
         break;
+    case rimes::capsule::CommandOp::Favorite:
+    case rimes::capsule::CommandOp::Remove:
+        if (SelectIdentity(command))
+            HistoryAction(command.op == rimes::capsule::CommandOp::Favorite ? "favorite"
+                                                                            : "remove");
+        break;
+    case rimes::capsule::CommandOp::ClearHistory:
+        HistoryAction("clear");
+        break;
     case rimes::capsule::CommandOp::Unknown:
             break;
     }
@@ -726,7 +797,7 @@ void CapsuleService::HandleCommand(const rimes::capsule::Command& command) {
 }
 
 void CapsuleService::EnsureUi() {
-    if (headless_ || !model_.visible()) {
+    if (headless_ || !WantsUi()) {
         return;
     }
     ReapUi();
@@ -1037,7 +1108,7 @@ bool CapsuleService::HasUiClients() {
 }
 
 void CapsuleService::ScheduleUiRespawn() {
-    if (headless_ || !model_.visible()) {
+    if (headless_ || !WantsUi()) {
         return;
     }
     dropped_ui_pid_ = ui_pid_;
@@ -1055,10 +1126,10 @@ void CapsuleService::ArmUiRespawnTimer(int delay_us) {
             ReapUi();
             ReplaceDroppedUi();
             ++ui_respawn_attempt_;
-            if (model_.visible()) {
+            if (WantsUi()) {
                 EnsureUi();
             }
-            if (model_.visible() && !HasUiClients() && ui_respawn_attempt_ < 5) {
+            if (WantsUi() && !HasUiClients() && ui_respawn_attempt_ < 5) {
                 const int delays[] = {2000000, 2000000, 2000000, 2000000};
                 const int index = std::min(ui_respawn_attempt_ - 1, 3);
                 ArmUiRespawnTimer(delays[index]);
@@ -1089,7 +1160,21 @@ void CapsuleService::WriteAll(const std::string& payload, bool revoke) {
 }
 
 void CapsuleService::Publish() {
-    if (model_.visible()) {
+    const auto* action_card = model_.Selected();
+    const auto action_scope =
+        std::string(model_.visible() ? "visible" : "hidden") + "/" +
+        (model_.password_field() ? "protected" : "open") + "/" +
+        rimes::capsule::ModuleRaw(model_.module()) + "/" + model_.token() + "/" +
+        (action_card ? action_card->id + action_card->revision : "") + "/" +
+        (model_.ModuleEnabled(rimes::capsule::Module::Temporary) ? "enabled" : "disabled");
+    if (action_scope != history_scope_) {
+        if (history_action_cancel_)
+            history_action_cancel_->store(true);
+        history_scope_ = action_scope;
+        restore_id_.clear();
+        restore_revision_.clear();
+    }
+    if (WantsUi()) {
         EnsureUi();
     }
     const auto* selected = model_.Selected();
@@ -1098,6 +1183,23 @@ void CapsuleService::Publish() {
          selected->id != detail_->id || selected->revision != detail_->revision))
         ClearDetail();
     auto snapshot = rimes::capsule::MakeSnapshot(model_);
+    snapshot.clipboard_capture = WantsClipboard();
+    snapshot.restore_id = restore_id_;
+    snapshot.restore_revision = restore_revision_;
+    snapshot.restore_seq = restore_seq_;
+    snapshot.restore_close = restore_close_;
+    if (model_.module() == rimes::capsule::Module::Temporary) {
+        snapshot.offset += history_offset_;
+        snapshot.count = history_count_;
+        if (!history_error_.empty())
+            snapshot.hint = history_error_;
+        else if (!model_.loading())
+            snapshot.hint =
+                model_.cards().empty()
+                    ? (clipboard_capture_ ? "复制新的内容后将在此显示"
+                                          : "剪贴板历史收录已关闭，可在 Capsule 设置中开启")
+                    : "↩ INSERT / RESTORE   Ctrl+C COPY   ESC CLOSE";
+    }
     if (detail_) {
         snapshot.detail = true;
         snapshot.detail_notice = detail_->format_issue;

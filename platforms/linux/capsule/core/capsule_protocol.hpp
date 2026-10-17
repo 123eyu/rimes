@@ -31,6 +31,9 @@ enum class CommandOp {
     RowSelect,
     RowCopy,
     RowInsert,
+    Favorite,
+    Remove,
+    ClearHistory,
     Unknown,
 };
 
@@ -52,6 +55,10 @@ struct Snapshot {
     std::string filter = "all";
     bool managing = false;
     bool loading = false;
+    bool clipboard_capture = false;
+    std::string restore_id, restore_revision;
+    std::uint64_t restore_seq = 0;
+    bool restore_close = false;
     std::vector<Module> modules{Module::Notes};
     std::string tab;
     std::string query;

@@ -89,6 +89,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ca
             "share/rimes/rime_ice.userdb/000001.log", "share/rimes/user.yaml",
             "share/rimes/schemes/learning/wanxiang.userdb/CURRENT",
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
+            "share/rimes/capsule/clipboard/history-v1.sqlite3",
             "share/rimes/data/personal.yaml", "share/fcitx5/addon/another.conf",
             "bin/another-program", ".engine/install/lib/librime.so",
             "share/rimes/translation/current.json", "share/rimes/translation/cache/model.argosmodel",

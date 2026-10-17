@@ -50,14 +50,33 @@ std::string EncodeSnapshot(const Snapshot& value) {
         s.detail_offset = 0;
         s.detail_selected = -1;
     }
+    if (s.password_field || !s.visible || s.module != "temporary") {
+        s.restore_id.clear();
+        s.restore_revision.clear();
+    }
+    if (s.password_field)
+        s.clipboard_capture = false;
     Json out{{"v",1},{"generation",s.generation},{"visible",s.visible},{"armed",s.armed},{"password_field",s.password_field},
         {"theme",s.theme},{"tab",s.tab},{"query",s.query},{"hint",s.hint},{"last_copied",s.last_copied},{"copy_seq",s.copy_seq},
         {"selected_id",s.selected_id},{"selected_title",s.selected_title},{"selected_preview",s.selected_preview},
         {"selected",s.selected},{"offset",s.offset},{"count",s.count},{"ui_clients",s.ui_clients},{"module",s.module},{"filter",s.filter},
         {"managing",s.managing},{"loading",s.loading},{"modules",Json::array()},{"cards",Json::array()}};
+    out["clipboard_capture"] = s.clipboard_capture;
+    out["restore_id"] = s.restore_id;
+    out["restore_revision"] = s.restore_revision;
+    out["restore_seq"] = s.restore_seq;
+    out["restore_close"] = s.restore_close;
     for (auto module : s.modules) out["modules"].push_back(ModuleRaw(module));
-    for (const auto& card : s.cards) out["cards"].push_back({{"id",card.id},{"kind",KindRaw(card.kind)},
-        {"title",card.title},{"preview",card.preview},{"revision",card.revision},{"module",ModuleRaw(card.module)},{"filter",card.filter}});
+    for (const auto& card : s.cards)
+        out["cards"].push_back({{"id", card.id},
+                                {"kind", KindRaw(card.kind)},
+                                {"title", card.title},
+                                {"preview", card.preview},
+                                {"revision", card.revision},
+                                {"module", ModuleRaw(card.module)},
+                                {"filter", card.filter},
+                                {"favorite", card.favorite},
+                                {"source", card.source}});
     out["detail_notice"] = s.detail_notice;
     out["detail"] = s.detail;
     out["detail_revision"] = s.detail_revision;
@@ -91,10 +110,22 @@ bool DecodeSnapshot(std::string_view json, Snapshot* out) {
         s.selected_preview = data.value("selected_preview", ""); s.selected = data.value("selected",0);
         s.count = data.value("count",0); s.ui_clients = data.value("ui_clients",0);
         s.offset = data.value("offset",0);
-        if(s.offset<0 || s.count<0 || s.count>kMaxRecords || s.offset>s.count) return false;
+        if (s.offset < 0 || s.count < 0 ||
+            s.count > (data.value("module", "notes") == "temporary" ? 100000 : kMaxRecords) ||
+            s.offset > s.count)
+            return false;
         s.module = data.value("module","notes"); s.filter = data.value("filter","all");
         const auto module = ModuleFromRaw(s.module);
         if (!module || !ValidFilter(*module,s.filter)) return false;
+        s.clipboard_capture = data.value("clipboard_capture", false);
+        s.restore_id = data.value("restore_id", "");
+        s.restore_revision = data.value("restore_revision", "");
+        s.restore_seq = data.value("restore_seq", std::uint64_t{0});
+        s.restore_close = data.value("restore_close", false);
+        if (!s.restore_id.empty() &&
+            (!LooksLikeUuid(s.restore_id) || s.restore_revision.size() != 64 ||
+             s.restore_revision.find_first_not_of("0123456789abcdef") != s.restore_revision.npos))
+            return false;
         s.managing = data.value("managing",false); s.loading = data.value("loading",false);
         if (data.contains("modules")) {
             s.modules.clear();
@@ -112,6 +143,10 @@ bool DecodeSnapshot(std::string_view json, Snapshot* out) {
                 card.id = item.at("id"); card.kind = KindFromRaw(item.at("kind").get<std::string>());
                 card.title = item.at("title"); card.preview = item.at("preview");
                 card.revision = item.value("revision", ""); card.filter = item.value("filter", "other");
+                card.favorite = item.value("favorite", false);
+                card.source = item.value("source", "");
+                if (card.source.size() > 512)
+                    return false;
                 card.module = ModuleFromRaw(item.value("module",s.module)).value_or(*module);
                 if (!LooksLikeUuid(card.id) || card.title.size() > 4096 ||
                     CharacterCount(card.title) > kMaxTitleChars || card.preview.size() > 4096) return false;
@@ -149,12 +184,20 @@ bool DecodeSnapshot(std::string_view json, Snapshot* out) {
              s.detail_revision.find_first_not_of("0123456789abcdef") != s.detail_revision.npos ||
              !LooksLikeUuid(s.selected_id)))
             return false;
+        if (!s.visible || s.module != "temporary" || s.password_field) {
+            s.restore_id.clear();
+            s.restore_revision.clear();
+        }
         if (s.password_field) {
+            s.clipboard_capture = false;
             s.visible = false;
             s.armed = false;
             s.query.clear();
             s.last_copied.clear();
             s.cards.clear();
+            s.count = 0;
+            s.offset = 0;
+            s.selected = 0;
             s.selected_id.clear();
             s.selected_title.clear();
             s.selected_preview.clear();
@@ -180,16 +223,31 @@ bool ParseCommand(std::string_view json, Command* out, std::string* error) {
             if (key != "v" && key != "op" && key != "text" && key != "tab" && key != "index" && key != "id" && key != "revision") return false;
         }
         static const std::map<std::string, CommandOp> ops{
-            {"hello",CommandOp::Hello},{"status",CommandOp::Status},{"toggle",CommandOp::Toggle},{"show",CommandOp::Show},
-            {"close",CommandOp::Close},{"next",CommandOp::Next},{"prev",CommandOp::Prev},{"select",CommandOp::Select},
-            {"tab",CommandOp::Tab},{"activate",CommandOp::Activate},{"copy",CommandOp::Copy},{"search",CommandOp::Search},
-            {"module",CommandOp::Module},{"filter",CommandOp::Filter},{"manage",CommandOp::Manage},{"rail",CommandOp::Rail},
-            {"refresh",CommandOp::Refresh},
-                                                          {"detail", CommandOp::Detail},
-                                                          {"detail-close", CommandOp::DetailClose},
-                                                          {"row-select", CommandOp::RowSelect},
-                                                          {"row-copy", CommandOp::RowCopy},
-                                                          {"row-insert", CommandOp::RowInsert}};
+            {"hello", CommandOp::Hello},
+            {"status", CommandOp::Status},
+            {"toggle", CommandOp::Toggle},
+            {"show", CommandOp::Show},
+            {"close", CommandOp::Close},
+            {"next", CommandOp::Next},
+            {"prev", CommandOp::Prev},
+            {"select", CommandOp::Select},
+            {"tab", CommandOp::Tab},
+            {"activate", CommandOp::Activate},
+            {"copy", CommandOp::Copy},
+            {"search", CommandOp::Search},
+            {"module", CommandOp::Module},
+            {"filter", CommandOp::Filter},
+            {"manage", CommandOp::Manage},
+            {"rail", CommandOp::Rail},
+            {"refresh", CommandOp::Refresh},
+            {"favorite", CommandOp::Favorite},
+            {"remove", CommandOp::Remove},
+            {"clear-history", CommandOp::ClearHistory},
+            {"detail", CommandOp::Detail},
+            {"detail-close", CommandOp::DetailClose},
+            {"row-select", CommandOp::RowSelect},
+            {"row-copy", CommandOp::RowCopy},
+            {"row-insert", CommandOp::RowInsert}};
         const auto found = ops.find(data.at("op").get<std::string>());
         if (found == ops.end()) return false;
         Command command;
@@ -199,6 +257,9 @@ bool ParseCommand(std::string_view json, Command* out, std::string* error) {
         if (!command.revision.empty() &&
             (command.revision.size() != 64 ||
              command.revision.find_first_not_of("0123456789abcdef") != command.revision.npos))
+            return false;
+        if ((command.op == CommandOp::Favorite || command.op == CommandOp::Remove) &&
+            (command.id.empty() || command.revision.empty()))
             return false;
         if ((command.op == CommandOp::RowSelect || command.op == CommandOp::RowCopy ||
              command.op == CommandOp::RowInsert) &&

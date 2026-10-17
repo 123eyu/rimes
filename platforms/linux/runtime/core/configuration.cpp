@@ -37,6 +37,10 @@ std::string URLPart(CURLU *url, CURLUPart part) {
 } // namespace
 
 std::vector<Field> PluginFields(std::string_view id) {
+  if (id == "builtin.capsule.temporary")
+    return {{"captureEnabled", "允许收录剪贴板内容",
+             "XSIME 运行时后台收录；安全输入、锁屏和休眠期间不会读取。",
+             FieldKind::Toggle, false, {}}};
   if (id == "builtin.apple-translation")
     return {
         Choice("sourceLanguage", "源语言", "zh-Hans",

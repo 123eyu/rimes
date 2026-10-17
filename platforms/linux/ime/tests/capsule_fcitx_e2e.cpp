@@ -1,3 +1,4 @@
+#include "capsule_history.hpp"
 #include "capsule_protocol.hpp"
 #include "capsule_store.hpp"
 #include "capsule_transport.hpp"
@@ -130,6 +131,195 @@ void ExpectNoZwsp(fcitx::InputContext* ic, const char* where) {
     if (client.find(kZwsp) != std::string::npos || popup.find(kZwsp) != std::string::npos) {
         Die(std::string("U+200B leaked into host preedit at ") + where);
     }
+}
+
+std::unique_ptr<fcitx::EventSourceTime> history_timer;
+void RunHistorySuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, fcitx::ICUUID uuid,
+                     fcitx::InputContext* ic, const std::string& dump_path) {
+    using namespace rimes::capsule;
+    SendKey(frontend, uuid, "Escape");
+    SendKey(frontend, uuid, "Control+Shift+V");
+    struct State {
+        int fd = -1, phase = 0;
+        ClipboardEntry text, image;
+        ~State() {
+            if (fd >= 0)
+                close(fd);
+        }
+    };
+    auto state = std::make_shared<State>();
+    ClipboardHistoryStore store(ClipboardHistoryStore::DefaultRoot());
+    state->image = store.Capture(ClipboardArchive{{{"image/png", "binary fixture"}}},
+                                 {"x11", "Fixture", "image"});
+    state->text =
+        store.Capture(ClipboardArchive{{{"text/plain;charset=utf-8", "全文中文\nsecond line"}}},
+                      {"x11", "Fixture", "text"});
+    state->fd = socket(AF_UNIX, SOCK_STREAM | SOCK_NONBLOCK | SOCK_CLOEXEC, 0);
+    sockaddr_un address{};
+    address.sun_family = AF_UNIX;
+    std::strncpy(address.sun_path, std::getenv("RIMES_CAPSULE_SOCKET"),
+                 sizeof(address.sun_path) - 1);
+    if (state->fd < 0 || connect(state->fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)))
+        Die("history socket");
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(30);
+    history_timer = instance.eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 20000, 20000,
+        [&, frontend, uuid, ic, dump_path, state, deadline](fcitx::EventSourceTime* timer,
+                                                            uint64_t) {
+            try {
+                if (std::chrono::steady_clock::now() > deadline)
+                    Die("history timeout phase " + std::to_string(state->phase));
+                char buffer[65536];
+                while (recv(state->fd, buffer, sizeof(buffer), MSG_DONTWAIT) > 0) {
+                }
+                auto send = [&](nlohmann::json command) {
+                    command["v"] = 1;
+                    std::string frame;
+                    EncodeFrame(command.dump(), &frame);
+                    if (::send(state->fd, frame.data(), frame.size(), MSG_NOSIGNAL) !=
+                        static_cast<ssize_t>(frame.size()))
+                        Die("history send phase " + std::to_string(state->phase) + " errno " +
+                            std::to_string(errno));
+                };
+                const auto snapshot = nlohmann::json::parse(ReadDump(dump_path));
+                auto loaded = [&] {
+                    return snapshot.at("module") == "temporary" &&
+                           !snapshot.at("loading").get<bool>() && snapshot.at("count") == 2;
+                };
+                switch (state->phase) {
+                case 0:
+                    send({{"op", "module"}, {"text", "temporary"}});
+                    state->phase = 1;
+                    break;
+                case 1:
+                    if (!loaded())
+                        break;
+                    send({{"op", "select"}, {"id", state->text.id}});
+                    state->phase = 2;
+                    break;
+                case 2:
+                    if (snapshot.at("selected_id") != state->text.id)
+                        break;
+                    frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(
+                        "全文中文\nsecond line");
+                    SendKey(frontend, uuid, "Return");
+                    state->phase = 3;
+                    break;
+                case 3:
+                    if (snapshot.at("visible").get<bool>())
+                        break;
+                    SendKey(frontend, uuid, "Control+Shift+V");
+                    state->phase = 4;
+                    break;
+                case 4:
+                    if (!loaded())
+                        break;
+                    send({{"op", "activate"},
+                          {"id", state->image.id},
+                          {"revision", state->image.revision}});
+                    state->phase = 5;
+                    break;
+                case 5:
+                    if (snapshot.at("restore_id") != state->image.id)
+                        break;
+                    if (!snapshot.at("restore_close").get<bool>() ||
+                        !snapshot.at("visible").get<bool>())
+                        Die("rich activation did not await clipboard acknowledgment");
+                    send({{"op", "favorite"},
+                          {"id", state->image.id},
+                          {"revision", state->image.revision}});
+                    state->phase = 6;
+                    break;
+                case 6: {
+                    ClipboardHistoryStore history(ClipboardHistoryStore::DefaultRoot());
+                    auto current = history.Get(state->image.id);
+                    if (!current || !current->favorite || !loaded())
+                        break;
+                    send({{"op", "remove"},
+                          {"id", state->image.id},
+                          {"revision", state->image.revision}}); // stale CAS must not remove
+                    state->image = *current;
+                    state->phase = 7;
+                    break;
+                }
+                case 7:
+                    if (!loaded() || snapshot.at("cards")
+                                             .at(snapshot.at("selected").get<int>())
+                                             .at("revision") != state->image.revision)
+                        break;
+                    send({{"op", "search"}, {"text", "second line"}});
+                    state->phase = 8;
+                    break;
+                case 8:
+                    if (snapshot.at("loading").get<bool>() || snapshot.at("count") != 1)
+                        break;
+                    if (snapshot.at("cards")[0].at("id") != state->text.id)
+                        Die("history full text search");
+                    SendKey(frontend, uuid, "Escape");
+                    state->phase = 9;
+                    break;
+                case 9:
+                    if (!loaded())
+                        break;
+                    if (!snapshot.at("visible").get<bool>() || snapshot.at("query") != "")
+                        Die("Escape must clear search before closing");
+                    SendKey(frontend, uuid, "Down");
+                    state->phase = 10;
+                    break;
+                case 10:
+                    if (snapshot.at("loading").get<bool>() || snapshot.at("filter") != "text")
+                        break;
+                    if (snapshot.at("count") != 1 || snapshot.at("selected_id") != state->text.id)
+                        Die("keyboard clipboard filter");
+                    SendKey(frontend, uuid, "Up");
+                    state->phase = 11;
+                    break;
+                case 11:
+                    if (!loaded())
+                        break;
+                    send({{"op", "select"}, {"id", state->text.id}});
+                    state->phase = 12;
+                    break;
+                case 12:
+                    if (snapshot.at("selected_id") != state->text.id)
+                        break;
+                    SendKey(frontend, uuid, "Delete");
+                    state->phase = 13;
+                    break;
+                case 13:
+                    if (snapshot.at("loading").get<bool>() || snapshot.at("count") != 1)
+                        break;
+                    if (snapshot.at("cards")[0].at("id") != state->image.id)
+                        Die("Delete removed the wrong history item");
+                    ic->setCapabilityFlags(fcitx::CapabilityFlags{fcitx::CapabilityFlag::Preedit} |
+                                           fcitx::CapabilityFlag::Password);
+                    send({{"op", "copy"},
+                          {"id", state->image.id},
+                          {"revision", state->image.revision}});
+                    state->phase = 14;
+                    break;
+                case 14:
+                    if (!snapshot.at("password_field").get<bool>())
+                        break;
+                    if (!snapshot.at("cards").empty() ||
+                        !snapshot.at("restore_id").get<std::string>().empty() ||
+                        snapshot.at("clipboard_capture").get<bool>())
+                        Die("protected history/action exposure");
+                    std::cout << "ok: Fcitx history text commits, rich explicit restore, favorite "
+                                 "CAS, full-text search and protection passed\n";
+                    instance.exit();
+                    return true;
+                }
+                timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000);
+                timer->setOneShot();
+                return true;
+            } catch (const std::exception& error) {
+                std::cerr << error.what() << '\n';
+                g_exit_status = EXIT_FAILURE;
+                instance.exit();
+                return true;
+            }
+        });
 }
 
 std::unique_ptr<fcitx::EventSourceTime> detail_timer;
@@ -301,7 +491,8 @@ void RunDetailSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, f
                     ExpectContains(ReadDump(dump_path), "\"visible\":true",
                                    "Buffer Return must not close Capsule");
                     std::cout << "ok: Buffer capturing keeps Capsule from consuming Return\n";
-                    instance.exit();
+                    SendKey(frontend, uuid, "Control+Shift+B");
+                    RunHistorySuite(instance, frontend, uuid, ic, dump_path);
                     return true;
                 }
                 timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000);
@@ -356,7 +547,11 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
 
     SendKey(frontend, uuid, "Escape");
     snapshot = ReadDump(dump_path);
-    ExpectContains(snapshot, "\"visible\":false", "Escape did not hide");
+    ExpectContains(snapshot, "\"visible\":true", "first Escape must leave the rail open");
+    ExpectContains(snapshot, "\"query\":\"\"", "first Escape must clear the search");
+    SendKey(frontend, uuid, "Escape");
+    snapshot = ReadDump(dump_path);
+    ExpectContains(snapshot, "\"visible\":false", "second Escape did not hide");
     frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("你好");
     Type(frontend, uuid, "nihao");
     SendKey(frontend, uuid, "space");

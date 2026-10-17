@@ -1,4 +1,5 @@
 #include "capsule_hash.hpp"
+#include "capsule_history.hpp"
 #include "capsule_manager.hpp"
 #include "capsule_rich_text.hpp"
 #include "desktop.hpp"
@@ -218,7 +219,69 @@ int main(int argc,char** argv) {
                       ReadRichText(rich.rich_asset)->PlainText() == "external Markdown projection",
                   "explicit GUI import did not persist replacement");
         }
-        std::cout << "GTK manager save, protected draft recovery, revocation and "
+        {
+            auto temporary = packages.Inspect("builtin.capsule.temporary");
+            if (!temporary.enabled)
+                packages.Enable(temporary.id, true, temporary.grant);
+            ClipboardHistoryStore history(ClipboardHistoryStore::DefaultRoot());
+            auto item = history.Capture({{{"text/plain;charset=utf-8", "历史完整内容\nsecond line"},
+                                          {"text/html", "<b>历史完整内容</b>"}}},
+                                        {"x11", "Fixture", "123"});
+            Snapshot state;
+            state.visible = true;
+            state.managing = true;
+            state.module = "temporary";
+            state.modules = {Module::Temporary, Module::Notes};
+            state.selected_id = item.id;
+            state.count = 1;
+            Card card;
+            card.id = item.id;
+            card.revision = item.revision;
+            card.module = Module::Temporary;
+            card.title = item.title;
+            card.preview = "short preview";
+            card.source = "Fixture";
+            state.cards = {card};
+            std::vector<Json> commands;
+            ManagerWindow history_ui(
+                [&](const std::string& raw) { commands.push_back(Json::parse(raw)); });
+            history_ui.Apply(state);
+            auto* detail = Find(history_ui.Root(), "capsule-clipboard-detail");
+            auto* text = Find(history_ui.Root(), "capsule-clipboard-text");
+            auto* copy = Find(history_ui.Root(), "capsule-clipboard-copy");
+            Check(detail && text && copy, "missing history manager controls");
+            Wait([&] { return Text(text) == "历史完整内容\nsecond line"; });
+            Check(gtk_widget_get_visible(detail) &&
+                      !gtk_text_view_get_editable(GTK_TEXT_VIEW(text)),
+                  "history manager must be read only");
+            gtk_button_clicked(GTK_BUTTON(copy));
+            Check(commands.size() == 1 && commands.back().at("op") == "copy" &&
+                      commands.back().at("revision") == item.revision,
+                  "history copy lost identity/revision");
+            Check(history.Favorite(item.id, item.revision, true), "favorite fixture");
+            item = *history.Get(item.id);
+            state.cards[0].revision = item.revision;
+            history_ui.Apply(state);
+            gtk_button_clicked(GTK_BUTTON(copy));
+            Check(commands.back().at("revision") == item.revision,
+                  "history manager copied stale revision");
+            state.password_field = true;
+            history_ui.Apply(state);
+            Check(Text(text).empty() && !gtk_widget_get_visible(history_ui.Window()),
+                  "protected manager exposed history text");
+            gtk_button_clicked(GTK_BUTTON(copy));
+            Check(commands.size() == 2, "concealed history accepted copy");
+            state.password_field = false;
+            history_ui.Apply(state);
+            Wait([&] { return Text(text) == "历史完整内容\nsecond line"; });
+            state.module = "notes";
+            state.cards.clear();
+            state.selected_id.clear();
+            history_ui.Apply(state);
+            Check(Text(text).empty() && !gtk_widget_get_visible(detail),
+                  "switching modules retained clipboard plaintext");
+        }
+        std::cout << "GTK manager save, protected draft recovery, clipboard detail, revocation and "
                      "concurrent-edit conflict passed\n";
     } catch(const std::exception& error) {std::cerr<<error.what()<<'\n';std::filesystem::remove_all(root);return 1;}
     std::filesystem::remove_all(root);return 0;
