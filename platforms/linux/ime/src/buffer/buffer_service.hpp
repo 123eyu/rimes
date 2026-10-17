@@ -54,6 +54,7 @@ public:
 
     std::string SocketPath() const { return socket_path_; }
     void Publish();
+    void Configure(bool close_after_last, bool reset_on_app_switch, int width);
 
 private:
     struct Client {
@@ -121,6 +122,9 @@ private:
     std::string pending_unfocus_token_;
     std::string target_token_;
     std::string raw_input_;
+    std::string last_external_program_;
+    bool reset_on_app_switch_ = false;
+    int width_ = 760;
     bool dragging_ = false;
     bool auto_capture_ = false;
     bool headless_ = false;

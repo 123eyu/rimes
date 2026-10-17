@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "buffer_protocol.hpp"
+#include "configuration.hpp"
 
 #include <fcitx-utils/capabilityflags.h>
 #include <fcitx-utils/event.h>
@@ -165,7 +166,7 @@ void AfterUs(SuiteCtx ctx, int delay_us, std::function<void(SuiteCtx)> fn) {
         }));
 }
 
-void SendBufferOp(const char* op) {
+void SendBufferOp(const char* op, std::string_view text = {}) {
     const char* path = std::getenv("RIMES_BUFFER_SOCKET");
     if (path == nullptr || path[0] == '\0') {
         Die("RIMES_BUFFER_SOCKET is missing");
@@ -181,7 +182,8 @@ void SendBufferOp(const char* op) {
         close(fd);
         Die("could not connect to the Buffer socket");
     }
-    const std::string json = std::string("{\"v\":1,\"op\":\"") + op + "\"}";
+    const std::string json = std::string("{\"v\":1,\"op\":\"") + op + "\"" +
+        (text.empty() ? "" : ",\"text\":" + rimes::buffer::JsonEscape(text)) + "}";
     std::string frame;
     if (!rimes::buffer::EncodeFrame(json, &frame) ||
         send(fd, frame.data(), frame.size(), MSG_NOSIGNAL) != static_cast<ssize_t>(frame.size())) {
@@ -530,10 +532,48 @@ void RunBufferSuite(fcitx::Instance& instance,
                                                                 "after held-Return send-all");
                                                             std::cout << "ok: held-Return send-all "
                                                                          "ate leftover repeats\n";
-                                                            ctx.frontend->call<
-                                                                fcitx::ITestFrontend::
-                                                                    destroyInputContext>(ctx.uuid);
-                                                            ctx.instance->exit();
+                                                            // Real settings-store transaction must
+                                                            // update the running addon without a restart.
+                                                            unsetenv("RIMES_BUFFER_CLOSE_AFTER_LAST");
+                                                            rimes::runtime::ConfigurationStore settings(
+                                                                rimes::runtime::UserRoot() / "configuration");
+                                                            auto changed=settings.Load();
+                                                            changed["closeAfterLast"]=false;
+                                                            changed["bufferWidth"]=920;
+                                                            changed["resetOnAppSwitch"]=true;
+                                                            settings.Save(changed,changed.at("revision"));
+                                                            AfterUs(ctx,100000,[](SuiteCtx next) {
+                                                                const auto updated=ReadDump(next.dump_path);
+                                                                ExpectContains(updated,"\"close_after_last\":false","running IME missed settings change");
+                                                                ExpectContains(updated,"\"width\":920","running IME missed width change");
+                                                                std::cout << "ok: settings transaction updates running Buffer\n";
+                                                                EnsureCapturing(next.frontend,next.uuid,next.dump_path);
+                                                                Type(next.frontend,next.uuid,"nihao");
+                                                                SendKey(next.frontend,next.uuid,"space");
+                                                                ExpectContains(ReadDump(next.dump_path),"你好","local app-switch fixture missing");
+                                                                const auto other=next.frontend->call<fcitx::ITestFrontend::createInputContext>("privacy-target");
+                                                                auto* other_ic=next.instance->inputContextManager().findByUUID(other);
+                                                                if(!other_ic) Die("privacy target unavailable");
+                                                                next.instance->setCurrentInputMethod(other_ic,"rimes",true);
+                                                                other_ic->focusIn();
+                                                                ExpectContains(ReadDump(next.dump_path),"\"empty\":true","opted-in application switch retained local typing");
+                                                                next.frontend->call<fcitx::ITestFrontend::destroyInputContext>(other);
+                                                                next.ic->focusIn();
+                                                                SendBufferOp("paste","external delivery fixture");
+                                                                AfterUs(next,100000,[](SuiteCtx done) {
+                                                                    ExpectContains(ReadDump(done.dump_path),"external delivery fixture","external fixture missing");
+                                                                    const auto target=done.frontend->call<fcitx::ITestFrontend::createInputContext>("privacy-external-target");
+                                                                    auto* target_ic=done.instance->inputContextManager().findByUUID(target);
+                                                                    if(!target_ic) Die("external target unavailable");
+                                                                    done.instance->setCurrentInputMethod(target_ic,"rimes",true);
+                                                                    target_ic->focusIn();
+                                                                    ExpectContains(ReadDump(done.dump_path),"external delivery fixture","app switch discarded external content");
+                                                                    std::cout << "ok: app-switch reset clears local typing and preserves external delivery\n";
+                                                                    done.frontend->call<fcitx::ITestFrontend::destroyInputContext>(target);
+                                                                    done.frontend->call<fcitx::ITestFrontend::destroyInputContext>(done.uuid);
+                                                                    done.instance->exit();
+                                                                });
+                                                            });
                                                         } catch (const TestFailed&) {
                                                             ctx.instance->exit();
                                                         }

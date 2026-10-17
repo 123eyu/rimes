@@ -118,7 +118,7 @@ Priority: optional
 Architecture: $ARCH
 Installed-Size: $SIZE
 Depends: fcitx5, $DEPS
-Recommends: libgtk-layer-shell0, wl-clipboard
+Recommends: libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk
 Maintainer: XSIME contributors <https://github.com/scholay/xsime>
 Homepage: https://xsime.com
 Description: XSIME input method frontend for Fcitx 5

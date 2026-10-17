@@ -4,12 +4,14 @@
 
 GitHub 里程碑：https://github.com/scholay/xsime/milestone/1
 
+**追加验收要求（2026-10-17）**：所有组件、设置和管理界面以当前 macOS 原生实现为基准做像素级对齐。相同内容、主题、逻辑尺寸与缩放下保存双端截图、并排图和差异图，逐项核对布局、间距、颜色、字体度量、图标、边框、圆角及交互状态；不以 GTK 默认样式代替产品样式。业务与状态迁移另用共享样例验证。详见 [视觉与行为对齐合同](VISUAL-PARITY.md)。任务总数仍为 30，此要求并入每项验收，不另开一轮视觉改造。
+
 P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模块；P2 完成最终桌面与安装包验收。每项实现时同步运行相关回归，不把测试全部推迟至最后。
 
 | 顺序 | 优先级 | GitHub 任务 | 状态 |
 |---|---|---|---|
-| 01 | P0 | [#151 插件注册、能力与启停生命周期](https://github.com/scholay/xsime/issues/151) | 源码及本地回归通过，待 CI |
-| 02 | P0 | [#152 官方插件安装、更新和完整性校验](https://github.com/scholay/xsime/issues/152) | 源码及本地回归通过，待 CI |
+| 01 | P0 | [#151 插件注册、能力与启停生命周期](https://github.com/scholay/xsime/issues/151) | 已合入，CI 与审查通过 |
+| 02 | P0 | [#152 官方插件安装、更新和完整性校验](https://github.com/scholay/xsime/issues/152) | 已合入，CI 与审查通过 |
 | 03 | P0 | [#153 统一设置、插件配置与凭据存储](https://github.com/scholay/xsime/issues/153) | 进行中 |
 | 04 | P0 | [#154 Buffer 双轨工作区与异步任务状态](https://github.com/scholay/xsime/issues/154) | 待开发 |
 | 05 | P0 | [#155 Linux 本地翻译引擎和资源管理](https://github.com/scholay/xsime/issues/155) | 待开发 |

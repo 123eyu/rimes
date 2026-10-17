@@ -134,7 +134,7 @@ void PlaceOnX11(App* app) {
         work.width = 1280;
         work.height = 800;
     }
-    const auto placed = rimes::buffer::PlaceX11Panel(app->snapshot.caret, work, kWindowWidth,
+    const auto placed = rimes::buffer::PlaceX11Panel(app->snapshot.caret, work, app->snapshot.width,
                                                      kWindowHeight, kGapAroundCaret);
     gtk_window_move(GTK_WINDOW(app->window), placed.x, placed.y);
     app->placed = true;
@@ -244,6 +244,13 @@ void ApplySnapshotJson(App* app, const std::string& json) {
         }
         return static_cast<int>(g_ascii_strtoll(json.c_str() + start + needle.size(), nullptr, 10));
     };
+    const int width = std::max(460, std::min(1200, extract_int("width", kWindowWidth)));
+    if (width != app->snapshot.width) {
+        app->snapshot.width = width;
+        gtk_widget_set_size_request(app->window, width, kWindowHeight);
+        gtk_window_resize(GTK_WINDOW(app->window), width, kWindowHeight);
+        app->placed = false;
+    }
     app->snapshot.caret.x = extract_int("x", 0);
     app->snapshot.caret.y = extract_int("y", 0);
     app->snapshot.caret.width = extract_int("w", 0);
@@ -378,7 +385,7 @@ void WriteGeometryDump(App* app) {
                  "{\"width\":%d,\"height\":%d,\"size_request_w\":%d,\"size_request_h\":%d,"
                  "\"layer\":%s,\"min_width\":%d,\"min_height\":%d}\n",
                  allocation.width, allocation.height, request_w, request_h,
-                 app->wayland_layer ? "true" : "false", kWindowWidth, kWindowHeight);
+                 app->wayland_layer ? "true" : "false", app->snapshot.width, kWindowHeight);
     std::fclose(file);
     app->dumped_geometry = true;
     if (app->quit_after_dump) {
@@ -526,12 +533,12 @@ gboolean ConnectSocket(App* app, const std::string& path) {
 void LoadCss() {
     GtkCssProvider* provider = gtk_css_provider_new();
     const char* css = R"CSS(
-window.rimes-buffer { background: transparent; min-width: 760px; min-height: 78px; }
+window.rimes-buffer { background: transparent; min-width: 460px; min-height: 78px; }
 #rimes-chrome {
   background-color: #1c2420;
   border: 1px solid #3d5a4c;
   border-radius: 12px;
-  min-width: 760px;
+  min-width: 460px;
   min-height: 78px;
 }
 #rimes-toolbar { min-height: 33px; }

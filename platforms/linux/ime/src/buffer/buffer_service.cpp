@@ -419,6 +419,13 @@ void BufferService::AfterRime(InputContext* ic, KeyEvent& event, bool rime_handl
     Publish();
 }
 
+void BufferService::Configure(bool close_after_last, bool reset_on_app_switch, int width) {
+    if (!std::getenv("RIMES_BUFFER_CLOSE_AFTER_LAST")) model_.set_close_after_last(close_after_last);
+    reset_on_app_switch_ = reset_on_app_switch;
+    width_ = std::clamp(width, 460, 1200);
+    Publish();
+}
+
 void BufferService::OnActivate(InputContext* ic) {
     if (ic == nullptr) {
         return;
@@ -448,6 +455,23 @@ void BufferService::OnActivate(InputContext* ic) {
     }
     if (model_.capture_enabled() && !model_.captures(token)) {
         DropCaptureForSwitch("focus-changed");
+    }
+    // Only a known external application transition may clear local typing.
+    // Companion settings/editors and mixed content staged for another app
+    // preserve the previous external identity and the complete workspace.
+    const auto program = ic->program();
+    const bool external = !program.empty() && program != "rimes-settings" &&
+        program != "rimes-buffer" && program != "rimes-capsule" && program != "rimes-mailbox";
+    if (external) {
+        const bool staged_external = std::any_of(model_.blocks().begin(), model_.blocks().end(), [](const auto& block) {
+            return block.origin != rimes::buffer::Origin::Rime && block.origin != rimes::buffer::Origin::Local;
+        });
+        if (reset_on_app_switch_ && !last_external_program_.empty() &&
+            program != last_external_program_ && !staged_external) {
+            model_.discard_for_privacy();
+            raw_input_.clear();
+        }
+        last_external_program_ = program;
     }
     OnPasswordField(ic, ic->capabilityFlags().test(CapabilityFlag::Password));
     if (auto_capture_ && !ic->capabilityFlags().test(CapabilityFlag::Password)) {
@@ -1027,6 +1051,7 @@ void BufferService::Publish() {
         EnsureUi();
     }
     auto snapshot = rimes::buffer::MakeSnapshot(model_);
+    snapshot.width = width_;
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::buffer::EncodeSnapshot(snapshot);
     WriteAll(json);
