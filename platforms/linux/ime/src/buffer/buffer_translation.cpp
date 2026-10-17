@@ -59,7 +59,7 @@ void BufferService::SynchronizeTranslation() {
 }
 bool BufferService::TranslationTick(bool force) {
     SynchronizeDerived();
-    if (!TranslationActive() || !translation_configuration_ || !translation_lease_) return false;
+    if (!Translating() || !translation_configuration_ || !translation_lease_) return false;
     // An explicit Generate and pending debounce share one worker ownership slot.
     if (translation_.Running()) return false;
     if (force) { translation_.Retry(); translation_explicit_ = true; }
