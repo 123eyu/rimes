@@ -20,3 +20,5 @@ Ubuntu 24.04 arm64 validation, 2026-10-17:
 
 This is transport and host evidence; external providers and real desktop/pixel
 acceptance remain separate parts of #158.
+
+Queued requests cancelled before their worker starts now emit one terminal `Cancelled` result. The HTTP fixture keeps four streams in teardown, cancels an accepted fifth queued request, checks its cancellation result, then verifies a fresh request still completes. `ai-http` passed with the updated worker pool on 2026-10-18.
