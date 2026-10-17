@@ -1,3 +1,4 @@
+#include "native_buffer_metrics.hpp"
 #include "configuration.hpp"
 #include <algorithm>
 #include <cmath>
@@ -274,7 +275,7 @@ void ConfigurationStore::Validate(const Json &value) {
           value.at("theme") == "quiet" || value.at("theme") == "rasta" ||
           value.at("theme") == "liquidGlass");
   Require(value.at("bufferWidth").is_number_integer() &&
-          value.at("bufferWidth") >= 460 && value.at("bufferWidth") <= 1200);
+          value.at("bufferWidth") >= rimes::native::bufferMinimumWidth && value.at("bufferWidth") <= rimes::native::bufferMaximumWidth);
   for (auto key : {"closeAfterLast", "resetOnAppSwitch", "autoSend"})
     Require(value.at(key).is_boolean());
   Require(value.at("activeConnector") == "openai-compatible" ||

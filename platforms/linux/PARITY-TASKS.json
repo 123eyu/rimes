@@ -74,7 +74,7 @@
         "扩展事件驱动 IPC，冻结源修订、任务身份、插件授权和焦点；取消、关闭或迟到回调不恢复投递权。",
         "保持单一 Rime runtime、每 IC 会话、原生 commitString；验证 UI 崩溃恢复与旧版 Default 行为。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 154,
       "url": "https://github.com/scholay/xsime/issues/154"
     },

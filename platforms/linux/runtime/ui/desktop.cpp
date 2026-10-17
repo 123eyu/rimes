@@ -302,6 +302,40 @@ GtkWidget *Icon(const std::string &name, int size) {
         } else if (icon == "xmark") {
           line(6, 6, 18, 18);
           line(18, 6, 6, 18);
+        } else if (icon == "chevron.left" || icon == "chevron.right") {
+          const double a = icon == "chevron.left" ? 15 : 9;
+          const double b = 24 - a;
+          line(a, 5, b, 12);
+          cairo_line_to(cr, a, 19);
+        } else if (icon == "arrow.uturn.backward") {
+          line(9, 4, 3, 9);
+          cairo_line_to(cr, 9, 14);
+          line(3, 9, 15, 9);
+          cairo_curve_to(cr, 24, 9, 24, 21, 15, 21);
+        } else if (icon == "doc.on.doc") {
+          cairo_rectangle(cr, 3, 3, 12, 14);
+          cairo_rectangle(cr, 8, 8, 13, 14);
+        } else if (icon == "doc.on.clipboard") {
+          cairo_rectangle(cr, 4, 4, 16, 18);
+          cairo_rectangle(cr, 8, 2, 8, 4);
+          line(8, 11, 16, 11);
+          line(8, 15, 16, 15);
+        } else if (icon == "paperplane.fill") {
+          line(2, 10, 22, 2);
+          cairo_line_to(cr, 15, 22);
+          cairo_line_to(cr, 10, 14);
+          cairo_close_path(cr);
+          cairo_fill(cr);
+          line(10, 14, 18, 6);
+        } else if (icon == "sparkles") {
+          line(12, 2, 14, 9);
+          cairo_line_to(cr, 22, 12);
+          cairo_line_to(cr, 14, 15);
+          cairo_line_to(cr, 12, 22);
+          cairo_line_to(cr, 9, 15);
+          cairo_line_to(cr, 2, 12);
+          cairo_line_to(cr, 9, 9);
+          cairo_close_path(cr);
         } else if (icon == "chart.bar" || icon == "chart.bar.xaxis") {
           for (int i = 0; i < 4; ++i)
             cairo_rectangle(cr, 3 + i * 5, 18 - (i % 3) * 4, 2,

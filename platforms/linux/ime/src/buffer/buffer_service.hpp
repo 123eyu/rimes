@@ -19,6 +19,7 @@
 #include "buffer_model.hpp"
 #include "buffer_protocol.hpp"
 #include "buffer_return.hpp"
+#include "configuration.hpp"
 
 namespace fcitx {
 
@@ -27,6 +28,9 @@ namespace fcitx {
 class BufferService {
 public:
     using PostFn = std::function<void(std::function<void()>)>;
+    using ResultFn = std::function<void(unsigned, std::string, bool, bool)>;
+    using RunDerived = std::function<void(rimes::buffer::DerivedRequest,
+        rimes::runtime::RequestConfiguration, std::shared_ptr<std::atomic<bool>>, ResultFn)>;
 
     BufferService(Instance* instance, PostFn post);
     ~BufferService();
@@ -54,7 +58,17 @@ public:
 
     std::string SocketPath() const { return socket_path_; }
     void Publish();
-    void Configure(bool close_after_last, bool reset_on_app_switch, int width);
+    void Configure(bool close_after_last, bool reset_on_app_switch, int width,
+                   std::string revision, std::string theme);
+    void BindPlugins(rimes::plugins::Registry& registry,
+        std::function<bool(const rimes::plugins::Lease&)> validate,
+        std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze);
+    // Only compiled adapters may register here, never renderer commands.
+    void RegisterDerivedAdapter(std::string id, std::string capability, RunDerived run, bool live_expand = true);
+    bool SelectPlugin(const std::string& id);
+    bool Generate();
+    void CancelDerived();
+    const rimes::buffer::DerivedWorkspace& derived() const { return derived_; }
 
 private:
     struct Client {
@@ -99,11 +113,24 @@ private:
     void ArmHoldTimer();
     void CancelHoldTimer();
     bool HasUiClients();
+    void SynchronizeDerived();
 
     Instance* instance_;
     PostFn post_;
     rimes::buffer::BufferModel model_;
     rimes::buffer::ReturnGesture gesture_;
+    struct DerivedAdapter { std::string capability; RunDerived run; bool live_expand; };
+    rimes::buffer::DerivedWorkspace derived_;
+    std::map<std::string, DerivedAdapter> derived_adapters_;
+    rimes::plugins::Registry* plugins_ = nullptr;
+    std::function<bool(const rimes::plugins::Lease&)> validate_;
+    std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze_;
+    std::optional<rimes::buffer::DerivedRequest> derived_request_;
+    std::shared_ptr<std::atomic<bool>> derived_cancel_;
+    std::shared_ptr<std::atomic<bool>> alive_ = std::make_shared<std::atomic<bool>>(true);
+    std::string configuration_revision_, theme_ = "night";
+    std::uint64_t focus_epoch_ = 0;
+    bool synchronizing_derived_ = false;
     std::string socket_path_;
     std::string dump_path_;
     int listen_fd_ = -1;

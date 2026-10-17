@@ -1,3 +1,4 @@
+#include "native_buffer_metrics.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
 #include <algorithm>
@@ -662,8 +663,8 @@ struct Settings {
                               FieldKind::Number,
                               760,
                               {},
-                              460,
-                              1200}},
+                              rimes::native::bufferMinimumWidth,
+                              rimes::native::bufferMaximumWidth}},
           Json{{"bufferWidth", saved.at("bufferWidth")}});
       Add(body, form->Widget());
       Add(body, Button("应用修改", [this, form] {

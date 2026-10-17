@@ -1,127 +1,45 @@
+#include "native_buffer_metrics.hpp"
 #include "buffer_protocol.hpp"
-
-#include <cctype>
-#include <cstdio>
-#include <cstdlib>
-#include <sstream>
+#include "plugin_store.hpp"
+#include <algorithm>
+#include <cmath>
+#include <stdexcept>
 
 namespace rimes::buffer {
 namespace {
-
-void AppendEscaped(std::ostringstream& out, std::string_view text) {
-    out << '"';
-    for (unsigned char byte : text) {
-        switch (byte) {
-            case '"':
-                out << "\\\"";
-                break;
-            case '\\':
-                out << "\\\\";
-                break;
-            case '\b':
-                out << "\\b";
-                break;
-            case '\f':
-                out << "\\f";
-                break;
-            case '\n':
-                out << "\\n";
-                break;
-            case '\r':
-                out << "\\r";
-                break;
-            case '\t':
-                out << "\\t";
-                break;
-            default:
-                if (byte < 0x20) {
-                    char buf[8];
-                    std::snprintf(buf, sizeof(buf), "\\u%04x", byte);
-                    out << buf;
-                } else {
-                    out << static_cast<char>(byte);
-                }
-                break;
-        }
-    }
-    out << '"';
-}
-
-void SkipWs(std::string_view json, std::size_t* pos) {
-    while (*pos < json.size() && std::isspace(static_cast<unsigned char>(json[*pos])) != 0) {
-        ++*pos;
-    }
-}
-
-bool FindKey(std::string_view json, std::string_view key, std::size_t* value_pos) {
-    const std::string needle = std::string("\"") + std::string(key) + "\"";
-    std::size_t search = 0;
-    while (search < json.size()) {
-        const auto found = json.find(needle, search);
-        if (found == std::string_view::npos) {
-            return false;
-        }
-        std::size_t pos = found + needle.size();
-        SkipWs(json, &pos);
-        if (pos < json.size() && json[pos] == ':') {
-            ++pos;
-            SkipWs(json, &pos);
-            *value_pos = pos;
-            return true;
-        }
-        search = found + 1;
-    }
-    return false;
-}
-
-bool ParseStringValue(std::string_view json, std::size_t pos, std::string* output) {
-    if (pos >= json.size() || json[pos] != '"') {
-        return false;
-    }
-    ++pos;
-    std::string raw;
-    while (pos < json.size()) {
-        const char ch = json[pos];
-        if (ch == '"') {
-            return JsonUnescape(raw, output);
-        }
-        raw.push_back(ch);
-        if (ch == '\\' && pos + 1 < json.size()) {
-            raw.push_back(json[pos + 1]);
-            pos += 2;
-            continue;
-        }
-        ++pos;
-    }
-    return false;
-}
-
-int ReadInt(std::string_view json, std::string_view key, int fallback) {
-    std::size_t pos = 0;
-    if (!FindKey(json, key, &pos)) {
-        return fallback;
-    }
-    char* end = nullptr;
-    const auto value = std::strtol(json.data() + pos, &end, 10);
-    if (end == json.data() + pos) {
-        return fallback;
-    }
-    return static_cast<int>(value);
-}
-
-std::string ReadString(std::string_view json, std::string_view key) {
-    std::size_t pos = 0;
-    std::string value;
-    if (!FindKey(json, key, &pos)) {
-        return {};
-    }
-    if (!ParseStringValue(json, pos, &value)) {
-        return {};
-    }
+using Json = plugins::Json;
+Json Parse(std::string_view text) {
+    if (text.size() > kMaxFrameBytes) throw std::runtime_error("Frame too large");
+    auto value = Json::parse(text, [](int depth, Json::parse_event_t, Json&) {
+        if (depth > 32) throw std::runtime_error("JSON nesting too deep");
+        return true;
+    });
+    if (!value.is_object() || (value.contains("v") && value.at("v") != 1))
+        throw std::runtime_error("Invalid protocol object");
     return value;
 }
-
-}  // namespace
+const char* PhaseName(DerivedPhase phase) {
+    switch (phase) {
+        case DerivedPhase::Idle: return "idle";
+        case DerivedPhase::Running: return "running";
+        case DerivedPhase::Ready: return "ready";
+        case DerivedPhase::Failed: return "failed";
+        case DerivedPhase::Protected: return "protected";
+    }
+    return "protected";
+}
+DerivedPhase ReadPhase(const std::string& phase) {
+    for (auto item : {DerivedPhase::Idle, DerivedPhase::Running, DerivedPhase::Ready,
+                      DerivedPhase::Failed, DerivedPhase::Protected})
+        if (phase == PhaseName(item)) return item;
+    throw std::runtime_error("Unknown result phase");
+}
+std::string ReadText(const Json& value, const char* key, const std::string& fallback = "") {
+    auto text = value.value(key, fallback);
+    if (text.find('\0') != std::string::npos) throw std::runtime_error("NUL in text");
+    return text;
+}
+} // namespace
 
 Snapshot MakeSnapshot(const BufferModel& model) {
     Snapshot snapshot;
@@ -152,175 +70,152 @@ Snapshot MakeSnapshot(const BufferModel& model) {
 }
 
 std::string EncodeSnapshot(const Snapshot& snapshot) {
-    std::ostringstream out;
-    out << "{\"v\":" << kProtocolVersion << ",\"type\":\"snapshot\"";
-    out << ",\"generation\":" << snapshot.generation;
-    out << ",\"width\":" << snapshot.width;
-    out << ",\"visible\":" << (snapshot.visible ? "true" : "false");
-    out << ",\"capturing\":" << (snapshot.capturing ? "true" : "false");
-    out << ",\"enabled\":" << (snapshot.enabled ? "true" : "false");
-    out << ",\"secure\":" << (snapshot.secure ? "true" : "false");
-    out << ",\"password_field\":" << (snapshot.password_field ? "true" : "false");
-    out << ",\"close_after_last\":" << (snapshot.close_after_last ? "true" : "false");
-    out << ",\"empty\":" << (snapshot.empty ? "true" : "false");
-    out << ",\"insertion_index\":" << snapshot.insertion_index;
-    char progress[32];
-    std::snprintf(progress, sizeof(progress), "%.3f", snapshot.hold_progress);
-    out << ",\"hold_progress\":" << progress;
-    out << ",\"preedit\":";
-    AppendEscaped(out, snapshot.preedit);
-    out << ",\"placeholder\":";
-    AppendEscaped(out, snapshot.placeholder);
-    out << ",\"target\":";
-    AppendEscaped(out, snapshot.target);
-    out << ",\"staged_text\":";
-    AppendEscaped(out, snapshot.staged_text);
-    out << ",\"caret\":{\"x\":" << snapshot.caret.x << ",\"y\":" << snapshot.caret.y
-        << ",\"w\":" << snapshot.caret.width << ",\"h\":" << snapshot.caret.height
-        << ",\"valid\":" << (snapshot.caret.valid ? "true" : "false") << "}";
-    out << ",\"ui_clients\":" << snapshot.ui_clients;
-    out << ",\"blocks\":[";
-    for (std::size_t index = 0; index < snapshot.blocks.size(); ++index) {
-        const auto& block = snapshot.blocks[index];
-        if (index != 0) {
-            out << ',';
-        }
-        out << "{\"id\":";
-        AppendEscaped(out, block.id);
-        out << ",\"text\":";
-        AppendEscaped(out, block.text);
-        out << ",\"origin\":";
-        AppendEscaped(out, OriginTag(block.origin));
-        out << ",\"created_at_ms\":" << block.created_at_ms << '}';
+    Json blocks = Json::array(), results = Json::array(), choices = Json::array();
+    if (!snapshot.secure) {
+        for (const auto& b : snapshot.blocks)
+            blocks.push_back({{"id", b.id}, {"text", b.text}, {"origin", OriginTag(b.origin)},
+                              {"created_at_ms", b.created_at_ms}});
+        for (const auto& r : snapshot.results)
+            results.push_back({{"id", r.id}, {"text", r.text}, {"alternative", r.alternative}, {"ready", r.ready}});
     }
-    out << "]}";
-    return out.str();
+    for (const auto& p : snapshot.plugins) choices.push_back({{"id", p.id}, {"name", p.name}});
+    return Json{{"v", 1}, {"type", "snapshot"}, {"generation", snapshot.generation},
+        {"width", snapshot.width}, {"visible", snapshot.visible}, {"capturing", snapshot.capturing},
+        {"enabled", snapshot.enabled}, {"secure", snapshot.secure}, {"password_field", snapshot.password_field},
+        {"close_after_last", snapshot.close_after_last}, {"empty", snapshot.secure || snapshot.empty},
+        {"insertion_index", snapshot.insertion_index}, {"hold_progress", snapshot.hold_progress},
+        {"preedit", snapshot.secure ? "" : snapshot.preedit}, {"placeholder", snapshot.placeholder},
+        {"target", snapshot.target}, {"staged_text", snapshot.secure ? "" : snapshot.staged_text},
+        {"caret", {{"x", snapshot.caret.x}, {"y", snapshot.caret.y}, {"w", snapshot.caret.width},
+                   {"h", snapshot.caret.height}, {"valid", snapshot.caret.valid}}},
+        {"ui_clients", snapshot.ui_clients}, {"blocks", blocks}, {"theme", snapshot.theme},
+        {"active_plugin", snapshot.active_plugin}, {"plugins", choices}, {"live_expand", snapshot.live_expand},
+        {"phase", PhaseName(snapshot.secure ? DerivedPhase::Protected : snapshot.phase)},
+        {"can_generate", !snapshot.secure && snapshot.can_generate},
+        {"selected_result", snapshot.secure ? "" : snapshot.selected_result}, {"results", results}}.dump();
+}
+
+bool ParseSnapshot(std::string_view text, Snapshot* output) {
+    if (!output) return false;
+    try {
+        const auto value = Parse(text);
+        if (value.at("type") != "snapshot") return false;
+        Snapshot s;
+        s.width = std::clamp(value.value("width", 760), rimes::native::bufferMinimumWidth, rimes::native::bufferMaximumWidth);
+        s.generation = value.value("generation", std::uint64_t{0});
+        s.visible = value.at("visible").get<bool>();
+        s.capturing = value.at("capturing").get<bool>();
+        s.enabled = value.value("enabled", false);
+        s.secure = value.at("secure").get<bool>();
+        s.password_field = value.value("password_field", false);
+        s.secure = s.secure || s.password_field;
+        s.close_after_last = value.value("close_after_last", true);
+        s.empty = value.at("empty").get<bool>();
+        s.insertion_index = value.value("insertion_index", 0);
+        s.hold_progress = value.value("hold_progress", 0.0);
+        if (!std::isfinite(s.hold_progress)) return false;
+        s.hold_progress = std::clamp(s.hold_progress, 0.0, 1.0);
+        s.preedit = ReadText(value, "preedit");
+        s.placeholder = ReadText(value, "placeholder", kPlaceholder);
+        s.target = ReadText(value, "target");
+        s.staged_text = ReadText(value, "staged_text");
+        const auto& c = value.at("caret");
+        s.caret = {c.at("x"), c.at("y"), c.at("w"), c.at("h"), c.at("valid")};
+        s.ui_clients = value.value("ui_clients", 0);
+        if (!value.at("blocks").is_array()) return false;
+        for (const auto& b : value.at("blocks")) {
+            Block block;
+            block.id = ReadText(b, "id");
+            block.text = ReadText(b, "text");
+            if (block.id.empty() || !ParseOrigin(ReadText(b, "origin"), &block.origin)) return false;
+            block.created_at_ms = b.value("created_at_ms", std::int64_t{0});
+            s.blocks.push_back(std::move(block));
+        }
+        s.theme = ReadText(value, "theme", "night");
+        if (s.theme != "night" && s.theme != "day" && s.theme != "quiet" && s.theme != "rasta" && s.theme != "liquidGlass") return false;
+        s.active_plugin = ReadText(value, "active_plugin");
+        s.live_expand = value.value("live_expand", true);
+        if (value.contains("plugins")) {
+            if (!value.at("plugins").is_array() || value.at("plugins").size() > 100) return false;
+            for (const auto& p : value.at("plugins")) s.plugins.push_back({ReadText(p, "id"), ReadText(p, "name")});
+        }
+        s.phase = ReadPhase(ReadText(value, "phase", "idle"));
+        s.can_generate = value.value("can_generate", false);
+        s.selected_result = ReadText(value, "selected_result");
+        if (value.contains("results")) {
+            if (!value.at("results").is_array() || value.at("results").size() > 5) return false;
+            for (const auto& r : value.at("results")) {
+                DerivedResult result{ReadText(r, "id"), ReadText(r, "text"), r.at("alternative"), r.at("ready")};
+                if (result.id.empty() || result.alternative >= 5 || (result.ready && s.phase != DerivedPhase::Ready)) return false;
+                s.results.push_back(std::move(result));
+            }
+        }
+        if (s.secure) {
+            s.blocks.clear(); s.results.clear(); s.preedit.clear(); s.staged_text.clear();
+            s.selected_result.clear(); s.empty = true; s.can_generate = false; s.phase = DerivedPhase::Protected;
+        }
+        *output = std::move(s);
+        return true;
+    } catch (const std::exception&) { return false; }
 }
 
 std::string EncodeError(std::string_view code, std::string_view message) {
-    std::ostringstream out;
-    out << "{\"v\":" << kProtocolVersion << ",\"type\":\"error\",\"code\":";
-    AppendEscaped(out, code);
-    out << ",\"message\":";
-    AppendEscaped(out, message);
-    out << '}';
-    return out.str();
+    return Json{{"v", 1}, {"type", "error"}, {"code", code}, {"message", message}}.dump();
 }
 
-bool ParseCommand(std::string_view json, Command* command, std::string* error) {
-    if (command == nullptr) {
-        return false;
-    }
+bool ParseCommand(std::string_view text, Command* command, std::string* error) {
+    if (!command) return false;
     *command = Command{};
-    const std::string op = ReadString(json, "op");
-    if (op.empty()) {
-        if (error != nullptr) {
-            *error = "missing op";
+    try {
+        const auto value = Parse(text);
+        const auto op = ReadText(value, "op");
+        const std::pair<const char*, CommandOp> ops[] = {
+            {"hello", CommandOp::Hello}, {"status", CommandOp::Query}, {"toggle", CommandOp::Toggle},
+            {"show", CommandOp::Show}, {"close", CommandOp::Close}, {"send_next", CommandOp::SendNext},
+            {"send_all", CommandOp::SendAll}, {"remove_last", CommandOp::RemoveLast},
+            {"select_all", CommandOp::SelectAll}, {"paste", CommandOp::Paste}, {"import_clipboard", CommandOp::Paste},
+            {"set_insertion", CommandOp::SetInsertion}, {"drag_begin", CommandOp::DragBegin},
+            {"drag_end", CommandOp::DragEnd}, {"select_plugin", CommandOp::SelectPlugin},
+            {"generate", CommandOp::Generate}, {"cancel_generation", CommandOp::CancelGeneration},
+            {"return_to_edit", CommandOp::ReturnToEdit}, {"select_result", CommandOp::SelectResult},
+            {"copy_result", CommandOp::CopyResult}};
+        Command next;
+        for (const auto& [name, code] : ops) if (op == name) next.op = code;
+        if (next.op == CommandOp::Unknown) throw std::runtime_error("Unknown operation");
+        if (next.op == CommandOp::Paste) {
+            next.text = ReadText(value, "text");
+            if (next.text.empty()) throw std::runtime_error("Paste requires text");
         }
+        if (next.op == CommandOp::SetInsertion) {
+            if (!value.at("index").is_number_integer()) throw std::runtime_error("Invalid index");
+            const auto index = value.at("index").get<std::int64_t>();
+            if (index < 0 || index > 65536) throw std::runtime_error("Invalid index");
+            next.insertion_index = static_cast<int>(index);
+        }
+        if (next.op == CommandOp::SelectPlugin || next.op == CommandOp::SelectResult || next.op == CommandOp::CopyResult) {
+            next.id = ReadText(value, "id");
+            if (!value.contains("id") || next.id.size() > 256 ||
+                (next.op != CommandOp::SelectPlugin && next.id.empty())) throw std::runtime_error("Invalid identity");
+        }
+        *command = std::move(next);
+        if (error) error->clear();
+        return true;
+    } catch (const std::exception&) {
+        if (error) *error = "Invalid Buffer command";
         return false;
     }
-    if (op == "hello" || op == "status") {
-        command->op = op == "hello" ? CommandOp::Hello : CommandOp::Query;
-    } else if (op == "toggle") {
-        command->op = CommandOp::Toggle;
-    } else if (op == "show") {
-        command->op = CommandOp::Show;
-    } else if (op == "close") {
-        command->op = CommandOp::Close;
-    } else if (op == "send_next") {
-        command->op = CommandOp::SendNext;
-    } else if (op == "send_all") {
-        command->op = CommandOp::SendAll;
-    } else if (op == "remove_last") {
-        command->op = CommandOp::RemoveLast;
-    } else if (op == "select_all") {
-        command->op = CommandOp::SelectAll;
-    } else if (op == "paste" || op == "import_clipboard") {
-        command->op = CommandOp::Paste;
-        command->text = ReadString(json, "text");
-        if (command->text.empty()) {
-            if (error != nullptr) {
-                *error = "paste requires text";
-            }
-            return false;
-        }
-    } else if (op == "set_insertion") {
-        command->op = CommandOp::SetInsertion;
-        command->insertion_index = ReadInt(json, "index", -1);
-        if (command->insertion_index < 0) {
-            if (error != nullptr) {
-                *error = "set_insertion requires index";
-            }
-            return false;
-        }
-    } else if (op == "drag_begin") {
-        command->op = CommandOp::DragBegin;
-    } else if (op == "drag_end") {
-        command->op = CommandOp::DragEnd;
-    } else {
-        command->op = CommandOp::Unknown;
-        if (error != nullptr) {
-            *error = "unknown op";
-        }
-        return false;
-    }
-    return true;
 }
 
-std::string JsonEscape(std::string_view text) {
-    std::ostringstream out;
-    AppendEscaped(out, text);
-    return out.str();
-}
-
+std::string JsonEscape(std::string_view text) { return Json(text).dump(); }
 bool JsonUnescape(std::string_view text, std::string* output) {
-    if (output == nullptr) {
-        return false;
-    }
+    if (!output) return false;
     output->clear();
-    for (std::size_t index = 0; index < text.size(); ++index) {
-        const char ch = text[index];
-        if (ch != '\\') {
-            output->push_back(ch);
-            continue;
-        }
-        if (index + 1 >= text.size()) {
-            return false;
-        }
-        const char next = text[++index];
-        switch (next) {
-            case '"':
-            case '\\':
-            case '/':
-                output->push_back(next);
-                break;
-            case 'b':
-                output->push_back('\b');
-                break;
-            case 'f':
-                output->push_back('\f');
-                break;
-            case 'n':
-                output->push_back('\n');
-                break;
-            case 'r':
-                output->push_back('\r');
-                break;
-            case 't':
-                output->push_back('\t');
-                break;
-            case 'u':
-                if (index + 4 >= text.size()) {
-                    return false;
-                }
-                output->push_back('?');
-                index += 4;
-                break;
-            default:
-                return false;
-        }
-    }
-    return true;
+    try {
+        const auto value = Json::parse(std::string("\"") + std::string(text) + "\"");
+        if (!value.is_string()) return false;
+        *output = value.get<std::string>();
+        return true;
+    } catch (const std::exception&) { return false; }
 }
 
 bool EncodeFrame(std::string_view payload, std::string* frame) {

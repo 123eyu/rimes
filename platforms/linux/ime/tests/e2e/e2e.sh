@@ -213,7 +213,7 @@ if [[ -x "$BUILD_DIR/rimes-buffer" ]]; then
     GEOM_X11="$STAGE_DIR/buffer-geom-x11.json"
     if timeout 8 "$BUILD_DIR/rimes-buffer" --preview --dump-geometry "$GEOM_X11" --quit-after-dump \
         >"$STAGE_DIR/buffer-geom-x11.log" 2>&1; then
-        assert_geometry "$GEOM_X11" "X11 preview" 760 78
+        assert_geometry "$GEOM_X11" "X11 preview" 760 73
     else
         echo "warning: rimes-buffer --dump-geometry exited ($STAGE_DIR/buffer-geom-x11.log)" >&2
         tail -n 20 "$STAGE_DIR/buffer-geom-x11.log" >&2 || true
@@ -397,7 +397,7 @@ if (( SKIP_WAYLAND == 0 )) && command -v sway >/dev/null && [[ -x "$BUILD_DIR/ri
         wait "$BUFFER_UI_PID" >/dev/null 2>&1 || true
         unset BUFFER_UI_PID
         if [[ -s "$GEOM_WL" ]]; then
-            assert_geometry "$GEOM_WL" "sway layer-shell preview" 760 78
+            assert_geometry "$GEOM_WL" "sway layer-shell preview" 760 73
         else
             echo "warning: rimes-buffer preview did not dump geometry (see $STAGE_DIR/buffer-ui.log)" >&2
         fi

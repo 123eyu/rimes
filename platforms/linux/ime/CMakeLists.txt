@@ -49,11 +49,13 @@ add_library(RimesBufferCore STATIC
     "${RIMES_BUFFER_ROOT}/core/buffer_process.cpp"
     "${RIMES_BUFFER_ROOT}/core/buffer_protocol.cpp"
     "${RIMES_BUFFER_ROOT}/core/buffer_return.cpp"
+    "${RIMES_BUFFER_ROOT}/core/derived_workspace.cpp"
 )
 target_include_directories(RimesBufferCore PUBLIC
     "${RIMES_BUFFER_ROOT}/core"
 )
 set_target_properties(RimesBufferCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(RimesBufferCore PUBLIC RimesPluginCore)
 rimes_harden(RimesBufferCore)
 
 add_library(RimesCapsuleCore STATIC
@@ -178,7 +180,7 @@ if(RIMES_BUILD_FCITX5)
             "${RIMES_BUFFER_ROOT}/ui/rimes_buffer_app.cpp"
         )
         target_include_directories(rimes-buffer PRIVATE ${GTK3_INCLUDE_DIRS})
-        target_link_libraries(rimes-buffer PRIVATE RimesBufferCore ${GTK3_LIBRARIES})
+        target_link_libraries(rimes-buffer PRIVATE RimesBufferCore RimesDesktopUI ${GTK3_LIBRARIES})
         target_compile_options(rimes-buffer PRIVATE ${GTK3_CFLAGS_OTHER})
         if(GTK_LAYER_SHELL_FOUND)
             target_include_directories(rimes-buffer PRIVATE ${GTK_LAYER_SHELL_INCLUDE_DIRS})
@@ -192,6 +194,12 @@ if(RIMES_BUILD_FCITX5)
         )
         install(TARGETS rimes-buffer DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
         install(TARGETS rimes-buffer DESTINATION "${CMAKE_INSTALL_BINDIR}")
+        find_program(RIMES_BUFFER_XVFB_RUN xvfb-run)
+        if(RIMES_BUFFER_XVFB_RUN AND RIMES_BUILD_TESTS)
+            add_test(NAME buffer-render COMMAND "${RIMES_BUFFER_XVFB_RUN}" -a $<TARGET_FILE:rimes-buffer>
+                --render "${CMAKE_BINARY_DIR}/buffer-render")
+        endif()
+
 
         add_executable(rimes-capsule
             "${RIMES_CAPSULE_ROOT}/ui/rimes_capsule_app.cpp"
@@ -271,6 +279,11 @@ if(RIMES_BUILD_TESTS)
     )
     target_link_libraries(rimes-buffer-model-tests PRIVATE RimesBufferCore)
     rimes_harden(rimes-buffer-model-tests)
+
+    add_executable(rimes-derived-workspace-tests "${RIMES_BUFFER_ROOT}/tests/derived_workspace_tests.cpp")
+    target_link_libraries(rimes-derived-workspace-tests PRIVATE RimesBufferCore)
+    rimes_harden(rimes-derived-workspace-tests)
+    add_test(NAME derived-workspace COMMAND rimes-derived-workspace-tests)
 
     add_executable(rimes-buffer-return-tests
         "${RIMES_BUFFER_ROOT}/tests/buffer_return_tests.cpp"
@@ -368,6 +381,12 @@ if(RIMES_BUILD_TESTS)
             RimesEngine
         )
         rimes_harden(rimes-fcitx-e2e)
+
+        add_executable(rimes-buffer-derived-host-tests tests/buffer_derived_host_tests.cpp src/buffer/buffer_service.cpp)
+        target_include_directories(rimes-buffer-derived-host-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+        target_link_libraries(rimes-buffer-derived-host-tests PRIVATE Fcitx5::Core RimesBufferCore Threads::Threads)
+        rimes_harden(rimes-buffer-derived-host-tests)
+        add_test(NAME buffer-derived-host COMMAND rimes-buffer-derived-host-tests)
 
         add_executable(rimes-buffer-fcitx-e2e tests/buffer_fcitx_e2e.cpp)
         target_link_libraries(rimes-buffer-fcitx-e2e PRIVATE

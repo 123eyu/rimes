@@ -1,6 +1,10 @@
 #include "../../product_brand.hpp"
 #include "buffer_placement.hpp"
 #include "buffer_protocol.hpp"
+#include "desktop.hpp"
+#include "native_buffer_metrics.hpp"
+#include <filesystem>
+#include <fstream>
 
 #include <gdk/gdk.h>
 #include <gtk/gtk.h>
@@ -32,15 +36,32 @@
 namespace {
 
 constexpr int kWindowWidth = 760;
-constexpr int kWindowHeight = 78;
-constexpr int kToolbarHeight = 33;
+constexpr int kWindowHeight = rimes::native::bufferHeight;
+constexpr int kToolbarHeight = 30;
 constexpr int kGapAroundCaret = 10;
 
 struct App {
     GtkWidget* window = nullptr;
+    GtkWidget* root = nullptr;
     GtkWidget* chip_box = nullptr;
+    GtkWidget* source_row = nullptr;
+    GtkWidget* result_row = nullptr;
+    GtkWidget* result_text = nullptr;
+    GtkWidget* source_actions = nullptr;
+    GtkWidget* result_actions = nullptr;
+    GtkWidget* selector = nullptr;
+    GtkWidget* edit = nullptr;
+    GtkWidget* copy = nullptr;
+    GtkWidget* generate = nullptr;
+    GtkWidget* pager = nullptr;
+    GtkWidget* pager_count = nullptr;
+    bool render = false;
+    int height = kWindowHeight;
+    std::string pending_copy;
+    std::string theme;
     GtkWidget* placeholder = nullptr;
     GtkWidget* preedit = nullptr;
+    GtkWidget* caret = nullptr;
     GtkWidget* status = nullptr;
     GtkWidget* send = nullptr;
     GtkWidget* progress = nullptr;
@@ -135,7 +156,7 @@ void PlaceOnX11(App* app) {
         work.height = 800;
     }
     const auto placed = rimes::buffer::PlaceX11Panel(app->snapshot.caret, work, app->snapshot.width,
-                                                     kWindowHeight, kGapAroundCaret);
+                                                     app->height, kGapAroundCaret);
     gtk_window_move(GTK_WINDOW(app->window), placed.x, placed.y);
     app->placed = true;
 }
@@ -165,6 +186,7 @@ void RebuildChips(App* app) {
     for (const auto& block : app->snapshot.blocks) {
         GtkWidget* chip = gtk_label_new(block.text.c_str());
         gtk_widget_set_name(chip, "rimes-chip");
+        gtk_widget_set_size_request(chip, -1, rimes::native::itemHeight);
         gtk_widget_set_tooltip_text(chip, block.text.c_str());
         gtk_label_set_single_line_mode(GTK_LABEL(chip), TRUE);
         gtk_label_set_ellipsize(GTK_LABEL(chip), PANGO_ELLIPSIZE_END);
@@ -179,158 +201,99 @@ void RebuildChips(App* app) {
     }
 }
 
-void ApplySnapshotJson(App* app, const std::string& json) {
-    if (json.find("\"type\":\"request_clipboard\"") != std::string::npos) {
-        GtkClipboard* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-        gchar* text = gtk_clipboard_wait_for_text(clipboard);
-        if (text != nullptr && text[0] != '\0') {
-            std::string command = std::string("{\"v\":1,\"op\":\"paste\",\"text\":") +
-                                  rimes::buffer::JsonEscape(text) + '}';
-            SendCommand(app, command);
-            g_free(text);
-        }
-        return;
-    }
-    if (json.find("\"type\":\"snapshot\"") == std::string::npos) {
-        return;
-    }
-    app->snapshot.visible = json.find("\"visible\":true") != std::string::npos;
-    app->snapshot.capturing = json.find("\"capturing\":true") != std::string::npos;
-    app->snapshot.secure = json.find("\"secure\":true") != std::string::npos;
-    app->snapshot.empty = json.find("\"empty\":true") != std::string::npos;
-    const auto preedit_key = json.find("\"preedit\":");
-    if (preedit_key != std::string::npos) {
-        rimes::buffer::Command ignored;
-        std::string error;
-        (void)ignored;
-        (void)error;
-    }
+void LoadCss(const std::string& theme);
+void Paste(App* app) {
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    auto* text = gtk_clipboard_wait_for_text(clipboard);
+    if (text && *text) SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "paste"}, {"text", text}}.dump());
+    g_free(text);
+}
 
-    // Re-parse through the same encoder fields we control.
-    // A full JSON parser is unnecessary: the IME writes our snapshot schema.
-    auto extract_string = [&](const char* key) -> std::string {
-        const std::string needle = std::string("\"") + key + "\":\"";
-        const auto start = json.find(needle);
-        if (start == std::string::npos) {
-            return {};
-        }
-        std::string raw;
-        for (std::size_t index = start + needle.size(); index < json.size(); ++index) {
-            if (json[index] == '\\' && index + 1 < json.size()) {
-                raw.push_back(json[index]);
-                raw.push_back(json[index + 1]);
-                ++index;
-                continue;
-            }
-            if (json[index] == '"') {
-                break;
-            }
-            raw.push_back(json[index]);
-        }
-        std::string out;
-        rimes::buffer::JsonUnescape(raw, &out);
-        return out;
-    };
-    app->snapshot.preedit = extract_string("preedit");
-    app->snapshot.placeholder = extract_string("placeholder");
-    app->snapshot.target = extract_string("target");
-    app->snapshot.staged_text = extract_string("staged_text");
-
-    auto extract_int = [&](const char* key, int fallback) {
-        const std::string needle = std::string("\"") + key + "\":";
-        const auto start = json.find(needle);
-        if (start == std::string::npos) {
-            return fallback;
-        }
-        return static_cast<int>(g_ascii_strtoll(json.c_str() + start + needle.size(), nullptr, 10));
-    };
-    const int width = std::max(460, std::min(1200, extract_int("width", kWindowWidth)));
-    if (width != app->snapshot.width) {
-        app->snapshot.width = width;
-        gtk_widget_set_size_request(app->window, width, kWindowHeight);
-        gtk_window_resize(GTK_WINDOW(app->window), width, kWindowHeight);
-        app->placed = false;
-    }
-    app->snapshot.caret.x = extract_int("x", 0);
-    app->snapshot.caret.y = extract_int("y", 0);
-    app->snapshot.caret.width = extract_int("w", 0);
-    app->snapshot.caret.height = extract_int("h", 0);
-    app->snapshot.caret.valid = json.find("\"valid\":true") != std::string::npos;
-
-    const auto progress_at = json.find("\"hold_progress\":");
-    if (progress_at != std::string::npos) {
-        app->snapshot.hold_progress =
-            g_ascii_strtod(json.c_str() + progress_at + std::strlen("\"hold_progress\":"), nullptr);
-    }
-
-    app->snapshot.blocks.clear();
-    std::size_t search = json.find("\"blocks\":[");
-    while (search != std::string::npos) {
-        const auto id_at = json.find("\"id\":\"", search);
-        const auto text_at = json.find("\"text\":\"", search);
-        const auto origin_at = json.find("\"origin\":\"", search);
-        const auto next_obj = json.find("},{", search);
-        const auto end_arr = json.find(']', search);
-        if (id_at == std::string::npos || text_at == std::string::npos ||
-            (end_arr != std::string::npos && id_at > end_arr)) {
-            break;
-        }
-        rimes::buffer::Block block;
-        auto take = [&](std::size_t at, const char* prefix) {
-            std::string raw;
-            for (std::size_t index = at + std::strlen(prefix); index < json.size(); ++index) {
-                if (json[index] == '\\' && index + 1 < json.size()) {
-                    raw.push_back(json[index]);
-                    raw.push_back(json[index + 1]);
-                    ++index;
-                    continue;
-                }
-                if (json[index] == '"') {
-                    break;
-                }
-                raw.push_back(json[index]);
-            }
-            std::string out;
-            rimes::buffer::JsonUnescape(raw, &out);
-            return out;
-        };
-        block.id = take(id_at, "\"id\":\"");
-        block.text = take(text_at, "\"text\":\"");
-        if (origin_at != std::string::npos && (next_obj == std::string::npos || origin_at < next_obj)) {
-            rimes::buffer::ParseOrigin(take(origin_at, "\"origin\":\""), &block.origin);
-        }
-        app->snapshot.blocks.push_back(block);
-        if (next_obj == std::string::npos || (end_arr != std::string::npos && next_obj > end_arr)) {
-            break;
-        }
-        search = next_obj + 1;
-    }
-
-    if (app->snapshot.visible && !app->snapshot.secure) {
+void Refresh(App* app) {
+    const auto& s = app->snapshot;
+    if (app->theme != s.theme) { LoadCss(s.theme); app->theme = s.theme; }
+    const bool derived = !s.active_plugin.empty();
+    const bool output = s.phase == rimes::buffer::DerivedPhase::Running ||
+                        s.phase == rimes::buffer::DerivedPhase::Failed || !s.results.empty();
+    const bool source = !derived || (s.live_expand ? !s.blocks.empty() || !output : !output);
+    const bool target = derived && (output || (s.live_expand && !s.blocks.empty()));
+    const int height = source && target ? rimes::native::bufferDerivedHeight : kWindowHeight;
+    gtk_widget_set_size_request(app->window, s.width, height);
+    gtk_window_resize(GTK_WINDOW(app->window), s.width, height);
+    app->height = height;
+    if (s.visible && !s.secure) {
         gtk_widget_show_all(app->window);
         gtk_window_set_keep_above(GTK_WINDOW(app->window), TRUE);
-        if (!app->wayland_layer && !app->placed) {
-            PlaceOnX11(app);
-        }
-    } else if (!app->snapshot.visible) {
+        if (!app->wayland_layer && !app->placed && !app->render) PlaceOnX11(app);
+    } else {
         gtk_widget_hide(app->window);
         app->placed = false;
     }
-
     RebuildChips(app);
-    const char* status = app->snapshot.capturing ? "Buffer" : "Paused";
-    if (app->snapshot.secure) {
-        status = "Protected";
+    gtk_widget_set_visible(app->caret, s.capturing && !s.secure);
+    gtk_widget_set_visible(app->source_row, source);
+    gtk_widget_set_visible(app->result_row, target);
+    gtk_widget_set_visible(app->source_actions, source && !target);
+    gtk_widget_set_visible(app->edit, derived && output);
+    gtk_widget_set_visible(app->send, !derived);
+    gtk_widget_set_sensitive(app->send, s.capturing && !s.blocks.empty() && !s.secure);
+    gtk_widget_set_visible(app->generate, derived);
+    gtk_widget_set_sensitive(app->generate, !s.secure && (s.can_generate || s.phase == rimes::buffer::DerivedPhase::Running));
+    const char* action = s.phase == rimes::buffer::DerivedPhase::Running ? "停止生成" : "生成结果";
+    gtk_widget_set_tooltip_text(app->generate, action);
+    atk_object_set_name(gtk_widget_get_accessible(app->generate), action);
+    std::string title = "Default";
+    for (const auto& p : s.plugins) if (p.id == s.active_plugin) title = p.name;
+    gtk_button_set_label(GTK_BUTTON(app->selector), (title + "  ⌄").c_str());
+    std::string status;
+    if (s.secure) status = "内容已隐藏";
+    else if (s.phase == rimes::buffer::DerivedPhase::Running) status = "正在生成…";
+    else if (s.phase == rimes::buffer::DerivedPhase::Failed) status = "生成失败，可重试";
+    else if (!s.capturing) status = "已暂停";
+    gtk_label_set_text(GTK_LABEL(app->status), status.c_str());
+    gtk_widget_set_visible(app->status, !status.empty());
+    gtk_label_set_text(GTK_LABEL(app->target), s.secure ? "" : s.target.c_str());
+    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(app->progress), CLAMP(s.hold_progress, 0.0, 1.0));
+    gtk_widget_set_visible(app->progress, s.hold_progress > 0);
+    const auto result = std::find_if(s.results.begin(), s.results.end(), [&](const auto& r) { return r.id == s.selected_result; });
+    const std::string text = result == s.results.end() ? (s.phase == rimes::buffer::DerivedPhase::Failed ? "生成失败，可重试" : "等待结果…") : result->text;
+    gtk_label_set_text(GTK_LABEL(app->result_text), text.c_str());
+    gtk_widget_set_tooltip_text(app->result_text, text.c_str());
+    gtk_widget_set_visible(app->copy, result != s.results.end());
+    gtk_widget_set_sensitive(app->copy, result != s.results.end() && result->ready && !s.secure);
+    gtk_widget_set_visible(app->pager, s.results.size() > 1);
+    const auto index = result == s.results.end() ? 0 : result - s.results.begin();
+    gtk_label_set_text(GTK_LABEL(app->pager_count), (std::to_string(index + 1) + "/" + std::to_string(s.results.size())).c_str());
+    // The same action overlay moves between source and target without reserving rail width.
+    auto* actions = target ? app->result_actions : app->source_actions;
+    for (auto* control : {app->generate, app->send, app->copy}) {
+        if (gtk_widget_get_parent(control) != actions) {
+            g_object_ref(control);
+            gtk_container_remove(GTK_CONTAINER(gtk_widget_get_parent(control)), control);
+            gtk_box_pack_start(GTK_BOX(actions), control, FALSE, FALSE, 0);
+            g_object_unref(control);
+        }
     }
-    gtk_label_set_text(GTK_LABEL(app->status), status);
-    if (app->snapshot.target.empty()) {
-        gtk_label_set_text(GTK_LABEL(app->target), "·");
-    } else {
-        gtk_label_set_text(GTK_LABEL(app->target), app->snapshot.target.c_str());
+}
+
+void ApplySnapshotJson(App* app, const std::string& json) {
+    rimes::buffer::Snapshot snapshot;
+    if (rimes::buffer::ParseSnapshot(json, &snapshot)) {
+        if (snapshot.width != app->snapshot.width) app->placed = false;
+        app->snapshot = std::move(snapshot);
+        Refresh(app);
+        return;
     }
-    gtk_widget_set_sensitive(app->send, !app->snapshot.blocks.empty() && app->snapshot.capturing);
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(app->progress),
-                                  CLAMP(app->snapshot.hold_progress, 0.0, 1.0));
+    try {
+        const auto message = rimes::runtime::Json::parse(json);
+        if (message.value("type", "") == "request_clipboard") Paste(app);
+        else if (message.value("type", "") == "copy_result" && !app->pending_copy.empty() &&
+                 message.value("id", "") == app->pending_copy && !app->snapshot.secure) {
+            const auto text = message.at("text").get<std::string>();
+            gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), text.c_str(), text.size());
+            app->pending_copy.clear();
+        }
+    } catch (const std::exception&) { /* Ignore unknown or incomplete messages. */ }
 }
 
 gboolean OnSocket(GIOChannel* /*channel*/, GIOCondition condition, gpointer data) {
@@ -385,11 +348,14 @@ void WriteGeometryDump(App* app) {
                  "{\"width\":%d,\"height\":%d,\"size_request_w\":%d,\"size_request_h\":%d,"
                  "\"layer\":%s,\"min_width\":%d,\"min_height\":%d}\n",
                  allocation.width, allocation.height, request_w, request_h,
-                 app->wayland_layer ? "true" : "false", app->snapshot.width, kWindowHeight);
+                 app->wayland_layer ? "true" : "false", app->snapshot.width, app->height);
     std::fclose(file);
     app->dumped_geometry = true;
     if (app->quit_after_dump) {
-        gtk_main_quit();
+        g_idle_add(+[](gpointer) -> gboolean {
+            gtk_main_quit();
+            return G_SOURCE_REMOVE;
+        }, nullptr);
     }
 }
 
@@ -530,186 +496,257 @@ gboolean ConnectSocket(App* app, const std::string& path) {
     return TRUE;
 }
 
-void LoadCss() {
-    GtkCssProvider* provider = gtk_css_provider_new();
-    const char* css = R"CSS(
-window.rimes-buffer { background: transparent; min-width: 460px; min-height: 78px; }
-#rimes-chrome {
-  background-color: #1c2420;
-  border: 1px solid #3d5a4c;
-  border-radius: 12px;
-  min-width: 460px;
-  min-height: 78px;
+void LoadCss(const std::string& theme) {
+    using namespace rimes::desktop;
+    Theme(theme);
+    const auto& palette = Visuals().at("palettes").at(theme == "liquidGlass" ? "day" : theme);
+    auto c = [&](const char* name) { return palette.at(name).get<std::string>(); };
+    static auto* provider = gtk_css_provider_new();
+    static bool attached = false;
+    if (!attached) {
+        gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider), GTK_STYLE_PROVIDER_PRIORITY_APPLICATION + 1);
+        attached = true;
+    }
+    const std::string css =
+        "window.rimes-buffer { background: transparent; }"
+        "#rimes-chrome { background: " + c("bufferBackground") + "; border-radius: 9px; }"
+        "#rimes-toolbar { min-height: 30px; border-bottom: 1px solid " + c("bufferDivider") + "; }"
+        "#rimes-title, #rimes-status, #rimes-target { color: " + c("textSecondary") + "; font-size: 11px; }"
+        "#rimes-rails { background: " + c("candidateBackground") + "; border: 0.5px solid " + c("borderStrong") + "; border-radius: 6px; }"
+        "#rimes-chip { background: transparent; color: " + c("textPrimary") + "; border-bottom: 1px solid " + c("borderStrong") + "; font-size: 12px; padding: 0; }"
+        "#rimes-result { background: transparent; color: " + c("textPrimary") + "; font-size: 12px; border-bottom: 1px solid " + c("borderStrong") + "; }"
+        "#rimes-caret { background: " + c("accentBlue") + "; border-radius: 1px; }"
+        "#rimes-placeholder, #rimes-preedit { color: " + c("bufferMuted") + "; font-size: 12px; }"
+        "#rimes-preedit { text-decoration: underline; color: " + c("accentBlue") + "; }"
+        "button.rimes-action, button.rimes-selector { background: " + c("surfaceSecondary") + "; color: " + c("textPrimary") + "; border: 0.5px solid " + c("border") + "; border-radius: 6px; min-width: 21px; min-height: 21px; padding: 0; }"
+        "button.rimes-selector { padding: 0 7px; font-weight: 600; }"
+        "button.rimes-action:hover, button.rimes-selector:hover { background: " + c("surfaceTertiary") + "; }"
+        "button.rimes-action .glyph { color: " + c("textSecondary") + "; }"
+        ".rimes-actions { background: linear-gradient(to right, transparent, " + c("candidateBackground") + " 18px); padding-left: 18px; }"
+        "#rimes-progress trough { min-height: 2px; background: transparent; }"
+        "#rimes-progress progress { min-height: 2px; background: " + c("accentBlue") + "; }";
+    GError* error = nullptr;
+    if (!gtk_css_provider_load_from_data(provider, css.c_str(), css.size(), &error)) {
+        g_clear_error(&error);
+        throw std::runtime_error("Buffer style could not load");
+    }
 }
-#rimes-toolbar { min-height: 33px; }
-#rimes-title, #rimes-status, #rimes-target {
-  color: #c5d4c8;
-  font-size: 11px;
+
+GtkWidget* Action(const std::string& icon, const std::string& label, std::function<void()> clicked) {
+    using namespace rimes::desktop;
+    auto* button = Button("", std::move(clicked), "rimes-action");
+    gtk_container_remove(GTK_CONTAINER(button), gtk_bin_get_child(GTK_BIN(button)));
+    auto* glyph = Icon(icon, 12);
+    gtk_widget_set_halign(glyph, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(glyph, GTK_ALIGN_CENTER);
+    gtk_container_add(GTK_CONTAINER(button), glyph);
+    gtk_widget_set_size_request(button, rimes::native::controlSize, rimes::native::controlSize);
+    gtk_widget_set_tooltip_text(button, label.c_str());
+    atk_object_set_name(gtk_widget_get_accessible(button), label.c_str());
+    gtk_widget_set_can_focus(button, FALSE);
+    return button;
 }
-#rimes-chip {
-  background-color: #2a3830;
-  color: #e8f0ea;
-  border-radius: 4px;
-  padding: 1px 6px;
-  font-size: 12px;
-  margin-right: 3px;
-}
-#rimes-placeholder, #rimes-preedit { color: #9aada0; font-size: 12px; }
-#rimes-preedit { text-decoration: underline; color: #e8f0ea; }
-button.rimes-action {
-  background: #2f463a;
-  color: #e8f0ea;
-  border: 1px solid #4a6b58;
-  border-radius: 6px;
-  min-width: 22px;
-  min-height: 22px;
-  padding: 0 6px;
-}
-button.rimes-action:hover { background: #3b5a49; }
-button.rimes-action:disabled { opacity: 0.4; }
-#rimes-progress trough { min-height: 2px; background: #1c2420; }
-#rimes-progress progress { background: #7cbc8a; min-height: 2px; }
-)CSS";
-    gtk_css_provider_load_from_data(provider, css, -1, nullptr);
-    gtk_style_context_add_provider_for_screen(gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider),
-                                              GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
-    g_object_unref(provider);
+
+void PluginMenu(App* app, GtkWidget* anchor) {
+    auto* menu = gtk_menu_new();
+    auto add = [&](std::string id, const std::string& title) {
+        auto* item = gtk_menu_item_new_with_label(title.c_str());
+        auto* fn = new std::function<void()>([app, id] { SendCommand(app, rimes::runtime::Json{{"v",1},{"op","select_plugin"},{"id",id}}.dump()); });
+        g_signal_connect_data(item, "activate", G_CALLBACK(+[](GtkMenuItem*, gpointer p) { (*static_cast<std::function<void()>*>(p))(); }), fn,
+                              +[](gpointer p, GClosure*) { delete static_cast<std::function<void()>*>(p); }, GConnectFlags(0));
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+    };
+    add("", "Default");
+    for (const auto& plugin : app->snapshot.plugins) add(plugin.id, plugin.name);
+    g_signal_connect(menu, "selection-done", G_CALLBACK(+[](GtkWidget* w) { gtk_widget_destroy(w); }), nullptr);
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), anchor, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, nullptr);
 }
 
 void BuildUi(App* app) {
+    using namespace rimes::desktop;
     app->window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(app->window), rimes::branding::Title(" Buffer").c_str());
     gtk_window_set_icon_name(GTK_WINDOW(app->window), "rimes");
     gtk_window_set_default_size(GTK_WINDOW(app->window), kWindowWidth, kWindowHeight);
     gtk_widget_set_size_request(app->window, kWindowWidth, kWindowHeight);
-    gtk_widget_set_hexpand(app->window, TRUE);
     gtk_window_set_resizable(GTK_WINDOW(app->window), FALSE);
     gtk_window_set_decorated(GTK_WINDOW(app->window), FALSE);
     gtk_window_set_skip_taskbar_hint(GTK_WINDOW(app->window), TRUE);
     gtk_window_set_skip_pager_hint(GTK_WINDOW(app->window), TRUE);
     gtk_window_set_accept_focus(GTK_WINDOW(app->window), FALSE);
     gtk_window_set_focus_on_map(GTK_WINDOW(app->window), FALSE);
-    // UTILITY (not DOCK): Xfce/xfwm can move it via begin_move_drag.
     gtk_window_set_type_hint(GTK_WINDOW(app->window), GDK_WINDOW_TYPE_HINT_UTILITY);
     gtk_window_set_keep_above(GTK_WINDOW(app->window), TRUE);
     gtk_widget_set_name(app->window, "rimes-buffer-window");
-    gtk_style_context_add_class(gtk_widget_get_style_context(app->window), "rimes-buffer");
+    Class(app->window, "rimes-buffer");
     gtk_widget_set_app_paintable(app->window, TRUE);
     gtk_widget_add_events(app->window, GDK_BUTTON_RELEASE_MASK);
     g_signal_connect(app->window, "destroy", G_CALLBACK(gtk_main_quit), nullptr);
     g_signal_connect(app->window, "size-allocate", G_CALLBACK(OnSizeAllocate), app);
-    // Button-release is a backup. The WM move-grab usually swallows it;
-    // the 50 ms pointer-button poll is the real end signal. Do not treat
-    // grab-broken as drag_end: xfwm fires that when it *takes* the grab.
-    g_signal_connect(app->window, "button-release-event", G_CALLBACK(OnButtonReleaseDuringDrag),
-                     app);
-
-    ApplyLayerShell(GTK_WINDOW(app->window), app);
-    // Layer-shell ignores default_size unless a request or stretch anchors exist.
-    gtk_widget_set_size_request(app->window, kWindowWidth, kWindowHeight);
-
-    GtkWidget* chrome = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    g_signal_connect(app->window, "button-release-event", G_CALLBACK(OnButtonReleaseDuringDrag), app);
+    if (!app->render) ApplyLayerShell(GTK_WINDOW(app->window), app);
+    auto* outer = Column(0);
+    app->root = outer;
+    gtk_container_add(GTK_CONTAINER(app->window), outer);
+    auto* chrome = Column(0);
+    gtk_widget_set_margin_top(chrome, rimes::native::chromeInset);
+    gtk_widget_set_margin_bottom(chrome, rimes::native::chromeInset);
+    gtk_widget_set_margin_start(chrome, rimes::native::chromeInset);
+    gtk_widget_set_margin_end(chrome, rimes::native::chromeInset);
     gtk_widget_set_name(chrome, "rimes-chrome");
-    gtk_container_add(GTK_CONTAINER(app->window), chrome);
-
-    GtkWidget* toolbar = gtk_event_box_new();
+    Add(outer, chrome, true);
+    auto* toolbar = gtk_event_box_new();
     gtk_widget_set_name(toolbar, "rimes-toolbar");
+    gtk_widget_set_size_request(toolbar, -1, kToolbarHeight + 1);
     gtk_widget_add_events(toolbar, GDK_BUTTON_PRESS_MASK | GDK_BUTTON_RELEASE_MASK);
     g_signal_connect(toolbar, "button-press-event", G_CALLBACK(OnToolbarDrag), app);
     g_signal_connect(toolbar, "button-release-event", G_CALLBACK(OnButtonReleaseDuringDrag), app);
-    gtk_box_pack_start(GTK_BOX(chrome), toolbar, FALSE, FALSE, 0);
-
-    GtkWidget* toolbar_row = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 8);
-    gtk_container_add(GTK_CONTAINER(toolbar), toolbar_row);
-    gtk_container_set_border_width(GTK_CONTAINER(toolbar_row), 6);
-
-    GtkWidget* title = gtk_label_new("Default");
-    gtk_widget_set_name(title, "rimes-title");
-    gtk_box_pack_start(GTK_BOX(toolbar_row), title, FALSE, FALSE, 0);
-
-    app->status = gtk_label_new("Buffer");
+    Add(chrome, toolbar);
+    auto* tools = Row(4);
+    gtk_widget_set_margin_start(tools, rimes::native::shelfHorizontalInset);
+    gtk_widget_set_margin_end(tools, rimes::native::shelfHorizontalInset);
+    gtk_widget_set_valign(tools, GTK_ALIGN_CENTER);
+    gtk_container_add(GTK_CONTAINER(toolbar), tools);
+    Add(tools, Action("square.grid.2x2", "Buffer 功能", [app] { PluginMenu(app, app->selector); }));
+    app->selector = Button("Default  ⌄", [app] { PluginMenu(app, app->selector); }, "rimes-selector");
+    gtk_widget_set_can_focus(app->selector, FALSE);
+    Add(tools, app->selector);
+    app->status = Label("");
     gtk_widget_set_name(app->status, "rimes-status");
-    gtk_box_pack_start(GTK_BOX(toolbar_row), app->status, FALSE, FALSE, 0);
-
-    GtkWidget* spacer = gtk_label_new("");
-    gtk_box_pack_start(GTK_BOX(toolbar_row), spacer, TRUE, TRUE, 0);
-
-    app->target = gtk_label_new("·");
+    Add(tools, app->status);
+    Add(tools, Label(""), true);
+    app->edit = Action("arrow.uturn.backward", "返回编辑", [app] { SendCommand(app, R"({"v":1,"op":"return_to_edit"})"); });
+    Add(tools, app->edit);
+    app->target = Label("");
+    gtk_label_set_ellipsize(GTK_LABEL(app->target), PANGO_ELLIPSIZE_END);
+    gtk_label_set_max_width_chars(GTK_LABEL(app->target), 16);
     gtk_widget_set_name(app->target, "rimes-target");
-    gtk_widget_set_tooltip_text(app->target, "Exact delivery target");
-    gtk_box_pack_start(GTK_BOX(toolbar_row), app->target, FALSE, FALSE, 0);
-
-    GtkWidget* close = gtk_button_new_with_label("×");
-    gtk_style_context_add_class(gtk_widget_get_style_context(close), "rimes-action");
-    gtk_widget_set_tooltip_text(close, "Close and pause (keeps staged blocks)");
-    g_signal_connect(close, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
-                         SendCommand(static_cast<App*>(data), R"({"v":1,"op":"close"})");
-                     }),
-                     app);
-    gtk_box_pack_end(GTK_BOX(toolbar_row), close, FALSE, FALSE, 0);
-
-    GtkWidget* body = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 6);
-    gtk_container_set_border_width(GTK_CONTAINER(body), 6);
-    gtk_box_pack_start(GTK_BOX(chrome), body, TRUE, TRUE, 0);
-
-    GtkWidget* scroll = gtk_scrolled_window_new(nullptr, nullptr);
-    gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_AUTOMATIC,
-                                   GTK_POLICY_NEVER);
-    gtk_scrolled_window_set_shadow_type(GTK_SCROLLED_WINDOW(scroll), GTK_SHADOW_NONE);
-    gtk_box_pack_start(GTK_BOX(body), scroll, TRUE, TRUE, 0);
-
-    GtkWidget* rail = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 4);
-    gtk_container_add(GTK_CONTAINER(scroll), rail);
-
-    app->placeholder = gtk_label_new(rimes::buffer::kPlaceholder);
+    gtk_widget_set_tooltip_text(app->target, "上屏目标");
+    Add(tools, app->target);
+    Add(tools, Action("xmark", "关闭并暂停", [app] { SendCommand(app, R"({"v":1,"op":"close"})"); }));
+    auto* body = Column(0);
+    gtk_widget_set_margin_top(body, 3);
+    gtk_widget_set_margin_bottom(body, 3);
+    gtk_widget_set_margin_start(body, rimes::native::mainHorizontalInset);
+    gtk_widget_set_margin_end(body, rimes::native::mainHorizontalInset);
+    Add(chrome, body, true);
+    auto* rails = Column(4);
+    gtk_widget_set_name(rails, "rimes-rails");
+    auto* rail_overlay = gtk_overlay_new();
+    Add(body, rail_overlay, true);
+    gtk_container_add(GTK_CONTAINER(rail_overlay), rails);
+    auto make_rail = [&](GtkWidget** row, GtkWidget** actions) {
+        *row = gtk_overlay_new();
+        gtk_widget_set_size_request(*row, -1, 28);
+        Add(rails, *row, true);
+        auto* scroll = gtk_scrolled_window_new(nullptr, nullptr);
+        gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll), GTK_POLICY_EXTERNAL, GTK_POLICY_NEVER);
+        gtk_container_add(GTK_CONTAINER(*row), scroll);
+        auto* line = Row(rimes::native::blockSpacing);
+        gtk_widget_set_margin_start(line, rimes::native::railHorizontalInset);
+        gtk_widget_set_margin_end(line, rimes::native::railHorizontalInset);
+        gtk_widget_set_valign(line, GTK_ALIGN_CENTER);
+        gtk_container_add(GTK_CONTAINER(scroll), line);
+        *actions = Class(Row(3), "rimes-actions");
+        gtk_widget_set_margin_end(*actions, rimes::native::railHorizontalInset);
+        gtk_widget_set_halign(*actions, GTK_ALIGN_END);
+        gtk_widget_set_valign(*actions, GTK_ALIGN_CENTER);
+        gtk_overlay_add_overlay(GTK_OVERLAY(*row), *actions);
+        return line;
+    };
+    auto* source = make_rail(&app->source_row, &app->source_actions);
+    app->placeholder = Label(rimes::buffer::kPlaceholder);
     gtk_widget_set_name(app->placeholder, "rimes-placeholder");
-    gtk_box_pack_start(GTK_BOX(rail), app->placeholder, FALSE, FALSE, 0);
-
-    app->chip_box = gtk_box_new(GTK_ORIENTATION_HORIZONTAL, 3);
-    gtk_box_pack_start(GTK_BOX(rail), app->chip_box, FALSE, FALSE, 0);
-
-    app->preedit = gtk_label_new("");
+    Add(source, app->placeholder);
+    app->chip_box = Row(rimes::native::blockSpacing);
+    Add(source, app->chip_box);
+    app->preedit = Label("");
     gtk_widget_set_name(app->preedit, "rimes-preedit");
-    gtk_box_pack_start(GTK_BOX(rail), app->preedit, FALSE, FALSE, 0);
-
-    GtkWidget* clipboard = gtk_button_new();
-    gtk_button_set_image(GTK_BUTTON(clipboard),
-                         gtk_image_new_from_icon_name("edit-paste", GTK_ICON_SIZE_BUTTON));
-    gtk_button_set_always_show_image(GTK_BUTTON(clipboard), TRUE);
-    gtk_style_context_add_class(gtk_widget_get_style_context(clipboard), "rimes-action");
-    gtk_widget_set_tooltip_text(clipboard, "Import clipboard into Buffer");
-    g_signal_connect(clipboard, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
-                         auto* self = static_cast<App*>(data);
-                         GtkClipboard* board = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
-                         gchar* text = gtk_clipboard_wait_for_text(board);
-                         if (text == nullptr || text[0] == '\0') {
-                             g_free(text);
-                             return;
-                         }
-                         std::string command = std::string("{\"v\":1,\"op\":\"paste\",\"text\":") +
-                                               rimes::buffer::JsonEscape(text) + '}';
-                         SendCommand(self, command);
-                         g_free(text);
-                     }),
-                     app);
-    gtk_box_pack_end(GTK_BOX(body), clipboard, FALSE, FALSE, 0);
-
-    app->send = gtk_button_new();
-    gtk_button_set_image(GTK_BUTTON(app->send),
-                         gtk_image_new_from_icon_name("go-next", GTK_ICON_SIZE_BUTTON));
-    gtk_button_set_always_show_image(GTK_BUTTON(app->send), TRUE);
-    gtk_style_context_add_class(gtk_widget_get_style_context(app->send), "rimes-action");
-    gtk_widget_set_tooltip_text(app->send, "Send next block");
-    g_signal_connect(app->send, "clicked", G_CALLBACK(+[](GtkButton*, gpointer data) {
-                         SendCommand(static_cast<App*>(data), R"({"v":1,"op":"send_next"})");
-                     }),
-                     app);
-    gtk_box_pack_end(GTK_BOX(body), app->send, FALSE, FALSE, 0);
-
+    Add(source, app->preedit);
+    app->caret = gtk_event_box_new();
+    gtk_widget_set_name(app->caret, "rimes-caret");
+    gtk_widget_set_size_request(app->caret, 2, 18);
+    gtk_widget_set_valign(app->caret, GTK_ALIGN_CENTER);
+    Add(source, app->caret);
+    auto* target = make_rail(&app->result_row, &app->result_actions);
+    app->result_text = Label("");
+    gtk_widget_set_size_request(app->result_text, -1, rimes::native::itemHeight);
+    gtk_widget_set_name(app->result_text, "rimes-result");
+    gtk_label_set_single_line_mode(GTK_LABEL(app->result_text), TRUE);
+    Add(target, app->result_text);
+    app->pager = Row(2);
+    auto move = [app](int delta) {
+        const auto& s = app->snapshot;
+        const auto current = std::find_if(s.results.begin(), s.results.end(), [&](const auto& r) { return r.id == s.selected_result; });
+        if (current == s.results.end()) return;
+        const int index = static_cast<int>(current - s.results.begin()) + delta;
+        if (index >= 0 && index < static_cast<int>(s.results.size()))
+            SendCommand(app, rimes::runtime::Json{{"v",1},{"op","select_result"},{"id",s.results[index].id}}.dump());
+    };
+    Add(app->pager, Action("chevron.left", "上一个结果", [move] { move(-1); }));
+    app->pager_count = Label("");
+    Add(app->pager, app->pager_count);
+    Add(app->pager, Action("chevron.right", "下一个结果", [move] { move(1); }));
+    Add(app->result_actions, app->pager);
+    app->copy = Action("doc.on.doc", "复制结果", [app] {
+        app->pending_copy = app->snapshot.selected_result;
+        SendCommand(app, rimes::runtime::Json{{"v",1},{"op","copy_result"},{"id",app->pending_copy}}.dump());
+    });
+    app->generate = Action("sparkles", "生成结果", [app] {
+        SendCommand(app, app->snapshot.phase == rimes::buffer::DerivedPhase::Running ? R"({"v":1,"op":"cancel_generation"})" : R"({"v":1,"op":"generate"})");
+    });
+    app->send = Action("paperplane.fill", "发送下一块", [app] { SendCommand(app, R"({"v":1,"op":"send_next"})"); });
+    Add(app->source_actions, Action("doc.on.clipboard", "导入剪贴板", [app] { Paste(app); }));
+    for (auto* control : {app->copy, app->generate, app->send}) Add(app->source_actions, control);
     app->progress = gtk_progress_bar_new();
     gtk_widget_set_name(app->progress, "rimes-progress");
-    gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(app->progress), 0);
-    gtk_box_pack_end(GTK_BOX(chrome), app->progress, FALSE, FALSE, 0);
+    gtk_widget_set_valign(app->progress, GTK_ALIGN_END);
+    gtk_overlay_add_overlay(GTK_OVERLAY(rail_overlay), app->progress);
+    gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(rail_overlay), app->progress, TRUE);
+}
+
+int RenderFixtures(App* app, const std::filesystem::path& output) {
+    std::filesystem::create_directories(output);
+    auto& s = app->snapshot;
+    s.visible = s.capturing = s.enabled = true;
+    s.empty = false;
+    s.blocks = {{"fixture-source", "同一窗口先展开为双轨", rimes::buffer::Origin::Rime, 0}};
+    rimes::runtime::Json manifest = rimes::runtime::Json::array();
+    for (const std::string theme : {"night", "day", "quiet", "rasta", "liquidGlass"}) {
+        for (const std::string state : {"standard", "dual", "running", "failed", "alternatives", "exchange", "return-to-edit", "restored", "hold"}) {
+            s.theme = theme;
+            s.active_plugin = state == "standard" || state == "restored" || state == "hold" ? "" : "fixture.transform";
+            s.hold_progress = state == "hold" ? 0.5 : 0;
+            s.plugins = {{"fixture.transform", "Default"}};
+            s.live_expand = state != "exchange" && state != "return-to-edit";
+            s.phase = state == "running" ? rimes::buffer::DerivedPhase::Running :
+                      state == "failed" ? rimes::buffer::DerivedPhase::Failed :
+                      state == "return-to-edit" || s.active_plugin.empty() ? rimes::buffer::DerivedPhase::Idle : rimes::buffer::DerivedPhase::Ready;
+            s.results.clear();
+            if (s.phase == rimes::buffer::DerivedPhase::Ready || s.phase == rimes::buffer::DerivedPhase::Running)
+                s.results.push_back({"fixture-result", "再验证它能缩回单轨", 0, s.phase == rimes::buffer::DerivedPhase::Ready});
+            if (state == "alternatives") s.results.push_back({"fixture-alternative", "另一个结果", 1, true});
+            s.selected_result = s.results.empty() ? "" : s.results.front().id;
+            s.can_generate = !s.active_plugin.empty() && s.phase != rimes::buffer::DerivedPhase::Running;
+            Refresh(app);
+            auto* loop = g_main_loop_new(nullptr, FALSE);
+            g_timeout_add(80, +[](gpointer p) -> gboolean { g_main_loop_quit(static_cast<GMainLoop*>(p)); return G_SOURCE_REMOVE; }, loop);
+            g_main_loop_run(loop);
+            g_main_loop_unref(loop);
+            const auto filename = theme + "--" + state + ".png";
+            const int width = gtk_widget_get_allocated_width(app->root), height = gtk_widget_get_allocated_height(app->root);
+            if (width != s.width || height != app->height ||
+                !rimes::desktop::Render(app->root, (output / filename).string())) {
+                g_printerr("Buffer render dimensions: %dx%d expected %dx%d\n", width, height, s.width, app->height);
+                return 1;
+            }
+            manifest.push_back({{"file",filename},{"theme",theme},{"state",state},{"width",width},{"height",height},{"fixture",true}});
+        }
+    }
+    std::ofstream file(output / "manifest.json");
+    file << manifest.dump(2) << '\n';
+    return file ? 0 : 1;
 }
 
 }  // namespace
@@ -718,11 +755,14 @@ int main(int argc, char** argv) {
     gtk_init(&argc, &argv);
     std::string socket_path = DefaultSocketPath();
     bool preview = false;
+    std::string render_directory;
     std::string dump_geometry;
     bool quit_after_dump = false;
     for (int index = 1; index < argc; ++index) {
         if (std::strcmp(argv[index], "--socket") == 0 && index + 1 < argc) {
             socket_path = argv[++index];
+        } else if (std::strcmp(argv[index], "--render") == 0 && index + 1 < argc) {
+            render_directory = argv[++index];
         } else if (std::strcmp(argv[index], "--preview") == 0) {
             preview = true;
         } else if (std::strcmp(argv[index], "--dump-geometry") == 0 && index + 1 < argc) {
@@ -734,10 +774,12 @@ int main(int argc, char** argv) {
 
     App app;
     g_app = &app;
+    app.render = !render_directory.empty();
     app.dump_geometry = dump_geometry;
     app.quit_after_dump = quit_after_dump;
-    LoadCss();
+    LoadCss("night");
     BuildUi(&app);
+    if (app.render) return RenderFixtures(&app, render_directory);
 
     if (preview) {
         app.snapshot.visible = true;
@@ -749,7 +791,7 @@ int main(int argc, char** argv) {
         demo.origin = rimes::buffer::Origin::Rime;
         app.snapshot.blocks.push_back(demo);
         gtk_widget_show_all(app.window);
-        RebuildChips(&app);
+        Refresh(&app);
         if (!app.dump_geometry.empty()) {
             g_timeout_add(200, [](gpointer data) -> gboolean {
                 WriteGeometryDump(static_cast<App*>(data));

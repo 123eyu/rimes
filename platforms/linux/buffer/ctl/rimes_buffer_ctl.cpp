@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <cerrno>
 #include <cstdlib>
 #include <sys/socket.h>
@@ -95,19 +96,22 @@ bool ReadSnapshot(int fd, std::string* json, int timeout_ms) {
 
 void Usage() {
     std::cerr << "Usage: rimes-buffer-ctl [--socket PATH] "
-                 "hello|status|toggle|show|close|send-next|send-all|remove-last\n";
+                 "hello|status|toggle|show|close|send-next|send-all|remove-last|generate|cancel-generation|return-to-edit|select-plugin ID|select-result ID|copy-result ID\n";
 }
 
 }  // namespace
 
 int main(int argc, char** argv) {
     std::string socket_path = DefaultSocketPath();
-    std::string op;
+    std::string op, id;
+    bool has_id = false;
     for (int index = 1; index < argc; ++index) {
         if (std::strcmp(argv[index], "--socket") == 0 && index + 1 < argc) {
             socket_path = argv[++index];
         } else if (argv[index][0] != '-') {
-            op = argv[index];
+            if (op.empty()) op = argv[index];
+            else if (!has_id) { id = argv[index]; has_id = true; }
+            else { Usage(); return 2; }
         } else {
             Usage();
             return 2;
@@ -118,21 +122,17 @@ int main(int argc, char** argv) {
         return 2;
     }
     std::string wire_op = op;
-    if (op == "send-next") {
-        wire_op = "send_next";
-    } else if (op == "send-all") {
-        wire_op = "send_all";
-    } else if (op == "remove-last") {
-        wire_op = "remove_last";
-    } else if (op == "select-all") {
-        wire_op = "select_all";
-    }
+    std::replace(wire_op.begin(), wire_op.end(), '-', '_');
+    const std::string command = std::string("{\"v\":1,\"op\":") + rimes::buffer::JsonEscape(wire_op) +
+        (has_id ? ",\"id\":" + rimes::buffer::JsonEscape(id) : "") + "}";
+    rimes::buffer::Command parsed;
+    std::string error;
+    if (!rimes::buffer::ParseCommand(command, &parsed, &error)) { Usage(); return 2; }
     const int fd = Connect(socket_path, 40);
     if (fd < 0) {
         std::cerr << "rimes-buffer-ctl: cannot connect to " << socket_path << '\n';
         return 1;
     }
-    const std::string command = std::string("{\"v\":1,\"op\":\"") + wire_op + "\"}";
     // AcceptClient publishes immediately. Drain that snapshot so mutating
     // ops wait for HandleCommand's later Publish on the Fcitx thread.
     std::string connect_snapshot;

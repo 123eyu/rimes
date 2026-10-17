@@ -18,6 +18,7 @@ on:
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
+      - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
@@ -44,6 +45,7 @@ on:
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
+      - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
@@ -116,11 +118,16 @@ jobs:
           RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
             platforms/linux/ime/build/runtime/rimes-settings --render "$RUNNER_TEMP/settings-render"
 
+      - name: Render Buffer states for macOS comparison
+        run: xvfb-run -a platforms/linux/ime/build/rimes-buffer --render "$RUNNER_TEMP/buffer-render"
+
       - name: Upload settings for macOS comparison
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: linux-settings-native-${{ github.run_id }}
-          path: ${{ runner.temp }}/settings-render
+          path: |
+            ${{ runner.temp }}/settings-render
+            ${{ runner.temp }}/buffer-render
           retention-days: 14
 
       - name: Original source import and native typing
