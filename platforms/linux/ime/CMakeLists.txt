@@ -408,6 +408,12 @@ if(RIMES_BUILD_TESTS)
         rimes_harden(rimes-buffer-translation-host-tests)
         add_test(NAME buffer-translation-host COMMAND rimes-buffer-translation-host-tests)
 
+        add_executable(rimes-buffer-delivery-host-tests tests/buffer_delivery_host_tests.cpp src/buffer/buffer_service.cpp src/buffer/buffer_translation.cpp src/buffer/buffer_delivery.cpp)
+        target_include_directories(rimes-buffer-delivery-host-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+        target_link_libraries(rimes-buffer-delivery-host-tests PRIVATE Fcitx5::Core RimesBufferCore Threads::Threads)
+        rimes_harden(rimes-buffer-delivery-host-tests)
+        add_test(NAME buffer-delivery-host COMMAND rimes-buffer-delivery-host-tests)
+
         add_executable(rimes-session-monitor-tests tests/session_monitor_tests.cpp src/session/session_monitor.cpp)
         target_include_directories(rimes-session-monitor-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
         target_link_libraries(rimes-session-monitor-tests PRIVATE Fcitx5::Core)
