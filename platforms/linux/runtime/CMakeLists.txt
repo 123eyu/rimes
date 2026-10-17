@@ -23,7 +23,7 @@ target_compile_options(RimesRuntimeStorage PRIVATE -Wall -Wextra -Wpedantic -Wer
 
 add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp core/configuration.cpp)
 target_compile_features(RimesPluginCore PUBLIC cxx_std_17)
-target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core")
+target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core" "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_include_directories(RimesPluginCore PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/generated")
 # Reuse the repository's pinned, licensed header-only JSON dependency.
 target_include_directories(RimesPluginCore SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/../../windows/native/third_party")
@@ -47,6 +47,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsWindow.swift"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsRouting.swift"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/BufferWindowController.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/BufferInlineView.swift"
     "${RIMES_REPOSITORY_ROOT}/Catalog/buffer-plugins.json"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/chatgpt.png"
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/PluginIcons/claude.png"

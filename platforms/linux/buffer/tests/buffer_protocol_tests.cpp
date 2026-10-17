@@ -63,6 +63,33 @@ int main() {
     const auto escaped = rimes::buffer::JsonEscape("a\"b\\c");
     Expect(escaped == "\"a\\\"b\\\\c\"", "json escape");
 
+    Expect(rimes::buffer::ParseCommand(R"({"op":"paste","text":"\u4f60\u597d\ud83d\ude42"})", &command, &error)
+           && command.text == "你好🙂", "Unicode command survives IPC");
+    for (const auto* bad : {R"({"nested":{"op":"send_all"}})", R"({"op":"send_all"} garbage)",
+            R"({"op":"paste","text":"\ud800"})", R"({"op":"paste","text":"\u0000"})",
+            R"({"op":"set_insertion","index":4294967297})", R"({"op":"set_insertion","index":1.5})",
+            R"({"v":2,"op":"show"})", R"({"op":"select_result"})"})
+        Expect(!rimes::buffer::ParseCommand(bad, &command, &error), "invalid command rejected");
+    auto dual = snapshot;
+    dual.active_plugin = "builtin.fixture";
+    dual.phase = rimes::buffer::DerivedPhase::Ready;
+    dual.results = {{"result", "Result includes ],{ and 中文🙂", 0, true}};
+    dual.selected_result = "result";
+    rimes::buffer::Snapshot decoded;
+    Expect(rimes::buffer::ParseSnapshot(rimes::buffer::EncodeSnapshot(dual), &decoded), "dual snapshot round trip");
+    Expect(decoded.results.size() == 1 && decoded.results.front().text == dual.results.front().text &&
+           decoded.blocks.front().text == snapshot.blocks.front().text, "nested arrays and Unicode remain distinct");
+    Expect(!rimes::buffer::ParseSnapshot(R"({"type":"snapshot","visible":"true"})", &decoded), "wrong snapshot types rejected");
+    dual.secure = true;
+    const auto protected_dual = rimes::buffer::EncodeSnapshot(dual);
+    Expect(protected_dual.find("Result includes") == std::string::npos && protected_dual.find("你好") == std::string::npos,
+           "protected snapshot scrubs both rails");
+    Expect(rimes::buffer::ParseSnapshot(protected_dual, &decoded) && decoded.results.empty() && decoded.blocks.empty(),
+           "protected renderer has no plaintext");
+    std::string unescaped;
+    Expect(rimes::buffer::JsonUnescape(R"(\u4f60\u597d\ud83d\ude42)", &unescaped) && unescaped == "你好🙂",
+           "Capsule shared unescape preserves Unicode");
+
     if (failures != 0) {
         std::cerr << failures << " protocol checks failed\n";
         return EXIT_FAILURE;

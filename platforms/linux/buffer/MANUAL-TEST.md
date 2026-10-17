@@ -85,7 +85,7 @@ For each host above, switch to **RIMES** (雾凇全拼) first.
     pause capture. The dragged position is forgotten on the next open
     (expected).
 14. **Wayland placement.** On labwc/sway the panel is overlay / always
-    visible, at least 760 px wide (stretched with side margins; ~1118×77
+    visible, at least 760 px wide (stretched with side margins; ~1118×73
     on a 1280-wide output is fine), chips are readable, and it does not
     steal focus. It sits at the bottom, not under the caret — expected.
 15. **UI respawn.** While capturing, `kill -9` the `rimes-buffer` process
@@ -153,11 +153,22 @@ focus-switch, password and Escape checks above.
 - Electron/Chromium: if preedit leaks raw letters into the page while Buffer
   is capturing, record it. Linux no longer installs a client-preedit ZWSP
   (GTK/VTE/Gecko would commit it on focus-out).
-- Clipboard button is a GTK `edit-paste` icon. An empty box means the icon
-  theme is missing, not U+2398 tofu.
+- Clipboard and result actions use bundled vector drawing; verify their tooltip,
+  hit area and nonactivating click behavior against macOS.
 
 ## What this checklist does not cover
 
 Mailbox, AI / translation / stream / music plugins, IBus, and a custom
 candidate window that follows the Buffer caret. Capsule has its own list in
 [`../capsule/MANUAL-TEST.md`](../capsule/MANUAL-TEST.md).
+
+## Derived host and visual acceptance
+
+- On a build with an enabled compiled adapter, verify source remains intact after
+  generation, cancel, return-to-edit, failed output and UI process restart.
+- Try each alternative, copy only ready results, then revoke the adapter during
+  a stream and confirm no late content reappears. Repeat after focus changes.
+- Match theme, fixture, display scale and window size to macOS. Compare native
+  73/105 heights, underlines, overlays, source/target roles and failure/empty states.
+- `--render` fixtures prove layout transitions only; they do not prove real AI or
+  translation availability, actual focus preservation or completed visual parity.

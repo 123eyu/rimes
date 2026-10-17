@@ -9,12 +9,13 @@ import re
 
 ROOT = Path(__file__).resolve().parents[3]
 SOURCES = ["Sources/RimeBuffer/RimeUI.swift", "Sources/RimeBuffer/SettingsWindow.swift",
-           "Sources/RimeBuffer/SettingsRouting.swift", "Sources/RimeBuffer/BufferWindowController.swift"]
+           "Sources/RimeBuffer/SettingsRouting.swift", "Sources/RimeBuffer/BufferWindowController.swift",
+           "Sources/RimeBuffer/BufferInlineView.swift"]
 CATALOG = "Catalog/buffer-plugins.json"
 
 
 def extract():
-    ui, settings, routing, buffer = [(ROOT / name).read_text() for name in SOURCES]
+    ui, settings, routing, buffer, inline = [(ROOT / name).read_text() for name in SOURCES]
     native_fields = set(re.findall(r"let (\w+): UInt32", ui.split("struct RimeThemePalette")[1].split("enum RimeThemePalettes")[0]))
     palettes = {}
     for name in ("night", "day", "quiet", "rasta"):
@@ -53,6 +54,13 @@ def extract():
         "cardHeight": number(r"card.heightAnchor.constraint\(equalToConstant: (\d+)"),
         "controlSize": number(r"enum BufferWorkbenchMetrics.*?controlSize: CGFloat = (\d+)", buffer.replace("\n", " ")),
     }
+    for name, field in (("bufferMinimumWidth", "standardMinimumWidth"), ("bufferMaximumWidth", "standardMaximumWidth"),
+                        ("bufferHeight", "expandedHeight"), ("bufferDerivedHeight", "translationExpandedHeight")):
+        metrics[name] = number(r"static let " + field + r": CGFloat = (\d+)", buffer)
+    for field in ("controlSize", "chromeInset", "mainHorizontalInset", "shelfHorizontalInset"):
+        metrics[field] = number(r"static let " + field + r": CGFloat = (\d+)", buffer)
+    for field in ("blockSpacing", "railHorizontalInset", "itemHeight", "blockUnderlineWidth", "selectedBlockUnderlineWidth"):
+        metrics[field] = number(r"static let " + field + r": CGFloat = (\d+)", inline)
     chrome = settings.split("private enum SettingsVisualStyle")[1].split("private enum SettingsPluginSwitchMode")[0]
     for name, palette in palettes.items():
         for key, field in (("settingsBackground", "background"), ("settingsSeparator", "separator")):
@@ -88,7 +96,13 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, required=True)
     args = parser.parse_args()
-    value = json.dumps(extract(), ensure_ascii=False, sort_keys=True)
+    imported = extract()
+    value = json.dumps(imported, ensure_ascii=False, sort_keys=True)
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text('// Generated from native macOS sources; do not edit.\n#pragma once\n'
                            'namespace rimes::desktop { inline constexpr char kNativeVisuals[] = R"xsime(' + value + ')xsime"; }\n')
+
+    # Core geometry constraints use the same generated constants as the renderer.
+    args.output.with_name("native_buffer_metrics.hpp").write_text(
+        "// Generated from macOS native metrics.\n#pragma once\nnamespace rimes::native {\n" +
+        "\n".join(f"inline constexpr int {key} = {value};" for key, value in imported["metrics"].items()) + "\n}\n")

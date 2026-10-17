@@ -83,6 +83,11 @@ RimesIme::RimesIme(Instance* instance)
     plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
     WatchPluginPackages();
     WatchConfiguration();
+    buffer_->BindPlugins(plugins_, [this](const auto& lease) { return acceptsPluginResult(lease); },
+        [this](std::string_view id) {
+            if (!configuration_) throw std::runtime_error("Configuration unavailable");
+            return configuration_->Freeze(id);
+        });
 
     destroy_watch_ = instance_->watchEvent(
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
@@ -194,7 +199,7 @@ void RimesIme::ApplyConfiguration() {
         if (revision == configuration_revision_) return;
         configuration_revision_ = revision;
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
-        buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"));
+        buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
     } catch (const std::exception&) {
         configuration_revision_.clear();
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);

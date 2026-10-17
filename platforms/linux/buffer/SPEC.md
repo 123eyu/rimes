@@ -2,10 +2,11 @@
 
 This is the acceptance baseline for the Linux Default Buffer. It is derived
 from macOS `BufferModel`, `RimeBufferController.drainCommit`,
-`BufferDeliveryCoordinator`, and `.codex/skills/rimebuffer-project/references/buffer-ui.md`.
-Linux implements the **Default** workbench only. AI / translation / stream /
-music plugins and Mailbox are out of scope. Capsule is a sibling component
-documented in `platforms/linux/capsule/SPEC.md`.
+`BufferDeliveryCoordinator`, and `.codex/skills/rimes-project/references/buffer-ui.md`.
+Linux includes Default staging and the derived workspace host. Compiled
+translation/AI/stream adapters and Mailbox are tracked in `../PARITY.md`;
+unavailable adapters cannot appear in the selector. Optional music remains
+outside this 30-task plan. Capsule is documented in `../capsule/SPEC.md`.
 
 The macOS hunch is confirmed: `RimesIme::commitText` is the single Fcitx5
 commit path, the analogue of `drainCommit` before `Delivery.insert`. When
@@ -106,15 +107,40 @@ content; blocks are not persisted.
 
 ## Workbench chrome
 
-- ~760×78 window: 33px toolbar + divider + one full-width rail.
-- Toolbar: Default label, status, passive target name, Close. Empty chrome
-  is the X11 drag region.
-- Rail: placeholder when idle and empty; otherwise chips + inline preedit.
-- Trailing overlay: clipboard import (`edit-paste` icon) and send next
-  (`go-next` icon). They must not shrink the rail. Do not use U+2398; Debian
-  fonts often lack that glyph.
-- Hold progress is a 2px bar along the bottom, not extra height.
-- Password / secure snapshots scrub plaintext.
+- Native dimensions come from the macOS sources at build time: 760×73
+  standard/single-exchange and 760×105 live dual rail, 30-point toolbar plus
+  divider, 2-point outer margin, 22-point controls, width range 520–1100.
+- Toolbar: function/installed-plugin selector, actionable status, return to edit,
+  passive delivery target and close. Empty chrome remains the X11 drag region.
+- Blocks use bottom rules, not bubbles. Source/preedit and target stay distinct.
+- The trailing action cluster overlays the full-width rail. Copy is enabled only
+  for a complete result; partial/error output cannot acquire delivery authority.
+- Four native palettes are imported from macOS. Liquid Glass currently uses an
+  opaque day fallback and is **not** visually accepted. Fonts, exact symbols,
+  selector details and missing plugin-specific controls remain in the visual audit.
+- Password / secure snapshots scrub source, preedit and results.
+
+## Derived workspace
+
+The host freezes the ordered source block identities/text/origins, configuration
+revision, plugin grant and focus epoch when a compiled adapter starts. Worker
+callbacks are posted onto the Fcitx event loop. Updating source, switching
+plugins, changing configuration, revoking a grant, closing, protecting the
+session or losing the UI cancels pending work. Late callbacks cannot restore
+results or authority. Reopening leaves the original source intact.
+
+Live adapters keep source and target visible together. Explicit generators use
+macOS's single-exchange presentation and return-to-edit action. Up to five
+alternatives page inside a fixed-size target rail. Repeated streaming updates
+replace accumulated text without changing its identity. A failure clears partial
+results; only a successful finish makes a result copyable. UTF-8 and bounded
+payload validation happen before output publication. Source and result budgets
+are each 256 KiB so the version-1 snapshot stays below the 1 MiB frame bound.
+
+Default delivery remains unchanged. Derived delivery and exact source consumption
+belong to task #157; the host refuses to send the source as a substitute while a
+derived plugin is selected. No production adapter is fabricated for a screenshot.
+`--render DIRECTORY` uses explicit fixtures and never connects to a live IME.
 
 ## Placement, focus, always-on-top
 
@@ -144,8 +170,8 @@ content; blocks are not persisted.
 
 - `gtk-layer-shell` overlay layer, bottom-anchored **and** left/right
   stretched with ~80px side margins and a 48px bottom margin, plus a
-  760×78 **minimum** size request. On a typical 1280-wide output the
-  allocated size is about 1118×77 — that is expected, not a shrink to
+  760×73 **minimum** size request. On a typical 1280-wide output the
+  allocated size is about 1118×73 — that is expected, not a shrink to
   ~184×75. Keyboard interactivity none.
 - The compositor owns vertical position. There is no reliable “10px under
   the caret” API on stock layer-shell.
@@ -167,11 +193,11 @@ content; blocks are not persisted.
 | Custom detached `CandidateWindow` | Stock Fcitx5 candidate panel | IME step 1 already uses Fcitx5 UI; a second chrome is a later port |
 | Exact `FocusToken` + PID/bundle/AX box lock | IC pointer + focused-IC recheck | No IMK client identity and no Accessibility tree |
 | `Command+Shift+B` while another IM is active | Only while RIMES is current | No LaunchAgent analogue in this step |
-| AI / translation / stream / music plugins | Default only | Later components (and Capsule / Mailbox) |
+| AI / translation / stream adapters | Host foundation; adapters pending | Tasks #155–#158 and #171–#175 |
 | Secure Input + session lock/sleep | Password capability + snapshot scrub | No Carbon Secure Event Input; lock/sleep hide is manual-test only. **Firefox disables the IM on `<input type=password>`**, so `CapabilityFlag::Password` never reaches the addon and captured chips can stay visible. Scrub cannot run. Escape / Return / preedit must still not touch an uncaptured field. |
-| Command+C generated-result copy | Not implemented | No generated-result workspace |
+| Command+C generated-result copy | Toolbar copy through host validation; key routing pending | Focus/hotkey tasks |
 | Pin to all Spaces / display recovery | Not implemented | No Spaces |
-| Themes 墨竹 / 翡翠 / 静谧 / Rasta | One Classic-like dark chrome | Visual port, not a theme engine |
+| Native themes | Four shared palettes; Liquid Glass opaque fallback | Compositor material acceptance pending |
 
 ## IPC
 
@@ -181,7 +207,13 @@ The IME owns the model. The UI and `rimes-buffer-ctl` are clients.
 
 Commands: `hello`, `status`, `toggle`, `show`, `close`, `send_next`,
 `send_all`, `remove_last`, `select_all`, `paste`, `set_insertion`,
-`drag_begin`, `drag_end`.
+`drag_begin`, `drag_end`, `select_plugin` (id, empty for Default), `generate`,
+`cancel_generation`, `return_to_edit`, `select_result` (id), `copy_result` (id).
+The wire parser validates complete JSON, top-level operation types and Unicode
+surrogate pairs. A snapshot carries compiled/enabled plugin choices, presentation
+style, task phase, selected result, alternatives and the active theme. Credentials
+and worker grants never appear on this socket. The host answers an authorized
+copy with a matching `copy_result` id/text; it never trusts renderer-supplied text.
 Connecting publishes the current snapshot immediately; mutating commands
 are applied on the Fcitx thread and publish again. `rimes-buffer-ctl`
 and the DBus e2e client drain the connect snapshot before treating a

@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "buffer_model.hpp"
+#include "derived_workspace.hpp"
 
 namespace rimes::buffer {
 
@@ -23,6 +24,12 @@ enum class CommandOp {
     SetInsertion,
     DragBegin,
     DragEnd,
+    SelectPlugin,
+    Generate,
+    CancelGeneration,
+    ReturnToEdit,
+    SelectResult,
+    CopyResult,
     Unknown,
 };
 
@@ -30,8 +37,10 @@ struct Command {
     CommandOp op = CommandOp::Unknown;
     std::string text;
     int insertion_index = -1;
+    std::string id;
 };
 
+struct PluginChoice { std::string id, name; };
 struct Snapshot {
     int width = 760;
     std::uint64_t generation = 0;
@@ -51,6 +60,14 @@ struct Snapshot {
     CaretRect caret;
     std::vector<Block> blocks;
     int ui_clients = 0;
+    std::string theme = "night";
+    std::string active_plugin;
+    bool live_expand = true;
+    std::vector<PluginChoice> plugins;
+    DerivedPhase phase = DerivedPhase::Idle;
+    bool can_generate = false;
+    std::string selected_result;
+    std::vector<DerivedResult> results;
 };
 
 Snapshot MakeSnapshot(const BufferModel& model);
@@ -58,6 +75,7 @@ Snapshot MakeSnapshot(const BufferModel& model);
 std::string EncodeSnapshot(const Snapshot& snapshot);
 std::string EncodeError(std::string_view code, std::string_view message);
 bool ParseCommand(std::string_view json, Command* command, std::string* error);
+bool ParseSnapshot(std::string_view json, Snapshot* snapshot);
 
 std::string JsonEscape(std::string_view text);
 bool JsonUnescape(std::string_view text, std::string* output);

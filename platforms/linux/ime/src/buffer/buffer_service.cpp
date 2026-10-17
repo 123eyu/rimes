@@ -1,3 +1,4 @@
+#include "native_buffer_metrics.hpp"
 #include "buffer_service.hpp"
 
 #include <algorithm>
@@ -146,6 +147,8 @@ BufferService::BufferService(Instance* instance, PostFn post)
 }
 
 BufferService::~BufferService() {
+    alive_->store(false);
+    CancelDerived();
     CancelHoldTimer();
     CancelFocusGraceTimer();
     CancelDragHardTimer();
@@ -200,6 +203,7 @@ bool BufferService::IsPrintableAscii(const KeyEvent& event, char* out) {
 }
 
 InputContext* BufferService::LiveTarget() const {
+    if (!instance_) return nullptr;
     InputContext* found = nullptr;
     instance_->inputContextManager().foreachFocused([&](InputContext* ic) {
         if (model_.captures(TokenFor(ic))) {
@@ -419,11 +423,106 @@ void BufferService::AfterRime(InputContext* ic, KeyEvent& event, bool rime_handl
     Publish();
 }
 
-void BufferService::Configure(bool close_after_last, bool reset_on_app_switch, int width) {
+void BufferService::Configure(bool close_after_last, bool reset_on_app_switch, int width,
+                              std::string revision, std::string theme) {
+    configuration_revision_ = std::move(revision);
+    theme_ = std::move(theme);
     if (!std::getenv("RIMES_BUFFER_CLOSE_AFTER_LAST")) model_.set_close_after_last(close_after_last);
     reset_on_app_switch_ = reset_on_app_switch;
-    width_ = std::clamp(width, 460, 1200);
+    width_ = std::clamp(width, rimes::native::bufferMinimumWidth, rimes::native::bufferMaximumWidth);
     Publish();
+}
+
+void BufferService::BindPlugins(rimes::plugins::Registry& registry,
+    std::function<bool(const rimes::plugins::Lease&)> validate,
+    std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze) {
+    CancelDerived();
+    plugins_ = &registry;
+    validate_ = std::move(validate);
+    freeze_ = std::move(freeze);
+}
+
+void BufferService::RegisterDerivedAdapter(std::string id, std::string capability, RunDerived run, bool live_expand) {
+    if (!plugins_ || !run || !validate_ || !freeze_) throw std::runtime_error("Unbound Buffer runtime");
+    const auto* state = plugins_->Find(id);
+    if (!state || state->descriptor.kind != rimes::plugins::Kind::Buffer ||
+        !state->descriptor.capabilities.count(capability) || derived_adapters_.count(id))
+        throw std::runtime_error("Invalid compiled Buffer adapter");
+    derived_adapters_.emplace(std::move(id), DerivedAdapter{std::move(capability), std::move(run), live_expand});
+}
+
+void BufferService::CancelDerived() {
+    if (derived_cancel_) derived_cancel_->store(true);
+    derived_cancel_.reset();
+    derived_request_.reset();
+    derived_.Cancel();
+}
+
+void BufferService::SynchronizeDerived() {
+    // A permission check may refresh configuration and publish a new snapshot.
+    if (synchronizing_derived_) return;
+    synchronizing_derived_ = true;
+    bool grant = false;
+    try { grant = derived_request_ && validate_ && validate_(derived_request_->lease); }
+    catch (const std::exception&) { grant = false; }
+    derived_.Synchronize(model_.blocks(), plugins_ ? plugins_->SelectedBuffer() : "",
+        configuration_revision_, {model_.capture_token(), focus_epoch_},
+        model_.visible() && model_.processing_active(), model_.secure() || model_.password_field());
+    if (derived_request_ && !derived_.Owns(*derived_request_, grant)) CancelDerived();
+    synchronizing_derived_ = false;
+}
+
+bool BufferService::SelectPlugin(const std::string& id) {
+    if (!plugins_ || (!id.empty() && !derived_adapters_.count(id)) || !plugins_->SelectBuffer(id)) return false;
+    CancelDerived();
+    Publish();
+    return true;
+}
+
+bool BufferService::Generate() {
+    SynchronizeDerived();
+    if (!plugins_ || !freeze_ || !validate_) return false;
+    const auto adapter = derived_adapters_.find(plugins_->SelectedBuffer());
+    if (adapter == derived_adapters_.end()) return false;
+    const auto lease = plugins_->Authorize(adapter->first, adapter->second.capability);
+    bool started = false;
+    try {
+        if (!lease || !validate_(*lease)) return false;
+        const auto configuration = freeze_(adapter->first);
+        if (configuration.revision != configuration_revision_) return false;
+        const auto request = derived_.Begin(*lease);
+        if (!request) return false;
+        started = true;
+        if (derived_cancel_) derived_cancel_->store(true);
+        derived_request_ = request;
+        derived_cancel_ = std::make_shared<std::atomic<bool>>(false);
+        auto receive = [this, alive = alive_, post = post_, request = *request](unsigned alternative,
+                            std::string text, bool finished, bool success) {
+            if (!alive->load()) return;
+            post([this, alive, request, alternative, text = std::move(text), finished, success] {
+                if (!alive->load()) return;
+                SynchronizeDerived();
+                const bool grant = validate_ && validate_(request.lease);
+                if (!derived_.Accepts(request, grant)) return;
+                const bool valid = text.empty() || derived_.Update(request, grant, alternative, text);
+                if (finished || !valid) {
+                    derived_.Finish(request, grant, success && valid);
+                    if (derived_cancel_) derived_cancel_->store(true);
+                    if (derived_.Phase() == rimes::buffer::DerivedPhase::Failed) derived_request_.reset();
+                }
+                Publish();
+            });
+        };
+        adapter->second.run(*request, configuration, derived_cancel_, std::move(receive));
+        Publish();
+        return true;
+    } catch (const std::exception&) {
+        // A preflight failure must not erase an earlier ready result. Once
+        // Begin has transferred ownership, only the new job is cancelled.
+        if (started) CancelDerived();
+        Publish();
+        return false;
+    }
 }
 
 void BufferService::OnActivate(InputContext* ic) {
@@ -497,6 +596,8 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     }
     // Do not drop capture yet. A toolbar drag or a brief WM grab will
     // activate this same IC again; a real field switch activates another.
+    ++focus_epoch_;
+    CancelDerived();
     pending_unfocus_token_ = TokenFor(ic);
     ArmFocusGraceTimer();
     Publish();
@@ -572,6 +673,7 @@ void BufferService::ShowAndCapture(InputContext* ic) {
         return;
     }
     RefreshCaret(ic);
+    ++focus_epoch_;
     model_.activate_capture(TokenFor(ic));
     model_.set_visible(true);
     ic->updatePreedit();
@@ -581,6 +683,8 @@ void BufferService::ShowAndCapture(InputContext* ic) {
 }
 
 void BufferService::CloseAndPause() {
+    ++focus_epoch_;
+    CancelDerived();
     gesture_.cancel();
     CancelHoldTimer();
     CancelFocusGraceTimer();
@@ -607,6 +711,8 @@ void BufferService::StageOpenPreedit() {
 }
 
 void BufferService::DropCaptureForSwitch(std::string_view reason) {
+    ++focus_epoch_;
+    CancelDerived();
     StageOpenPreedit();
     gesture_.cancel();
     CancelHoldTimer();
@@ -677,6 +783,9 @@ void BufferService::ApplyReturnAction(rimes::buffer::ReturnGesture::Action actio
 }
 
 bool BufferService::Deliver(bool all) {
+    // Derived output is delivered through its ownership-aware path (task 7).
+    // Never send source text behind the user's selected transform.
+    if (plugins_ && !plugins_->SelectedBuffer().empty()) return false;
     auto* ic = LiveTarget();
     if (ic == nullptr) {
         FCITX_LOGC(rimes_buffer_log, Info) << "delivery rejected: no live target";
@@ -766,6 +875,33 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             FCITX_LOGC(rimes_buffer_log, Info) << "toolbar drag_end received";
             EndDrag();
             return;
+        case rimes::buffer::CommandOp::SelectPlugin:
+            SelectPlugin(command.id);
+            break;
+        case rimes::buffer::CommandOp::Generate:
+            Generate();
+            break;
+        case rimes::buffer::CommandOp::CancelGeneration:
+        case rimes::buffer::CommandOp::ReturnToEdit:
+            CancelDerived();
+            break;
+        case rimes::buffer::CommandOp::SelectResult:
+            SynchronizeDerived();
+            derived_.SelectResult(command.id);
+            break;
+        case rimes::buffer::CommandOp::CopyResult: {
+            SynchronizeDerived();
+            const auto request = derived_request_;
+            const bool grant = request && validate_ && validate_(request->lease);
+            SynchronizeDerived();
+            if (request && derived_.Owns(*request, grant) &&
+                derived_.SelectResult(command.id)) {
+                const auto text = derived_.CopyText();
+                if (!text.empty()) WriteAll(rimes::runtime::Json{{"v", 1}, {"type", "copy_result"},
+                    {"id", command.id}, {"text", text}}.dump());
+            }
+            break;
+        }
         case rimes::buffer::CommandOp::Unknown:
             break;
     }
@@ -1000,6 +1136,7 @@ void BufferService::ScheduleUiRespawn() {
     if (headless_ || !model_.visible()) {
         return;
     }
+    CancelDerived();
     dropped_ui_pid_ = ui_pid_;
     ui_respawn_attempt_ = 0;
     ArmUiRespawnTimer(50000);
@@ -1047,11 +1184,25 @@ void BufferService::WriteAll(const std::string& payload) {
 }
 
 void BufferService::Publish() {
+    SynchronizeDerived();
     if (model_.visible()) {
         EnsureUi();
     }
     auto snapshot = rimes::buffer::MakeSnapshot(model_);
     snapshot.width = width_;
+    snapshot.theme = theme_;
+    snapshot.active_plugin = derived_.Plugin();
+    const auto adapter = derived_adapters_.find(snapshot.active_plugin);
+    snapshot.live_expand = adapter == derived_adapters_.end() || adapter->second.live_expand;
+    snapshot.phase = derived_.Phase();
+    snapshot.can_generate = derived_.CanGenerate();
+    snapshot.results = derived_.Results();
+    if (const auto* selected = derived_.SelectedResult()) snapshot.selected_result = selected->id;
+    if (plugins_) for (const auto& state : plugins_->Entries()) {
+        if (state.descriptor.kind == rimes::plugins::Kind::Buffer && state.installed && state.enabled &&
+            derived_adapters_.count(state.descriptor.id))
+            snapshot.plugins.push_back({state.descriptor.id, state.descriptor.name});
+    }
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::buffer::EncodeSnapshot(snapshot);
     WriteAll(json);
