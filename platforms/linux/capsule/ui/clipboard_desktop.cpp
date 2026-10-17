@@ -46,7 +46,7 @@ struct DesktopClipboard::Impl {
                         bool written = false;
                         if (restore && !state.protected_input.load() &&
                             epoch == state.epoch.load() && write_epoch == state.write_epoch.load())
-                            written = backend->Restore(std::move(*restore));
+                            written = backend->Restore(std::move(*restore), epoch, write_epoch);
                         if (completed) {
                             auto notify = std::move(completed);
                             notify(written && !state.protected_input.load() &&
@@ -103,6 +103,7 @@ DesktopClipboard::DesktopClipboard(Capture capture, Status status)
 DesktopClipboard::~DesktopClipboard() = default;
 void DesktopClipboard::Configure(bool capture, bool protected_input) {
     auto& state = impl_->state;
+    std::lock_guard<std::mutex> lock(state.mutex);
     if (state.allowed.load() != capture || state.protected_input.load() != protected_input) {
         state.protected_input.store(true);
         state.epoch.fetch_add(1);

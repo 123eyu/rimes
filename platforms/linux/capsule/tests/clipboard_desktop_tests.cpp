@@ -70,6 +70,16 @@ int main(int argc, char** argv) {
         ClipboardArchive text{{{"text/plain;charset=utf-8", "中文 example\nsecond line"},
                                {"text/html", "<b>中文</b>"},
                                {"application/x-fixture", std::string("\0raw\xff", 5)}}};
+        const auto old_epoch = state.epoch.load(), old_write = state.write_epoch.load();
+        state.protected_input.store(true);
+        Check(!producer->Restore(text, old_epoch, old_write),
+              "protected in-flight restore reached ownership write");
+        state.protected_input.store(false);
+        state.write_epoch.fetch_add(1);
+        Check(!producer->Restore(text, old_epoch, old_write),
+              "revoked in-flight restore reached ownership write");
+        spin(100);
+        Check(count() == 0, "rejected restore changed desktop clipboard");
         producer->Restore(text);
         Check(spin(5000, [&] { return count() == 1; }), "multi-MIME capture timeout");
         {
@@ -123,11 +133,44 @@ int main(int argc, char** argv) {
                 gtk_selection_data_free(data);
             }
         }
+        ClipboardArchive partial{{{"text/plain;charset=utf-8", "valid before failure"},
+                                  {"application/x-unavailable", ""},
+                                  {"text/html", "<b>valid after failure</b>"}}};
+        if (wayland)
+            producer->Restore(partial);
+        else {
+            GtkTargetEntry targets[] = {{const_cast<char*>("text/plain;charset=utf-8"), 0, 0},
+                                        {const_cast<char*>("application/x-unavailable"), 0, 1},
+                                        {const_cast<char*>("text/html"), 0, 2}};
+            Check(gtk_clipboard_set_with_data(
+                      gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), targets, 3,
+                      +[](GtkClipboard*, GtkSelectionData* selection, guint index, gpointer raw) {
+                          if (index == 1)
+                              return; // Advertised conversion refuses its request.
+                          auto* archive = static_cast<ClipboardArchive*>(raw);
+                          const auto& value = archive->representations.at(index);
+                          gtk_selection_data_set(
+                              selection, gtk_selection_data_get_target(selection), 8,
+                              reinterpret_cast<const guchar*>(value.bytes.data()),
+                              value.bytes.size());
+                      },
+                      +[](GtkClipboard*, gpointer) {}, &partial),
+                  "partial producer unavailable");
+        }
+        Check(spin(8000, [&] { return count() == 3; }),
+              "one failed MIME discarded successful formats");
+        {
+            std::lock_guard<std::mutex> lock(mutex);
+            const auto& values = captured.back().representations;
+            Check(values.size() == 2 && values[0] == partial.representations[0] &&
+                      values[1] == partial.representations[2],
+                  "partial MIME failure mixed or truncated remaining representations");
+        }
         consumer.Configure(false, false);
         spin(100);
         producer->Restore(first);
         spin(150);
-        Check(count() == 2, "disabled observer read clipboard");
+        Check(count() == 3, "disabled observer read clipboard");
         std::cout << (wayland ? "Wayland" : "X11")
                   << ": real multi-MIME, binary and 3 MiB transfers, protection baseline, "
                      "exclusions and own-copy suppression passed\n";

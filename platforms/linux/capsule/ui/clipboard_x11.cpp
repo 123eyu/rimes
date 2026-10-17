@@ -102,22 +102,36 @@ class X11Backend final : public ClipboardBackend {
         total_ = 0;
         Convert(targets_);
     }
+    void SkipType() {
+        if (targets_pending_ || !Current()) {
+            Cancel();
+            return;
+        }
+        FinishType("", 0);
+    }
     void FinishType(std::string bytes, int format) {
         if (!Current()) {
             Cancel();
             return;
         }
-        total_ += bytes.size();
-        if (total_ > ClipboardArchive::maxTotalBytes) {
-            Cancel();
-            return;
+        if (bytes.size() > ClipboardArchive::maxTotalBytes - total_) {
+            bytes.clear();
+            format = 0;
         }
-        capture_.representations.push_back({types_[at_].second, std::move(bytes), format});
+        total_ += bytes.size();
+        if (format)
+            capture_.representations.push_back({types_[at_].second, std::move(bytes), format});
         incremental_ = false;
         chunked_.clear();
-        if (++at_ < types_.size())
+        if (++at_ < types_.size()) {
+            if (read_window_)
+                xcb_destroy_window(connection_, read_window_);
+            read_window_ = xcb_generate_id(connection_);
+            const std::uint32_t mask = XCB_EVENT_MASK_PROPERTY_CHANGE;
+            xcb_create_window(connection_, XCB_COPY_FROM_PARENT, read_window_, root_, 0, 0, 1, 1, 0,
+                              XCB_WINDOW_CLASS_INPUT_OUTPUT, visual_, XCB_CW_EVENT_MASK, &mask);
             Convert(types_[at_].first);
-        else {
+        } else {
             ClipboardSource source{"x11", "", std::to_string(owner_)};
             auto name = Reply<xcb_get_property_reply_t>(xcb_get_property(connection_, false, owner_,
                                                                          Atom("WM_CLASS"),
@@ -128,7 +142,7 @@ class X11Backend final : public ClipboardBackend {
                 const auto size = xcb_get_property_value_length(name.get());
                 source.application = std::string(raw, std::find(raw, raw + size, '\0'));
             }
-            if (Current())
+            if (Current() && !capture_.representations.empty())
                 state_.capture(std::move(capture_), std::move(source), capture_epoch_);
             Cancel();
         }
@@ -144,7 +158,7 @@ class X11Backend final : public ClipboardBackend {
                              0, (bound + 3) / 4)
                 .sequence);
         if (!reply || reply->bytes_after || reply->type == XCB_ATOM_NONE) {
-            Cancel();
+            SkipType();
             return;
         }
         const auto size = static_cast<std::size_t>(xcb_get_property_value_length(reply.get()));
@@ -183,7 +197,7 @@ class X11Backend final : public ClipboardBackend {
         if (reply->type == incr_) {
             if (incremental_ || reply->format != 32 || size != 4 ||
                 *reinterpret_cast<const std::uint32_t*>(bytes) > ClipboardArchive::maxTypeBytes) {
-                Cancel();
+                SkipType();
                 return;
             }
             incremental_ = true;
@@ -192,13 +206,13 @@ class X11Backend final : public ClipboardBackend {
             return;
         }
         if (reply->format != 8 && reply->format != 16 && reply->format != 32) {
-            Cancel();
+            SkipType();
             return;
         }
         if (incremental_) {
             if (chunked_.size() + size > ClipboardArchive::maxTypeBytes ||
                 (!chunked_.empty() && format_ != reply->format)) {
-                Cancel();
+                SkipType();
                 return;
             }
             format_ = reply->format;
@@ -332,8 +346,10 @@ class X11Backend final : public ClipboardBackend {
             owner_ = Owner();
             baseline_ = true;
         }
-        if (capturing_ && (!state_.Current(capture_epoch_) || Clock::now() > deadline_))
+        if (capturing_ && !state_.Current(capture_epoch_))
             Cancel();
+        else if (capturing_ && Clock::now() > deadline_)
+            SkipType();
         while (auto* raw = xcb_poll_for_event(connection_)) {
             Owned<xcb_generic_event_t> event(raw, &std::free);
             const auto type = raw->response_type & 0x7f;
@@ -352,7 +368,7 @@ class X11Backend final : public ClipboardBackend {
                     if (selection->property == property_)
                         Receive();
                     else
-                        Cancel();
+                        SkipType();
                 }
             } else if (type == XCB_PROPERTY_NOTIFY) {
                 const auto* property = reinterpret_cast<xcb_property_notify_event_t*>(raw);
@@ -380,11 +396,16 @@ class X11Backend final : public ClipboardBackend {
             transfers_.end());
         xcb_flush(connection_);
     }
-    bool Restore(ClipboardArchive archive) override {
-        Cancel();
-        own_ = std::make_shared<ClipboardArchive>(std::move(archive));
-        xcb_set_selection_owner(connection_, window_, clipboard_, XCB_CURRENT_TIME);
-        xcb_flush(connection_);
+    bool Restore(ClipboardArchive archive, std::uint64_t epoch,
+                 std::uint64_t write_epoch) override {
+        auto next = std::make_shared<ClipboardArchive>(std::move(archive));
+        if (!state_.CommitWrite(epoch, write_epoch, [&] {
+                Cancel();
+                own_ = std::move(next);
+                xcb_set_selection_owner(connection_, window_, clipboard_, XCB_CURRENT_TIME);
+                xcb_flush(connection_);
+            }))
+            return false;
         if (Owner() != window_) {
             own_.reset();
             state_.status("剪贴板恢复失败，请重试");

@@ -61,6 +61,17 @@ class WaylandBackend final : public ClipboardBackend {
         type_ = 0;
         total_ = 0;
     }
+    void SkipType() {
+        if (receive_ >= 0)
+            close(receive_);
+        receive_ = -1;
+        if (!capture_.representations.empty()) {
+            total_ -= capture_.representations.back().bytes.size();
+            capture_.representations.pop_back();
+        }
+        ++type_;
+        ReadNext();
+    }
     static void Destroy(wl_proxy*& value, std::uint32_t operation) {
         if (value)
             wl_proxy_marshal_flags(value, operation, nullptr, wl_proxy_get_version(value),
@@ -84,7 +95,7 @@ class WaylandBackend final : public ClipboardBackend {
         const auto& types = offers_.at(current_);
         if (type_ >= types.size()) {
             auto archive = std::move(capture_);
-            if (Current())
+            if (Current() && !archive.representations.empty())
                 state_.capture(std::move(archive), {"wayland", "", "primary-seat"}, capture_epoch_);
             CancelRead();
             return;
@@ -313,8 +324,10 @@ class WaylandBackend final : public ClipboardBackend {
         Dispatch();
         if (!healthy_)
             throw std::runtime_error("Wayland clipboard access revoked");
-        if (receive_ >= 0 && (!Current() || Clock::now() > deadline_))
+        if (receive_ >= 0 && !Current())
             CancelRead();
+        else if (receive_ >= 0 && Clock::now() > deadline_)
+            SkipType();
         if (receive_ >= 0) {
             std::array<char, 65536> bytes{};
             std::size_t budget = 256 * 1024;
@@ -325,10 +338,17 @@ class WaylandBackend final : public ClipboardBackend {
                 if (count < 0 && (errno == EAGAIN || errno == EWOULDBLOCK))
                     break;
                 if (count < 0) {
-                    CancelRead();
+                    SkipType();
                     break;
                 }
                 if (!count) {
+                    // Wayland has no separate failure signal. An empty pipe
+                    // contributes no useful representation, but must not erase
+                    // the other MIME types that were already read successfully.
+                    if (capture_.representations.back().bytes.empty()) {
+                        SkipType();
+                        break;
+                    }
                     close(receive_);
                     receive_ = -1;
                     ++type_;
@@ -338,7 +358,7 @@ class WaylandBackend final : public ClipboardBackend {
                 auto& value = capture_.representations.back().bytes;
                 if (value.size() + count > ClipboardArchive::maxTypeBytes ||
                     total_ + count > ClipboardArchive::maxTotalBytes) {
-                    CancelRead();
+                    SkipType();
                     break;
                 }
                 value.append(bytes.data(), count);
@@ -371,21 +391,30 @@ class WaylandBackend final : public ClipboardBackend {
                                         [](const auto& value) { return value.fd < 0; }),
                          transfers_.end());
     }
-    bool Restore(ClipboardArchive archive) override {
-        CancelRead();
-        Destroy(source_, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
-        owned_ = std::make_shared<ClipboardArchive>(std::move(archive));
-        source_ =
+    bool Restore(ClipboardArchive archive, std::uint64_t epoch,
+                 std::uint64_t write_epoch) override {
+        auto next = std::make_shared<ClipboardArchive>(std::move(archive));
+        auto* source =
             wl_proxy_marshal_flags(manager_, EXT_DATA_CONTROL_MANAGER_V1_CREATE_DATA_SOURCE,
                                    interfaces_.source, wl_proxy_get_version(manager_), 0, nullptr);
         static void (*source_listener[])(void) = {reinterpret_cast<void (*)(void)>(&Send),
                                                   reinterpret_cast<void (*)(void)>(&Cancelled)};
-        wl_proxy_add_listener(source_, source_listener, this);
-        for (const auto& value : owned_->representations)
-            wl_proxy_marshal_flags(source_, EXT_DATA_CONTROL_SOURCE_V1_OFFER, nullptr,
-                                   wl_proxy_get_version(source_), 0, value.type.c_str());
-        wl_proxy_marshal_flags(device_, EXT_DATA_CONTROL_DEVICE_V1_SET_SELECTION, nullptr,
-                               wl_proxy_get_version(device_), 0, source_);
+        wl_proxy_add_listener(source, source_listener, this);
+        for (const auto& value : next->representations)
+            wl_proxy_marshal_flags(source, EXT_DATA_CONTROL_SOURCE_V1_OFFER, nullptr,
+                                   wl_proxy_get_version(source), 0, value.type.c_str());
+        if (!state_.CommitWrite(epoch, write_epoch, [&] {
+                CancelRead();
+                Destroy(source_, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
+                owned_ = std::move(next);
+                source_ = source;
+                wl_proxy_marshal_flags(device_, EXT_DATA_CONTROL_DEVICE_V1_SET_SELECTION, nullptr,
+                                       wl_proxy_get_version(device_), 0, source_);
+                wl_display_flush(display_);
+            })) {
+            Destroy(source, EXT_DATA_CONTROL_SOURCE_V1_DESTROY);
+            return false;
+        }
         Roundtrip();
         return healthy_ && source_;
     }
