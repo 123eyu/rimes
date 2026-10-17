@@ -1,5 +1,6 @@
 #include "buffer/buffer_service.hpp"
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <stdexcept>
 #include <unistd.h>
@@ -12,6 +13,8 @@ int main() {
     const auto root = std::filesystem::path(path);
     setenv("RIMES_BUFFER_SOCKET", (root / "buffer.sock").c_str(), 1);
     setenv("RIMES_BUFFER_HEADLESS", "1", 1);
+    const auto dump_path = root / "snapshot.json";
+    setenv("RIMES_BUFFER_DUMP", dump_path.c_str(), 1);
     std::vector<std::function<void()>> posted;
     auto drain = [&] { while (!posted.empty()) { auto action = std::move(posted.front()); posted.erase(posted.begin()); action(); } };
     fcitx::BufferService::ResultFn late;
@@ -59,6 +62,16 @@ int main() {
             Check(!host.Generate(), "invalid retry started");
             Check(host.derived().CopyText() == "Translated🙂", "failed retry erased ready results");
             unavailable_configuration = false;
+            prepare();
+            late({0, "private preview", false, true}); drain();
+            plugins.ApplyState("builtin.fixture", true, false);
+            // No intervening Publish: rejection itself must clear the UI.
+            late({0, "revoked preview", true, true}); drain();
+            std::ifstream snapshot_file(dump_path);
+            const std::string published((std::istreambuf_iterator<char>(snapshot_file)), std::istreambuf_iterator<char>());
+            Snapshot snapshot;
+            Check(ParseSnapshot(published, &snapshot) && snapshot.results.empty() && snapshot.result_blocks.empty() &&
+                  snapshot.phase != DerivedPhase::Running, "revoked AI preview remained in emitted UI snapshot");
             for (int scenario = 0; scenario < 7; ++scenario) {
                 prepare();
                 const auto previous = late;

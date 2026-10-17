@@ -155,21 +155,14 @@ void RunAIRequest(std::string text, RequestConfiguration configuration, std::ato
     receive({"", true, error, {}});
 }
 AIWorker::~AIWorker() { Shutdown(); }
-void AIWorker::Shutdown() { CancelAll(); for (auto& job : jobs_) if (job.thread.joinable()) job.thread.join(); jobs_.clear(); }
-void AIWorker::CancelAll() { for (auto& job : jobs_) job.cancelled->store(true); }
+void AIWorker::Shutdown() { jobs_.Shutdown(); }
+void AIWorker::CancelAll() { jobs_.CancelAll(); }
 void AIWorker::Run(std::string text, RequestConfiguration configuration,
     std::shared_ptr<std::atomic<bool>> cancelled, AIReceive receive) {
-    for (auto it = jobs_.begin(); it != jobs_.end();)
-        if (it->finished->load()) { it->thread.join(); it = jobs_.erase(it); } else ++it;
-    if (jobs_.size() >= 4) { receive({"", true, AIError::Busy, {}}); return; }
-    auto finished = std::make_shared<std::atomic<bool>>(false);
-    jobs_.push_back({cancelled, finished, {}});
-    try {
-        jobs_.back().thread = std::thread([text = std::move(text), configuration = std::move(configuration), cancelled, finished, receive] {
-            try { RunAIRequest(text, configuration, *cancelled, receive); }
-            catch (...) { try { receive({"", true, AIError::Network, {}}); } catch (...) {} }
-            finished->store(true);
-        });
-    } catch (...) { jobs_.pop_back(); throw; }
+    auto work = [text = std::move(text), configuration = std::move(configuration), cancelled, receive] {
+        try { RunAIRequest(text, configuration, *cancelled, receive); }
+        catch (...) { try { receive({"", true, AIError::Network, {}}); } catch (...) {} }
+    };
+    if (!jobs_.Run(std::move(cancelled), std::move(work))) receive({"", true, AIError::Busy, {}});
 }
 } // namespace rimes::runtime
