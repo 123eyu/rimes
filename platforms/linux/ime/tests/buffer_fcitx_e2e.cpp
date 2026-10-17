@@ -795,7 +795,8 @@ int main(int argc, char** argv) {
         struct FixtureCleanup {
             std::filesystem::path root;
             ~FixtureCleanup() { if (!root.empty()) { std::error_code error; std::filesystem::remove_all(root, error); } }
-        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") ? std::filesystem::path(dump_path).parent_path() : std::filesystem::path{}};
+        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") || std::getenv("RIMES_TEST_AI_API") ?
+                  std::filesystem::path(dump_path).parent_path() : std::filesystem::path{}};
         fcitx::setupTestingEnvironment(argv[1], {argv[2]}, {argv[3]});
 
         char arg0[] = "rimes-buffer-fcitx-e2e";
