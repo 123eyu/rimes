@@ -8,7 +8,7 @@ int main() {
     BackgroundJobs jobs;
     std::mutex mutex;
     std::condition_variable changed;
-    int started = 0, finished = 0, obsolete = 0;
+    int started = 0, finished = 0, obsolete = 0, cancelled_completions = 0;
     bool release = false, latest = false;
     auto cancel = [] { return std::make_shared<std::atomic<bool>>(false); };
     try {
@@ -32,7 +32,8 @@ int main() {
         for (const auto& flag : old) Check(flag->load(), "active process cancellation missing");
         for (int i = 0; i < 100; ++i) {
             auto flag = cancel();
-            Check(jobs.Run(flag, [&] { std::lock_guard lock(mutex); ++obsolete; }), "cleanup blocked replacement request");
+            Check(jobs.Run(flag, [&] { std::lock_guard lock(mutex); ++obsolete; },
+                [&] { std::lock_guard lock(mutex); ++cancelled_completions; }), "cleanup blocked replacement request");
             flag->store(true);
         }
         Check(jobs.Run(cancel(), [&] { std::lock_guard lock(mutex); latest = true; changed.notify_all(); }), "latest request rejected");
@@ -42,6 +43,7 @@ int main() {
             release = true; changed.notify_all();
             Check(changed.wait_for(lock, std::chrono::seconds(3), [&] { return latest && finished == 4; }), "queued latest request never ran");
             Check(obsolete == 0, "cancelled queued work executed");
+            Check(cancelled_completions == 100, "cancelled queued requests lost or duplicated completion");
         }
         jobs.Shutdown();
         Check(!jobs.Run(cancel(), [] {}), "shutdown admitted new work");

@@ -28,3 +28,7 @@ Checks on Ubuntu 24.04 arm64:
   source retirement, Return delivery, frozen siblings, reopen and send-all pass.
 
 These tests do not establish physical desktop or pixel acceptance for #156.
+
+### Queued cancellation completion (2026-10-18)
+
+Accepted work removed before execution now invokes its cancellation completion exactly once, outside the worker-pool mutex. The translation adapter reports an unsuccessful completion for that case as it does for cancelled active work. This also permits a completion to schedule work without deadlocking the pool. A deterministic fixture holds all four workers in cleanup, cancels 100 queued replacements and checks 100 completions with zero obsolete work executed; the latest request still runs. `background-jobs` and `buffer-translation-host` passed on the local Linux fixture. Review: PR #187 comment 4303129786.
