@@ -1,11 +1,10 @@
 #pragma once
+#include "background_jobs.hpp"
 #include "configuration.hpp"
 #include <atomic>
 #include <chrono>
 #include <functional>
-#include <list>
 #include <memory>
-#include <thread>
 #include <vector>
 namespace rimes::runtime {
 enum class AIError { None, Configuration, Cancelled, Authentication, RateLimited, Timeout, Network, Protocol, TooLarge, Incomplete, Busy };
@@ -24,7 +23,6 @@ public:
     void Run(std::string text, RequestConfiguration configuration,
              std::shared_ptr<std::atomic<bool>> cancelled, AIReceive receive);
 private:
-    struct Job { std::shared_ptr<std::atomic<bool>> cancelled, finished; std::thread thread; };
-    std::list<Job> jobs_;
+    BackgroundJobs jobs_;
 };
 } // namespace rimes::runtime
