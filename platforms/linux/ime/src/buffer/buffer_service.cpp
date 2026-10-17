@@ -1,5 +1,6 @@
 #include "native_buffer_metrics.hpp"
 #include "buffer_service.hpp"
+#include "buffer_application.hpp"
 
 #include <algorithm>
 #include <cerrno>
@@ -559,8 +560,7 @@ void BufferService::OnActivate(InputContext* ic) {
     // Companion settings/editors and mixed content staged for another app
     // preserve the previous external identity and the complete workspace.
     const auto program = ic->program();
-    const bool external = !program.empty() && program != "rimes-settings" &&
-        program != "rimes-buffer" && program != "rimes-capsule" && program != "rimes-mailbox";
+    const bool external = !program.empty() && !rimes::buffer::IsCompanionApplication(program);
     if (external) {
         const bool staged_external = std::any_of(model_.blocks().begin(), model_.blocks().end(), [](const auto& block) {
             return block.origin != rimes::buffer::Origin::Rime && block.origin != rimes::buffer::Origin::Local;
@@ -630,9 +630,6 @@ void BufferService::OnPasswordField(InputContext* ic, bool password) {
         model_.set_password_field(true);
         if (model_.capture_enabled()) {
             model_.route_direct_preserving_content("password");
-        }
-        if (model_.visible()) {
-            model_.set_visible(false);
         }
         Publish();
         return;

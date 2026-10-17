@@ -118,7 +118,9 @@ content; blocks are not persisted.
 - Four native palettes are imported from macOS. Liquid Glass currently uses an
   opaque day fallback and is **not** visually accepted. Fonts, exact symbols,
   selector details and missing plugin-specific controls remain in the visual audit.
-- Password / secure snapshots scrub source, preedit and results.
+- Password / secure snapshots scrub source, preedit, results and target identity.
+  An already-visible workbench keeps its position and geometry, shows protected
+  chrome and cannot read the clipboard or deliver text. Explicit close still hides it.
 
 ## Derived workspace
 

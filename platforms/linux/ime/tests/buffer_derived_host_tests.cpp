@@ -70,6 +70,7 @@ int main() {
                 if (scenario == 5) host.OnPasswordField(nullptr, true);
                 if (scenario == 6) Check(host.SelectPlugin(""), "return default");
                 host.Publish();
+                if (scenario == 5) Check(host.model().visible(), "protected workbench lost its visible chrome");
                 Check(cancelled->load(), "worker was not cancelled");
                 previous(0, "late", true, true); drain();
                 Check(host.derived().Results().empty(), "late result regained authority");
