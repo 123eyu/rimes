@@ -52,7 +52,12 @@ def main():
             return process
 
         try:
-            start(["xfwm4", "--compositor=off"])
+            wm = start(["xfwm4", "--compositor=off"])
+            def wm_ready():
+                assert wm.poll() is None, "window manager exited during startup"
+                result = subprocess.run(["xprop", "-root", "_NET_SUPPORTING_WM_CHECK", "_NET_SUPPORTED"], capture_output=True, text=True)
+                return result.returncode == 0 and "_NET_ACTIVE_WINDOW" in result.stdout and "window id # 0x" in result.stdout
+            wait_for(wm_ready, "window manager did not publish EWMH support")
             start([build / "runtime/rimes-settings"])
             settings = wait_for(lambda: windows("^XSIME 设置$"), "settings did not open")[0]
             second = start([build / "runtime/rimes-settings"])
