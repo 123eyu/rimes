@@ -93,3 +93,36 @@ sRGB, writes pairs/difference maps and records unresolved review status. It neve
 turns a similarity percentage into an automatic acceptance. `rimes-settings
 --smoke` creates its own disposable profile and exercises real controls, rejected
 saves, credential redaction, restart and layout dimensions under Xvfb.
+
+## Local translation resources
+
+The translation card's gear opens **本地翻译语言资源**. Install / repair downloads
+the pinned Chinese ⇄ English Argos 1.9 models and CTranslate2 4.6 CPU runtime
+(about 180 MB on arm64 or 204 MB on amd64). Python 3.12 is required; Ubuntu
+24.04 deb packages declare it as a dependency. Downloads are explicit, show
+progress and can be cancelled. An interrupted download never becomes an active
+model. Verified archives are retained for retry and offline repair.
+
+`rimes-translation --status` checks all installed hashes; `--install` installs
+or repairs resources. `--request` accepts JSON on stdin, including
+`{"op":"translate","source":"zh-Hans","target":"en","text":"你好"}`.
+Supported directions are `zh-Hans` / `en`; `auto` source uses a Chinese-character
+heuristic. Other languages require a separate provider. Translation runs in a
+bounded cancellable subprocess, without network access in its inference path.
+The resource manager, worker, exact hashes and license notice are imported from
+the pinned `OfficialPlugins` source, sharing the worker and model versions with
+Windows. No pip dependency resolution runs on the user's machine.
+
+Private resources live in `$RIMES_USER_DIR/translation`, or the default XDG
+user directory. Source uninstall and `apt remove` remove the installed helper,
+not downloaded models, dictionaries or learning data. The resource backend is
+implemented independently of the Buffer adapter; check the parity tracker for
+its current runtime and visual acceptance status.
+
+The opt-in integration test downloads and runs the real model in a disposable
+profile, checks both directions, refuses damaged resources and repairs them
+from verified archives with network proxies disabled:
+
+```bash
+python3 platforms/linux/runtime/tests/translation_engine_smoke.py /path/to/rimes-translation
+```

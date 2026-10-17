@@ -1,3 +1,4 @@
+#include "translation_resources.hpp"
 #include "native_buffer_metrics.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
@@ -328,6 +329,12 @@ struct Settings {
       gtk_container_add(
           GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))),
           form.Widget());
+      if (id == "builtin.apple-translation") {
+        auto* resources = Button("语言资源…", [dialog] { TranslationResources(GTK_WINDOW(dialog)); });
+        gtk_widget_set_margin_start(resources, 18);
+        gtk_widget_set_margin_end(resources, 18);
+        gtk_container_add(GTK_CONTAINER(gtk_dialog_get_content_area(GTK_DIALOG(dialog))), resources);
+      }
       gtk_widget_show_all(dialog);
       const auto response = gtk_dialog_run(GTK_DIALOG(dialog));
       try {
@@ -411,6 +418,8 @@ struct Settings {
               p.name + " · " + p.version + " · " +
               (p.available ? (p.installed ? "已安装" : "未安装") : p.error));
         }));
+    if (p.id == "builtin.apple-translation" && !p.installed)
+      Add(top, IconButton("gearshape", "本地翻译语言资源", [this] { TranslationResources(GTK_WINDOW(window)); }));
     if (p.installed && !PluginFields(p.id).empty())
       Add(top, IconButton("gearshape", "配置" + p.name,
                           [this, p] { Configure(p.id); }));

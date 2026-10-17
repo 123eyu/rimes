@@ -17,10 +17,11 @@ VERSION=$(dpkg-deb -f "$DEB" Version)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 DATA="$WORK/user-data/rimes"
-mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule"
+mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule" "$DATA/translation/cache"
 printf '%s\n' 'keep learned dictionary' > "$DATA/rime_ice.userdb/CURRENT"
 printf '%s\n' 'keep imported learning' > "$DATA/schemes/learning/custom.userdb/CURRENT"
 printf '%s\n' 'keep notes' > "$DATA/capsule/note.md"
+printf '%s\n' 'keep downloaded model' > "$DATA/translation/cache/model.argosmodel"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
 sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
@@ -28,10 +29,12 @@ sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
 [[ -x /usr/bin/rimes-settings && -x /usr/bin/rimes-plugins ]]
+[[ -x /usr/bin/rimes-translation && -f /usr/libexec/rimes/translation/resources.lock.json ]]
+RIMES_USER_DIR="$WORK/resource-status" /usr/bin/rimes-translation --status | python3 -c 'import json,sys; assert json.load(sys.stdin)["state"] == "missing"'
 [[ -f /usr/share/applications/org.scholay.rimes.settings.desktop ]]
 /usr/bin/rimes-settings --help
 [[ -f /usr/share/rimes/data/default.yaml ]]
-for program in /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins; do
+for program in /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins /usr/bin/rimes-translation; do
     ldd "$program" > "$WORK/ldd.txt"
     if grep -q 'not found' "$WORK/ldd.txt"; then
         cat "$WORK/ldd.txt" >&2
