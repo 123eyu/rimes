@@ -1,0 +1,17 @@
+cmake_minimum_required(VERSION 3.27)
+if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
+    project(RimesLinuxRuntime LANGUAGES CXX)
+    include(CTest)
+endif()
+
+add_library(RimesPluginCore STATIC core/plugin_registry.cpp)
+target_compile_features(RimesPluginCore PUBLIC cxx_std_17)
+target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core")
+set_target_properties(RimesPluginCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_options(RimesPluginCore PRIVATE -Wall -Wextra -Wpedantic -Werror)
+
+if(BUILD_TESTING OR RIMES_BUILD_TESTS)
+    add_executable(rimes-plugin-registry-tests tests/plugin_registry_tests.cpp)
+    target_link_libraries(rimes-plugin-registry-tests PRIVATE RimesPluginCore)
+    add_test(NAME plugin-registry COMMAND rimes-plugin-registry-tests)
+endif()

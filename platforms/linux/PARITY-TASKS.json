@@ -1,0 +1,653 @@
+{
+  "schemaVersion": 1,
+  "baseline": "823c910",
+  "scope": "30 core tasks authorized 2026-10-17; optional plugins and cross-device sync excluded",
+  "tasks": [
+    {
+      "order": 1,
+      "key": "LINUX-PARITY-01",
+      "priority": "P0",
+      "title": "插件注册、能力与启停生命周期",
+      "depends_on": [],
+      "area": "plugins",
+      "acceptance": [
+        "提供 Buffer、Capsule、Mailbox、内置扩展四类统一注册及稳定身份；只列出已编译的 Linux 能力。",
+        "停用、卸载和更新撤销授权与在途任务；停用当前 Buffer 插件退回 Default，保留用户数据。",
+        "Fcitx 宿主接入注册表；验证重启恢复、能力拒绝、旧任务失效及普通输入不受影响。"
+      ],
+      "status": "implemented_pending_ci",
+      "issue": 151,
+      "url": "https://github.com/scholay/xsime/issues/151"
+    },
+    {
+      "order": 2,
+      "key": "LINUX-PARITY-02",
+      "priority": "P0",
+      "title": "官方插件安装、更新和完整性校验",
+      "depends_on": [
+        1
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "读取固定版本目录及平台声明，校验 SHA-256、SDK、最低宿主版本和贡献类型。",
+        "预装与下载共用生命周期；暂存验证后原子安装，失败保留旧版本，新装默认停用。",
+        "覆盖损坏包、路径穿越、符号链接、断网、更新撤权与重装；插件卸载保留词库、会话和凭据。"
+      ],
+      "status": "in_progress",
+      "issue": 152,
+      "url": "https://github.com/scholay/xsime/issues/152"
+    },
+    {
+      "order": 3,
+      "key": "LINUX-PARITY-03",
+      "priority": "P0",
+      "title": "统一设置、插件配置与凭据存储",
+      "depends_on": [
+        1,
+        2
+      ],
+      "area": "settings",
+      "acceptance": [
+        "提供原生设置页及声明式插件配置表单，含连接器、模型、语言、启停和恢复默认。",
+        "私有配置以 0700/0600 原子存储；拒绝不安全路径；凭据不进入 argv、日志或普通偏好。",
+        "每次请求冻结配置；保存、迁移、重启、错误恢复和界面反馈均可验证。"
+      ],
+      "status": "planned",
+      "issue": 153,
+      "url": "https://github.com/scholay/xsime/issues/153"
+    },
+    {
+      "order": 4,
+      "key": "LINUX-PARITY-04",
+      "priority": "P0",
+      "title": "Buffer 双轨工作区与异步任务状态",
+      "depends_on": [
+        1,
+        3
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "在现有 Default Buffer 上实现 source/target、插件选择、返回编辑、结果复制、状态和 alternatives。",
+        "扩展事件驱动 IPC，冻结源修订、任务身份、插件授权和焦点；取消、关闭或迟到回调不恢复投递权。",
+        "保持单一 Rime runtime、每 IC 会话、原生 commitString；验证 UI 崩溃恢复与旧版 Default 行为。"
+      ],
+      "status": "planned",
+      "issue": 154,
+      "url": "https://github.com/scholay/xsime/issues/154"
+    },
+    {
+      "order": 5,
+      "key": "LINUX-PARITY-05",
+      "priority": "P0",
+      "title": "Linux 本地翻译引擎和资源管理",
+      "depends_on": [
+        3,
+        4
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "采用 Linux 可运行的离线翻译后端；优先复用 Windows 已固定的资源和 worker 协议，并记录语言能力及许可证。",
+        "首次资源安装、摘要检查、进度、取消、失败重试和离线可用状态真实可见。",
+        "用真实本地引擎验证双向中英文，覆盖缺失/损坏模型与取消；不把 AI 云翻译冒充本地翻译。"
+      ],
+      "status": "planned",
+      "issue": 155,
+      "url": "https://github.com/scholay/xsime/issues/155"
+    },
+    {
+      "order": 6,
+      "key": "LINUX-PARITY-06",
+      "priority": "P0",
+      "title": "实时增量翻译与连续输入",
+      "depends_on": [
+        4,
+        5
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "按句子建立精确源切片与稳定身份，防抖及最大等待触发翻译；稳定前段不因尾部编辑重译。",
+        "语言和连续翻译配置生效；原文编辑、取消、重试及部分结果有清楚反馈。",
+        "验证快速连续输入、中文标点、多段粘贴、修改前段/尾段、错误重试和迟到结果。"
+      ],
+      "status": "planned",
+      "issue": 156,
+      "url": "https://github.com/scholay/xsime/issues/156"
+    },
+    {
+      "order": 7,
+      "key": "LINUX-PARITY-07",
+      "priority": "P0",
+      "title": "派生结果投递、源消费与自动发送",
+      "depends_on": [
+        4,
+        6
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "Return 轻按、长按、纸飞机和复制遵守同一任务/源/目标校验；仅成功上屏后消费。",
+        "翻译单元首个子块交付后原子退休精确原文，其余译文不可变且不被重复翻译。",
+        "可选自动发送采用单调时间，隐藏/暂停/保护不计龄；不强制收束组字，不重复投递，失败保留。"
+      ],
+      "status": "planned",
+      "issue": 157,
+      "url": "https://github.com/scholay/xsime/issues/157"
+    },
+    {
+      "order": 8,
+      "key": "LINUX-PARITY-08",
+      "priority": "P0",
+      "title": "AI API 插件与流式请求",
+      "depends_on": [
+        3,
+        4,
+        7
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "实现 OpenAI 兼容 API、Provider/模型配置及显式调用，源文作为请求，回复进入目标轨。",
+        "网络任务不阻塞 Fcitx；支持 SSE 流式、取消、超时、鉴权失败、限流和有界响应。",
+        "使用隔离协议服务器覆盖真实传输、碎片流、错误及失效任务；联通实际可用渠道时记录独立验收。"
+      ],
+      "status": "planned",
+      "issue": 158,
+      "url": "https://github.com/scholay/xsime/issues/158"
+    },
+    {
+      "order": 9,
+      "key": "LINUX-PARITY-09",
+      "priority": "P0",
+      "title": "保护态、锁屏睡眠与会话生命周期",
+      "depends_on": [
+        4,
+        7,
+        8
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "接入桌面会话锁定、睡眠、失活与 Fcitx 密码能力；保护期间不读取剪贴板、不泄露正文、不投递。",
+        "焦点、输入源和 IC 退役立即撤销授权；恢复后不能复用旧任务/旧输入框。",
+        "覆盖 Firefox 禁用 IM 的密码框、同 IC 换框、进程退出和锁屏恢复，记录平台可检测边界。"
+      ],
+      "status": "planned",
+      "issue": 159,
+      "url": "https://github.com/scholay/xsime/issues/159"
+    },
+    {
+      "order": 10,
+      "key": "LINUX-PARITY-10",
+      "priority": "P0",
+      "title": "全局快捷键与跨输入法唤起",
+      "depends_on": [
+        3,
+        9
+      ],
+      "area": "settings",
+      "acceptance": [
+        "提供 Buffer、Capsule、Mailbox 和设置的桌面启动入口及可配置快捷键。",
+        "跨输入法显式唤出时选择 XSIME 并等待新鲜焦点；关闭不切回旧输入法，尊重用户随后切换。",
+        "采用 X11/Wayland 各自支持的注册机制，冲突与不支持时给出可操作入口；验证登录和重启恢复。"
+      ],
+      "status": "planned",
+      "issue": 160,
+      "url": "https://github.com/scholay/xsime/issues/160"
+    },
+    {
+      "order": 11,
+      "key": "LINUX-PARITY-11",
+      "priority": "P0",
+      "title": "桌面窗口、主题与多屏交互",
+      "depends_on": [
+        4,
+        9,
+        10
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "统一工具栏、双轨尺寸、键盘操作、主题和可访问名称；非激活面板不抢宿主输入。",
+        "实现 X11 与支持 layer-shell 的 Wayland 放置、多屏缩放及位置恢复；GNOME/KDE 提供明确可用的降级行为。",
+        "验证拖动、首击、跨屏、全屏、缩放和遮挡；候选与 Buffer 不相互覆盖且目标身份不伪造。"
+      ],
+      "status": "planned",
+      "issue": 161,
+      "url": "https://github.com/scholay/xsime/issues/161"
+    },
+    {
+      "order": 12,
+      "key": "LINUX-PARITY-12",
+      "priority": "P1",
+      "title": "Capsule 五模块宿主、管理页和底栏",
+      "depends_on": [
+        1,
+        3,
+        9,
+        11
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "提供临时、捕获、笔记、资源、密码模块注册与启停，管理页、过滤、搜索和快捷底栏。",
+        "扩展持久化类型及可靠附件存储，兼容既有 Markdown/UUID/revision；停用不删除用户数据。",
+        "保持精确目标插入及复制分离，覆盖键鼠导航、关闭、重启和跨框失效。"
+      ],
+      "status": "planned",
+      "issue": 162,
+      "url": "https://github.com/scholay/xsime/issues/162"
+    },
+    {
+      "order": 13,
+      "key": "LINUX-PARITY-13",
+      "priority": "P1",
+      "title": "Capsule 结构化笔记与编辑",
+      "depends_on": [
+        12
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "提供新建、编辑、删除、摘要、Bullet/结构化字段及富文本资产；Markdown 副本可被外部编辑器读取。",
+        "保留非本产品拥有的 front matter，坏记录单条降级，并发修订冲突不覆盖。",
+        "卡片详情支持逐行复制/插入，整条插入仍可用；覆盖外部编辑冲突、资产哈希及迁移。"
+      ],
+      "status": "planned",
+      "issue": 163,
+      "url": "https://github.com/scholay/xsime/issues/163"
+    },
+    {
+      "order": 14,
+      "key": "LINUX-PARITY-14",
+      "priority": "P1",
+      "title": "Capsule 临时剪贴板历史",
+      "depends_on": [
+        12,
+        9
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "按用户开关收录文本、链接、图片和文件，私有持久化原始 MIME 与来源信息，支持搜索、删除和收藏。",
+        "保护期间停止读取，恢复只建基线；机密/临时及本产品敏感复制不得进入历史。",
+        "X11 与 Wayland 使用各自支持的读取/恢复机制；文本经原生输入提交，其他类型仅显式恢复剪贴板。"
+      ],
+      "status": "planned",
+      "issue": 164,
+      "url": "https://github.com/scholay/xsime/issues/164"
+    },
+    {
+      "order": 15,
+      "key": "LINUX-PARITY-15",
+      "priority": "P1",
+      "title": "Capsule 资源、文献和文件预览",
+      "depends_on": [
+        12,
+        13
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "支持文献、文档、项目、Skills 和其他资源分类，保存本机路径而不递归复制项目。",
+        "提供有界图片/文本/PDF 预览、导入与文件复制；引用元数据及单条文献格式与 macOS 当前范围对齐。",
+        "验证丢失文件、路径/链接限制、附件持久化、搜索、备份恢复和旧 PDF/Skill 兼容。"
+      ],
+      "status": "planned",
+      "issue": 165,
+      "url": "https://github.com/scholay/xsime/issues/165"
+    },
+    {
+      "order": 16,
+      "key": "LINUX-PARITY-16",
+      "priority": "P1",
+      "title": "Capsule 截图、录屏与捕获归档",
+      "depends_on": [
+        12,
+        15
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "通过 Linux 桌面原生接口提供用户明确发起的截图和录屏，支持停止、取消及权限拒绝。",
+        "图片/视频保存到私有内容库，支持预览、复制、收藏和来源标注；收藏不受临时清理影响。",
+        "覆盖 X11 与 Wayland portal，验证取消/锁屏/失败的资源释放、声音和格式能力边界。"
+      ],
+      "status": "planned",
+      "issue": 166,
+      "url": "https://github.com/scholay/xsime/issues/166"
+    },
+    {
+      "order": 17,
+      "key": "LINUX-PARITY-17",
+      "priority": "P1",
+      "title": "Capsule 密码库、结构化秘密与 TOTP",
+      "depends_on": [
+        12,
+        13,
+        9
+      ],
+      "area": "capsule",
+      "acceptance": [
+        "实现与现有格式有明确兼容策略的加密密码库、查看口令、分类、编辑及安全迁移。",
+        "机密默认脱敏；详情 60 秒授权、单字段 15 秒显示、显式复制后条件清理，禁止进入历史或云同步。",
+        "覆盖 TOTP 标准向量、密码错误、凭据变更、失焦/睡眠遮蔽、并发写入及损坏数据；无明文日志。"
+      ],
+      "status": "planned",
+      "issue": 167,
+      "url": "https://github.com/scholay/xsime/issues/167"
+    },
+    {
+      "order": 18,
+      "key": "LINUX-PARITY-18",
+      "priority": "P1",
+      "title": "Mailbox 窗口、模块宿主和持久化",
+      "depends_on": [
+        1,
+        3,
+        9,
+        11
+      ],
+      "area": "mailbox",
+      "acceptance": [
+        "建立独立 Mailbox GTK 窗口，三模块导航、未读角标、响应式侧栏和尺寸保存。",
+        "实现兼容 schema-v1 的会话/消息/附件存储、原子写入及迁移；停用或关闭不删除内容。",
+        "验证空态、长内容、最小尺寸、深浅主题、重启、损坏记录及通知打开同一窗口。"
+      ],
+      "status": "planned",
+      "issue": 168,
+      "url": "https://github.com/scholay/xsime/issues/168"
+    },
+    {
+      "order": 19,
+      "key": "LINUX-PARITY-19",
+      "priority": "P1",
+      "title": "Mailbox 收件、附件与 Capsule/Buffer 流转",
+      "depends_on": [
+        18,
+        13,
+        15
+      ],
+      "area": "mailbox",
+      "acceptance": [
+        "提供单向收件、未读/待处理/归档筛选、图片保存及本地备注。",
+        "附件复制到独立私有目录后原子发布，存入 Capsule 后不依赖 Mailbox 原附件。",
+        "外部内容加入 Buffer 需明确接受且通过来源/焦点/修订检查；验证失败回滚、取消和删除后的独立性。"
+      ],
+      "status": "planned",
+      "issue": 169,
+      "url": "https://github.com/scholay/xsime/issues/169"
+    },
+    {
+      "order": 20,
+      "key": "LINUX-PARITY-20",
+      "priority": "P1",
+      "title": "本地 MCP/HTTP 网关与收件审核",
+      "depends_on": [
+        18,
+        19
+      ],
+      "area": "mailbox",
+      "acceptance": [
+        "实现仅本机的 HTTP push 与 stateless MCP 接口，私有 token、请求大小/速率边界及来源标识。",
+        "外部输入进入待审核收件，不自动上屏或拉起 Buffer；支持接受/拒绝和撤销来源。",
+        "覆盖未授权、坏请求、重放/重复、取消、关窗和安全态；不扩展到尚未在 macOS 落地的 SSE/SSH 客户端。"
+      ],
+      "status": "planned",
+      "issue": 170,
+      "url": "https://github.com/scholay/xsime/issues/170"
+    },
+    {
+      "order": 21,
+      "key": "LINUX-PARITY-21",
+      "priority": "P1",
+      "title": "ChatGPT/Codex CLI 渠道插件",
+      "depends_on": [
+        3,
+        4,
+        7,
+        18,
+        19
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "实现 Linux Codex CLI 探测、登录状态、模型/推理深度、文本流式与取消，固定 argv 且不经 shell 拼接。",
+        "图片任务由 Mailbox 持有，Buffer 关闭可继续；产物只保存并预览于 Mailbox，Skill 按渠道显式挂载。",
+        "覆盖 CLI 不存在、需要登录、协议错误、取消进程树、迟到结果和文本/图像不同生命周期。"
+      ],
+      "status": "planned",
+      "issue": 171,
+      "url": "https://github.com/scholay/xsime/issues/171"
+    },
+    {
+      "order": 22,
+      "key": "LINUX-PARITY-22",
+      "priority": "P1",
+      "title": "Claude Code CLI 渠道插件",
+      "depends_on": [
+        3,
+        4,
+        7,
+        18
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "实现 Linux Claude Code CLI 探测、登录状态、模型/推理深度与流式结果。",
+        "源缓冲作为完整请求，显式发起；支持超时、取消和进程回收，凭据由渠道自己管理。",
+        "覆盖协议碎片、CLI 缺失、认证失败、用户改文/换框以及插件停用后旧结果拒绝。"
+      ],
+      "status": "planned",
+      "issue": 172,
+      "url": "https://github.com/scholay/xsime/issues/172"
+    },
+    {
+      "order": 23,
+      "key": "LINUX-PARITY-23",
+      "priority": "P1",
+      "title": "Mailbox AI 对话工作区",
+      "depends_on": [
+        18,
+        8,
+        21,
+        22
+      ],
+      "area": "mailbox",
+      "acceptance": [
+        "提供新建、搜索、重命名、归档、草稿和流式对话，复用已实现的渠道。",
+        "每个会话固定 Provider/模型路由，部分流只在内存，最终回复完成后持久化。",
+        "覆盖恢复、取消、错误重试和全局配置变化；明确操作才把结果加入 Buffer。"
+      ],
+      "status": "planned",
+      "issue": 173,
+      "url": "https://github.com/scholay/xsime/issues/173"
+    },
+    {
+      "order": 24,
+      "key": "LINUX-PARITY-24",
+      "priority": "P1",
+      "title": "Mailbox PTY 终端与手动成果收取",
+      "depends_on": [
+        18,
+        19,
+        21,
+        22
+      ],
+      "area": "mailbox",
+      "acceptance": [
+        "使用 Linux PTY 提供 Shell、Codex、Claude 终端，会话独立工作目录，支持尺寸调整及终端键盘交互。",
+        "切页或关窗保留正在运行的进程；显式结束才终止，应用重启不伪造重建旧进程。",
+        "文件列表/预览有界，按会话 UUID 手动收取至 Mailbox；覆盖退出、取消、并行会话和附件原子性。"
+      ],
+      "status": "planned",
+      "issue": 174,
+      "url": "https://github.com/scholay/xsime/issues/174"
+    },
+    {
+      "order": 25,
+      "key": "LINUX-PARITY-25",
+      "priority": "P1",
+      "title": "意识流输入插件与本地/AI 候选",
+      "depends_on": [
+        4,
+        7,
+        8
+      ],
+      "area": "buffer",
+      "acceptance": [
+        "实现连续全拼 raw 输入、本地 Rime/Octagram 优先解码与独立 AI 回退，1–5 个完整候选。",
+        "候选数、延迟配置、硬/软边界和确认/发送分离，保留当前普通输入方案。",
+        "覆盖粘贴校验、编辑、部分发送后续写、取消、旧候选失效和原生投递。"
+      ],
+      "status": "planned",
+      "issue": 175,
+      "url": "https://github.com/scholay/xsime/issues/175"
+    },
+    {
+      "order": 26,
+      "key": "LINUX-PARITY-26",
+      "priority": "P1",
+      "title": "并击扩展与自定义键位",
+      "depends_on": [
+        1,
+        3,
+        9,
+        25
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "实现当前统一并击行为、物理批次与精确上下文保护；支持已应用键位快照和跨批配对。",
+        "提供复制/编辑/导入/导出键位、草稿与应用分离；部署验证失败恢复旧配置和方案。",
+        "验证普通输入与意识流共用配置、键位类型、焦点/编辑/方案变化取消及单键不吞字。"
+      ],
+      "status": "planned",
+      "issue": 176,
+      "url": "https://github.com/scholay/xsime/issues/176"
+    },
+    {
+      "order": 27,
+      "key": "LINUX-PARITY-27",
+      "priority": "P1",
+      "title": "日常输入统计与隐私聚合",
+      "depends_on": [
+        1,
+        3,
+        26
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "提供键频、成文字数、活跃时间、速度趋势及键盘热力图，沿用明确指标定义。",
+        "按开关采集脱敏计数，保护字段和测速练习排除；仅保存本地聚合而不保存输入正文。",
+        "验证采集启停、时间口径、重启、并击批次及数据导出/删除。"
+      ],
+      "status": "planned",
+      "issue": 177,
+      "url": "https://github.com/scholay/xsime/issues/177"
+    },
+    {
+      "order": 28,
+      "key": "LINUX-PARITY-28",
+      "priority": "P1",
+      "title": "打字测速与文章练习",
+      "depends_on": [
+        1,
+        3,
+        26,
+        27
+      ],
+      "area": "plugins",
+      "acceptance": [
+        "提供中英文文章跟打、原生输入区、实时对齐及成绩，marked text 不算错。",
+        "按连续时间、正确成文、字准、物理键、并击批次和回退独立计分，与日常统计隔离。",
+        "只保存本机聚合和文章/配置身份；验证中英文、重启、取消、重试和输入法方案切换。"
+      ],
+      "status": "planned",
+      "issue": 178,
+      "url": "https://github.com/scholay/xsime/issues/178"
+    },
+    {
+      "order": 29,
+      "key": "LINUX-PARITY-29",
+      "priority": "P2",
+      "title": "Linux 桌面、宿主和跨模块验收",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28
+      ],
+      "area": "validation",
+      "acceptance": [
+        "建立并执行 X11、wlroots Wayland 和 GNOME/KDE 支持/降级矩阵，覆盖 GTK、Qt、浏览器、终端。",
+        "验证输入、双轨翻译、AI、剪贴板、捕获、密码、Mailbox、快捷键、锁屏和跨屏完整流程。",
+        "记录确切提交、构建、桌面、通过项与不支持项；源码测试、容器测试与真实桌面结果分别呈现。"
+      ],
+      "status": "planned",
+      "issue": 179,
+      "url": "https://github.com/scholay/xsime/issues/179"
+    },
+    {
+      "order": 30,
+      "key": "LINUX-PARITY-30",
+      "priority": "P2",
+      "title": "deb 生命周期、同版本发布集成与文档",
+      "depends_on": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11,
+        12,
+        13,
+        14,
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27,
+        28,
+        29
+      ],
+      "area": "release",
+      "acceptance": [
+        "所有新模块、固定插件资源和必要依赖纳入 deb，构建与测试随项目 v* 并进入同一 Release 流程。",
+        "验证新装、升级、重装和卸载，保留用户词库、学习记录、笔记、会话和凭据；校验源安装清单兼容。",
+        "同步安装、使用、权限、卸载和发布文档；生成并验证确切版本产物，不把配置完成等同已公开发布。"
+      ],
+      "status": "planned",
+      "issue": 180,
+      "url": "https://github.com/scholay/xsime/issues/180"
+    }
+  ],
+  "milestone": {
+    "number": 1,
+    "url": "https://github.com/scholay/xsime/milestone/1"
+  }
+}

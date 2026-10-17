@@ -7,6 +7,11 @@ XSIME `rime-data` set. It lives next to the existing
 `fcitx5-rime` / `ibus-rime` and is unchanged.
 
 This is step 3 of the Linux port (IME + Default Buffer + Capsule rail).
+The [30-task Linux parity plan](../PARITY.md) now tracks the full desktop port.
+The host has a compiled plugin registry with capability checks and revocable
+task grants. Fcitx5 configuration can disable the existing Capsule notes module:
+disabling closes/disarms its rail without deleting notes or affecting typing.
+Catalog declarations alone never enable an unimplemented Linux adapter.
 Mailbox is still later. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in

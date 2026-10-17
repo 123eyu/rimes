@@ -52,8 +52,9 @@
 
 ## 代码边界
 
-2026-09-29 起按 [平台路线图](PLATFORM-ROADMAP.md) 开发：Windows 对标 macOS、Android 对标
-iOS，Linux 收敛到现有功能维护。构建与实机验收分别记录。
+按 [平台路线图](PLATFORM-ROADMAP.md) 开发：Windows 对标 macOS、Android 对标
+iOS。2026-10-17 起 Linux 按维护者授权的 [30 项计划](platforms/linux/PARITY.md)
+补齐内置扩展、Buffer、Capsule、Mailbox 及核心插件，取代之前仅维护的范围。构建与实机验收分别记录。
 
 | 范围 | 维护入口 | 验证责任 |
 |---|---|---|

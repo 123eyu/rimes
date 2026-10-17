@@ -69,6 +69,13 @@ RimesIme::RimesIme(Instance* instance)
     };
     buffer_ = std::make_unique<BufferService>(instance_, post);
     capsule_ = std::make_unique<CapsuleService>(instance_, post);
+    // Register only adapters which exist in this host. Catalog entries for
+    // future Linux ports never become executable just by being downloaded.
+    plugins_.Register({"builtin.capsule.notes", "笔记", "1.1.0",
+        rimes::plugins::Kind::Capsule, {"capsule.navigate"}},
+        {[this] { capsule_->SetEnabled(true); }, [this] { capsule_->SetEnabled(false); }});
+    capsule_->SetEnabled(false);
+    plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
 
     destroy_watch_ = instance_->watchEvent(
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
@@ -98,10 +105,14 @@ RimesIme::RimesIme(Instance* instance)
         });
 }
 
-void RimesIme::reloadConfig() { readAsIni(config_, "conf/rimes.conf"); }
+void RimesIme::reloadConfig() {
+    readAsIni(config_, "conf/rimes.conf");
+    if (capsule_) plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
+}
 void RimesIme::setConfig(const RawConfig& config) {
     config_.load(config, true);
     safeSaveAsIni(config_, "conf/rimes.conf");
+    plugins_.ApplyState("builtin.capsule.notes", true, *config_.capsuleNotes);
     instance_->inputContextManager().foreachFocused([this](InputContext* ic) {
         if (auto* state = ic->propertyFor(&factory_)) state->refreshCandidates();
         return true;
@@ -109,6 +120,7 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    plugins_.Shutdown();
     if (alive_) {
         alive_->store(false);
     }
