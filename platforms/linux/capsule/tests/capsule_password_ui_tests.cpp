@@ -142,6 +142,7 @@ int main(int argc, char** argv) {
                 stage = "focus " + std::to_string(++focus_count);
                 gtk_window_present(GTK_WINDOW(window));
                 gdk_window_focus(gtk_widget_get_window(window), GDK_CURRENT_TIME);
+
                 Wait([&] { return gtk_window_is_active(GTK_WINDOW(window)); });
             };
             focus();
@@ -178,7 +179,7 @@ int main(int argc, char** argv) {
             };
             auto unlock = [&](RevealCode code = DefaultRevealCode()) {
                 focus();
-                stage = "unlock";
+                stage = "unlock " + std::to_string(focus_count);
                 attempt(code);
                 Wait([&] { return gtk_widget_get_sensitive(get("vault-edit")); });
             };
@@ -233,6 +234,33 @@ int main(int argc, char** argv) {
                   "TOTP reveal leaked seed");
             click("vault-edit");
             Check(Text(get("vault-plaintext")) == draft.body, "editor did not load decrypted body");
+            stage = "category popup";
+            gtk_combo_box_popup(GTK_COMBO_BOX(get("vault-category")));
+            Wait([&] {
+                gboolean shown = FALSE;
+                g_object_get(get("vault-category"), "popup-shown", &shown, nullptr);
+                return shown;
+            });
+            const auto popup_deadline = Clock::now() + std::chrono::milliseconds(120);
+            while (Clock::now() < popup_deadline) {
+                while (gtk_events_pending())
+                    gtk_main_iteration();
+                std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            }
+            Check(Text(get("vault-plaintext")) == draft.body,
+                  "owned category popup concealed plaintext");
+            Check(g_spawn_command_line_sync("xdotool key Down Return", nullptr, nullptr, nullptr,
+                                            nullptr),
+                  "could not select category");
+            Wait([&] {
+                gboolean shown = TRUE;
+                g_object_get(get("vault-category"), "popup-shown", &shown, nullptr);
+                return !shown;
+            });
+            focus();
+            Check(Text(get("vault-plaintext")) == draft.body,
+                  "closing category popup concealed plaintext");
+            stage = "editor copy";
             auto* buffer = gtk_text_view_get_buffer(GTK_TEXT_VIEW(get("vault-plaintext")));
             GtkTextIter first{}, last{};
             gtk_text_buffer_get_bounds(buffer, &first, &last);
@@ -260,18 +288,44 @@ int main(int argc, char** argv) {
             click("vault-save");
             Wait([&] { return refreshes == 1; });
             entry = store.Inspect(entry.id);
-            Check(entry.title == "已加密修改" &&
+            Check(entry.title == "已加密修改" && entry.category == "key" &&
                       store.Read(entry.id, entry.revision).body == draft.body,
                   "GUI encrypted save failed");
             Check(absent(), "save retained plaintext");
             unlock();
             click("vault-edit");
+            stage = "external focus with category popup";
             gtk_text_buffer_set_text(buffer, "temporary unsaved secret", -1);
+            gtk_combo_box_popup(GTK_COMBO_BOX(get("vault-category")));
+            Wait([&] {
+                gboolean shown = FALSE;
+                g_object_get(get("vault-category"), "popup-shown", &shown, nullptr);
+                return shown;
+            });
+            stage = "external window mapping";
             auto* other_window = gtk_window_new(GTK_WINDOW_TOPLEVEL);
             gtk_container_add(GTK_CONTAINER(other_window), gtk_entry_new());
+            gtk_window_set_default_size(GTK_WINDOW(other_window), 200, 80);
+            gtk_window_move(GTK_WINDOW(other_window), 900, 30);
             gtk_widget_show_all(other_window);
+            Wait([&] { return gtk_widget_get_mapped(other_window); });
+            stage = "outside menu dismissal";
+            int other_x = 0, other_y = 0;
+            gdk_window_get_origin(gtk_widget_get_window(other_window), &other_x, &other_y);
+            auto outside = "xdotool mousemove " + std::to_string(other_x + 20) + " " +
+                           std::to_string(other_y + 20) + " click 1";
+            Check(g_spawn_command_line_sync(outside.c_str(), nullptr, nullptr, nullptr, nullptr),
+                  "could not dismiss menu outside window");
+            Wait([&] {
+                gboolean shown = TRUE;
+                g_object_get(get("vault-category"), "popup-shown", &shown, nullptr);
+                return !shown;
+            });
+            stage = "external window active";
             gtk_window_present(GTK_WINDOW(other_window));
             Wait([&] { return gtk_window_is_active(GTK_WINDOW(other_window)); });
+            stage = "external window conceal";
+            Wait([&] { return absent(); });
             Check(Text(get("vault-plaintext")).empty() && absent(),
                   "focus loss retained decrypted editor");
             gtk_widget_destroy(other_window);
@@ -314,9 +368,9 @@ int main(int argc, char** argv) {
             // Change the current credential through the real four-chord UI, including mismatch
             // retry.
             auto* configure = Button(view.Widget(), "查看口令…");
-        Check(configure, "credential configuration entry missing");
-        gtk_button_clicked(GTK_BUTTON(configure));
-        auto* change = Button(view.Widget(), "更改查看口令…");
+            Check(configure, "credential configuration entry missing");
+            gtk_button_clicked(GTK_BUTTON(configure));
+            auto* change = Button(view.Widget(), "更改查看口令…");
             Check(change, "credential UI missing");
             gtk_button_clicked(GTK_BUTTON(change));
             attempt(custom);

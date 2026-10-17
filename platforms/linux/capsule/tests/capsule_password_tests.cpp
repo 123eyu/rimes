@@ -37,7 +37,8 @@ int main(int argc, char** argv) {
         Check(key && key->size() == 32, "native key invalid");
         directory.Write("master-key", *key);
         for (const auto& doc : fixture.at("documents"))
-            files.Write(doc.at("id").get<std::string>() + ".md", doc.at("document").get<std::string>());
+            files.Write(doc.at("id").get<std::string>() + ".md",
+                        doc.at("document").get<std::string>());
         const auto summaries = store.List();
         Check(summaries.size() == fixture.at("documents").size(), "native summaries unavailable");
         for (const auto& doc : fixture.at("documents")) {
@@ -111,7 +112,8 @@ int main(int argc, char** argv) {
         store.Remove(saved.id, saved.revision);
         const auto bad = NewUuidV4();
         files.Write(bad + ".md", "{broken");
-        Check(store.List().size() == fixture.at("documents").size(), "broken record poisoned library");
+        Check(store.List().size() == fixture.at("documents").size(),
+              "broken record poisoned library");
         files.Remove(bad + ".md");
         std::filesystem::create_directory_symlink(root / "passwords", root / "link");
         Reject([&] { PasswordStore unsafe(root / "link"); }, "symlink vault accepted");
@@ -129,13 +131,28 @@ int main(int argc, char** argv) {
         Record note;
         note.title = "Public note";
         note.content = "- 密码：migration-fixture";
-        note.summary="public note summary must not migrate";
+        note.summary = "public note summary must not migrate";
         std::string error;
         Check(notes.Put(note, "", &note, &error) == StoreStatus::Ok, "note fixture unavailable");
         Reject([&] { store.MigrateNote(note.id, std::string(64, 'a'), "login"); },
                "stale note migration accepted");
+        const auto before_migration = store.List().size();
+        int publication = 0;
+        Reject(
+            [&] {
+                store.MigrateNote(note.id, note.revision, "login", "", [&](const auto& action) {
+                    if (++publication == 1)
+                        action(); // cancel after ciphertext is published
+                });
+            },
+            "cancelled migration deleted the original note");
+        Record preserved;
+        Check(publication == 2 && store.List().size() == before_migration &&
+                  notes.Get(note.id, &preserved, &error) == StoreStatus::Ok &&
+                  preserved.revision == note.revision,
+              "cancelled migration failed to roll back encrypted copy and retain note");
         const auto migrated = store.MigrateNote(note.id, note.revision, "login");
-        Check(migrated.summary.empty(),"note summary disclosed during migration");
+        Check(migrated.summary.empty(), "note summary disclosed during migration");
         Record removed;
         Check(notes.Get(note.id, &removed, &error) == StoreStatus::NotFound &&
                   store.Read(migrated.id, migrated.revision).body == note.content,
@@ -145,22 +162,29 @@ int main(int argc, char** argv) {
         RevealCode custom = {"qaz", "wsx", "edc", "rfv"};
         RevealCode wrong = {"a", "b", "c", "d"};
         const auto initial = credential.Revision();
-        const auto unchanged=store.Inspect(migrated.id);
-        const auto secret=store.Read(unchanged.id,unchanged.revision,initial);
-        const SecretCommit cancelled=[](const auto&){};
-        Reject([&]{store.Put(secret,secret.revision,initial,cancelled);},"cancelled final write published");
-        Reject([&]{store.Remove(secret.id,secret.revision,initial,cancelled);},"cancelled final remove published");
-        Check(store.Inspect(secret.id).revision==secret.revision,"cancelled gate changed record");
-        Reject([&]{credential.Change(DefaultRevealCode(),custom,initial,cancelled);},"cancelled credential replacement published");
-        bool authorized=false;
-        store.WithAuthorization(secret.id,secret.revision,initial,[&]{authorized=true;});
-        Check(authorized,"current copy authorization denied");
-        Reject([&]{store.WithAuthorization(secret.id,"stale",initial,[]{});},"stale copy authority accepted");
+        const auto unchanged = store.Inspect(migrated.id);
+        const auto secret = store.Read(unchanged.id, unchanged.revision, initial);
+        const SecretCommit cancelled = [](const auto&) {};
+        Reject([&] { store.Put(secret, secret.revision, initial, cancelled); },
+               "cancelled final write published");
+        Reject([&] { store.Remove(secret.id, secret.revision, initial, cancelled); },
+               "cancelled final remove published");
+        Check(store.Inspect(secret.id).revision == secret.revision,
+              "cancelled gate changed record");
+        Reject([&] { credential.Change(DefaultRevealCode(), custom, initial, cancelled); },
+               "cancelled credential replacement published");
+        bool authorized = false;
+        store.WithAuthorization(secret.id, secret.revision, initial, [&] { authorized = true; });
+        Check(authorized, "current copy authorization denied");
+        Reject([&] { store.WithAuthorization(secret.id, "stale", initial, [] {}); },
+               "stale copy authority accepted");
         {
-            auto held=directory.Lock();
-            Reject([&]{store.WithAuthorization(secret.id,secret.revision,initial,[]{});},"busy copy gate blocked instead of rejecting");
+            auto held = directory.Lock();
+            Reject([&] { store.WithAuthorization(secret.id, secret.revision, initial, [] {}); },
+                   "busy copy gate blocked instead of rejecting");
         }
-        Reject([&]{store.Read(secret.id,secret.revision,"changed-credential");},"old authorization decrypted after credential change");
+        Reject([&] { store.Read(secret.id, secret.revision, "changed-credential"); },
+               "old authorization decrypted after credential change");
         Reject([&] { credential.Change(wrong, custom, initial); },
                "wrong current code changed credential");
         credential.Change(DefaultRevealCode(), custom, initial);

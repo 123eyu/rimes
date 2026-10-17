@@ -342,9 +342,16 @@ PasswordSummary PasswordStore::MigrateNote(const std::string& id, const std::str
     secret.summary.clear();
     secret.category = category;
     auto saved = Put(secret, "", credential, gate);
-    if (notes.Remove(id, revision, &error) != StoreStatus::Ok) {
+    const auto remove = [&](const std::function<void()>& action) {
+        // ContentStore holds the same vault root lock here. Credential changes
+        // cannot race the final deletion, and cancellation is checked again.
+        Require(credential.empty() || RevealCredential(root_).Revision() == credential,
+                "查看口令已变化，请重新验证");
+        CommitSecret(gate, action);
+    };
+    if (notes.Remove(id, revision, &error, remove) != StoreStatus::Ok) {
         Remove(saved.id, saved.revision);
-        throw std::runtime_error("笔记发生并发修改，已保留原文并撤销迁移");
+        throw std::runtime_error("迁移已取消或笔记发生变化，已保留原文并撤销迁移");
     }
     return saved;
 }

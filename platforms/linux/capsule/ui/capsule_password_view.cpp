@@ -15,9 +15,9 @@ namespace rimes::capsule {
 namespace {
 using Clock = std::chrono::steady_clock;
 using namespace rimes::desktop;
-void Post(std::function<void()> fn) {
+void Post(std::function<void()> fn, int priority = G_PRIORITY_DEFAULT) {
     g_idle_add_full(
-        G_PRIORITY_DEFAULT,
+        priority,
         +[](gpointer p) -> gboolean {
             (*static_cast<std::function<void()>*>(p))();
             return G_SOURCE_REMOVE;
@@ -253,8 +253,13 @@ struct PasswordView::Impl {
                          this);
         g_signal_connect(window, "focus-out-event",
                          G_CALLBACK(+[](GtkWidget*, GdkEventFocus*, gpointer raw) -> gboolean {
-                             static_cast<Impl*>(raw)->Conceal();
+                             static_cast<Impl*>(raw)->CheckFocusSoon();
                              return FALSE;
+                         }),
+                         this);
+        g_signal_connect(category, "notify::popup-shown",
+                         G_CALLBACK(+[](GObject*, GParamSpec*, gpointer raw) {
+                             static_cast<Impl*>(raw)->CheckFocusSoon();
                          }),
                          this);
         g_signal_connect(text, "realize", G_CALLBACK(+[](GtkWidget* widget, gpointer) {
@@ -337,8 +342,28 @@ struct PasswordView::Impl {
                std::find(state.modules.begin(), state.modules.end(), Module::Passwords) !=
                    state.modules.end();
     }
+    bool OwnedCategoryPopup() const {
+        gboolean shown = FALSE;
+        g_object_get(category, "popup-shown", &shown, nullptr);
+        auto* grab = gtk_grab_get_current();
+        return shown && grab && GTK_IS_MENU(grab) &&
+               gtk_menu_get_attach_widget(GTK_MENU(grab)) == category;
+    }
     bool Focused() const {
-        return gtk_window_is_active(window) && gtk_widget_get_visible(GTK_WIDGET(window));
+        return gtk_widget_get_visible(GTK_WIDGET(window)) &&
+               (gtk_window_is_active(window) || OwnedCategoryPopup());
+    }
+    void CheckFocusSoon() {
+        // GTK transfers keyboard focus to the combo's own menu. Let that one
+        // event finish before checking ownership; any external focus still
+        // revokes the lease, including when an open menu is dismissed.
+        const auto life = alive;
+        Post(
+            [this, life] {
+                if (life->load() && !Focused())
+                    Conceal();
+            },
+            G_PRIORITY_DEFAULT_IDLE);
     }
     bool Valid() const {
         return Allowed() && Focused() && record &&

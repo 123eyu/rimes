@@ -378,15 +378,22 @@ StoreStatus ContentStore::Put(const Record& request, std::string expected_revisi
         return result;
     }, error);
 }
-StoreStatus ContentStore::Remove(std::string_view id, std::string_view expected_revision, std::string* error) {
+StoreStatus ContentStore::Remove(std::string_view id, std::string_view expected_revision, std::string* error,
+    const std::function<void(const std::function<void()>&)>& commit) {
     if (!LooksLikeUuid(id)) return InvalidFail(error, "invalid id");
     return WithLock([&] {
         Record existing;
         const auto status = ParseFile(EntryPath(id), &existing, error);
         if (status != StoreStatus::Ok) return status;
         if (expected_revision != existing.revision) return StoreStatus::RevisionConflict;
-        runtime::PrivateDirectory(entries_).Remove(EntryPath(id).filename().string());
-        return StoreStatus::Ok;
+        bool removed = false;
+        const auto remove = [&] {
+            if (removed) throw std::runtime_error("Duplicate note removal");
+            runtime::PrivateDirectory(entries_).Remove(EntryPath(id).filename().string());
+            removed = true;
+        };
+        if (commit) commit(remove); else remove();
+        return removed ? StoreStatus::Ok : StoreStatus::Invalid;
     }, error);
 }
 StoreStatus ContentStore::ReadAll(std::vector<Record>* out, std::string* error) const {

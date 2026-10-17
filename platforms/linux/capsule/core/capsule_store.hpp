@@ -65,7 +65,8 @@ public:
     StoreStatus Put(const Record& request, std::string expected_revision, Record* out,
                     std::string* error);
     StoreStatus Remove(std::string_view id, std::string_view expected_revision,
-                       std::string* error);
+                       std::string* error,
+                       const std::function<void(const std::function<void()>&)>& commit = {});
 
 private:
     StoreStatus WithLock(const std::function<StoreStatus()>& body, std::string* error) const;

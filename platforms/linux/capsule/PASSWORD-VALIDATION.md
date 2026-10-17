@@ -33,3 +33,9 @@ Ubuntu 24.04 arm64、GTK 3.24、Fcitx 5.1.7、OpenSSL 3；Xvfb + Xfwm4 与实际
 Linux 目前从底栏打开管理窗口，尚未实现原生底栏内联解锁详情。Wayland 敏感复制需要 ext/wlr-data-control；GNOME 等桌面的受焦点剪贴板路径待实现。实际 GNOME/KDE/wlroots 的锁屏、休眠、多屏与缩放继续由 #167/#179 验收。未发布正式 v* 标签或公开安装包。
 
 参考：[RFC 6238](https://www.rfc-editor.org/rfc/rfc6238.html)、[OpenSSL EVP ChaCha20](https://docs.openssl.org/3.0/man3/EVP_chacha20/)、[GTK 输入上下文](https://raw.githubusercontent.com/GNOME/gtk/gtk-3-24/gtk/gtkimmodule.c) 与 [GTK PRIMARY 生命周期](https://docs.gtk.org/gtk3/method.TextBuffer.remove_selection_clipboard.html)。
+
+## PR review regression checks (2026-10-18)
+
+The category popup now defers its focus decision until GTK has processed focus events, and only accepts a menu attached to that category control. The real X11/GTK test opens the dropdown, selects a category, verifies encrypted save, then moves focus outside an open dropdown and verifies immediate conceal. The existing 15-second, credential, plugin, record, and lock revocation cases remain in the same test.
+
+Note migration rechecks cancellation and the credential under the source deletion lock; cancelling after encrypted publication retains the original note and rolls back the new vault record. Buffer prefix consumption rejects a boundary inside a UTF-8 sequence before changing state. Regression tests cover both CJK and emoji.
