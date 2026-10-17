@@ -43,14 +43,48 @@ int main(int argc, char** argv) {
     }
     {
         AIWorker worker;
-        auto cancelled = std::make_shared<std::atomic<bool>>(false);
-        std::atomic<unsigned> callbacks{0};
-        worker.Run("原文🙂", configuration("/cancel"), cancelled, [&](AIUpdate) { ++callbacks; });
-        worker.Shutdown();
-        const auto final_callbacks = callbacks.load();
-        worker.Shutdown(); // teardown is explicitly idempotent
-        Check(cancelled->load() && final_callbacks == 1 && callbacks.load() == final_callbacks,
-              "shutdown returned before cancellation callback finished");
+        std::mutex mutex;
+        std::condition_variable changed;
+        bool release = false, replacement = false;
+        unsigned started = 0, completed = 0;
+        AIError replacement_error = AIError::Busy;
+        try {
+            for (unsigned i = 0; i < 4; ++i) {
+                worker.Run("原文🙂", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(false),
+                    [&, held = false](AIUpdate update) mutable {
+                        std::unique_lock lock(mutex);
+                        if (!update.finished && !held) {
+                            held = true; ++started; changed.notify_all();
+                            changed.wait(lock, [&] { return release; });
+                        }
+                        if (update.finished) { ++completed; changed.notify_all(); }
+                    });
+            }
+            {
+                std::unique_lock lock(mutex);
+                Check(changed.wait_for(lock, std::chrono::seconds(5), [&] { return started == 4; }), "AI streams did not start");
+            }
+            worker.CancelAll();
+            worker.Run("原文🙂", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(false), [&](AIUpdate update) {
+                if (update.finished) {
+                    std::lock_guard lock(mutex);
+                    replacement = true; replacement_error = update.error; changed.notify_all();
+                }
+            });
+            {
+                std::unique_lock lock(mutex);
+                Check(!replacement, "cancelled AI callbacks blocked the replacement request");
+                release = true; changed.notify_all();
+                Check(changed.wait_for(lock, std::chrono::seconds(5), [&] { return replacement && completed == 4; }), "AI replacement did not complete");
+                Check(replacement_error == AIError::None, "AI replacement lost its request");
+            }
+            worker.Shutdown();
+            worker.Shutdown(); // teardown is explicitly idempotent
+        } catch (...) {
+            { std::lock_guard lock(mutex); release = true; changed.notify_all(); }
+            worker.Shutdown();
+            throw;
+        }
     }
     std::cout << "AI HTTP: native contract, fragmented stream, early DONE, cancellation, timeout, auth, limits, redirect, size guards and joined shutdown passed\n";
 }

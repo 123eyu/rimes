@@ -588,7 +588,7 @@ bool BufferService::Generate() {
                 SynchronizeDerived();
                 bool grant = false;
                 try { grant = validate_ && validate_(request.lease); } catch (const std::exception&) {}
-                if (!derived_.Accepts(request, grant)) return;
+                if (!derived_.Accepts(request, grant)) { Publish(); return; }
                 const bool valid = text.empty() || derived_.Update(request, grant, alternative, text);
                 if (finished && success && !blocks.empty()) {
                     std::string joined;
