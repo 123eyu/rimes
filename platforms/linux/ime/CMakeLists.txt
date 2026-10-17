@@ -115,6 +115,8 @@ if(RIMES_BUILD_FCITX5)
         src/fcitx/rimes_ime.cpp
         src/fcitx/rimes_state.cpp
         src/session/session_monitor.cpp
+        src/desktop/workspace_launcher.cpp
+        src/desktop/desktop_shortcuts.cpp
         src/buffer/buffer_service.cpp
         src/buffer/buffer_translation.cpp
         src/buffer/buffer_delivery.cpp
@@ -122,8 +124,10 @@ if(RIMES_BUILD_FCITX5)
     )
     target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
+    pkg_check_modules(RimesXCB REQUIRED IMPORTED_TARGET xcb)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
     target_link_libraries(rimes PRIVATE PkgConfig::GTK3)
+    target_link_libraries(rimes PRIVATE PkgConfig::RimesXCB)
     if(GTK_LAYER_SHELL_FOUND)
         target_link_libraries(rimes PRIVATE PkgConfig::GTK_LAYER_SHELL)
         target_compile_definitions(rimes PRIVATE HAVE_GTK_LAYER_SHELL=1)
@@ -131,6 +135,8 @@ if(RIMES_BUILD_FCITX5)
     target_compile_definitions(rimes PRIVATE
         RIMES_INSTALL_SHARED_DIR="${CMAKE_INSTALL_FULL_DATADIR}/rimes/data"
         RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}"
+        RIMES_INSTALLED_SETTINGS="${CMAKE_INSTALL_FULL_BINDIR}/rimes-settings"
+        RIMES_BUILD_SETTINGS="${CMAKE_BINARY_DIR}/runtime/rimes-settings"
     )
     set_target_properties(rimes PROPERTIES
         PREFIX ""
@@ -409,6 +415,18 @@ if(RIMES_BUILD_TESTS)
         find_program(DBUS_RUN_SESSION dbus-run-session REQUIRED)
         add_test(NAME session-protection-dbus COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:rimes-session-monitor-tests>)
         set_tests_properties(session-protection-dbus PROPERTIES ENVIRONMENT "RIMES_PRIVATE_SESSION_TEST=1")
+
+        add_executable(rimes-desktop-shortcuts-tests tests/desktop_shortcuts_tests.cpp src/desktop/desktop_shortcuts.cpp)
+        target_include_directories(rimes-desktop-shortcuts-tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/src")
+        target_link_libraries(rimes-desktop-shortcuts-tests PRIVATE Fcitx5::Core RimesPluginCore PkgConfig::RimesXCB)
+        rimes_harden(rimes-desktop-shortcuts-tests)
+        add_dependencies(rimes-desktop-shortcuts-tests rimes-launch)
+        add_test(NAME desktop-shortcuts-portal COMMAND ${DBUS_RUN_SESSION} -- $<TARGET_FILE:rimes-desktop-shortcuts-tests> --portal $<TARGET_FILE:rimes-launch>)
+        set_tests_properties(desktop-shortcuts-portal PROPERTIES ENVIRONMENT "RIMES_PRIVATE_SESSION_TEST=1")
+        find_program(RIMES_XDOTOOL xdotool)
+        if(RIMES_BUFFER_XVFB_RUN AND RIMES_XDOTOOL)
+            add_test(NAME desktop-shortcuts-x11 COMMAND ${RIMES_BUFFER_XVFB_RUN} -a ${DBUS_RUN_SESSION} -- $<TARGET_FILE:rimes-desktop-shortcuts-tests> --x11)
+        endif()
 
         add_executable(rimes-buffer-fcitx-e2e tests/buffer_fcitx_e2e.cpp)
         target_link_libraries(rimes-buffer-fcitx-e2e PRIVATE

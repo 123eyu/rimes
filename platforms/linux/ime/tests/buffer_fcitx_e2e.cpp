@@ -89,7 +89,7 @@ std::string IsolateDirs() {
     setenv("RIMES_BUFFER_AUTO_CAPTURE", "0", 1);
     setenv("RIMES_BUFFER_CLOSE_AFTER_LAST", "1", 1);
     setenv("RIMES_BUFFER_FOCUS_GRACE_MS", "200", 1);
-    if (std::getenv("RIMES_TEST_SESSION_PROTECTION")) {
+    if (std::getenv("RIMES_TEST_SESSION_PROTECTION") || std::getenv("RIMES_TEST_LAUNCHER")) {
         setenv("RIMES_CAPSULE_HEADLESS", "1", 1);
         setenv("RIMES_CAPSULE_SOCKET", (root / "capsule.sock").c_str(), 1);
         setenv("RIMES_CAPSULE_DUMP", (root / "capsule.json").c_str(), 1);
@@ -242,6 +242,94 @@ void DrainStaged(fcitx::AddonInstance* frontend, const fcitx::ICUUID& uuid,
     if (!HasNeedle(leftover, "\"empty\":true")) {
         Die("could not drain leftover Buffer chips");
     }
+}
+
+void RunLauncherSuite(SuiteCtx ctx) {
+    auto phase = std::make_shared<unsigned>(0);
+    auto other = std::make_shared<fcitx::ICUUID>();
+    auto config = std::make_shared<rimes::runtime::ConfigurationStore>(
+        std::filesystem::path(std::getenv("RIMES_USER_DIR")) / "configuration");
+    auto initial = config->Load();
+    initial["resetOnAppSwitch"] = false; config->Save(initial, initial.at("revision"));
+    ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit); ctx.ic->focusIn();
+    auto check = [](bool condition, const char* message) { if (!condition) Die(message); };
+    auto capturing = [ctx](bool expected) {
+        ExpectContains(ReadDump(ctx.dump_path), expected ? "\"capturing\":true" : "\"capturing\":false", "launcher capture state");
+    };
+    const auto started = fcitx::now(CLOCK_MONOTONIC);
+    ctx.timers->emplace_back(ctx.instance->eventLoop().addTimeEvent(CLOCK_MONOTONIC, started + 200000, 0,
+        [ctx, phase, other, config, check, capturing, started](fcitx::EventSourceTime* timer, uint64_t) {
+            try {
+                check(fcitx::now(CLOCK_MONOTONIC) - started < 10000000, "launcher suite deadline");
+                auto* instance = ctx.instance;
+                auto key = [&](const char* value) { SendKey(ctx.frontend, ctx.uuid, value); };
+                auto keyboard = [&] { instance->setCurrentInputMethod(ctx.ic, "keyboard-us", true); };
+                switch (*phase) {
+                case 0:
+                    keyboard(); check(instance->inputMethod(ctx.ic) == "keyboard-us", "keyboard fixture unavailable");
+                    ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Control+Shift+b"), false);
+                    check(instance->inputMethod(ctx.ic) == "rimes", "global shortcut did not switch this IC");
+                    break;
+                case 1:
+                    capturing(true);
+                    ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Control+Shift+b"), false);
+                    capturing(true); // held press must not toggle it closed
+                    ctx.frontend->call<fcitx::ITestFrontend::keyEvent>(ctx.uuid, fcitx::Key("Control+Shift+b"), true);
+                    key("Control+Shift+b"); capturing(false);
+                    check(instance->inputMethod(ctx.ic) == "rimes", "closing unexpectedly switched IM");
+                    keyboard(); key("Control+Shift+b"); keyboard(); // user overrides the pending activation
+                    break;
+                case 2:
+                    capturing(false);
+                    key("Control+Shift+b"); ctx.ic->focusOut();
+                    *other = ctx.frontend->call<fcitx::ITestFrontend::createInputContext>("launcher-other-app");
+                    instance->inputContextManager().findByUUID(*other)->focusIn();
+                    break;
+                case 3:
+                    capturing(false);
+                    instance->inputContextManager().findByUUID(*other)->focusOut();
+                    ctx.frontend->call<fcitx::ITestFrontend::destroyInputContext>(*other);
+                    ctx.ic->focusIn(); keyboard(); ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Sensitive);
+                    key("Control+Shift+b");
+                    check(instance->inputMethod(ctx.ic) == "keyboard-us", "protected field switched IM");
+                    capturing(false);
+                    ctx.ic->setCapabilityFlags(fcitx::CapabilityFlag::Preedit);
+                    {
+                        auto next = config->Load(); next["shortcuts"]["buffer"] = "CTRL+ALT+j";
+                        config->Save(next, next.at("revision"));
+                    }
+                    break;
+                case 4:
+                    key("Control+Shift+b");
+                    check(instance->inputMethod(ctx.ic) == "keyboard-us", "retired binding still active");
+                    key("Control+Alt+j"); break;
+                case 5:
+                    capturing(true); key("Control+Alt+j"); capturing(false);
+                    {
+                        auto next = config->Load(); next["globalShortcuts"] = false; config->Save(next, next.at("revision"));
+                    }
+                    keyboard(); break;
+                case 6:
+                    key("Control+Alt+j");
+                    check(instance->inputMethod(ctx.ic) == "keyboard-us", "global disable ignored");
+                    instance->setCurrentInputMethod(ctx.ic, "rimes", true); key("Control+Alt+j"); capturing(true);
+                    key("Control+Alt+j"); capturing(false);
+                    {
+                        auto next = config->Load(); next["globalShortcuts"] = true; config->Save(next, next.at("revision"));
+                    }
+                    keyboard(); break;
+                case 7: key("Control+Shift+v"); break;
+                case 8:
+                    ExpectContains(ReadDump(std::getenv("RIMES_CAPSULE_DUMP")), "\"visible\":true", "Capsule independent shortcut did not open");
+                    check(instance->inputMethod(ctx.ic) == "rimes", "Capsule did not select XSIME");
+                    key("Control+Shift+v");
+                    std::cout << "Launcher: other IM activation, held keys, focus/user-switch cancellation, sensitive fields, custom bindings and disable passed\n";
+                    instance->exit(); return true;
+                }
+                ++*phase; timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 200000); timer->setOneShot();
+            } catch (const TestFailed&) { ctx.instance->exit(); }
+            return true;
+        }));
 }
 
 void RunBufferSuite(fcitx::Instance& instance,
@@ -879,14 +967,17 @@ int main(int argc, char** argv) {
         struct FixtureCleanup {
             std::filesystem::path root;
             ~FixtureCleanup() { if (!root.empty()) { std::error_code error; std::filesystem::remove_all(root, error); } }
-        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") || std::getenv("RIMES_TEST_AI_API") || std::getenv("RIMES_TEST_SESSION_PROTECTION") ?
+        } cleanup{std::getenv("RIMES_TEST_TRANSLATION_RESOURCES") || std::getenv("RIMES_TEST_AI_API") || std::getenv("RIMES_TEST_SESSION_PROTECTION") || std::getenv("RIMES_TEST_LAUNCHER") ?
                   std::filesystem::path(dump_path).parent_path() : std::filesystem::path{}};
         fcitx::setupTestingEnvironment(argv[1], {argv[2]}, {argv[3]});
 
         char arg0[] = "rimes-buffer-fcitx-e2e";
         char arg1[] = "--disable=all";
         char arg2[] = "--enable=testfrontend,testui,rimes";
-        char* args[] = {arg0, arg1, arg2};
+        // Fcitx's shipped TestIM provides a pass-through keyboard-us entry.
+        // The real keyboard addon is statically linked into the fcitx5 binary.
+        char launcherArg[] = "--enable=testfrontend,testui,testim,rimes";
+        char* args[] = {arg0, arg1, std::getenv("RIMES_TEST_LAUNCHER") ? launcherArg : arg2};
         fcitx::Instance instance(3, args);
         std::unique_ptr<SessionFixture> session_fixture;
         if (std::getenv("RIMES_TEST_SESSION_PROTECTION")) session_fixture = std::make_unique<SessionFixture>(instance.eventLoop());
@@ -916,6 +1007,7 @@ int main(int argc, char** argv) {
             }
             fcitx::InputMethodGroup group("Default");
             group.setDefaultLayout("us");
+            if (std::getenv("RIMES_TEST_LAUNCHER")) group.inputMethodList().emplace_back(fcitx::InputMethodGroupItem("keyboard-us"));
             group.inputMethodList().emplace_back(fcitx::InputMethodGroupItem("rimes"));
             group.setDefaultInputMethod("rimes");
             manager.setGroup(group);
@@ -955,7 +1047,9 @@ int main(int argc, char** argv) {
                     suite_started = true;
                     std::cout << "ok: buffer testfrontend left Deploying\n";
                     try {
-                        if (session_fixture)
+                        if (std::getenv("RIMES_TEST_LAUNCHER"))
+                            RunLauncherSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});
+                        else if (session_fixture)
                             RunProtectionSuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer}, session_fixture.get());
                         else if (std::getenv("RIMES_TEST_AI_API"))
                             RunAISuite({&instance, &extra_timers, frontend, uuid, ic, dump_path, &grace_timer, &hold_timer});

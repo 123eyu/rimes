@@ -24,6 +24,8 @@
 #include "local_translation.hpp"
 #include "ai_api.hpp"
 #include "session/session_monitor.hpp"
+#include "desktop/workspace_launcher.hpp"
+#include "desktop/desktop_shortcuts.hpp"
 
 namespace fcitx {
 
@@ -85,6 +87,8 @@ private:
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> focus_watch_;
     std::unique_ptr<SessionMonitor> session_monitor_;
+    std::unique_ptr<WorkspaceLauncher> launcher_;
+    std::unique_ptr<DesktopShortcuts> desktop_shortcuts_;
     bool deploy_announced_ = false;
     rimes::plugins::Registry plugins_;
     std::unique_ptr<rimes::plugins::PackageStore> plugin_store_;

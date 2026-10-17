@@ -59,6 +59,7 @@ public:
     void OnInputContextDestroyed(InputContext* ic);
     void OnPasswordField(InputContext* ic, bool password);
     void OnSessionProtection(bool protected_session);
+    void SetManagedHotkey() { managed_hotkey_ = true; }
 
     void Toggle(InputContext* ic);
     void ShowAndCapture(InputContext* ic);
@@ -87,6 +88,7 @@ public:
 private:
     bool restore_after_session_ = false;
     bool focus_suspended_ = false;
+    bool managed_hotkey_ = false;
     struct Client {
         int fd = -1;
         std::string incoming;

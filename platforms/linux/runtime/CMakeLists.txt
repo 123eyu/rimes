@@ -29,7 +29,16 @@ target_link_libraries(RimesProcess PUBLIC Threads::Threads)
 set_target_properties(RimesProcess PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(RimesProcess PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp core/configuration.cpp)
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/ShortcutPreferences.swift"
+    "${CMAKE_CURRENT_SOURCE_DIR}/generate_shortcut_contract.py")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/generate_shortcut_contract.py"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_shortcuts.hpp"
+    RESULT_VARIABLE RIMES_SHORTCUT_IMPORT_RESULT)
+if(NOT RIMES_SHORTCUT_IMPORT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Review the macOS shortcut contract before building Linux")
+endif()
+add_library(RimesPluginCore STATIC core/plugin_registry.cpp core/plugin_store.cpp core/package_binding.cpp core/official_catalog.cpp core/http_download.cpp core/configuration.cpp core/shortcuts.cpp)
 target_compile_features(RimesPluginCore PUBLIC cxx_std_17)
 target_include_directories(RimesPluginCore PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core" "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_include_directories(RimesPluginCore PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/generated")
@@ -105,7 +114,7 @@ execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/gen
 if(NOT RIMES_VISUAL_IMPORT_RESULT EQUAL 0)
     message(FATAL_ERROR "Review the native macOS visual contract before building Linux UI")
 endif()
-add_library(RimesDesktopUI STATIC ui/desktop.cpp ui/translation_resources.cpp)
+add_library(RimesDesktopUI STATIC ui/desktop.cpp ui/translation_resources.cpp ui/launcher_client.cpp)
 target_include_directories(RimesDesktopUI PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/ui" PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
 target_link_libraries(RimesDesktopUI PUBLIC RimesPluginCore PkgConfig::RuntimeGtk)
 target_compile_options(RimesDesktopUI PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -116,6 +125,12 @@ add_dependencies(rimes-settings rimes-translation)
 target_compile_options(rimes-settings PRIVATE -Wall -Wextra -Wpedantic -Werror)
 install(TARGETS rimes-settings DESTINATION "${CMAKE_INSTALL_BINDIR}")
 install(FILES ui/org.scholay.rimes.settings.desktop DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
+add_executable(rimes-launch ctl/launch_ctl.cpp)
+target_link_libraries(rimes-launch PRIVATE RimesDesktopUI)
+target_compile_options(rimes-launch PRIVATE -Wall -Wextra -Wpedantic -Werror)
+install(TARGETS rimes-launch DESTINATION "${CMAKE_INSTALL_BINDIR}")
+install(FILES ui/org.scholay.rimes.buffer.desktop ui/org.scholay.rimes.capsule.desktop
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/applications")
 
 if(BUILD_TESTING OR RIMES_BUILD_TESTS)
     add_executable(rimes-ai-codec-tests ../ai/chat_codec_tests.cpp)

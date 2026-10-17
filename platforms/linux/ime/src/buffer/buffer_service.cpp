@@ -304,7 +304,7 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
     if (gesture_.pending() && !event.isRelease() && !IsReturnKey(event.rawKey()) && !IsReturnKey(event.key())) {
         gesture_.cancel(); CancelHoldTimer(); model_.set_hold_progress(0);
     }
-    if (IsToggleHotkey(event)) {
+    if (!managed_hotkey_ && IsToggleHotkey(event)) {
         Toggle(ic);
         event.filterAndAccept();
         return true;

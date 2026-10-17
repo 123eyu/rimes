@@ -1,5 +1,6 @@
 #include "session/protected_input.hpp"
 #include "rimes_ime.hpp"
+#include <glib.h>
 
 #include <filesystem>
 #include <functional>
@@ -76,6 +77,18 @@ RimesIme::RimesIme(Instance* instance)
     };
     buffer_ = std::make_unique<BufferService>(instance_, post);
     capsule_ = std::make_unique<CapsuleService>(instance_, post);
+    launcher_ = std::make_unique<WorkspaceLauncher>(*instance_, *buffer_, *capsule_, [] {
+        const char* program = access(RIMES_INSTALLED_SETTINGS, X_OK) == 0 ? RIMES_INSTALLED_SETTINGS : RIMES_BUILD_SETTINGS;
+        gchar* arguments[] = {const_cast<gchar*>(program), nullptr};
+        GError* error = nullptr;
+        const bool launched = g_spawn_async(nullptr, arguments, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr, nullptr, &error);
+        g_clear_error(&error); return launched;
+    });
+    buffer_->SetManagedHotkey(); capsule_->SetManagedHotkey();
+    desktop_shortcuts_ = std::make_unique<DesktopShortcuts>(instance_->eventLoop(),
+        [this](const std::string& action) { return launcher_->Open(action); },
+        [this] { return launcher_->LastResult(); });
+    launcher_->SetDesktopStatus([this] { return desktop_shortcuts_ ? desktop_shortcuts_->Status() : rimes::runtime::Json::object(); });
     // Register only adapters which exist in this host. Catalog entries for
     // future Linux ports never become executable just by being downloaded.
     plugins_.Register({"builtin.capsule.notes", "笔记", "1.1.0",
@@ -139,6 +152,7 @@ RimesIme::RimesIme(Instance* instance)
                 if (auto* state = cap.inputContext()->propertyFor(&factory_)) state->reset();
             }
             if (!cap.inputContext()->hasFocus()) return;
+            if (password && launcher_) launcher_->Revoke();
             if (buffer_) {
                 buffer_->OnPasswordField(cap.inputContext(), password);
             }
@@ -156,6 +170,7 @@ RimesIme::RimesIme(Instance* instance)
             capsule_->OnPasswordField(ic, protected_field);
         });
     session_monitor_ = std::make_unique<SessionMonitor>(instance_->eventLoop(), [this](bool protected_session) {
+        if (protected_session && launcher_) launcher_->Revoke();
         buffer_->OnSessionProtection(protected_session);
         capsule_->OnSessionProtection(protected_session);
         if (protected_session) instance_->inputContextManager().foreach([this](InputContext* ic) {
@@ -182,6 +197,8 @@ void RimesIme::setConfig(const RawConfig& config) {
 }
 
 RimesIme::~RimesIme() {
+    desktop_shortcuts_.reset();
+    launcher_.reset();
     session_monitor_.reset();
     configuration_watch_.reset();
     if (configuration_watch_fd_ >= 0) close(configuration_watch_fd_);
@@ -258,9 +275,12 @@ void RimesIme::ApplyConfiguration() {
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
         buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
         buffer_->ConfigureAutoSend(config.at("autoSend"), config.at("autoSendSeconds"));
+        if (launcher_) launcher_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
+        if (desktop_shortcuts_) desktop_shortcuts_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
     } catch (const std::exception&) {
         configuration_revision_.clear();
         buffer_->ConfigureAutoSend(false, 1);
+        if (launcher_) launcher_->Revoke();
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
     }
 }

@@ -267,6 +267,13 @@ void CapsuleService::Close() {
     Publish();
 }
 
+void CapsuleService::ShowDetached() {
+    if (!enabled_ || model_.password_field()) return;
+    model_.Disarm("detached-open");
+    pending_unfocus_token_.clear(); CancelFocusGraceTimer();
+    ReloadNotes(); model_.set_visible(true); EnsureUi(); Publish();
+}
+
 void CapsuleService::SetEnabled(bool enabled) {
     if (enabled_ == enabled) return;
     enabled_ = enabled;
@@ -333,7 +340,7 @@ bool CapsuleService::HandleEarlyKey(KeyEvent& event) {
         return false;
     }
     OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
-    if (IsToggleHotkey(event)) {
+    if (!managed_hotkey_ && IsToggleHotkey(event)) {
         Toggle(ic);
         event.filterAndAccept();
         return true;

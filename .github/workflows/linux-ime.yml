@@ -17,6 +17,8 @@ on:
       - "Sources/RimeBuffer/RimeUI.swift"
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/AITextPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
@@ -44,6 +46,8 @@ on:
       - "Sources/RimeBuffer/RimeUI.swift"
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/AITextPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
@@ -95,7 +99,7 @@ jobs:
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev \
             xvfb xdotool dbus-x11 \
             python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
-            libgtk-layer-shell-dev libssl-dev libcurl4-openssl-dev \
+            libgtk-layer-shell-dev libxcb1-dev libssl-dev libcurl4-openssl-dev \
             qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
