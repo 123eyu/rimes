@@ -465,24 +465,44 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
     const auto disabled=packages.Inspect(notes.id);
     packages.Enable(notes.id,true,disabled.grant); engine->reloadConfig();
     const auto until=std::chrono::steady_clock::now()+std::chrono::seconds(8);
-    resume_timer=instance.eventLoop().addTimeEvent(CLOCK_MONOTONIC,fcitx::now(CLOCK_MONOTONIC)+50000,50000,
-        [&,frontend,uuid,ic,dump_path,until](fcitx::EventSourceTime* timer,uint64_t) {
+    resume_timer = instance.eventLoop().addTimeEvent(
+        CLOCK_MONOTONIC, fcitx::now(CLOCK_MONOTONIC) + 50000, 50000,
+        [&, frontend, uuid, ic, dump_path, until, opened = false](fcitx::EventSourceTime* timer,
+                                                                  uint64_t) mutable {
             try {
                 if(ReadDump(dump_path).find("\"loading\":true")!=std::string::npos) {
-                    if(std::chrono::steady_clock::now()>until) Die("Capsule reload timed out");
-                    timer->setTime(fcitx::now(CLOCK_MONOTONIC)+50000);timer->setOneShot();return true;
+                    if(std::chrono::steady_clock::now()>until)
+                        Die("Capsule reload timed out");
+                    timer->setTime(fcitx::now(CLOCK_MONOTONIC)+50000);
+                    timer->setOneShot();
+                    return true;
                 }
-                SendKey(frontend,uuid,"Control+Shift+V");
-                for(int i=0;i<5 && ReadDump(dump_path).find("\"module\":\"notes\"")==std::string::npos;++i) SendKey(frontend,uuid,"Tab");
+                if (!opened) {
+                    SendKey(frontend, uuid, "Control+Shift+V");
+                    for (int i = 0; i < 5 && ReadDump(dump_path).find("\"module\":\"notes\"") ==
+                                                 std::string::npos;
+                         ++i)
+                        SendKey(frontend, uuid, "Tab");
+                    opened = true;
+                }
                 const auto restored=ReadDump(dump_path);
+                if (restored.find("\"loading\":true") != std::string::npos) {
+                    if (std::chrono::steady_clock::now() > until)
+                        Die("re-enabled notes reload timed out");
+                    timer->setTime(fcitx::now(CLOCK_MONOTONIC) + 20000);
+                    timer->setOneShot();
+                    return true;
+                }
                 ExpectContains(restored,"\"armed\":true","re-enabled plugin needs explicit target capture");
                 ExpectContains(restored,"RIMES 默认词条","re-enabled module failed to reload data");
                 std::cout<< "ok: package disable revokes capture, preserves data "
                              "and ordinary typing; re-enable reloads notes\n";
                 RunDetailSuite(instance, frontend, uuid, ic, dump_path);
                 return true;
-            } catch(const TestFailed&) {}
-            instance.exit();return true;
+            } catch(const TestFailed&) {
+            }
+            instance.exit();
+            return true;
         });
 }
 
