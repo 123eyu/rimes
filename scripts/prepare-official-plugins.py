@@ -118,6 +118,21 @@ def prepare(root, source, update_lock=False):
             header += '{' + cpp_string(entry["id"]) + ',\n' + cpp_string(data) + '},\n'
         header += "};\n}\n"
         imports["platforms/windows/native/src/workbench/official_plugin_catalog.generated.hpp"] = header.encode()
+    # Keep unsupported desktop entries visible as unavailable. The Linux host
+    # additionally checks its compiled adapters before accepting any package.
+    linux = [entry for entry in packages if "macos" in entry["platforms"] or "linux" in entry["platforms"]]
+    if linux:
+        header = "// Generated from the pinned official plugin catalog. Do not edit.\n#pragma once\n#include <string_view>\nnamespace rimes::linuxruntime::official {\n"
+        # The complete license-bearing catalog exceeds GCC's constexpr strlen
+        # limit. An array preserves the exact bytes without evaluating strlen
+        # at compile time or increasing compiler resource limits.
+        header += 'inline constexpr char kCatalogJSON[] =\n' + cpp_string(canonical({"schemaVersion": 1, "plugins": linux}).decode()) + ';\n'
+        header += "struct BundledPackage { std::string_view id, bytes; };\ninline constexpr BundledPackage kPackages[] = {\n"
+        for entry in linux:
+            package = {key: value for key, value in entry.items() if key not in ("sha256", "downloadAssetName", "downloadURL")}
+            header += '{' + cpp_string(entry["id"]) + ',\n' + cpp_string(canonical(package).decode()) + '},\n'
+        header += "};\n}\n"
+        imports["platforms/linux/runtime/generated/official_plugin_catalog.hpp"] = header.encode()
     inputs = {name: digest(safe_path(source, name).read_bytes()) for name in sorted(input_names)}
     revision = subprocess.check_output(["git", "-C", str(source), "rev-parse", "HEAD"], text=True, encoding="utf-8").strip()
     if update_lock:

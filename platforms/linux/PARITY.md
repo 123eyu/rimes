@@ -9,8 +9,8 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 顺序 | 优先级 | GitHub 任务 | 状态 |
 |---|---|---|---|
 | 01 | P0 | [#151 插件注册、能力与启停生命周期](https://github.com/scholay/xsime/issues/151) | 源码及本地回归通过，待 CI |
-| 02 | P0 | [#152 官方插件安装、更新和完整性校验](https://github.com/scholay/xsime/issues/152) | 进行中 |
-| 03 | P0 | [#153 统一设置、插件配置与凭据存储](https://github.com/scholay/xsime/issues/153) | 待开发 |
+| 02 | P0 | [#152 官方插件安装、更新和完整性校验](https://github.com/scholay/xsime/issues/152) | 源码及本地回归通过，待 CI |
+| 03 | P0 | [#153 统一设置、插件配置与凭据存储](https://github.com/scholay/xsime/issues/153) | 进行中 |
 | 04 | P0 | [#154 Buffer 双轨工作区与异步任务状态](https://github.com/scholay/xsime/issues/154) | 待开发 |
 | 05 | P0 | [#155 Linux 本地翻译引擎和资源管理](https://github.com/scholay/xsime/issues/155) | 待开发 |
 | 06 | P0 | [#156 实时增量翻译与连续输入](https://github.com/scholay/xsime/issues/156) | 待开发 |
