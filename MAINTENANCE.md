@@ -4,12 +4,20 @@
 
 - 一个仓库、一条应用集成主线 `main`；macOS、iOS、Android、Windows、Linux 不维持长期分叉的产品主线。
 - 新工作从最新主线开短分支，一件事一个可审查提交/PR；合入后不再沿旧分支叠加功能。
-- 每个平台独立构建和验收。Linux deb 随项目 `v*` 版本附到同一 Release；iOS、Android、Windows 保持各自发布渠道。2026-10-04 的跨平台版本基线为 **1.1.0**，构建编号独立递增；Windows 可在同一 major.minor 基线内独立发布向前的补丁版本。合入主线不等于可用或已发布。
+- 每个平台独立构建和验收。从 1.1.6 起，macOS、Android、Windows、Linux 的正式安装包统一由项目 `v*` 流程构建并附到同一 Release，全部读回校验后才发布共同的更新清单。iOS 独立走 App Store；各平台构建编号独立递增。合入主线不等于可用或已发布。
 - 本地维护可以领先 `origin/main`。未获授权时，不 push、不创建发布 tag、不触发远端 workflow，
   不安装输入法、不提交 App Store、不修改远端 PR 或保护规则。
 - 获准同步远端时，从已验证的本地主线提交创建交付分支，经 PR 回到 `origin/main`；不 force-push
   或绕过保护。再按届时的远端主线和 CI 状态处理本地对齐，不直接重置包含未发布工作的分支。
 - 用户词库、凭据、运行时数据不参与分支整理；保留原始提交与备份引用，不自动清理旧分支。
+
+## 2026-10-19 全平台 1.1.6 收敛
+
+- 本体 [#215](https://github.com/scholay/xsime/pull/215)、[#216](https://github.com/scholay/xsime/pull/216)、[#217](https://github.com/scholay/xsime/pull/217) 经正常 PR 合并，保留原作者提交。应用发布源码为 `91e6f322472b4752d1b4fcb7bbc14b995f894844`，不可变标签 `v1.1.6`。
+- 官方插件 [#19](https://github.com/scholay/rimes-plugins/pull/19) 已合入插件 main 并发布 v1.1.6；本体保持审查后的固定依赖，不自动追随插件 main。
+- 五端确切主线提交的远端 CI 全部通过。按维护者要求，本次不在维护者这台 Mac 上构建、安装或测试。最终包与实际公开状态见 [1.1.6 发布记录](docs/releases/1.1.6.md)。
+- 主工作区已回到 main，91 份本地验收资料摘要一致，两份 stash、备份引用及旧工作区保留。Windows 开发机当前无法连接；收敛范围为已取得的本地及 GitHub 已推送改动，未声称核验其未推送内容。
+- 正式 tag 冻结应用发布源码。原流程的清单任务跳过问题以独立 CI 修复 [#219](https://github.com/scholay/xsime/pull/219) 收敛，并用原 run 的不可变资产补发；不移动 tag、不重新构建或更换公开包。测试加固 [#218](https://github.com/scholay/xsime/pull/218) 与发布文档随后合入 main，产品源码仍对应原 tag。
 
 ## 2026-10-13 全平台 1.1.3 发布
 
@@ -91,12 +99,12 @@ python3 scripts/prepare-official-plugins.py
 |---|---|---|---|
 | macOS | `VERSION` 与 `Info.plist`；正式 tag 匹配，本地开发版附提交身份 | `CI` / `Release macOS`，`scripts/release.sh` | 正式包需签名、公证、同包真机验收与批准 |
 | iOS | 公开版 `ios-vX.Y.Z`；本地默认 `project.yml`，CI 独立 build number | `iOS checks` / `ios-release.yml` | tag 必须位于 main 历史；上传、审核、上架分开记录 |
-| Android | `platforms/android/VERSION` 与 Gradle versionCode | `Android checks` / `scripts/build-release.sh` | 正式 APK/AAB 需长期签名与独立验收 |
-| Windows 原生 | `native/VERSION` 生成工程、PE 和运行时版本；Artifact 加架构和源码快照 | `Windows IME` / `Windows Native Foundation` 与 `New-RimesNativePackage.ps1` | Windows 11 x64；经独立验收和授权，手工发布未签名 EXE 到 `windows-v*` |
+| Android | `platforms/android/VERSION` 与 Gradle versionCode | `Android checks` / 项目 `v*` 正式流程 | 长期签名 APK/AAB，受保护的 android-release 环境，设置内升级 |
+| Windows 原生 | `native/VERSION` 生成工程、PE 和运行时版本；Artifact 加架构和源码快照 | `Windows IME` / 项目 `v*` 正式流程与 `New-RimesNativePackage.ps1` | Windows x64，包含 x64／x86 TSF；正式流程发布完整未签名 EXE／ZIP，设置内升级 |
 | Linux 原生 | 根 `VERSION`；发布时读取同一 `v*` tag，preview 转为 Debian `~preview.N` | `Linux IME` / `linux-deb.yml` / `Release macOS` 的 Linux 附件 job | Ubuntu 24.04 amd64 deb + SHA-256；需真实桌面验证 |
 | 旧 Windows/Linux 数据预览 | `platform-preview-vX.Y.Z` | `platform-preview-release.yml` | 词库与脚本数据包，不是原生 IME 产品版本 |
 
-四个目标平台保留 1.1.0 基线，后续构建编号独立递增；Windows 1.1.1 是独立补丁发布。版本检查要求 Windows 的 major.minor 与基线一致、patch 不回退，并核验 CMake 消费其 VERSION。Windows 原生产品使用 `windows-v*`，从冻结源码构建、校验安装包后，经维护者授权手工创建 GitHub Release；该标签不会自动运行 macOS 发布流程。
+1.1.6 起四端安装包使用同一正式 `v*` 版本，分别记录各自构建和校验结果；iOS 的上传、审核和上架状态单独记录。旧 `android-v*`、`windows-v*` 标签及已发布资产保留为历史，不删除、移动或覆盖。
 
 Linux CMake 与 deb 统一读取根 `VERSION`，不再单独维护 `ime/VERSION`。后续每个 `v*` Release 都构建、测试并附带同一提交的 deb 与校验文件；PR／手动／定时演练只保留 Artifact。修改安装、依赖、升级或卸载行为时，同步更新 Linux 安装文档与发布说明。日常使用推荐 deb，源码卸载脚本按安装清单清理程序并保留词库和学习记录。配置好发布流程不表示对应版本已发布。
 

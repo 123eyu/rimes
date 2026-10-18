@@ -106,17 +106,17 @@
 
 ## 安装
 
-[1.1.4 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.1.4)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
+[1.1.6 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.1.6)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
 
 | 平台 | 版本与安装入口 |
 |---|---|
-| macOS | [1.1.4 PKG](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-1.1.4.pkg)，Apple Silicon／Intel，已签名和公证 |
-| Android | [1.1.4 APK](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Android-1.1.4.apk)，版本码 18，沿用长期签名 |
-| Windows | [1.1.4 EXE](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
-| Linux | [1.1.4 DEB](https://github.com/scholay/xsime/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
+| macOS | [1.1.6 PKG](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-1.1.6.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.1.6 APK](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Android-1.1.6.apk)，版本码 20，沿用长期签名 |
+| Windows | [1.1.6 EXE](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Windows-1.1.6-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.1.6 DEB](https://github.com/scholay/xsime/releases/download/v1.1.6/fcitx5-rimes_1.1.6_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
 | iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。公开可安装版本以 Apple 页面为准 |
 
-本轮构建、导入测试与安装验收范围见[1.1.4 发布记录](docs/releases/1.1.4.md)。
+本轮构建、导入测试与安装验收范围见[1.1.6 发布记录](docs/releases/1.1.6.md)。
 
 macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/xsime/issues/90)。
 
@@ -133,7 +133,7 @@ cd xsime
 | iOS | 键盘与主 App（iOS 17+）：离线拼音、自然码、五笔、英文，以及 Buffer | 用 Xcode 打开 [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md) |
 | Windows | 原生 TSF 输入法、Buffer、并击及官方插件设置；x64 系统，x64／x86 TSF | 见 [`platforms/windows/native/README.md`](platforms/windows/native/README.md) |
 | Android | 原生输入法（InputConnection）、Buffer、六个官方插件和可配置 AI 服务 | 见 [`platforms/android/README.md`](platforms/android/README.md) |
-| Linux | Fcitx5 输入法、Buffer、Capsule。还没有 Mailbox | 见 [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
+| Linux | Fcitx5 输入法、Buffer、Capsule 与 Mailbox | 见 [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
 
 ## 文档
 
@@ -154,22 +154,28 @@ cd xsime
 | [RELEASE-HISTORY.md](RELEASE-HISTORY.md) | 已关闭的发布通道、旧仓库迁移与改名记录 |
 | [CHANGELOG.md](CHANGELOG.md) | 由公开 GitHub Release 与提交信息生成的逐版本变更 |
 
-## 自动更新
+## 应用更新
 
-已发布的正式签名版（仍可能显示 XSIME）会检查 [`scholay/xsime`](https://github.com/scholay/xsime) 的
-GitHub Release；未签名的 `vX.Y.Z-preview.N` 不会进入该通道。
+从 1.1.6 起，五端都在设置中提供「检查更新」。macOS、Windows、Android、Linux 可继续下载并调用系统安装器；重新打开应用、确认已运行目标版本后显示完成提示。设置、导入方案和学习记录会保留；如系统要求授权、注销或重启，请按提示完成。
 
-macOS 自动发布工作流的入口如下（各平台流程见 [RELEASE.md](RELEASE.md)，变更见 [CHANGELOG.md](CHANGELOG.md)）：
+| 平台 | 更新方式 |
+|---|---|
+| macOS | 下载已签名、公证的 PKG，交给 macOS Installer 安装 |
+| Windows | 下载完整 EXE 并安装；当前 EXE 未签名 |
+| Android | 下载沿用长期签名的 APK，在系统安装器确认升级 |
+| Linux | Ubuntu 24.04 amd64 下载 DEB，授权系统包管理器安装 |
+| iOS | 检查实际可用的商店版本，前往 App Store 下载和安装；测试版由 TestFlight 更新 |
+
+旧版尚未提供完整更新入口时，请先从上方下载表手动升级一次。GitHub 发布新版本不代表 iOS 同版已上架，以 Apple 页面为准。
+
+四端正式安装包统一发布在 [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest) 的 `vX.Y.Z` Release。CI 上传并读回全部安装包后，最后发布共同的 `update-manifest.json`；预览版不进入正式更新通道。iOS 使用独立的 `ios-vX.Y.Z` 商店发布流程。
+
+维护者在五端主线 CI 通过后发布，步骤见 [RELEASE.md](RELEASE.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)：
 
 ```bash
-./scripts/release.sh --dry-run preview  # 预览计划、CI 门禁与发布说明
-./scripts/release.sh preview            # macOS 未签名预览版 vX.Y.Z-preview.N
-./scripts/release.sh stable             # 预览线转正为 vX.Y.Z（需 Developer ID）
-./scripts/release.sh platform minor     # 显式维护用 Windows/Linux 数据预览（不阻断 macOS）
+./scripts/release.sh stable --dry-run  # 检查版本、五端 CI 与发布前提
+./scripts/release.sh stable            # 创建正式 tag，由 GitHub Actions 构建和发布
 ```
-
-所有 Release 都发布在 `scholay/xsime`：macOS `vX.Y.Z` 是正式版；`vX.Y.Z-preview.N` 是未签名
-Pre-release，不进入自动更新。Android 正式包使用 `android-vX.Y.Z`，Windows 正式包使用 `windows-vX.Y.Z`；旧 Windows/Linux 数据包 `platform-preview-vX.Y.Z` 始终是 Pre-release。
 
 ## 友链
 

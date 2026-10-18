@@ -81,7 +81,7 @@
 
 ## インストール
 
-[1.1.4 リリース](https://github.com/scholay/xsime/releases/tag/v1.1.4)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.4 の検証記録](docs/releases/1.1.4.md)を参照してください。ソースからのローカルビルドも可能です。
+[1.1.6 リリース](https://github.com/scholay/xsime/releases/tag/v1.1.6)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 amd64／Fcitx5）をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.1.6 の検証記録](docs/releases/1.1.6.md)を参照してください。ソースからのローカルビルドも可能です。
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/xsime.git
@@ -94,7 +94,7 @@ cd xsime
 | iOS | キーボードと本体アプリ（iOS 17+）。オフラインの拼音、自然碼、五筆、英語、および Buffer | Xcode で [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md) を開く |
 | Windows | ネイティブ TSF 入力メソッド、Buffer、並打、公式プラグイン設定。x64 / x86 対応 | [`platforms/windows/native/README.md`](platforms/windows/native/README.md) を参照 |
 | Android | ネイティブ InputConnection キーボード、Buffer、6つの公式プラグイン、設定可能な AI サービス | [`platforms/android/README.md`](platforms/android/README.md) を参照 |
-| Linux | Fcitx5 入力メソッド、Buffer、Capsule。Mailbox はまだない | [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) を参照 |
+| Linux | Fcitx5 入力メソッド、Buffer、Capsule、Mailbox | [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) を参照 |
 
 ## ドキュメント
 
@@ -113,20 +113,22 @@ cd xsime
 | [RELEASE-HISTORY.md](RELEASE-HISTORY.md) | 閉じたリリース経路、旧リポジトリの移行、改名の記録 |
 | [CHANGELOG.md](CHANGELOG.md) | 公開 GitHub Release とコミットメッセージから生成した版ごとの変更 |
 
-## 自動更新
+## アプリの更新
 
-正式に署名してインストールした XSIME は、[`scholay/xsime`](https://github.com/scholay/xsime) の GitHub Release を確認します。未署名の `vX.Y.Z-preview.N` はこの経路に入りません。
+1.1.6 から、5つのプラットフォームの設定に「更新を確認」があります。macOS は署名・公証済み PKG、Windows は完全な EXE、Android は従来の鍵で署名した APK をダウンロードし、システムのインストーラで更新します。Linux は Ubuntu 24.04 amd64 向けの DEB を取得し、システムのパッケージ管理に権限を与えてインストールします。Windows EXE は現在未署名です。
 
-リリースの入口は一つで、バージョン番号は tag だけから来ます。手順は [RELEASE.md](RELEASE.md)、変更は [CHANGELOG.md](CHANGELOG.md) を見てください。
+アプリを再度開き、実行中のバージョンを確認してから完了を表示します。設定、取り込んだ入力方案、学習記録は保持します。システムが認証、ログアウト、再起動を求めた場合は案内に従ってください。旧版に更新機能がない場合は、上記の配布ページから一度手動で更新してください。
+
+iOS は実際に提供されているストア版を確認し、App Store でダウンロード・インストールします。テスト版は TestFlight が管理します。GitHub の公開だけでは iOS の公開を意味しません。
+
+4つのインストーラは [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest) の同じ `vX.Y.Z` Release に公開します。CI はすべての配布ファイルをアップロードして読み戻した後、最後に共通の `update-manifest.json` を公開します。プレビュー版は正式更新の対象外です。iOS は独立した `ios-vX.Y.Z` のストア向け手順を使います。
+
+保守担当者は5つのプラットフォームの main CI が通過してから公開します。[RELEASE.md](RELEASE.md) と [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
 ```bash
-./scripts/release.sh --dry-run preview  # 計画、CI の門、リリースノートをプレビュー
-./scripts/release.sh preview            # 未署名の macOS プレビュー vX.Y.Z-preview.N
-./scripts/release.sh stable             # プレビュー系列を vX.Y.Z にする（Developer ID が必要）
-./scripts/release.sh platform minor     # 保守用の Windows/Linux データプレビュー（macOS を止めない）
+./scripts/release.sh stable --dry-run  # バージョン、5端の CI、公開条件を確認
+./scripts/release.sh stable            # 正式 tag を作り、GitHub Actions で構築・公開
 ```
-
-すべての Release は `scholay/xsime` に公開されます。macOS の `vX.Y.Z` は正式版です。`vX.Y.Z-preview.N` は未署名の Pre-release で、自動更新には入りません。Windows/Linux の `platform-preview-vX.Y.Z` は常に Pre-release です。
 
 ## リンク
 
