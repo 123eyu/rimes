@@ -26,13 +26,18 @@ def event_section(text, event):
 
 class MainlineChannelTests(unittest.TestCase):
     def test_platform_checks_follow_main_not_retired_feature_branches(self):
-        for name in ("ios.yml", "linux-ime.yml", "windows-ime.yml"):
+        for name in ("ios.yml", "android.yml", "linux-ime.yml", "windows-ime.yml"):
             with self.subTest(workflow=name):
                 text = workflow(name)
                 for event in ("push", "pull_request"):
                     block = event_section(text, event)
                     self.assertRegex(block, r"branches:\s*(?:\[main\]|\n\s+- main\n)")
-                    self.assertIn("paths:", block)
+                    if event == "pull_request":
+                        self.assertIn("paths:", block)
+                    else:
+                        # Stable tags require every platform's push evidence
+                        # for the exact main SHA, including one-platform fixes.
+                        self.assertNotRegex(block, r"\bpaths(?:-ignore)?:")
                 trigger = text.split("permissions:", 1)[0]
                 self.assertNotIn("cursor/", trigger)
                 self.assertNotIn("codex/ios-", trigger)
@@ -57,14 +62,13 @@ class MainlineChannelTests(unittest.TestCase):
         self.assertLess(text.index(guard), text.index("Check required signing credentials"))
         self.assertNotIn("workflow_dispatch:", text.split("permissions:", 1)[0])
 
-    def test_shared_dictionary_changes_get_platform_evidence(self):
+    def test_shared_dictionary_changes_get_pr_evidence(self):
         for name in ("ios.yml", "windows-ime.yml", "linux-ime.yml"):
             with self.subTest(workflow=name):
-                for event in ("push", "pull_request"):
-                    block = event_section(workflow(name), event)
-                    self.assertRegex(block, r"['\"]rime-data/\*\*['\"]")
-                    if name != "ios.yml":
-                        self.assertRegex(block, r"['\"]scripts/platform-preview/\*\*['\"]")
+                block = event_section(workflow(name), "pull_request")
+                self.assertRegex(block, r"['\"]rime-data/\*\*['\"]")
+                if name != "ios.yml":
+                    self.assertRegex(block, r"['\"]scripts/platform-preview/\*\*['\"]")
 
     def test_linux_deb_is_required_and_attached_only_after_project_publication(self):
         text = workflow("release.yml")
