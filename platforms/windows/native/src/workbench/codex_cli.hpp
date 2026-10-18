@@ -21,8 +21,19 @@ class CodexJsonDecoder {
 };
 std::wstring QuoteWindowsArgument(const std::wstring& value);
 std::vector<std::wstring> CodexTextArguments(const std::filesystem::path& workspace,
-                                            const std::string& model);
+                                            const std::string& model, const std::string& effort = {});
+std::vector<std::wstring> CodexAppServerArguments(const std::filesystem::path& workspace);
+bool RunCodexStreamingProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const Generation& job,
+    const std::function<bool(const std::string&)>& snapshot,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms = 120000);
 std::filesystem::path ResolveCodex(const std::string& override_path);
+std::filesystem::path CodexHome();
+bool RunCodexControl(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::function<bool()>& cancelled,
+    std::string* error, unsigned timeout_ms = 10000,
+    const std::function<void(std::string_view)>& output = {});
 bool GenerateCodex(const Settings&, const Generation&,
                    const std::function<bool(const std::string&)>&,
                    const std::function<bool()>&, std::string*);
@@ -36,6 +47,11 @@ bool RunCodexTextProcess(const std::filesystem::path& executable,
                          const std::function<bool()>& cancelled,
                          std::string* error, unsigned timeout_ms = 120000);
 // Fixed local helpers share the bounded, cancellable job and pipe transport.
+// Bounded JSON-line worker for offline model reuse; cancellation retires it.
+bool RunWarmLocalTextProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const std::function<bool(const std::string&)>& chunk,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms = 120000);
 bool RunLocalTextProcess(const std::filesystem::path& executable,
     const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
     const std::string& input, const std::function<bool(const std::string&)>& output,

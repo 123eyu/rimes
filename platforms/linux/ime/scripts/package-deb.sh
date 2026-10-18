@@ -41,7 +41,7 @@ WORKDIR=$(mktemp -d /tmp/rimes-deb.XXXXXX)
 trap 'rm -rf "$WORKDIR"' EXIT
 
 STAGE="$WORKDIR/data"
-python3 "$REPO_ROOT/scripts/platform-preview/preview.py" stage \
+python3 "$SCRIPT_DIR/stage-data.py" \
     --repo-root "$REPO_ROOT" \
     --output-dir "$STAGE"
 
@@ -54,6 +54,15 @@ cmake -S "$IME_ROOT" -B "$BUILD_DIR" \
 cmake --build "$BUILD_DIR" -j"$(nproc)"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 "$BUILD_DIR/rimes-engine-smoke" "$STAGE" "$WORKDIR/smoke-user"
+"$BUILD_DIR/rimes-chord-engine-tests" "$STAGE"
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/rimes-chord-fcitx-e2e" "$BUILD_DIR" . test-data
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/rimes-metrics-fcitx-e2e" "$BUILD_DIR" . test-data
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/practice-probe/rimes-settings" "$BUILD_DIR" . test-data
+dbus-run-session --config-file="$IME_ROOT/tests/portal_fixture_bus.conf" -- xvfb-run -a python3 \
+    "$REPO_ROOT/platforms/linux/typing-practice/tests/practice_desktop_test.py" "$BUILD_DIR" "$STAGE"
 
 ROOT="$WORKDIR/root"
 RIMES_IME_STAGE_DIR="$STAGE" DESTDIR="$ROOT" \
@@ -117,14 +126,15 @@ Section: utils
 Priority: optional
 Architecture: $ARCH
 Installed-Size: $SIZE
-Depends: fcitx5, python3.12, $DEPS
-Recommends: libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk
+Depends: pkexec, fcitx5, fcitx5-frontend-gtk3, python3.12, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-pipewire, xdg-desktop-portal, $DEPS
+Recommends: xdg-desktop-portal-gtk, libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk, fonts-noto-color-emoji
 Maintainer: XSIME contributors <https://github.com/scholay/xsime>
 Homepage: https://xsime.com
 Description: XSIME input method frontend for Fcitx 5
  A librime frontend owned by XSIME. It deploys the reviewed XSIME rime-data
  set, keeps user state in ~/.local/share/rimes, and ships the Linux Buffer
- workbench, Capsule rail and scheme importer next to the Fcitx5 addon.
+ workbench, Capsule rail, Mailbox workspace and scheme importer next to
+ the Fcitx5 addon.
  A private pinned Rime/Lua runtime supports portable third-party schemes.
 EOF
 

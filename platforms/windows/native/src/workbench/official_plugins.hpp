@@ -11,6 +11,8 @@ namespace rimes::windows::workbench {
 struct PluginView {
   std::string id, name, version, grant;
   bool installed = false, enabled = false, bundled = false;
+  std::string kind = "buffer";
+  bool can_install = true;
 };
 // Host-owned verified package store. Only the Broker writes; private user data
 // and credentials are never part of this directory or the uninstall operation.
@@ -19,6 +21,8 @@ class OfficialPluginStore {
   explicit OfficialPluginStore(std::filesystem::path root = {});
   std::vector<PluginView> Entries();
   std::string Grant(const std::string& id);
+  std::string LoadBufferSelection();
+  bool SaveBufferSelection(const std::string& id, std::string* error);
   core::Json Package(const std::string& id);
   bool Install(const std::string& id, std::string* error);
   bool InstallData(const std::string& id, const std::string& bytes,

@@ -1,0 +1,210 @@
+[
+  {
+    "page": "day-chat-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.05410955882352941,
+    "mean_absolute_channel_error": 4.218798774509804,
+    "pair": "day-chat-compact-pair.png",
+    "difference_4x": "day-chat-compact-diff.png"
+  },
+  {
+    "page": "day-chat-failed-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.037827941176470585,
+    "mean_absolute_channel_error": 2.176062254901961,
+    "pair": "day-chat-failed-compact-pair.png",
+    "difference_4x": "day-chat-failed-compact-diff.png"
+  },
+  {
+    "page": "day-chat-failed-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.06311964285714286,
+    "mean_absolute_channel_error": 2.3942173809523806,
+    "pair": "day-chat-failed-wide-pair.png",
+    "difference_4x": "day-chat-failed-wide-diff.png"
+  },
+  {
+    "page": "day-chat-new-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.0551235294117647,
+    "mean_absolute_channel_error": 4.2970379901960785,
+    "pair": "day-chat-new-compact-pair.png",
+    "difference_4x": "day-chat-new-compact-diff.png"
+  },
+  {
+    "page": "day-chat-new-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.05145821428571429,
+    "mean_absolute_channel_error": 3.408046666666667,
+    "pair": "day-chat-new-wide-pair.png",
+    "difference_4x": "day-chat-new-wide-diff.png"
+  },
+  {
+    "page": "day-chat-running-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.042581617647058825,
+    "mean_absolute_channel_error": 2.6880205882352946,
+    "pair": "day-chat-running-compact-pair.png",
+    "difference_4x": "day-chat-running-compact-diff.png"
+  },
+  {
+    "page": "day-chat-running-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.06539928571428572,
+    "mean_absolute_channel_error": 2.6363484523809526,
+    "pair": "day-chat-running-wide-pair.png",
+    "difference_4x": "day-chat-running-wide-diff.png"
+  },
+  {
+    "page": "day-chat-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.07009571428571429,
+    "mean_absolute_channel_error": 3.367572857142857,
+    "pair": "day-chat-wide-pair.png",
+    "difference_4x": "day-chat-wide-diff.png"
+  },
+  {
+    "page": "night-chat-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.45088823529411765,
+    "mean_absolute_channel_error": 4.2890009803921565,
+    "pair": "night-chat-compact-pair.png",
+    "difference_4x": "night-chat-compact-diff.png"
+  },
+  {
+    "page": "night-chat-failed-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.4328183823529412,
+    "mean_absolute_channel_error": 2.2794235294117646,
+    "pair": "night-chat-failed-compact-pair.png",
+    "difference_4x": "night-chat-failed-compact-diff.png"
+  },
+  {
+    "page": "night-chat-failed-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.47288107142857144,
+    "mean_absolute_channel_error": 2.3343973809523813,
+    "pair": "night-chat-failed-wide-pair.png",
+    "difference_4x": "night-chat-failed-wide-diff.png"
+  },
+  {
+    "page": "night-chat-new-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.31325,
+    "mean_absolute_channel_error": 4.6542375,
+    "pair": "night-chat-new-compact-pair.png",
+    "difference_4x": "night-chat-new-compact-diff.png"
+  },
+  {
+    "page": "night-chat-new-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.4035142857142857,
+    "mean_absolute_channel_error": 3.4681884523809523,
+    "pair": "night-chat-new-wide-pair.png",
+    "difference_4x": "night-chat-new-wide-diff.png"
+  },
+  {
+    "page": "night-chat-running-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.4385676470588235,
+    "mean_absolute_channel_error": 2.7015225490196078,
+    "pair": "night-chat-running-compact-pair.png",
+    "difference_4x": "night-chat-running-compact-diff.png"
+  },
+  {
+    "page": "night-chat-running-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.4756757142857143,
+    "mean_absolute_channel_error": 2.5260586904761904,
+    "pair": "night-chat-running-wide-pair.png",
+    "difference_4x": "night-chat-running-wide-diff.png"
+  },
+  {
+    "page": "night-chat-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.48165857142857144,
+    "mean_absolute_channel_error": 3.2728235714285714,
+    "pair": "night-chat-wide-pair.png",
+    "difference_4x": "night-chat-wide-diff.png"
+  }
+]

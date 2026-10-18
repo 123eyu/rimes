@@ -1,0 +1,38 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "fff17a358e28441c3fee40308f79917408462538",
+  "sourceFiles": {
+    "Sources/RimeBuffer/CapsuleRailSmoke.swift": "82dc2416d486881a6f3ccd1ed9758c307c4d799f36fe0060aba12ad8a38bd5e5",
+    "Sources/RimeBuffer/CapsuleWindowController.swift": "674ede84577f8145f42ee5ee95de506f7b33fbf63215cea8e997800988c2269a",
+    "Sources/RimeBuffer/RimeFixedAccentPopUpButton.swift": "b90d30f2cda3560e5d6388db8e5233687fcbbd860a0935f818ce672025651609",
+    "platforms/linux/capsule/ui/capsule_manager.cpp": "05edec12bf9ae4fcda54d68ab37c2ef536625902f073fb531bd9d42d0797d43a",
+    "platforms/linux/capsule/ui/capsule_manager.hpp": "b5e374db08239baeeecfb7c8664d3d6b25e2f0f4fb692422cdf9ce09f8e53e39",
+    "platforms/linux/capsule/ui/rimes_capsule_app.cpp": "8d543e5a9b4942de8fd4789bb59582a0b6503353fce19e9ac9d66275aaf6e01c",
+    "platforms/linux/capsule/tests/capsule_manager_tests.cpp": "4b1038db93cd599becf93d34f095fd9523a66a5ce2f191ec7074da01b1c9cd3f",
+    "platforms/linux/validation/render_capsule_manager.py": "8f414897631ecb3eea991f68519568665b12ffa220def02d53eda553a3ca54a9",
+    ".github/workflows/linux-ime.yml": "9564e7b0a2a0bef6590faf95c5ecaa15b25698eb0f96748a2247be82eb0c9912"
+  },
+  "macos": "ProductName:\t\tmacOS\nProductVersion:\t\t27.0.1\nBuildVersion:\t\t26A434",
+  "linux": "Ubuntu 24.04 arm64 / GTK 3 / Xvfb + Xfwm4, private D-Bus and user roots",
+  "state": "4 identical generated note records; first row selected; inactive window; 940x660 at 2x; actual light/dark appearance verified",
+  "tests": {
+    "swiftDebugBuild": "passed with Xcode",
+    "macosSmokes": [
+      "capsule-window-smoke",
+      "capsule-module-smoke",
+      "capsule-rail-smoke"
+    ],
+    "linuxCTest": [
+      "capsule-manager-ui",
+      "capsule-password-ui",
+      "capsule-capture-controller",
+      "capsule-note-editor-ui"
+    ],
+    "resizes": [
+      "940x660",
+      "620x430",
+      "940x660"
+    ]
+  },
+  "acceptance": "requires_review: font/glyphs, text line height, inline controls and action placement remain different"
+}

@@ -61,27 +61,27 @@ This table is generated from [`Catalog/buffer-plugins.json`](Catalog/buffer-plug
 
 | Plug-in | ID | Version | Default installation | Default state |
 |---|---|---:|---|---|
-| Translation | `builtin.apple-translation` | 2.2.0 | Bundled with XSIME | Enabled |
+| Translation | `builtin.apple-translation` | 2.3.0 | Bundled with XSIME | Enabled |
 | Capture | `builtin.capsule.capture` | 1.1.0 | Bundled with XSIME | Enabled |
 | Notes | `builtin.capsule.notes` | 1.1.0 | Bundled with XSIME | Enabled |
 | Passwords | `builtin.capsule.passwords` | 1.1.0 | Bundled with XSIME | Enabled |
 | Resources | `builtin.capsule.resources` | 1.1.0 | Bundled with XSIME | Enabled |
 | Temporary | `builtin.capsule.temporary` | 1.1.0 | Bundled with XSIME | Enabled |
-| Claude | `builtin.claude-code-cli` | 1.1.0 | On demand in Settings | Disabled |
-| ChatGPT | `builtin.codex-cli` | 1.1.1 | On demand in Settings | Disabled |
-| Chord input | `builtin.fly-chord-learning` | 2.0.0 | Bundled with XSIME | Disabled |
+| Claude | `builtin.claude-code-cli` | 1.2.0 | On demand in Settings | Disabled |
+| ChatGPT | `builtin.codex-cli` | 1.2.0 | On demand in Settings | Disabled |
+| Chord input | `builtin.fly-chord-learning` | 2.1.0 | Bundled with XSIME | Disabled |
 | LaTeX | `builtin.latex` | 1.1.0 | On demand in Settings | Disabled |
 | Chat | `builtin.mailbox.chat` | 1.1.0 | Bundled with XSIME | Enabled |
 | Inbox | `builtin.mailbox.inbox` | 1.1.0 | Bundled with XSIME | Enabled |
 | Terminal | `builtin.mailbox.terminal` | 1.1.0 | Bundled with XSIME | Enabled |
 | Morse Code | `builtin.morse` | 0.1.0 | On demand in Settings | Disabled |
 | Electronic Music | `builtin.music` | 0.2.3 | On demand in Settings | Disabled |
-| AI API | `builtin.openai-compatible` | 1.0.0 | On demand in Settings | Disabled |
+| AI API | `builtin.openai-compatible` | 1.1.0 | On demand in Settings | Disabled |
 | Polisher | `builtin.polisher` | 1.1.0 | On demand in Settings | Disabled |
 | Reference | `builtin.scholay` | 0.1.0 | On demand in Settings | Disabled |
-| Statistics | `builtin.statistics` | 2.0.0 | Bundled with XSIME | Enabled |
+| Statistics | `builtin.statistics` | 2.1.0 | Bundled with XSIME | Enabled |
 | Stream of Consciousness Input | `builtin.stream-input` | 1.4.0 | Bundled with XSIME | Enabled |
-| Typing practice | `builtin.typing-speed` | 2.0.0 | Bundled with XSIME | Enabled |
+| Typing practice | `builtin.typing-speed` | 2.1.0 | Bundled with XSIME | Enabled |
 
 Bundled plug-ins use the defaults above. Optional plug-ins require installation and explicit enablement. Upgrades preserve existing plugin state.
 <!-- END PRESET BUFFER PLUGINS -->

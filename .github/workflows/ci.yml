@@ -31,6 +31,11 @@ jobs:
       - name: Pinned plugin import tests
         run: python3 scripts/test-official-plugin-import.py
 
+      - name: Application update manifest contracts
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -Iplatforms/windows/native/third_party Shared/AppUpdate/manifest_tests.cpp -o "$RUNNER_TEMP/update-contract"
+          "$RUNNER_TEMP/update-contract"
+
       - name: Release tool tests
         run: python3 -m unittest discover -s scripts/release -p "test*.py" -v
 
@@ -185,7 +190,7 @@ jobs:
           assert release_workflow.count('must disallow administrator bypass') == 2
           assert release_workflow.count('must allow the formal tag pattern v*') == 2
           assert 'Could not destroy the temporary signing keychain; refusing to stage release assets.' in release_workflow
-          publish_job = release_workflow.split('  publish_staged_release:', 1)[1]
+          publish_job = release_workflow.split('  publish_staged_release:', 1)[1].split('\n  attach_linux_deb:', 1)[0]
           assert 'actions/checkout@' not in publish_job
           assert 'scripts/rehearse-release-pkg.sh' not in publish_job
 
@@ -599,6 +604,21 @@ jobs:
       # link-time dependency on Squirrel — a stock runner compiles it cleanly.
       - name: Build (debug)
         run: swift build
+
+      - name: Export native settings for Linux contract review
+        run: |
+          BIN="$(swift build --show-bin-path)/RimeBuffer"
+          "$BIN" gateway-settings-render "$RUNNER_TEMP/native-gateway-settings/gateway"
+          "$BIN" codex-settings-render "$RUNNER_TEMP/native-gateway-settings/codex"
+          "$BIN" claude-settings-render "$RUNNER_TEMP/native-gateway-settings/claude"
+
+      - name: Save native settings contracts and renderings
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-gateway-settings-${{ github.sha }}
+          path: ${{ runner.temp }}/native-gateway-settings
+          if-no-files-found: error
+          retention-days: 7
 
       # Candidate pagination also verifies real librime page/commit routing.
       # Stage the checksum-verified product runtime without installing an IME.

@@ -1,0 +1,34 @@
+{
+  "verified": true,
+  "version": "1.1.5-win-capsule-selection.20261018",
+  "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-capsule-selection.20261018-823c910b600c-3fdb007aaedf",
+  "sourceSnapshot": "d7fc717b6515f2a8f27d431b1b9ed6afa554f703742d10f12d61833c0a8df8e3",
+  "sourceFilesMatched": 154,
+  "binaryHashesMatched": true,
+  "brokerPid": 118532,
+  "settingsUnchanged": true,
+  "userDataRetained": true,
+  "peripheralFilesUnchanged": 49,
+  "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-capsule-selection-20261018-105133",
+  "requiresSignOut": true,
+  "tests": [
+    "RimesPeripherals x64",
+    "RimesPeripherals x86",
+    "RimesPeripheralTests --ui x64"
+  ],
+  "nativeImages": 56,
+  "covered": [
+    "first Recent selection",
+    "manual module selection",
+    "close/reopen",
+    "host restart",
+    "generic open/toggle/manager",
+    "disabled/invalid fallback",
+    "all-disabled state",
+    "Mailbox independence",
+    "blocked opens",
+    "existing preferences retained"
+  ],
+  "testNote": "Isolated temporary profiles and synthetic clipboard. No typing or paste injected into user applications.",
+  "verifiedAt": "2026-10-18T10:52:10.3603971+08:00"
+}

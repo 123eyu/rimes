@@ -1,0 +1,418 @@
+[
+  {
+    "page": "chinese-complete-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.13842582791922214,
+    "mean_absolute_channel_error": 16.048556675979235,
+    "pair": "chinese-complete-day-pair.png",
+    "difference_4x": "chinese-complete-day-diff.png"
+  },
+  {
+    "page": "chinese-complete-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.9870534662734913,
+    "mean_absolute_channel_error": 13.0921443706661,
+    "pair": "chinese-complete-night-pair.png",
+    "difference_4x": "chinese-complete-night-diff.png"
+  },
+  {
+    "page": "chinese-complete-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.4436374627671152,
+    "mean_absolute_channel_error": 15.396408101239656,
+    "pair": "chinese-complete-quiet-pair.png",
+    "difference_4x": "chinese-complete-quiet-diff.png"
+  },
+  {
+    "page": "chinese-complete-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.9958525771566747,
+    "mean_absolute_channel_error": 13.028462844637124,
+    "pair": "chinese-complete-rasta-pair.png",
+    "difference_4x": "chinese-complete-rasta-diff.png"
+  },
+  {
+    "page": "chinese-history-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.049672451243183285,
+    "mean_absolute_channel_error": 4.075133830914749,
+    "pair": "chinese-history-day-pair.png",
+    "difference_4x": "chinese-history-day-diff.png"
+  },
+  {
+    "page": "chinese-history-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.9780611655421019,
+    "mean_absolute_channel_error": 4.200786425116308,
+    "pair": "chinese-history-night-pair.png",
+    "difference_4x": "chinese-history-night-diff.png"
+  },
+  {
+    "page": "chinese-history-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.4332135594786949,
+    "mean_absolute_channel_error": 4.463855832332008,
+    "pair": "chinese-history-quiet-pair.png",
+    "difference_4x": "chinese-history-quiet-diff.png"
+  },
+  {
+    "page": "chinese-history-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.997377876883261,
+    "mean_absolute_channel_error": 4.315733123825369,
+    "pair": "chinese-history-rasta-pair.png",
+    "difference_4x": "chinese-history-rasta-diff.png"
+  },
+  {
+    "page": "chinese-live-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.12478104882783542,
+    "mean_absolute_channel_error": 13.626963089774577,
+    "pair": "chinese-live-day-pair.png",
+    "difference_4x": "chinese-live-day-diff.png"
+  },
+  {
+    "page": "chinese-live-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9874387540126681,
+    "mean_absolute_channel_error": 11.494697042837423,
+    "pair": "chinese-live-night-pair.png",
+    "difference_4x": "chinese-live-night-diff.png"
+  },
+  {
+    "page": "chinese-live-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.3906097531541037,
+    "mean_absolute_channel_error": 13.149036930913722,
+    "pair": "chinese-live-quiet-pair.png",
+    "difference_4x": "chinese-live-quiet-diff.png"
+  },
+  {
+    "page": "chinese-live-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9951925563497563,
+    "mean_absolute_channel_error": 11.842611030081938,
+    "pair": "chinese-live-rasta-pair.png",
+    "difference_4x": "chinese-live-rasta-diff.png"
+  },
+  {
+    "page": "chinese-ready-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.09583122140273569,
+    "mean_absolute_channel_error": 9.141181554771698,
+    "pair": "chinese-ready-day-pair.png",
+    "difference_4x": "chinese-ready-day-diff.png"
+  },
+  {
+    "page": "chinese-ready-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9878201945389785,
+    "mean_absolute_channel_error": 7.5634602100781905,
+    "pair": "chinese-ready-night-pair.png",
+    "difference_4x": "chinese-ready-night-diff.png"
+  },
+  {
+    "page": "chinese-ready-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.3662324709760395,
+    "mean_absolute_channel_error": 8.726507286304232,
+    "pair": "chinese-ready-quiet-pair.png",
+    "difference_4x": "chinese-ready-quiet-diff.png"
+  },
+  {
+    "page": "chinese-ready-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9955528775700903,
+    "mean_absolute_channel_error": 8.301137741550265,
+    "pair": "chinese-ready-rasta-pair.png",
+    "difference_4x": "chinese-ready-rasta-diff.png"
+  },
+  {
+    "page": "english-complete-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.12089991025346687,
+    "mean_absolute_channel_error": 14.15509117770708,
+    "pair": "english-complete-day-pair.png",
+    "difference_4x": "english-complete-day-diff.png"
+  },
+  {
+    "page": "english-complete-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.9874276586292335,
+    "mean_absolute_channel_error": 11.36810141855179,
+    "pair": "english-complete-night-pair.png",
+    "difference_4x": "english-complete-night-diff.png"
+  },
+  {
+    "page": "english-complete-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.42605601257047787,
+    "mean_absolute_channel_error": 13.470412714787903,
+    "pair": "english-complete-quiet-pair.png",
+    "difference_4x": "english-complete-quiet-diff.png"
+  },
+  {
+    "page": "english-complete-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1922
+    ],
+    "changed_pixel_fraction": 0.9962293784232638,
+    "mean_absolute_channel_error": 11.327895741959336,
+    "pair": "english-complete-rasta-pair.png",
+    "difference_4x": "english-complete-rasta-diff.png"
+  },
+  {
+    "page": "english-history-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.05063603382937425,
+    "mean_absolute_channel_error": 4.236372931879102,
+    "pair": "english-history-day-pair.png",
+    "difference_4x": "english-history-day-diff.png"
+  },
+  {
+    "page": "english-history-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.9779254090026804,
+    "mean_absolute_channel_error": 4.362795968512185,
+    "pair": "english-history-night-pair.png",
+    "difference_4x": "english-history-night-diff.png"
+  },
+  {
+    "page": "english-history-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.4341754090026805,
+    "mean_absolute_channel_error": 4.629911690852513,
+    "pair": "english-history-quiet-pair.png",
+    "difference_4x": "english-history-quiet-diff.png"
+  },
+  {
+    "page": "english-history-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1240
+    ],
+    "changed_pixel_fraction": 0.9972507856548665,
+    "mean_absolute_channel_error": 4.481285431493976,
+    "pair": "english-history-rasta-pair.png",
+    "difference_4x": "english-history-rasta-diff.png"
+  },
+  {
+    "page": "english-live-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.09639023650174644,
+    "mean_absolute_channel_error": 9.822861749287691,
+    "pair": "english-live-day-pair.png",
+    "difference_4x": "english-live-day-diff.png"
+  },
+  {
+    "page": "english-live-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9885679903730445,
+    "mean_absolute_channel_error": 8.220294618628435,
+    "pair": "english-live-night-pair.png",
+    "difference_4x": "english-live-night-diff.png"
+  },
+  {
+    "page": "english-live-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.3622723856023226,
+    "mean_absolute_channel_error": 9.392671687027402,
+    "pair": "english-live-quiet-pair.png",
+    "difference_4x": "english-live-quiet-diff.png"
+  },
+  {
+    "page": "english-live-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9963209306976439,
+    "mean_absolute_channel_error": 8.727025068472525,
+    "pair": "english-live-rasta-pair.png",
+    "difference_4x": "english-live-rasta-diff.png"
+  },
+  {
+    "page": "english-ready-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.08723307783283164,
+    "mean_absolute_channel_error": 8.478946781647638,
+    "pair": "english-ready-day-pair.png",
+    "difference_4x": "english-ready-day-diff.png"
+  },
+  {
+    "page": "english-ready-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.9893019940072891,
+    "mean_absolute_channel_error": 7.044712013120979,
+    "pair": "english-ready-night-pair.png",
+    "difference_4x": "english-ready-night-diff.png"
+  },
+  {
+    "page": "english-ready-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.357361931459663,
+    "mean_absolute_channel_error": 8.107470114027011,
+    "pair": "english-ready-quiet-pair.png",
+    "difference_4x": "english-ready-quiet-diff.png"
+  },
+  {
+    "page": "english-ready-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1662
+    ],
+    "changed_pixel_fraction": 0.997033815025912,
+    "mean_absolute_channel_error": 7.72277304820259,
+    "pair": "english-ready-rasta-pair.png",
+    "difference_4x": "english-ready-rasta-diff.png"
+  }
+]

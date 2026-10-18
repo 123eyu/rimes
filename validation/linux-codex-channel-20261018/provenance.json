@@ -1,0 +1,55 @@
+{
+  "purpose": "public-codex-channel-parity",
+  "generatedAt": "2026-10-18T01:02:06.558423+00:00",
+  "parentCommit": "ef124f11028d4f26ddc68e0911fc3458bfb88504",
+  "nativeCommand": "RIMEBUFFER_APPEARANCE_MODE=THEME RimeBuffer codex-settings-render OUTPUT",
+  "linuxCommand": "RIMES_USER_DIR=ISOLATED_ROOT xvfb-run -a rimes-settings --render-codex OUTPUT",
+  "nativeBuild": "isolated debug binary, not installed",
+  "linuxEnvironment": "Ubuntu 24.04 arm64, GTK 3.24.41, Fcitx 5.1.7, Xvfb/xfwm4, private D-Bus",
+  "logicalSize": [
+    980,
+    680
+  ],
+  "scale": 2,
+  "pairedStates": 10,
+  "linuxBufferThemes": 5,
+  "visualStatus": "requires_review",
+  "nativeBuffer": "protected input concealed fixture; excluded from comparison",
+  "sources": {
+    "Sources/RimeBuffer/AITextPlugins.swift": "b67b106542a1f06a69909e9d2c52af4797879908c7101bbcd7feb53b866edd4d",
+    "Sources/RimeBuffer/AITextCodexAppServer.swift": "1749e161fa64bc4cde85f4b2908685520abce8aab382180a765d0424816f65fa",
+    "Sources/RimeBuffer/SettingsWindow.swift": "4690bd6842d32c1cb5e8d0365703bba98bf842fddb7ac42ab03fbfd05160ac8f",
+    "Sources/RimeBuffer/main.swift": "ed0d637ecc2e1e2021493b6b5341aec04c07f2527a1aeb47b934b4d0945e359d",
+    "Sources/RimeBuffer/Inbound/InboundToast.swift": "4bcf9b1f6d50044a4d15e23643fd4693962f8a9d4f3a9c4007dabec9e2401e34",
+    "platforms/linux/runtime/core/codex_channel.cpp": "efd4bac7f1b0f6a576e6f7b31449ce895f1c7ed325cb317539a37c7981fb0dac",
+    "platforms/linux/runtime/core/codex_protocol.cpp": "70c4f3efd02677e6ef64a49a96607b33b6bca8d8af507c4d0484bf9ef175020d",
+    "platforms/linux/runtime/core/cli_session.cpp": "9e2113c88eecb0131e7167c30921515df2242961ea2d3042e2edecb7cf7d84cd",
+    "platforms/linux/runtime/ui/settings.cpp": "7776143230f1c871ee4df2b92ee17396bbc1574fc8f2b9c5a8897e5e1535098e",
+    "platforms/linux/buffer/ui/rimes_buffer_app.cpp": "4398e2c183c7908f225ab0d2fffe88cbff8ff974c0f7c37c7771b21f7bcb65c3",
+    "platforms/linux/mailbox/ui/mailbox_toast.cpp": "b83d24e43719a11c8cd6551ae58091a3fb1133a9b13105d4ad650ab998f350d3",
+    "platforms/linux/mailbox/ui/mailbox_workspace.cpp": "d1a85ae467332e9bc885a869de528db1700b81bca2158df101f7cbe1c1b177ce",
+    "platforms/linux/mailbox/core/codex_image_jobs.cpp": "f3667786d37b023a8e1eb23d6101b15bb382858daad770f789b92b62c0cbb57a",
+    "platforms/linux/ime/src/fcitx/rimes_ime.cpp": "b738d96262ffddc413b6a5925b1531ee3c0ebd4ba6f7ffe85ac5dd475e4dd281"
+  },
+  "nativeBinarySHA256": "1d1b16d2b4eb1f2b68bb1e308ba20a90a160da9b436e4e185801bc0053ed3eec",
+  "linuxBinaries": [
+    "42681ae7fa8489938c4774d5c6042d55ea3991cc7d058b02f9864d350000fbab  /tmp/xsime-ime-build/runtime/rimes-settings",
+    "1826ba8ede47bc62dc170f394c2d6a360709c5a8eb934316d80264fd1ec17a39  /tmp/xsime-ime-build/rimes-buffer",
+    "2fee7793c0b684ef892c766968b096499af20c31530a65057451e5e610a447b5  /tmp/xsime-ime-build/rimes-mailbox",
+    "730a638d398728cdee4c6f51eb129274b43a1033ab8b6b41603e01f945a9ee64  /tmp/xsime-ime-build/rimes.so"
+  ],
+  "validation": {
+    "ctest": {
+      "passed": 74,
+      "total": 74,
+      "seconds": 85.2
+    },
+    "sourceLifecycleTests": 17,
+    "actualFcitxCodex": "passed",
+    "passiveReceiptAndSessionProtection": "passed",
+    "officialCodexCLI": "0.163.0, isolated prompt-free initialize/MCP/account probe; no account",
+    "packageSHA256": "3e9503e52d2de799526df20470bfde884984e7283062e8ea8edab390d29fbf38",
+    "packagePublished": false,
+    "debLifecycle": "install/reinstall/remove; 20 user data sentinels preserved"
+  }
+}

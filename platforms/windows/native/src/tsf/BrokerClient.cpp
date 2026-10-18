@@ -42,15 +42,17 @@ namespace protocol = rimes::windows::core;
 // session instead of permanently giving up after one scheduler hiccup.
 constexpr ULONGLONG kConnectBudgetMillis = 2000;
 constexpr ULONGLONG kLaunchConnectBudgetMillis = 15000;
-// Daily-use first key after a cold Broker page-in, plus hosted CI VMs, can
-// exceed a 20 ms budget even when the engine is healthy. Keep this short
-// enough that a hung Broker still fail-opens.
-constexpr ULONGLONG kKeyBudgetMillis = 80;
+// Cold engine pages and the first user-dictionary commit can exceed 80 ms on
+// 32-bit hosts. That deadline disconnected a healthy Broker and lost candidate
+// selection. This is a response ceiling, not a delay for ordinary keys: return
+// immediately on a reply, and still retire the connection without replay when
+// an unresponsive Broker exceeds the bounded allowance.
+constexpr ULONGLONG kKeyBudgetMillis = 200;
 // Closing an input session is acknowledged by the Broker worker. A 10 ms
 // deadline is shorter than a normal Windows scheduling quantum and spuriously
-// disconnects during host composition termination. Keep the same bounded
-// allowance as an ordinary key request; never replay a timed-out key.
-constexpr ULONGLONG kCloseBudgetMillis = kKeyBudgetMillis;
+// disconnects during host composition termination. Keep session retirement
+// bounded independently of engine processing; never replay a timed-out key.
+constexpr ULONGLONG kCloseBudgetMillis = 80;
 constexpr DWORD kConnectRetryMillis = 50;
 constexpr DWORD kBusyPipeWaitMillis = 200;
 
@@ -714,7 +716,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
   }
   bool Capturing() const noexcept override { return capturing_.load(); }
   bool IsBufferSendKey(WPARAM key) const noexcept override {
-    const auto chord = send_chord_.load();
+    const auto chord = static_cast<unsigned>(buffer_chords_.load() & 0xffffU);
     return core::IsBufferSendChord(static_cast<unsigned>(key), ReadModifiers(),
                                     chord & 0xffU, chord >> 8U);
   }
@@ -874,6 +876,11 @@ class NamedPipeBrokerClient final : public BrokerClient {
     ResetSessionLocked();
   }
 
+  std::optional<bool> AsciiMode() const noexcept override {
+    if (!connected_.load(std::memory_order_acquire) || !modifier_capable_.load()) return std::nullopt;
+    return ascii_mode_.load();
+  }
+
   BrokerKeyResult HandleKey(const BrokerKeyEvent& event,
                             BrokerInputState* state) noexcept override {
     if (state != nullptr) {
@@ -884,6 +891,9 @@ class NamedPipeBrokerClient final : public BrokerClient {
       CancelShiftTap();
       return BrokerKeyResult::kPassThrough;
     }
+    const bool toggle = event.phase == BrokerKeyPhase::kInputModeToggle;
+    if (toggle && (event.virtual_key != VK_SHIFT || !modifier_capable_.load()))
+      return BrokerKeyResult::kUnavailable;
     const bool shift = IsShiftKey(event.virtual_key);
     const std::size_t key_index = shift && event.virtual_key == VK_SHIFT
         ? (((event.key_data >> 16U) & 0xffU) == 0x36U ? VK_RSHIFT : VK_LSHIFT)
@@ -899,13 +909,24 @@ class NamedPipeBrokerClient final : public BrokerClient {
                  : BrokerKeyResult::kPassThrough;
     }
 
-    const std::uint32_t modifiers = ReadModifiers();
+    const std::uint32_t modifiers = toggle ? 0 : ReadModifiers();
     const bool composing = composing_.load(std::memory_order_acquire) || pending_chord_.load();
     const bool observe_shift = shift && modifier_capable_.load() &&
                                !HasCommandModifiers(modifiers);
-    const auto send_chord = send_chord_.load();
+    const auto chords = buffer_chords_.load();
+    const auto send_chord = static_cast<unsigned>(chords & 0xffffU);
+    const auto previous_chord = static_cast<unsigned>((chords >> 16U) & 0xffffU);
+    const auto next_chord = static_cast<unsigned>((chords >> 32U) & 0xffffU);
     const bool capture_key = capturing_.load() &&
-        (core::IsBufferSendChord(static_cast<std::uint32_t>(event.virtual_key), modifiers,
+        ((peripheral_input_.load() &&
+          ((!HasCommandModifiers(modifiers) && (event.virtual_key == VK_UP || event.virtual_key == VK_DOWN || event.virtual_key == VK_TAB)) ||
+           ((modifiers & ~static_cast<unsigned>(protocol::KeyModifiers::kCapsLock)) == static_cast<unsigned>(protocol::KeyModifiers::kControl) &&
+            (event.virtual_key == 'F' || event.virtual_key == 'N')))) ||
+         (!peripheral_input_.load() && core::BufferPluginCycleDirection(
+             static_cast<std::uint32_t>(event.virtual_key), modifiers,
+             previous_chord & 0xffU, previous_chord >> 8U,
+             next_chord & 0xffU, next_chord >> 8U) != 0) ||
+         core::IsBufferSendChord(static_cast<std::uint32_t>(event.virtual_key), modifiers,
                                 send_chord & 0xffU, send_chord >> 8U) ||
          ((modifiers & ~static_cast<unsigned>(protocol::KeyModifiers::kCapsLock)) ==
              static_cast<unsigned>(protocol::KeyModifiers::kControl) &&
@@ -929,13 +950,13 @@ class NamedPipeBrokerClient final : public BrokerClient {
     }
 
     const bool key_down = event.phase == BrokerKeyPhase::kKeyDown;
-    const bool key_up = event.phase == BrokerKeyPhase::kKeyUp;
+    const bool key_up = event.phase == BrokerKeyPhase::kKeyUp || toggle;
     if (key_down && (!shift || HasCommandModifiers(modifiers))) CancelShiftTap();
     if ((!key_down && !key_up) ||
         (key_down && !observe_shift &&
          !ShouldOfferKey(event.virtual_key, modifiers, composing,
                          capturing_.load(), ascii_mode_.load()) && !capture_key) ||
-        (key_up && !pressed_keys_[key_index].load(std::memory_order_acquire) &&
+        (key_up && !toggle && !pressed_keys_[key_index].load(std::memory_order_acquire) &&
          !held_shift_[key_index].load(std::memory_order_acquire))) {
       return BrokerKeyResult::kPassThrough;
     }
@@ -946,15 +967,16 @@ class NamedPipeBrokerClient final : public BrokerClient {
         // This physical event has already failed open. Retire its gesture;
         // a repeated release must never become a later synthetic tap.
         CancelShiftTap();
-        if (shift && key_up) held_shift_[key_index].store(false);
+        if (shift && key_up && !toggle) held_shift_[key_index].store(false);
         return BrokerKeyResult::kUnavailable;
       }
-      const bool owned_up = key_up && pressed_keys_[key_index].exchange(
+      if (toggle) CancelShiftTap();
+      const bool owned_up = key_up && !toggle && pressed_keys_[key_index].exchange(
           false, std::memory_order_acq_rel);
-      const bool observed_up = key_up && observed_shift_[key_index].exchange(
+      const bool observed_up = key_up && !toggle && observed_shift_[key_index].exchange(
           false, std::memory_order_acq_rel);
-      const bool held_up = key_up && held_shift_[key_index].exchange(false);
-      if (key_up && !owned_up && !held_up) {
+      const bool held_up = key_up && !toggle && held_shift_[key_index].exchange(false);
+      if (key_up && !toggle && !owned_up && !held_up) {
         return BrokerKeyResult::kPassThrough;
       }
       if (!connected_.load(std::memory_order_acquire) ||
@@ -974,7 +996,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
         // known. Physical Shift remains with the host throughout the gesture.
         return BrokerKeyResult::kPassThrough;
       }
-      if (shift && (!observed_up || HasCommandModifiers(modifiers) ||
+      if (shift && !toggle && (!observed_up || HasCommandModifiers(modifiers) ||
                     !modifier_capable_.load() ||
                     GetTickCount64() - shift_down_at_[key_index] >= 500))
         return BrokerKeyResult::kPassThrough;
@@ -993,7 +1015,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
       protocol::KeyEvent key;
       key.session_id = input_session_id_;
       key.sequence_id = sequence_id;
-      key.timestamp_millis = GetTickCount64();
+      key.timestamp_millis = static_cast<DWORD>(GetMessageTime());
       key.virtual_key = static_cast<std::uint32_t>(event.virtual_key);
       key.scan_code =
           static_cast<std::uint32_t>((event.key_data >> 16U) & 0xffU);
@@ -1113,6 +1135,7 @@ class NamedPipeBrokerClient final : public BrokerClient {
              static_cast<unsigned>(
                  protocol::InputStateFlags::kBufferCapture)) != 0;
         capturing_.store(state->buffer_capture);
+        state->pending_chord = pending_chord;
         state->composing = is_composing;
         state->revision = decoded.revision;
         state->caret_utf16 = decoded.caret_utf16;
@@ -1503,23 +1526,35 @@ class NamedPipeBrokerClient final : public BrokerClient {
           if (kind == "capture") {
             const auto key = message->value("sendKey", unsigned(VK_RETURN));
             const auto modifiers = message->value("sendModifiers", unsigned(MOD_ALT | MOD_SHIFT));
-            if (!core::ValidShortcut(key, modifiers, true)) {
+            const auto previous_key = message->value("previousPluginKey", unsigned(VK_UP));
+            const auto previous_modifiers = message->value("previousPluginModifiers", unsigned(MOD_ALT | MOD_SHIFT));
+            const auto next_key = message->value("nextPluginKey", unsigned(VK_DOWN));
+            const auto next_modifiers = message->value("nextPluginModifiers", unsigned(MOD_ALT | MOD_SHIFT));
+            if (!core::ValidShortcut(key, modifiers, true) ||
+                !core::ValidShortcut(previous_key, previous_modifiers) ||
+                !core::ValidShortcut(next_key, next_modifiers) ||
+                (previous_key == next_key && previous_modifiers == next_modifiers) ||
+                (key == previous_key && modifiers == previous_modifiers) ||
+                (key == next_key && modifiers == next_modifiers)) {
               capturing_.store(false);
               continue;
             }
             // A single atomic snapshot avoids torn key/modifier reads on the
             // host input thread while settings are being changed.
-            send_chord_.store(key | (modifiers << 8U));
+            buffer_chords_.store(std::uint64_t(key | (modifiers << 8U)) |
+                (std::uint64_t(previous_key | (previous_modifiers << 8U)) << 16U) |
+                (std::uint64_t(next_key | (next_modifiers << 8U)) << 32U));
             capturing_.store(message->value("enabled", false));
+            peripheral_input_.store(message->value("enabled", false) && message->value("inputRoute", 1U) >= 2);
           }
-          if (kind == "capture" || kind == "deliver" || kind == "buffer_caret") {
+          if (kind == "capture" || kind == "deliver" || kind == "buffer_caret" || kind == "buffer_transition") {
             (*message)["connectionGeneration"] = generation;
             std::lock_guard lock(notification_mutex_);
             if (notifications_.size() >= 128) return;
             notifications_.push_back(std::move(*message));
           }
         }
-        if (kind == "capture" || kind == "deliver" || kind == "buffer_caret") {
+        if (kind == "capture" || kind == "deliver" || kind == "buffer_caret" || kind == "buffer_transition") {
           const auto window = notification_window_.load();
           if (window) PostMessageW(window, kBrokerNotification, 0, 0);
         } else if (kind == "disconnected")
@@ -1617,7 +1652,11 @@ class NamedPipeBrokerClient final : public BrokerClient {
 
   std::atomic<HWND> notification_window_{nullptr};
   std::atomic_bool capturing_{false}, control_capable_{false};
-  std::atomic_uint32_t send_chord_{VK_RETURN | ((MOD_ALT | MOD_SHIFT) << 8U)};
+  std::atomic_bool peripheral_input_{false};
+  std::atomic_uint64_t buffer_chords_{
+      std::uint64_t(VK_RETURN | ((MOD_ALT | MOD_SHIFT) << 8U)) |
+      (std::uint64_t(VK_UP | ((MOD_ALT | MOD_SHIFT) << 8U)) << 16U) |
+      (std::uint64_t(VK_DOWN | ((MOD_ALT | MOD_SHIFT) << 8U)) << 32U)};
   std::atomic_bool modifier_capable_{false};
   std::atomic_bool pending_chord_capable_{false}, pending_chord_{false};
   std::atomic_bool key_routing_capable_{false}, ascii_mode_{false};

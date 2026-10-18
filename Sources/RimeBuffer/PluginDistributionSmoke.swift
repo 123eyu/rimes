@@ -110,13 +110,13 @@ func runPluginDistributionSmokeTest() -> Bool {
         BuiltInPluginID.aiText,
     ]
     let expectedVersions = [
-        BuiltInPluginID.codexCLI: "1.1.1", BuiltInPluginID.claudeCodeCLI: "1.1.0",
-        BuiltInPluginID.openAICompatible: "1.0.0", BuiltInPluginID.scholay: "0.1.0",
+        BuiltInPluginID.codexCLI: "1.2.0", BuiltInPluginID.claudeCodeCLI: "1.2.0",
+        BuiltInPluginID.openAICompatible: "1.1.0", BuiltInPluginID.scholay: "0.1.0",
         BuiltInPluginID.polisher: "1.1.0", BuiltInPluginID.latex: "1.1.0",
-        BuiltInPluginID.appleTranslation: "2.2.0", BuiltInPluginID.streamInput: "1.4.0",
+        BuiltInPluginID.appleTranslation: "2.3.0", BuiltInPluginID.streamInput: "1.4.0",
         BuiltInPluginID.music: "0.2.3", BuiltInPluginID.morse: "0.1.0",
-        BuiltInPluginID.statistics: "2.0.0", BuiltInPluginID.typingSpeed: "2.0.0",
-        BuiltInPluginID.flyChordLearning: "2.0.0",
+        BuiltInPluginID.statistics: "2.1.0", BuiltInPluginID.typingSpeed: "2.1.0",
+        BuiltInPluginID.flyChordLearning: "2.1.0",
     ].merging(Dictionary(uniqueKeysWithValues: CapsuleModuleID.allCases.map { (BuiltInPluginID.capsule($0), "1.1.0") }), uniquingKeysWith: { first, _ in first })
      .merging(Dictionary(uniqueKeysWithValues: MailboxModuleID.allCases.map { ($0.pluginKey.rawID, "1.1.0") }), uniquingKeysWith: { first, _ in first })
 
@@ -422,6 +422,7 @@ func runPluginDistributionSmokeTest() -> Bool {
             downloader: downloader,
             completionQueue: DispatchQueue(label: "plugin-distribution-smoke.success"),
             hostVersion: "0.4.2",
+            catalogReleaseVersion: "1.1.0",
             catalogEntries: [entry]
         )
         store.bootstrap(hadLegacyEnablement: false, legacyDisabledIDs: [])

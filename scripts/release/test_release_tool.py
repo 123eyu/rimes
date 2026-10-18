@@ -449,7 +449,7 @@ class FormalPackageOnlyWorkflowTests(unittest.TestCase):
 
 
 class MacOSReleaseGatePolicyTests(unittest.TestCase):
-    """Keep experimental cross-platform checks out of the macOS release gate."""
+    """Require native platform evidence for stable releases, not legacy previews."""
 
     @classmethod
     def setUpClass(cls):
@@ -459,8 +459,9 @@ class MacOSReleaseGatePolicyTests(unittest.TestCase):
         cls.platform_workflow = (root / ".github/workflows/platform-preview.yml").read_text()
         cls.windows_workflow = (root / ".github/workflows/windows-native.yml").read_text()
 
-    def test_release_script_requires_only_the_macos_ci_workflow(self):
+    def test_stable_release_requires_the_five_current_native_workflows(self):
         self.assertIn('REQUIRED_WORKFLOWS=("CI")', self.release_script)
+        self.assertIn('if [[ "$KIND" == "stable" ]]; then\n    REQUIRED_WORKFLOWS+=("iOS checks" "Android checks" "Windows IME" "Linux IME")\nfi', self.release_script)
         self.assertNotIn('"Platform Preview Data"', self.release_script.split("REQUIRED_WORKFLOWS=", 1)[1].split("\n", 1)[0])
         self.assertNotIn('"Windows Native Foundation"', self.release_script.split("REQUIRED_WORKFLOWS=", 1)[1].split("\n", 1)[0])
 

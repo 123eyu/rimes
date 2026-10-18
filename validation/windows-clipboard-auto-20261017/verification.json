@@ -1,0 +1,13 @@
+{
+  "version": "1.1.5-win-settings-live.20261017",
+  "brokerPid": 123696,
+  "singleBroker": true,
+  "installedBinariesMatch": true,
+  "validatedSourceFiles": 24,
+  "installedSourcesMatch": true,
+  "clipboardAutomaticEnabled": true,
+  "peripheralPreferencesUnchanged": true,
+  "settingsUnchanged": true,
+  "fluentLicensePresent": true,
+  "verifiedAt": "2026-10-17T23:20:02.9475235+08:00"
+}

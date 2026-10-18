@@ -1,0 +1,34 @@
+[
+  {
+    "path": "platforms/windows/native/CMakeLists.txt",
+    "sha256": "16c499841bc2b8f7dd3afa5ca9206b91a32155136c269f0b1e782a6ee9a24bd3"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/fluent_icons.hpp",
+    "sha256": "a51e4f8f1a118aad73960a8e787a0fca1f988ad583a54a2803c77734829112b3"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/fluent_d2d.hpp",
+    "sha256": "cf05170c2db42428aef0fe6e963f4ce1f79ffad286b18c7690891543ac0ee1d4"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/buffer_paint.hpp",
+    "sha256": "6e31c4694dd9ad42dedc3af183cf350528e30dc3edb678047007b0f2476464b7"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/settings_paint.hpp",
+    "sha256": "d9223bdcbbffd06a757e82560f4445fac55b7f535a752cf7a3d5cc3b937fa94d"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/appearance.hpp",
+    "sha256": "77e129687d3f072ee26db03265005e2a7ed6e2e10b7b1e384217a7df78263a43"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/window.cpp",
+    "sha256": "7d721d080caceed80b9dbe3af9ff1d824d09ae2f8682b9498e4435049112391c"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/surface_tests.cpp",
+    "sha256": "94e1f8289c4f55f92b95c9a1250677cd3db0a749900c081d4d616cf8a9b27c1b"
+  }
+]

@@ -11,6 +11,9 @@ public final class EngineInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();
         try {
+            if(arguments!=null && "app-update".equals(arguments.getString("mode"))) {
+                AppUpdateContract.run(this); result.putString("stream", "PASS application update contracts and system installation cancellation\n"); finish(-1,result); return;
+            }
             if(arguments!=null && "wubi".equals(arguments.getString("mode"))) {
                 result.putString("stream",WubiContract.run(this)); finish(-1,result); return;
             }
@@ -119,6 +122,7 @@ public final class EngineInstrumentation extends Instrumentation {
                     engine.initialize(data.getAbsolutePath(),user.getAbsolutePath()); return engine;
                 }).get(10,java.util.concurrent.TimeUnit.SECONDS);
             }
+            AppUpdateContract.validateManifest();
             touchChecks=NativeTouchContract.run(this);
             java.util.concurrent.atomic.AtomicReference<Throwable> renderingError=new java.util.concurrent.atomic.AtomicReference<>();
             runOnMainSync(() -> {

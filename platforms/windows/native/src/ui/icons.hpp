@@ -1,11 +1,16 @@
 #pragma once
 
 #include <Windows.h>
+#include <objidl.h>
+#include <gdiplus.h>
+#pragma comment(lib, "gdiplus.lib")
 
 #include <algorithm>
 #include <cmath>
 #include <cstring>
 #include <iterator>
+#include <memory>
+#include <mutex>
 #include <vector>
 
 #include "theme.hpp"
@@ -38,37 +43,55 @@ enum class IconId {
   kPalette,
   kLink,
   kInfo,
+  kHome,
 };
 
 [[nodiscard]] inline COLORREF ToColorRef(std::uint32_t rgb) noexcept {
   return RGB(Red(rgb), Green(rgb), Blue(rgb));
 }
 
-inline void FillRoundRect(HDC dc, const RECT& rect, int radius,
-                          COLORREF fill) noexcept {
-  const HBRUSH brush = CreateSolidBrush(fill);
-  const HPEN pen = CreatePen(PS_NULL, 0, fill);
-  const HGDIOBJ old_brush = SelectObject(dc, brush);
-  const HGDIOBJ old_pen = SelectObject(dc, pen);
-  RoundRect(dc, rect.left, rect.top, rect.right, rect.bottom, radius * 2,
-            radius * 2);
-  SelectObject(dc, old_brush);
-  SelectObject(dc, old_pen);
-  DeleteObject(brush);
-  DeleteObject(pen);
+struct SmoothShapesSession {
+  ULONG_PTR token = 0;
+  SmoothShapesSession() { Gdiplus::GdiplusStartupInput input; Gdiplus::GdiplusStartup(&token, &input, nullptr); }
+  ~SmoothShapesSession() { if (token) Gdiplus::GdiplusShutdown(token); }
+};
+inline std::shared_ptr<SmoothShapesSession> AcquireSmoothShapes() noexcept {
+  // UI owners retain this until their windows are destroyed. Do not initialize
+  // or shut down GDI+ in TSF DllMain / a DLL static destructor.
+  static std::mutex mutex;
+  static std::weak_ptr<SmoothShapesSession> weak;
+  try {
+    std::lock_guard lock(mutex);
+    auto session = weak.lock();
+    if (!session) { session = std::make_shared<SmoothShapesSession>(); weak = session; }
+    return session;
+  } catch (...) { return {}; }
 }
-
-inline void StrokeRoundRect(HDC dc, const RECT& rect, int radius,
-                            COLORREF stroke, int thickness = 1) noexcept {
-  const HBRUSH brush = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
-  const HPEN pen = CreatePen(PS_SOLID, thickness, stroke);
-  const HGDIOBJ old_brush = SelectObject(dc, brush);
-  const HGDIOBJ old_pen = SelectObject(dc, pen);
-  RoundRect(dc, rect.left, rect.top, rect.right - thickness,
-            rect.bottom - thickness, radius * 2, radius * 2);
-  SelectObject(dc, old_brush);
-  SelectObject(dc, old_pen);
-  DeleteObject(pen);
+inline void RoundPath(Gdiplus::GraphicsPath& path, float x, float y, float w, float h, float radius) {
+  const float d = (std::min)(radius * 2.f, (std::min)(w, h));
+  if (d <= 0) { path.AddRectangle(Gdiplus::RectF(x, y, w, h)); return; }
+  path.AddArc(x, y, d, d, 180.f, 90.f); path.AddArc(x + w - d, y, d, d, 270.f, 90.f);
+  path.AddArc(x + w - d, y + h - d, d, d, 0.f, 90.f); path.AddArc(x, y + h - d, d, d, 90.f, 90.f);
+  path.CloseFigure();
+}
+inline void FillRoundRect(HDC dc, const RECT& rect, int radius, COLORREF fill) noexcept {
+  const auto session = AcquireSmoothShapes();
+  if (rect.right <= rect.left || rect.bottom <= rect.top || !session || !session->token) return;
+  Gdiplus::Graphics graphics(dc); graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  Gdiplus::GraphicsPath path;
+  RoundPath(path, float(rect.left), float(rect.top), float(rect.right - rect.left), float(rect.bottom - rect.top), float(radius));
+  Gdiplus::SolidBrush brush(Gdiplus::Color(255, GetRValue(fill), GetGValue(fill), GetBValue(fill)));
+  graphics.FillPath(&brush, &path);
+}
+inline void StrokeRoundRect(HDC dc, const RECT& rect, int radius, COLORREF stroke, int thickness = 1) noexcept {
+  const auto session = AcquireSmoothShapes();
+  if (rect.right <= rect.left + thickness || rect.bottom <= rect.top + thickness || !session || !session->token) return;
+  Gdiplus::Graphics graphics(dc); graphics.SetSmoothingMode(Gdiplus::SmoothingModeAntiAlias);
+  Gdiplus::GraphicsPath path; const float inset = thickness * .5f;
+  RoundPath(path, rect.left + inset, rect.top + inset, float(rect.right - rect.left - thickness),
+      float(rect.bottom - rect.top - thickness), (std::max)(0.f, radius - inset));
+  Gdiplus::Pen pen(Gdiplus::Color(255, GetRValue(stroke), GetGValue(stroke), GetBValue(stroke)), float(thickness));
+  graphics.DrawPath(&pen, &path);
 }
 
 inline void FillRectColor(HDC dc, const RECT& rect, COLORREF fill) noexcept {
@@ -96,6 +119,14 @@ inline void DrawIconGlyph(HDC dc, IconId id, const RECT& box,
   };
 
   switch (id) {
+    case IconId::kHome:
+      line(cx - s, cy, cx, cy - s);
+      line(cx, cy - s, cx + s, cy);
+      line(cx - s + 2, cy - 2, cx - s + 2, cy + s);
+      line(cx - s + 2, cy + s, cx + s - 2, cy + s);
+      line(cx + s - 2, cy + s, cx + s - 2, cy - 2);
+      Rectangle(dc, cx - s / 3, cy + 1, cx + s / 3 + 1, cy + s + 1);
+      break;
     case IconId::kInfo:
       Ellipse(dc, cx - s + 1, cy - s + 1, cx + s, cy + s);
       SelectObject(dc, brush);

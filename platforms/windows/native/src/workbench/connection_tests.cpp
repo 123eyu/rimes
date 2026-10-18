@@ -1,5 +1,6 @@
-#include "chord_profile.hpp"
+﻿#include "chord_profile.hpp"
 #include "provider.hpp"
+#include "connector_ui.hpp"
 #include "runtime.hpp"
 #include <atomic>
 #include <filesystem>
@@ -82,6 +83,7 @@ int main() {
     Check(SelectConnection(&s, b) && s.model == "b-model" &&
               s.ai_connector == "openai-compatible",
           "select profile projects provider request fields");
+    s.connections.back().documentation_url = "https://example.com/docs";
     s.buffer_width = 920;
     s.send_hold_ms = 1500;
     s.candidate_width = 720;
@@ -94,7 +96,7 @@ int main() {
     Settings restored;
     Check(
         LoadSettings(&restored, nullptr) && restored.active_connection == b &&
-            restored.connections.size() == 4 && restored.buffer_width == 920 &&
+            restored.connections.size() == 4 && restored.connections.back().documentation_url == "https://example.com/docs" && restored.buffer_width == 920 &&
             restored.send_hold_ms == 1500 && restored.candidate_width == 720 &&
             restored.candidate_height == 42 &&
             restored.candidate_label_size == 12 &&
@@ -179,6 +181,23 @@ int main() {
               runtime.Snapshot()["result"] == "" &&
               runtime.Snapshot()["source"] == "synthetic source",
           "switching connectors cancels old output without consuming source");
+    auto removed = runtime.Configuration();
+    removed.connections.erase(std::remove_if(removed.connections.begin(), removed.connections.end(),
+        [&](const auto& c) { return c.id == b; }), removed.connections.end());
+    Check(runtime.Configure(removed, {}, false, &error), "removed provider credential transaction succeeds");
+    PCREDENTIALW deleted = nullptr;
+    Check(!CredReadW((L"RIMES.Windows.OpenAI." + Wide(b)).c_str(), CRED_TYPE_GENERIC, 0, &deleted) &&
+        GetLastError() == ERROR_NOT_FOUND && Stored(a,L"synthetic-a",L"https://a.invalid/v1"),
+        "provider deletion removes its own credential and preserves other providers");
+    Check(ValidConnectionURL("https://api.example.com/v1") && ValidConnectionURL("http://127.0.0.1:11434/v1") &&
+        !ValidConnectionURL("http://remote.example/v1") && !ValidConnectionURL("https://user:pass@example.com") &&
+        !ValidConnectionURL("https://api.example.com/v1?key=secret") &&
+        ValidConnectionURL("https://example.com/docs?lang=zh",true), "URL actions enforce supported endpoints");
+    const std::string oauth = "https://auth.openai.com/oauth/authorize?state=fixture&code_challenge=fixture";
+    Check(CodexAuthorizationURL("Open " + oauth + "\n") == oauth && CodexAuthorizationURL(oauth).empty() &&
+        CodexAuthorizationURL("https://auth.openai.com.evil.test/oauth/authorize?state=x&code_challenge=y\n").empty() &&
+        CodexAuthorizationURL("https://auth.openai.com/oauth/authorize?state=x\n").empty(),
+        "login URL requires complete official OAuth destination with state and PKCE");
     std::cout << "Connection migration, selection, credential "
                  "isolation/rollback and parity preferences passed\n";
     return 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -25,11 +26,16 @@ enum class CommandOp {
     DragBegin,
     DragEnd,
     SelectPlugin,
+    ConfigurePlugin,
     Generate,
     CancelGeneration,
+    OpenMailboxImage,
     ReturnToEdit,
     SelectResult,
     CopyResult,
+    CycleAutoSend,
+    ToggleCloseAfterLast,
+    ReceiveMailbox,
     Unknown,
 };
 
@@ -38,12 +44,18 @@ struct Command {
     std::string text;
     int insertion_index = -1;
     std::string id;
+    std::string thread, message, revision, scope, module, plugin;
+    std::uint64_t generation = 0;
+    std::uint64_t peer_generation = 0;
+    int peer = -1; // Filled by the host socket, never trusted from JSON.
 };
 
 struct PluginChoice { std::string id, name; };
+struct PluginOption { std::string id, title, value; std::vector<PluginChoice> choices; };
 struct Snapshot {
     int width = 760;
     std::uint64_t generation = 0;
+    std::string mailbox_scope;
     bool visible = false;
     bool capturing = false;
     bool enabled = false;
@@ -53,6 +65,8 @@ struct Snapshot {
     bool empty = true;
     int insertion_index = 0;
     double hold_progress = 0;
+    int auto_send_seconds = 0;
+    std::map<std::string, double> auto_send_progress;
     std::string preedit;
     std::string placeholder;
     std::string target;
@@ -64,10 +78,16 @@ struct Snapshot {
     std::string active_plugin;
     bool live_expand = true;
     std::vector<PluginChoice> plugins;
+    std::vector<PluginOption> plugin_options;
     DerivedPhase phase = DerivedPhase::Idle;
+    std::string message;
     bool can_generate = false;
+    bool can_deliver = false;
+    bool mailbox_image = false;
+    std::string mailbox_thread;
     std::string selected_result;
     std::vector<DerivedResult> results;
+    std::vector<Block> result_blocks;
 };
 
 Snapshot MakeSnapshot(const BufferModel& model);

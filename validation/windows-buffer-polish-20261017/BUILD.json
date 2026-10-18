@@ -1,0 +1,16 @@
+﻿{
+    "version":  "1.1.5-win-buffer-ui.20261017",
+    "file":  "RIMES-Windows-1.1.5-win-buffer-ui.20261017-Setup.exe",
+    "bytes":  50955264,
+    "sha256":  "44227ef1ee1c1db4501a8571213ead9369abc3e2b4ce42e3459cab92627cc549",
+    "payloadSHA256":  "2dfd737c9a380dccd6abc40604646b0af4a88179ebc446a8ef336beb5d637e36",
+    "packageManifestSHA256":  "917705ef8fb0591734b9cedcfaff114cc550943c69fa55b23f79fcf0da7c9902",
+    "sourceSnapshot":  "627adecbf063866a8101004ae6f22883fc7d84ec89de6991edb94fe7b30e1cdf",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "builderSHA256":  "7591f8a1313ee81c61d7e34f6031e3cc972ad8940ec8260bd0d8429ad98c3fe3",
+    "setupSourceSHA256":  "ef721af9416c41233bec339f9cff82a22607d8d85d6a742dae032765534425c6",
+    "signing":  "unsigned",
+    "verifiedFiles":  246,
+    "payloadMatchesTestedInstallation":  true,
+    "verifiedWithoutInstalling":  true
+}

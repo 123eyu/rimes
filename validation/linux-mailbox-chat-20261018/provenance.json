@@ -1,0 +1,40 @@
+{
+  "task": 23,
+  "issue": "https://github.com/scholay/xsime/issues/173",
+  "parentCommit": "b835eaead91ab121210ce15a03710f71ea0e1c04",
+  "pluginCommit": "873ebe997b4102b3b0933968ae4a54fb4fe8af9d",
+  "sourceSha256": {
+    "Sources/RimeBuffer/Mailbox/MailboxMessagesWorkspace.swift": "eb1b8b89c5547326328fe59abb24ba19d9df1325e1685021ad0f829ccb69d4f2",
+    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceViewController.swift": "803c421084675cacaeef29e0f9a1c273dce156683c0952d8136a15a02cb08905",
+    "Sources/RimeBuffer/Mailbox/MailboxLinuxFixtures.swift": "c5114f1f8b3d4378b04abaaa3cd26fa6c69f5de0a4f5fa8ca0d6df6324c2e6c2",
+    "Sources/RimeBuffer/Mailbox/MailboxChatLinuxFixtures.swift": "95ca0d44d0b340459c912936ba75419bdadcaa99bfd7685340137c2476b7beac",
+    "Sources/RimeBuffer/Mailbox/AITextMailboxGenerationCoordinator.swift": "935f6e7a3a9111e211542e830704567ddc209f52e8562d4e09f0033391e30bb4",
+    "Sources/RimeBuffer/AITextGenerationOptions.swift": "da21e26a06cf44d9ec66735892daf5f1c9f243093c749f5acfcb55dc057fb5b5",
+    "platforms/linux/mailbox/core/chat_jobs.cpp": "9966ed66af7c8356897cfac29f13d2773636f9f01a0b83a5cd19fb8036bb5ff9",
+    "platforms/linux/mailbox/core/mailbox_store.cpp": "b81e6b008713f259cf2caa73d0e77f75d29918fdf20f0c10547efef681c7d4fe",
+    "platforms/linux/mailbox/ui/mailbox_workspace.cpp": "05678bd175a47c0bc288b3a76ba50bfbca0cfde6f11f539d87979346a5e077bf",
+    "platforms/linux/runtime/core/configuration.cpp": "d1e80314cb9616c9cedf96e80e13dcf9896080ec6b393aee066e02e6404d85ee",
+    "platforms/linux/runtime/core/ai_api.cpp": "780c32d6e8e7bcbc5d69482752e5c8f9bdda433688f11fbab84cc04d7fb79e2d",
+    "platforms/linux/runtime/core/claude_channel.cpp": "2e2253f0de346de4fe3b3155fb6a7cf632e21402647baa1af81e11d231f65cad",
+    "platforms/linux/runtime/core/codex_channel.cpp": "fb677d874444947238d551bb220a75003fd2eee0dae713a7ef182bdd3acc2ce4",
+    "platforms/linux/runtime/ui/desktop.cpp": "75a18ee394ca8da9a1d657ce82ce48a1b94ebb4f7e74845f51c7fea9d29ca098",
+    "OfficialPlugins/native/shared/openai/chat_codec.cpp": "f10cb221b9c194834a361c42913c8bfde784582414d9923960229fc0d150388c"
+  },
+  "environment": {
+    "linux": "Ubuntu 24.04 arm64 container",
+    "gtk": "3.24.41",
+    "fcitx": "5.1.7",
+    "render": "Actual AppKit/GTK, identical public data, Asia/Tokyo, 1000x700 and 680x500, scale 2, night/day"
+  },
+  "verification": {
+    "ctest": "80/80, clean Release/deb, 104.81 seconds",
+    "sourceLifecycle": "13 passed",
+    "debLifecycle": "install/reinstall/remove, 22 XSIME and 2 Claude files retained",
+    "native": "Swift debug build, AI Mailbox smoke exit 0, workspace smoke and 5 Linux conversation readback passed",
+    "packageSha256": "0f519d7ef58a867f65b1ef0c5aeb5dc66937c46d7746aa639d1c87574fdabe1c",
+    "fcitx": "Current rebuilt addon and both CLI E2E hosts: Claude text/cancel/revoke and Codex text/image passed (exit 0)"
+  },
+  "visualStatus": "requires_review",
+  "liveAccountGeneration": "not tested",
+  "release": "not published"
+}

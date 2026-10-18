@@ -1,0 +1,168 @@
+{
+  "appearance" : "light",
+  "controls" : {
+    "body" : {
+      "alignment" : {
+        "height" : 303,
+        "width" : 499.5,
+        "x" : 410.5,
+        "y" : 249
+      },
+      "height" : 303,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 249
+    },
+    "editor" : {
+      "alignment" : {
+        "height" : 575,
+        "width" : 531.5,
+        "x" : 394.5,
+        "y" : 56
+      },
+      "height" : 575,
+      "width" : 531.5,
+      "x" : 394.5,
+      "y" : 56
+    },
+    "format" : {
+      "alignment" : {
+        "height" : 20,
+        "width" : 499.5,
+        "x" : 410.5,
+        "y" : 203
+      },
+      "height" : 25,
+      "width" : 506.5,
+      "x" : 407.5,
+      "y" : 202
+    },
+    "list" : {
+      "alignment" : {
+        "height" : 541,
+        "width" : 225.5,
+        "x" : 142,
+        "y" : 90
+      },
+      "height" : 541,
+      "width" : 225.5,
+      "x" : 142,
+      "y" : 90
+    },
+    "new" : {
+      "alignment" : {
+        "height" : 20,
+        "width" : 57,
+        "x" : 310.5,
+        "y" : 57
+      },
+      "height" : 32,
+      "width" : 71,
+      "x" : 303.5,
+      "y" : 52
+    },
+    "remove" : {
+      "alignment" : {
+        "height" : 18,
+        "width" : 32,
+        "x" : 830,
+        "y" : 600
+      },
+      "height" : 18,
+      "width" : 32,
+      "x" : 830,
+      "y" : 600
+    },
+    "save" : {
+      "alignment" : {
+        "height" : 20,
+        "width" : 40,
+        "x" : 870,
+        "y" : 599
+      },
+      "height" : 32,
+      "width" : 54,
+      "x" : 863,
+      "y" : 594
+    },
+    "search" : {
+      "alignment" : {
+        "height" : 22,
+        "width" : 160.5,
+        "x" : 142,
+        "y" : 56
+      },
+      "height" : 22,
+      "width" : 160.5,
+      "x" : 142,
+      "y" : 56
+    },
+    "summary" : {
+      "alignment" : {
+        "height" : 20,
+        "width" : 499.5,
+        "x" : 410.5,
+        "y" : 157
+      },
+      "height" : 20,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 157
+    },
+    "title" : {
+      "alignment" : {
+        "height" : 20,
+        "width" : 499.5,
+        "x" : 410.5,
+        "y" : 111
+      },
+      "height" : 20,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 111
+    }
+  },
+  "formRows" : [
+    {
+      "height" : 13,
+      "width" : 503.5,
+      "x" : 408.5,
+      "y" : 72
+    },
+    {
+      "height" : 36,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 95
+    },
+    {
+      "height" : 36,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 141
+    },
+    {
+      "height" : 36,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 187
+    },
+    {
+      "height" : 319,
+      "width" : 499.5,
+      "x" : 410.5,
+      "y" : 233
+    },
+    {
+      "height" : 13,
+      "width" : 503.5,
+      "x" : 408.5,
+      "y" : 562
+    }
+  ],
+  "height" : 660,
+  "keyWindow" : false,
+  "scale" : 2,
+  "selectedRow" : 0,
+  "width" : 940
+}

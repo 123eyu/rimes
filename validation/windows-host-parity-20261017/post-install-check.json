@@ -1,0 +1,25 @@
+{
+  "version": "1.1.5-win-hosts.20261017",
+  "singleCurrentBroker": true,
+  "brokerHashMatches": true,
+  "windows": [
+    {
+      "class": "Rimes.Workbench",
+      "pid": 15304,
+      "visible": false,
+      "topmost": true,
+      "noActivate": true
+    }
+  ],
+  "tsf": [
+    {
+      "architecture": "x64",
+      "identicalToPrevious": true
+    },
+    {
+      "architecture": "x86",
+      "identicalToPrevious": true
+    }
+  ],
+  "thisUiUpdateRequiresSignOut": false
+}

@@ -37,8 +37,9 @@ constexpr ULONG kLanguageProfileIconIndex = 3;
 
 // These categories are backed by UIElement negotiation, owned candidate
 // windows/light-dismiss events and the authenticated sandbox input endpoint.
-const std::array<const GUID*, 2> kHostCategories{
-    &GUID_TFCAT_TIPCAP_UIELEMENTENABLED, &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT};
+const std::array<const GUID*, 3> kHostCategories{
+    &GUID_TFCAT_TIPCAP_UIELEMENTENABLED, &GUID_TFCAT_TIPCAP_IMMERSIVESUPPORT,
+    &GUID_TFCAT_TIPCAP_SYSTRAYSUPPORT};
 
 enum class Command {
   kMetadata,
@@ -68,7 +69,7 @@ struct RegistrationDelta {
   bool profile_created = false;
   bool category_created = false;
   bool display_created = false;
-  std::array<bool, 2> host_created{};
+  std::array<bool, kHostCategories.size()> host_created{};
 };
 
 class ScopedCoInitialize final {
@@ -749,7 +750,7 @@ bool LoadClassFactory() {
   return true;
 }
 
-bool ReadHostCategories(ITfCategoryMgr* categories, std::array<bool, 2>* present) {
+bool ReadHostCategories(ITfCategoryMgr* categories, std::array<bool, kHostCategories.size()>* present) {
   for (std::size_t i = 0; i < kHostCategories.size(); ++i) {
     ComPtr<IEnumGUID> values;
     const auto result = categories->EnumItemsInCategory(*kHostCategories[i], values.Put());
@@ -894,7 +895,7 @@ bool RegisterTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
-  std::array<bool, 2> host_exists{};
+  std::array<bool, kHostCategories.size()> host_exists{};
   if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
@@ -1039,7 +1040,7 @@ bool UnregisterTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
-  std::array<bool, 2> host_exists{};
+  std::array<bool, kHostCategories.size()> host_exists{};
   if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
@@ -1121,7 +1122,7 @@ bool VerifyTsf(const std::wstring& dll_path) {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
-  std::array<bool, 2> host_exists{};
+  std::array<bool, kHostCategories.size()> host_exists{};
   if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
@@ -1130,7 +1131,7 @@ bool VerifyTsf(const std::wstring& dll_path) {
     return false;
   }
   if (!processor_exists || !profile_exists || !category_exists ||
-      !display_exists || !host_exists[0] || !host_exists[1]) {
+      !display_exists || std::ranges::find(host_exists, false) != host_exists.end()) {
     std::cerr << "TSF registration is incomplete: processor="
               << (processor_exists ? "present" : "missing")
               << ", language-profile="
@@ -1139,7 +1140,8 @@ bool VerifyTsf(const std::wstring& dll_path) {
               << (category_exists ? "present" : "missing")
               << ", display-category="
               << (display_exists ? "present" : "missing")
-              << ", ui-element=" << host_exists[0] << ", immersive=" << host_exists[1] << ".\n";
+              << ", ui-element=" << host_exists[0] << ", immersive=" << host_exists[1]
+              << ", system-tray=" << host_exists[2] << ".\n";
     return false;
   }
   if (!LoadClassFactory()) {
@@ -1166,7 +1168,7 @@ bool VerifyTsfAbsent() {
   bool profile_exists = false;
   bool category_exists = false;
   bool display_exists = false;
-  std::array<bool, 2> host_exists{};
+  std::array<bool, kHostCategories.size()> host_exists{};
   if (!ReadHostCategories(categories.Get(), &host_exists)) return false;
   if (!IsProcessorRegistered(profiles.Get(), &processor_exists) ||
       !IsProfileRegistered(profiles.Get(), &profile_exists) ||
@@ -1181,14 +1183,14 @@ bool VerifyTsfAbsent() {
   }
   if (!other_view_state.class_key_exists &&
       (processor_exists || profile_exists || category_exists ||
-       display_exists || host_exists[0] || host_exists[1])) {
+       display_exists || std::ranges::find(host_exists, true) != host_exists.end())) {
     std::cerr << "Shared TSF registration remains without either COM "
                  "architecture.\n";
     return false;
   }
   if (other_view_state.class_key_exists &&
       (!processor_exists || !profile_exists || !category_exists ||
-       !display_exists || !host_exists[0] || !host_exists[1])) {
+       !display_exists || std::ranges::find(host_exists, false) != host_exists.end())) {
     std::cerr << "The other COM architecture remains, but its shared TSF "
                  "registration is incomplete.\n";
     return false;

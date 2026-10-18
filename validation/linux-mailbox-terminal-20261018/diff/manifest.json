@@ -1,0 +1,262 @@
+[
+  {
+    "page": "day-terminal-empty-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.07190661764705883,
+    "mean_absolute_channel_error": 8.886859068627452,
+    "pair": "day-terminal-empty-compact-pair.png",
+    "difference_4x": "day-terminal-empty-compact-diff.png"
+  },
+  {
+    "page": "day-terminal-empty-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.059749642857142855,
+    "mean_absolute_channel_error": 6.032032261904763,
+    "pair": "day-terminal-empty-wide-pair.png",
+    "difference_4x": "day-terminal-empty-wide-diff.png"
+  },
+  {
+    "page": "day-terminal-exited-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.05894411764705882,
+    "mean_absolute_channel_error": 7.980527696078432,
+    "pair": "day-terminal-exited-compact-pair.png",
+    "difference_4x": "day-terminal-exited-compact-diff.png"
+  },
+  {
+    "page": "day-terminal-exited-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.07414928571428571,
+    "mean_absolute_channel_error": 5.700176190476191,
+    "pair": "day-terminal-exited-wide-pair.png",
+    "difference_4x": "day-terminal-exited-wide-diff.png"
+  },
+  {
+    "page": "day-terminal-file-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.05671323529411765,
+    "mean_absolute_channel_error": 7.653661274509804,
+    "pair": "day-terminal-file-compact-pair.png",
+    "difference_4x": "day-terminal-file-compact-diff.png"
+  },
+  {
+    "page": "day-terminal-file-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.09119428571428571,
+    "mean_absolute_channel_error": 7.189155595238096,
+    "pair": "day-terminal-file-wide-pair.png",
+    "difference_4x": "day-terminal-file-wide-diff.png"
+  },
+  {
+    "page": "day-terminal-receipt-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.05584852941176471,
+    "mean_absolute_channel_error": 7.589846323529412,
+    "pair": "day-terminal-receipt-compact-pair.png",
+    "difference_4x": "day-terminal-receipt-compact-diff.png"
+  },
+  {
+    "page": "day-terminal-receipt-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.07264571428571429,
+    "mean_absolute_channel_error": 5.508264642857142,
+    "pair": "day-terminal-receipt-wide-pair.png",
+    "difference_4x": "day-terminal-receipt-wide-diff.png"
+  },
+  {
+    "page": "day-terminal-running-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.05671323529411765,
+    "mean_absolute_channel_error": 7.653661274509804,
+    "pair": "day-terminal-running-compact-pair.png",
+    "difference_4x": "day-terminal-running-compact-diff.png"
+  },
+  {
+    "page": "day-terminal-running-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.0751825,
+    "mean_absolute_channel_error": 6.056617380952381,
+    "pair": "day-terminal-running-wide-pair.png",
+    "difference_4x": "day-terminal-running-wide-diff.png"
+  },
+  {
+    "page": "night-terminal-empty-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.1526875,
+    "mean_absolute_channel_error": 4.890016421568627,
+    "pair": "night-terminal-empty-compact-pair.png",
+    "difference_4x": "night-terminal-empty-compact-diff.png"
+  },
+  {
+    "page": "night-terminal-empty-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.5263164285714286,
+    "mean_absolute_channel_error": 4.876483809523809,
+    "pair": "night-terminal-empty-wide-pair.png",
+    "difference_4x": "night-terminal-empty-wide-diff.png"
+  },
+  {
+    "page": "night-terminal-exited-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.13897941176470588,
+    "mean_absolute_channel_error": 3.31501568627451,
+    "pair": "night-terminal-exited-compact-pair.png",
+    "difference_4x": "night-terminal-exited-compact-diff.png"
+  },
+  {
+    "page": "night-terminal-exited-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.5193285714285715,
+    "mean_absolute_channel_error": 3.5873038095238097,
+    "pair": "night-terminal-exited-wide-pair.png",
+    "difference_4x": "night-terminal-exited-wide-diff.png"
+  },
+  {
+    "page": "night-terminal-file-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.13769264705882353,
+    "mean_absolute_channel_error": 2.989331617647059,
+    "pair": "night-terminal-file-compact-pair.png",
+    "difference_4x": "night-terminal-file-compact-diff.png"
+  },
+  {
+    "page": "night-terminal-file-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.5197967857142857,
+    "mean_absolute_channel_error": 5.130764047619048,
+    "pair": "night-terminal-file-wide-pair.png",
+    "difference_4x": "night-terminal-file-wide-diff.png"
+  },
+  {
+    "page": "night-terminal-receipt-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.13588676470588235,
+    "mean_absolute_channel_error": 2.9233992647058824,
+    "pair": "night-terminal-receipt-compact-pair.png",
+    "difference_4x": "night-terminal-receipt-compact-diff.png"
+  },
+  {
+    "page": "night-terminal-receipt-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.5178260714285714,
+    "mean_absolute_channel_error": 3.3950432142857143,
+    "pair": "night-terminal-receipt-wide-pair.png",
+    "difference_4x": "night-terminal-receipt-wide-diff.png"
+  },
+  {
+    "page": "night-terminal-running-compact",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1360,
+      1000
+    ],
+    "changed_pixel_fraction": 0.13769264705882353,
+    "mean_absolute_channel_error": 2.989331617647059,
+    "pair": "night-terminal-running-compact-pair.png",
+    "difference_4x": "night-terminal-running-compact-diff.png"
+  },
+  {
+    "page": "night-terminal-running-wide",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      2000,
+      1400
+    ],
+    "changed_pixel_fraction": 0.5229760714285714,
+    "mean_absolute_channel_error": 3.992783928571429,
+    "pair": "night-terminal-running-wide-pair.png",
+    "difference_4x": "night-terminal-running-wide-diff.png"
+  }
+]

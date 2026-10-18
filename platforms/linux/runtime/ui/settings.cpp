@@ -1,7 +1,21 @@
 #include "translation_resources.hpp"
+#include "application_update.hpp"
 #include "native_buffer_metrics.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
+#include "shortcuts.hpp"
+#include "launcher_client.hpp"
+#include "gateway_access.hpp"
+#include "codex_channel.hpp"
+#include "claude_channel.hpp"
+#include "chord_editor.hpp"
+#include "chord_core.hpp"
+#include "statistics_pane.hpp"
+#include "practice_pane.hpp"
+#ifdef RIMES_GATEWAY_CLIPBOARD
+#include "clipboard_desktop.hpp"
+#include "capsule_password.hpp"
+#endif
 #include <algorithm>
 #include <atomic>
 #include <cstring>
@@ -20,17 +34,66 @@ struct Settings {
                         BundledPackages(), CompiledAdapters(),
                         RIMES_PRODUCT_VERSION};
   Json saved = config.Load();
+  Json routes = [] { auto value = Visuals().at("routes"); value.push_back(rimes::chord::Contract().at("route"));
+    value.push_back({{"id", "extension.statistics"}, {"title", "统计"}, {"icon", "chart.bar.xaxis"}, {"group", "extensions"},
+                    {"subpages", Json::array({{"daily", "每日"}, {"history", "历史"}, {"test-results", "测速成绩"}})}});
+    value.push_back({{"id", "extension.typing-speed"}, {"title", "打字测速"}, {"icon", "speedometer"}, {"group", "extensions"},
+                    {"subpages", Json::array({{"overview", "文章跟打"}, {"history", "成绩"}})}}); return value; }();
+  std::unique_ptr<ChordPane> chord_pane;
+  std::unique_ptr<StatisticsPane> statistics_pane;
+  std::unique_ptr<PracticePane> practice_pane;
   GtkWidget *window = nullptr, *root = nullptr, *content = nullptr,
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
+  std::string gateway_client = "cursor";
+  ClaudeWorker claude_worker;
+  std::shared_ptr<std::atomic<bool>> claude_cancel;
+  bool claude_busy = false, claude_login_running = false, claude_checked = false, claude_feedback_error = false;
+  std::optional<bool> claude_authenticated;
+  ClaudeError claude_error = ClaudeError::Missing;
+  std::filesystem::path claude_test_executable;
+  std::uint64_t claude_generation = 0;
+  std::string claude_feedback;
+  CodexWorker codex_worker;
+  std::shared_ptr<std::atomic<bool>> codex_cancel;
+  bool codex_busy = false, codex_login_running = false, codex_checked = false, codex_credential = false;
+  bool codex_test_no_browser = false, codex_feedback_error = false;
+  std::filesystem::path codex_test_executable;
+  CodexError codex_error = CodexError::Missing;
+  std::uint64_t codex_generation = 0;
+  std::string codex_feedback, codex_url;
+#ifdef RIMES_GATEWAY_CLIPBOARD
+  std::unique_ptr<rimes::capsule::DesktopClipboard> gateway_clipboard;
+#endif
   std::map<std::string, GtkWidget *> navigation;
+  std::map<std::string, GtkWidget *> shortcut_buttons;
+  GtkWidget *shortcut_status = nullptr;
+  std::string recording_action, recording_token;
+  bool recording_ready = false;
+  uint64_t page_revision = 0;
+  guint shortcut_poll = 0;
   bool rendering = false, busy = false;
+  bool application_window = false;
   GSubprocess *operation = nullptr;
   GCancellable *cancel = g_cancellable_new();
   std::shared_ptr<std::atomic<bool>> alive =
       std::make_shared<std::atomic<bool>>(true);
   ~Settings() {
     alive->store(false);
+    chord_pane.reset();
+    statistics_pane.reset();
+    practice_pane.reset();
+    codex_worker.Shutdown();
+    claude_worker.Shutdown();
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    gateway_clipboard.reset();
+#endif
+    if (window) {
+      g_signal_handlers_disconnect_by_data(window, this);
+      gtk_widget_destroy(window);
+      window = nullptr;
+    }
+    if (shortcut_poll) g_source_remove(shortcut_poll);
     if (operation) {
       g_subprocess_force_exit(operation);
       g_object_unref(operation);
@@ -56,18 +119,27 @@ struct Settings {
     Theme(saved.at("theme"));
     Message(cleaned ? "已保存" : "已保存；旧密钥清理未完成，请检查目录权限。");
   }
-  void Build(bool offscreen) {
+  void Build(bool offscreen, GtkApplication *application = nullptr) {
     rendering = offscreen;
+    application_window = application != nullptr;
     if (offscreen)
       g_object_set(gtk_settings_get_default(), "gtk-enable-animations", FALSE,
                    nullptr);
     Theme(saved.at("theme"));
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    gateway_clipboard = std::make_unique<rimes::capsule::DesktopClipboard>([](auto, auto, auto) {}, [](auto) {});
+    gateway_clipboard->Configure(false, false);
+#endif
     window = offscreen ? gtk_offscreen_window_new()
-                       : gtk_window_new(GTK_WINDOW_TOPLEVEL);
+                       : application ? gtk_application_window_new(application) : gtk_window_new(GTK_WINDOW_TOPLEVEL);
     gtk_window_set_title(GTK_WINDOW(window), "XSIME 设置");
     gtk_window_set_default_size(GTK_WINDOW(window), Metric("settingsWidth"),
                                 Metric("settingsHeight"));
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+    g_signal_connect(window, "delete-event", G_CALLBACK(+[](GtkWidget*, GdkEvent*, gpointer data) -> gboolean {
+      auto* self = static_cast<Settings*>(data);
+      return (self->chord_pane && !self->chord_pane->CanLeave()) || (self->practice_pane && !self->practice_pane->CanLeave());
+    }), this);
     // GtkOffscreenWindow can allocate its minimum instead of the requested
     // default after a page switch. A render fixture has an exact canvas;
     // interactive windows retain their independent resizable minimum.
@@ -82,7 +154,11 @@ struct Settings {
                      G_CALLBACK(+[](GtkWidget *, gpointer p) {
                        auto *self = static_cast<Settings *>(p);
                        self->alive->store(false);
-                       if (!self->rendering)
+                       self->chord_pane.reset();
+                       self->statistics_pane.reset();
+                       self->practice_pane.reset();
+                       self->window = nullptr;
+                       if (!self->rendering && !self->application_window)
                          gtk_main_quit();
                      }),
                      this);
@@ -106,7 +182,7 @@ struct Settings {
       gtk_widget_set_margin_start(bar, 10);
       gtk_widget_set_valign(bar, GTK_ALIGN_CENTER);
       Add(bar, IconButton("xmark", "关闭设置",
-                          [this] { gtk_widget_destroy(window); }));
+                          [this] { if ((!chord_pane || chord_pane->CanLeave()) && (!practice_pane || practice_pane->CanLeave())) gtk_widget_destroy(window); }));
       Add(bar, Label("XSIME 设置", "tiny"), true);
       gtk_container_add(GTK_CONTAINER(titlebar), bar);
     }
@@ -128,7 +204,7 @@ struct Settings {
     gtk_widget_set_margin_start(group, 8);
     gtk_widget_set_size_request(group, -1, 19);
     Add(sidebar, group);
-    for (const auto &r : Visuals().at("routes")) {
+    for (const auto &r : routes) {
       const std::string id = r.at("id"), title = r.at("title"),
                         icon = r.at("icon");
       auto *button = Button("", [this, id] { Select(id); }, "navigation");
@@ -149,14 +225,30 @@ struct Settings {
     content = Column(0);
     Add(body, content, true);
     Select(route, subpage);
+    if (!offscreen) shortcut_poll = g_timeout_add_seconds(2, +[](gpointer data) -> gboolean {
+      auto* self = static_cast<Settings*>(data);
+      if (self->alive->load() && self->route == "core.buffer") self->ShortcutStatus();
+      return G_SOURCE_CONTINUE;
+    }, this);
   }
   const Json &Route() const {
-    for (const auto &r : Visuals().at("routes"))
+    for (const auto &r : routes)
       if (r.at("id") == route)
         return r;
     throw std::runtime_error("Unknown route");
   }
   void Select(std::string next, const std::string &page = "") {
+    if (chord_pane && !chord_pane->CanLeave()) return;
+    if (practice_pane && !practice_pane->CanLeave()) return;
+    chord_pane.reset();
+    statistics_pane.reset();
+    practice_pane.reset();
+    StopShortcutRecording();
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    if (gateway_clipboard) gateway_clipboard->CancelWrites();
+#endif
+    ++page_revision;
+    shortcut_buttons.clear(); shortcut_status = nullptr;
     route = std::move(next);
     const auto &r = Route();
     subpage = page.empty() ? r.at("subpages")[0][0].get<std::string>() : page;
@@ -182,7 +274,10 @@ struct Settings {
         Class(b, "selected");
       Add(segments, b);
     }
-    feedback = Label(message, "tiny");
+    std::string breadcrumb = r.at("title");
+    for (const auto& page : r.at("subpages")) if (page[0] == subpage) breadcrumb += " · " + page[1].get<std::string>();
+    feedback = Label(message.empty() ? breadcrumb : message, "tiny");
+    gtk_label_set_xalign(GTK_LABEL(feedback), 1);
     // A long validation message must not change the native window geometry.
     gtk_label_set_ellipsize(GTK_LABEL(feedback), PANGO_ELLIPSIZE_END);
     gtk_widget_set_tooltip_text(feedback, message.c_str());
@@ -207,12 +302,29 @@ struct Settings {
     gtk_widget_set_margin_end(body, 24);
     gtk_widget_set_margin_bottom(body, 22);
     gtk_container_add(GTK_CONTAINER(scroll), body);
-    if (route == "core.plugins")
+    if (route == "extension.fly-chord-learning") {
+      chord_pane = std::make_unique<ChordPane>(GTK_WINDOW(window), subpage, rendering,
+          [this] { saved = config.Load(); });
+      Add(body, chord_pane->Widget());
+    } else if (route == "extension.typing-speed" || (route == "extension.statistics" && subpage == "test-results")) {
+      gtk_widget_set_margin_start(body, 0); gtk_widget_set_margin_end(body, 0); gtk_widget_set_margin_bottom(body, 0);
+      gtk_widget_set_size_request(body, 698, -1);
+      practice_pane = std::make_unique<PracticePane>(GTK_WINDOW(window), subpage, saved.at("theme"), rendering);
+      Add(body, practice_pane->Widget());
+    } else if (route == "extension.statistics") {
+      statistics_pane = std::make_unique<StatisticsPane>(GTK_WINDOW(window), subpage, saved.at("theme"), rendering,
+          Json::object(), [this] { saved = config.Load(); });
+      Add(body, statistics_pane->Widget());
+    } else if (route == "core.plugins")
       Plugins(body);
     else if (route == "core.connectors" && subpage == "ai-model")
       Connectors(body);
+    else if (route == "core.connectors" && subpage == "local-gateway")
+      Gateway(body);
     else if (route == "core.appearance")
       Appearance(body);
+    else if (route == "core.capsule")
+        Capsule(body);
     else if (route == "core.buffer")
       Buffer(body);
     else if (route == "core.input-method") {
@@ -223,6 +335,7 @@ struct Settings {
       Add(body, Label("XSIME", "heading"));
       Add(body, Label(std::string("版本 ") + RIMES_PRODUCT_VERSION, "caption"));
       Add(body, Label("学术海 · 原生中文输入与文本工作台", "section"));
+      Add(body, Button("检查更新…", [this] { ShowApplicationUpdate(GTK_WINDOW(window)); }));
     } else if (route == "core.maintenance" && subpage == "logs-data") {
       Add(body, Label("用户词库、学习记录和工作台数据", "section"));
       Add(body, Button("打开数据目录…", [this] { OpenPath(UserRoot()); }));
@@ -626,9 +739,265 @@ struct Settings {
                          : "尚未保存密钥；支持无需密钥的本机服务。",
                      "caption"));
   }
+  void CopyGateway(bool supplementary) {
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    Try([&] {
+      saved = config.Load();
+      if (!saved.at("gatewayEnabled").get<bool>()) { Message("本地网关已关闭"); return; }
+      auto bearer = GatewayAccess().Current();
+      auto value = GatewayConfiguration(gateway_client, saved.at("gatewayPort"), bearer, supplementary);
+      auto life = alive;
+      const auto revision = saved.at("revision").get<std::string>();
+      const auto directory = UserRoot();
+      const auto page = page_revision;
+      bool queued = gateway_clipboard && gateway_clipboard->Restore(
+        rimes::capsule::ClipboardArchive{{{"text/plain;charset=utf-8", value}, {"UTF8_STRING", value}}}, true,
+        [this, life, page](bool success) {
+          auto* callback = new std::function<void()>([this, life, page, success] {
+            if (life->load() && page_revision == page)
+              Message(success ? "已复制配置，60 秒后清理本次复制" : "复制未完成，请检查桌面剪贴板权限或重新复制");
+          });
+          g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer raw)->gboolean {
+            (*static_cast<std::function<void()>*>(raw))(); return G_SOURCE_REMOVE;
+          }, callback, +[](gpointer raw) { delete static_cast<std::function<void()>*>(raw); });
+        }, [directory, revision, bearer, life](const auto& publish) {
+          if (!life->load()) return;
+          GatewayAccess(directory / "gateway").WithBearer(bearer, [&] {
+            ConfigurationStore(directory / "configuration", false).WithGateway(revision, [&] {
+              if (life->load()) publish();
+            });
+          });
+        });
+      rimes::capsule::EraseSecret(bearer);
+      rimes::capsule::EraseSecret(value);
+      Message(queued ? "正在复制配置…" : "复制未完成，请检查桌面剪贴板权限或重试");
+    });
+#else
+    (void)supplementary;
+    Message("复制网关配置需要 Linux 完整版的桌面剪贴板组件。");
+#endif
+  }
+  void Gateway(GtkWidget* body) {
+    const bool enabled = saved.at("gatewayEnabled");
+    auto* row = Class(Row(10), "shortcut-row");
+    gtk_widget_set_size_request(row, 650, 46);
+    auto* tile = Class(gtk_event_box_new(), "gateway-icon-tile");
+    gtk_widget_set_size_request(tile, 30, 30);
+    gtk_widget_set_valign(tile, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(tile, 11);
+    auto* glyph = Icon("network", 19);
+    gtk_widget_set_halign(glyph, GTK_ALIGN_CENTER);
+    gtk_widget_set_valign(glyph, GTK_ALIGN_CENTER);
+    gtk_container_add(GTK_CONTAINER(tile), glyph);
+    Add(row, tile);
+    auto* label = Label("启用本地网关", "name");
+    gtk_widget_set_tooltip_text(label, "允许本机智能体通过标准 MCP / HTTP 推送待确认内容；配置仅指向 127.0.0.1。");
+    Add(row, label, true);
+    auto* toggle = gtk_switch_new();
+    gtk_widget_set_valign(toggle, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_end(toggle, 10);
+    atk_object_set_name(gtk_widget_get_accessible(toggle), "启用本地网关");
+    gtk_switch_set_active(GTK_SWITCH(toggle), enabled);
+    g_signal_connect(toggle, "state-set", G_CALLBACK(+[](GtkSwitch*, gboolean state, gpointer raw)->gboolean {
+      auto* self = static_cast<Settings*>(raw);
+      self->Try([&] { auto next = self->saved; next["gatewayEnabled"] = bool(state); self->Save(next); });
+      // Rebuild after the emitting widget returns to GTK.
+      auto life = self->alive;
+      auto* callback = new std::function<void()>([self, life] { if (life->load() && self->route == "core.connectors" && self->subpage == "local-gateway") self->Select(self->route, self->subpage); });
+      g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer p)->gboolean { (*static_cast<std::function<void()>*>(p))(); return G_SOURCE_REMOVE; }, callback, +[](gpointer p) { delete static_cast<std::function<void()>*>(p); });
+      return FALSE;
+    }), this);
+    Add(row, toggle);
+    Add(body, row);
+    auto* panel = Class(Column(10), "panel");
+    gtk_widget_set_size_request(panel, 650, -1);
+    gtk_widget_set_opacity(panel, enabled ? 1 : 0.55);
+    auto* tabs = Class(Row(0), "gateway-tabs");
+    gtk_box_set_homogeneous(GTK_BOX(tabs), TRUE);
+    gtk_widget_set_size_request(tabs, 626, -1);
+    for (const auto& client : GatewayClients()) {
+      const std::string id = client.at("id"), title = client.at("title");
+      auto* button = Button(title, [this, id] { gateway_client = id; Select(route, subpage); }, "segment");
+      if (id == gateway_client) Class(button, "selected");
+      gtk_widget_set_sensitive(button, enabled);
+      Add(tabs, button, true);
+    }
+    Add(panel, tabs);
+    std::string description;
+    for (const auto& client : GatewayClients()) if (client.at("id") == gateway_client) description = client.at("detail");
+    auto* detail = Class(Label(description, "caption"), "gateway-detail");
+    gtk_widget_set_size_request(detail, 626, -1);
+    gtk_label_set_line_wrap(GTK_LABEL(detail), TRUE);
+    Add(panel, detail);
+    auto section = [&](const char* title, const char* copy, bool supplementary) {
+      auto* header = Row(12);
+      gtk_widget_set_size_request(header, 626, -1);
+      Add(header, Label(title, "name"), true);
+      auto* button = Button(copy, [this, supplementary] { CopyGateway(supplementary); }, "gateway-copy");
+      gtk_widget_set_sensitive(button, enabled);
+      Add(header, button);
+      Add(panel, header);
+      // The preview never opens the token file.
+      auto* preview = Class(Label(GatewayConfiguration(gateway_client, saved.at("gatewayPort"), "••••••••", supplementary)), "gateway-config");
+      gtk_widget_set_size_request(preview, 626, -1);
+      gtk_label_set_line_wrap(GTK_LABEL(preview), TRUE);
+      gtk_label_set_line_wrap_mode(GTK_LABEL(preview), PANGO_WRAP_CHAR);
+      gtk_label_set_selectable(GTK_LABEL(preview), TRUE);
+      gtk_label_set_max_width_chars(GTK_LABEL(preview), 100);
+      atk_object_set_name(gtk_widget_get_accessible(preview), supplementary ? "附加配置预览" : "网关配置预览");
+      Add(panel, preview);
+    };
+    section("配置预览（令牌已脱敏）", "复制配置", false);
+    if (gateway_client == "codex") section("环境变量（当前预览已脱敏）", "复制环境变量", true);
+    if (gateway_client == "claudeCode") section("终端命令（可选，当前预览已脱敏）", "复制终端命令", true);
+    Add(body, panel);
+  }
+  void StartClaude(bool login) {
+    if (rendering) return;
+    if (claude_cancel) claude_cancel->store(true);
+    if (login && claude_login_running) {
+      claude_feedback = "正在取消 Claude 登录…";
+      if (route == "core.connectors") Select(route, subpage);
+      return;
+    }
+    claude_cancel = std::make_shared<std::atomic<bool>>(false);
+    claude_busy = true; claude_login_running = login;
+    claude_feedback = login ? "正在启动 Claude Code 登录" : ""; claude_feedback_error = false;
+    const auto generation = ++claude_generation;
+    ClaudeRequest request; request.mode = login ? ClaudeMode::Login : ClaudeMode::Probe;
+    request.timeout = login ? std::chrono::minutes(5) : std::chrono::seconds(4);
+    request.executable = claude_test_executable;
+    claude_worker.Run(request, claude_cancel, [this, life = alive, generation, login](ClaudeEvent event) {
+      auto* callback = new std::function<void()>([this, life, generation, login, event = std::move(event)] {
+        if (!life->load() || generation != claude_generation) return;
+        if (login && !event.activity.empty()) claude_feedback = event.activity;
+        if (event.finished) {
+          claude_busy = claude_login_running = false; claude_checked = true;
+          if (!login || event.error == ClaudeError::None || event.error == ClaudeError::LoginRequired) {
+            claude_error = event.error;
+            claude_authenticated = event.error == ClaudeError::None ? std::optional<bool>(true) :
+              event.error == ClaudeError::LoginRequired ? std::optional<bool>(false) : std::nullopt;
+          }
+          if (login) {
+            claude_feedback = event.error == ClaudeError::None ? "Claude 登录成功。" :
+              event.error == ClaudeError::Timeout ? "等待 Claude 登录超时，请重新发起授权。" :
+              event.error == ClaudeError::Cancelled ? "已取消 Claude 登录。" : ClaudeErrorMessage(event.error);
+            claude_feedback_error = event.error != ClaudeError::None;
+          }
+        }
+        if (route == "core.connectors" && subpage == "ai-model") Select(route, subpage);
+      });
+      g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer value)->gboolean {
+        (*static_cast<std::function<void()>*>(value))(); return G_SOURCE_REMOVE;
+      }, callback, +[](gpointer value) { delete static_cast<std::function<void()>*>(value); });
+    });
+  }
+  void ClaudePanel(GtkWidget* body) {
+    auto* panel = Class(Column(10), "panel"); gtk_widget_set_size_request(panel, 650, -1);
+    auto* top = Class(Row(10), "shortcut-row"); gtk_widget_set_size_request(top, 626, 46);
+    auto* icon = Class(gtk_event_box_new(), "gateway-icon-tile");
+    gtk_widget_set_size_request(icon, 30, 30); gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(icon, 11);
+    gtk_container_add(GTK_CONTAINER(icon), Icon("rimes.brand.claude", 19)); Add(top, icon);
+    auto* title = Label("Claude Code CLI", "name");
+    const bool ready = claude_checked && claude_error == ClaudeError::None;
+    const std::string detail = ready ? "使用本机已登录的 claude 命令行；工具调用与会话持久化被关闭。" :
+      !claude_checked && claude_busy ? "正在检查 Claude Code CLI 与登录状态…" : ClaudeErrorMessage(claude_error);
+    gtk_widget_set_tooltip_text(title, detail.c_str()); Add(top, title, true);
+    auto* badge = Label(ready ? "可用" : "不可用", ready ? "connector-ready" : "connector-unavailable");
+    gtk_widget_set_margin_end(badge, 10); Add(top, badge); Add(panel, top);
+    auto* actions = Row(8);
+    const auto title_text = claude_login_running ? "取消登录" : !claude_authenticated ? "授权 Claude" : *claude_authenticated ? "重新授权 Claude" : "登录 Claude";
+    Add(actions, Button(title_text, [this] { StartClaude(true); Select(route, subpage); }, "connector-action"));
+    if (claude_busy) { auto* spinner = gtk_spinner_new(); gtk_widget_set_size_request(spinner, 16, 16); gtk_spinner_start(GTK_SPINNER(spinner)); Add(actions, spinner); }
+    Add(panel, actions);
+    if (!claude_feedback.empty()) { auto* label = Label(claude_feedback, "connector-feedback"); if (claude_feedback_error) Class(label, "error"); Add(panel, label); }
+    Add(body, panel);
+    if (!rendering && !claude_checked && !claude_busy) StartClaude(false);
+  }
+  void StartCodex(bool login) {
+    if (rendering) return;
+    if (codex_cancel) codex_cancel->store(true);
+    if (login && codex_login_running) {
+      codex_feedback = "正在取消 Codex 登录…";
+      if (route == "core.connectors") Select(route, subpage);
+      return;
+    }
+    codex_cancel = std::make_shared<std::atomic<bool>>(false);
+    codex_busy = true; codex_login_running = login; codex_url.clear();
+    codex_feedback = login ? "正在启动 Codex 登录" : ""; codex_feedback_error = false;
+    const auto generation = ++codex_generation;
+    CodexRequest request; request.mode = login ? CodexMode::Login : CodexMode::Probe;
+    request.timeout = login ? std::chrono::minutes(5) : std::chrono::seconds(4);
+    request.executable = codex_test_executable;
+    const auto directory = request.root;
+    codex_worker.Run(request, codex_cancel, [this, life = alive, generation, login, directory](CodexEvent event) {
+      const bool credential = event.finished && HasCodexCredential(directory);
+      auto* callback = new std::function<void()>([this, life, generation, login, credential, event = std::move(event)] {
+        if (!life->load() || generation != codex_generation) return;
+        if (!event.authorization_url.empty()) {
+          codex_url = event.authorization_url; codex_feedback = "等待浏览器完成 ChatGPT 授权…";
+          if (!codex_test_no_browser) {
+            GError* error = nullptr;
+            if (!g_app_info_launch_default_for_uri(codex_url.c_str(), nullptr, &error))
+              codex_feedback = "无法打开浏览器，请复制登录链接后继续授权。";
+            g_clear_error(&error);
+          }
+        }
+        if (event.finished) {
+          codex_busy = false; codex_login_running = false; codex_checked = true;
+          codex_error = event.error; codex_credential = credential; codex_url.clear();
+          if (login) { codex_feedback = event.error == CodexError::None ? "Codex 登录成功。" : CodexErrorMessage(event.error); codex_feedback_error = event.error != CodexError::None; }
+        }
+        if (route == "core.connectors" && subpage == "ai-model") Select(route, subpage);
+      });
+      g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer value)->gboolean {
+        (*static_cast<std::function<void()>*>(value))(); return G_SOURCE_REMOVE;
+      }, callback, +[](gpointer value) { delete static_cast<std::function<void()>*>(value); });
+    });
+  }
+  void CopyCodexURL() {
+    if (!codex_login_running || !SafeCodexAuthorizationURL(codex_url)) return;
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    const auto operation = codex_cancel;
+    if (gateway_clipboard && operation) gateway_clipboard->Restore(
+      rimes::capsule::ClipboardArchive{{{"text/plain;charset=utf-8", codex_url}, {"UTF8_STRING", codex_url}}}, true,
+      [](bool) {}, [life = alive, operation](const auto& publish) {
+        if (life->load() && !operation->load()) publish();
+      });
+#else
+    gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), codex_url.c_str(), -1);
+#endif
+  }
+  void CodexPanel(GtkWidget* body) {
+    auto* panel = Class(Column(10), "panel"); gtk_widget_set_size_request(panel, 650, -1);
+    auto* top = Class(Row(10), "shortcut-row"); gtk_widget_set_size_request(top, 626, 46);
+    auto* icon = Class(gtk_event_box_new(), "gateway-icon-tile");
+    gtk_widget_set_size_request(icon, 30, 30); gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(icon, 11);
+    gtk_container_add(GTK_CONTAINER(icon), Icon("rimes.brand.chatgpt", 19)); Add(top, icon);
+    auto* title = Label("Codex CLI", "name");
+    const bool ready = codex_checked && codex_error == CodexError::None;
+    const std::string detail = ready ? CodexContract().at("presentation").at("ready").get<std::string>() :
+      !codex_checked && codex_busy ? CodexContract().at("presentation").at("checking").get<std::string>() : CodexErrorMessage(codex_error);
+    gtk_widget_set_tooltip_text(title, detail.c_str()); Add(top, title, true);
+    auto* badge = Label(ready ? "可用" : "不可用", ready ? "connector-ready" : "connector-unavailable");
+    gtk_widget_set_margin_end(badge, 10); Add(top, badge); Add(panel, top);
+    auto* actions = Row(8);
+    Add(actions, Button(codex_login_running ? "取消登录" : codex_credential ? "重新授权 Codex" : "登录 Codex", [this] {
+      StartCodex(true); Select(route, subpage);
+    }, "connector-action"));
+    if (!codex_url.empty()) Add(actions, Button("复制登录链接", [this] { CopyCodexURL(); }, "connector-action"));
+    if (codex_busy) { auto* spinner = gtk_spinner_new(); gtk_widget_set_size_request(spinner, 16, 16); gtk_spinner_start(GTK_SPINNER(spinner)); Add(actions, spinner); }
+    Add(panel, actions);
+    if (!codex_feedback.empty()) { auto* label = Label(codex_feedback, "connector-feedback"); if (codex_feedback_error) Class(label, "error"); Add(panel, label); }
+    Add(body, panel);
+    if (!rendering && !codex_checked && !codex_busy) StartCodex(false);
+  }
   void Connectors(GtkWidget *body) {
     auto *row = Row(8);
     gtk_widget_set_size_request(row, 650, 68);
+    gtk_box_set_homogeneous(GTK_BOX(row), TRUE);
     for (const auto &entry : std::vector<std::pair<std::string, std::string>>{
              {"codex-cli", "ChatGPT"},
              {"claude-code-cli", "Claude"},
@@ -641,27 +1010,47 @@ struct Settings {
               auto next = saved;
               next["activeConnector"] = id;
               Save(next);
+              if (id == "codex-cli" && !codex_busy) codex_checked = false;
+              if (id == "claude-code-cli" && !claude_busy) claude_checked = false;
               Select(route, subpage);
             });
           },
           "choice");
       if (saved.at("activeConnector") == id)
         Class(b, "selected");
+      auto* content = Row(9);
+      gtk_widget_set_margin_start(content, 10); gtk_widget_set_margin_end(content, 10);
+      auto* tile = gtk_event_box_new();
+      gtk_widget_set_size_request(tile, 24, 24); gtk_widget_set_valign(tile, GTK_ALIGN_CENTER);
+      gtk_container_add(GTK_CONTAINER(tile), Icon(id == "codex-cli" ? "rimes.brand.chatgpt" : id == "claude-code-cli" ? "rimes.brand.claude" : "network", 18));
+      Add(content, tile); Add(content, Label(entry.second, "name"), true);
+      auto* radio = gtk_drawing_area_new();
+      gtk_widget_set_size_request(radio, 16, 16); gtk_widget_set_valign(radio, GTK_ALIGN_CENTER);
+      g_signal_connect(radio, "draw", G_CALLBACK(+[](GtkWidget* widget, cairo_t* cr, gpointer raw)->gboolean {
+        const bool selected = GPOINTER_TO_INT(raw);
+        auto color = [&](const char* name) {
+          GdkRGBA rgba{}; gtk_style_context_lookup_color(gtk_widget_get_style_context(widget), name, &rgba);
+          gdk_cairo_set_source_rgba(cr, &rgba);
+        };
+        const double x = gtk_widget_get_allocated_width(widget) / 2.0;
+        const double y = gtk_widget_get_allocated_height(widget) / 2.0;
+        cairo_arc(cr, x, y, 7.5, 0, 6.283185307179586);
+        color("xsime_choice_surface"); cairo_fill_preserve(cr);
+        color(selected ? "xsime_switch_on" : "xsime_choice_border");
+        cairo_set_line_width(cr, selected ? 1.5 : 1); cairo_stroke(cr);
+        if (selected) { color("xsime_switch_on"); cairo_arc(cr, x, y, 16 * .22, 0, 6.283185307179586); cairo_fill(cr); }
+        return FALSE;
+      }), GINT_TO_POINTER(saved.at("activeConnector") == id));
+      Add(content, radio);
+      gtk_container_remove(GTK_CONTAINER(b), gtk_bin_get_child(GTK_BIN(b)));
+      gtk_container_add(GTK_CONTAINER(b), content);
       Add(row, b, true);
     }
     Add(body, row);
     if (saved.at("activeConnector") == "openai-compatible")
       ProviderEditor(body);
-    else {
-      auto *panel = Class(Column(10), "panel");
-      gtk_widget_set_size_request(panel, 650, -1);
-      Add(panel,
-          Label(saved.at("activeConnector") == "codex-cli" ? "Codex CLI"
-                                                           : "Claude Code CLI",
-                "name"));
-      Add(panel, Label("登录与会话入口随对应 CLI 插件接入。", "caption"));
-      Add(body, panel);
-    }
+    else if (saved.at("activeConnector") == "codex-cli") CodexPanel(body);
+    else ClaudePanel(body);
   }
   void Appearance(GtkWidget *body) {
     if (subpage == "size") {
@@ -715,6 +1104,26 @@ struct Settings {
     }
     Add(body, grid);
   }
+  void Capsule(GtkWidget* body) {
+      const std::string id = "builtin.capsule.temporary";
+      auto form = std::make_shared<Form>(PluginFields(id), config.Plugin(id));
+      Add(body, form->Widget());
+      Add(body, Button("应用修改", [this, form, id] {
+              Try([&] {
+                  auto next = saved;
+                  next["plugins"][id] = form->Values();
+                  Save(next);
+              });
+          }));
+      Add(body,
+          Label("文字通过输入法直接上屏；图片、文件和富文本可复制后在目标应用粘贴。", "caption"));
+      Add(body, Label("本地资料库", "section"));
+      Add(body, Label("剪贴板原始格式与 Capsule 内容保存在本机，卸载程序时保留。", "caption"));
+      Add(body, Button("打开数据目录…", [this] { OpenPath(UserRoot() / "capsule"); }));
+      Add(body,
+          Label("X11 使用剪贴板所有权事件；Wayland 需要桌面开放 data-control 接口。", "caption"));
+      Add(body, Button("管理 Capsule 插件…", [this] { Select("core.plugins"); }));
+  }
   void Buffer(GtkWidget *body) {
     auto form = std::make_shared<Form>(
         std::vector<Field>{{"closeAfterLast",
@@ -740,19 +1149,194 @@ struct Settings {
             Save(next);
           });
         }));
+    auto* spacer = gtk_box_new(GTK_ORIENTATION_VERTICAL, 0);
+    gtk_widget_set_size_request(spacer, -1, 20); Add(body, spacer);
+    Add(body, Label("快捷键", "section"));
+    Shortcuts(body);
+  }
+  static std::string ShortcutTitle(const std::string& chord) {
+    if (chord.empty()) return "未设置";
+    const auto parsed = ParseShortcut(chord);
+    std::string result;
+    if (parsed->modifiers & Shortcut::Control) result += "Ctrl ";
+    if (parsed->modifiers & Shortcut::Alt) result += "Alt ";
+    if (parsed->modifiers & Shortcut::Shift) result += "⇧ ";
+    if (parsed->modifiers & Shortcut::Logo) result += "Super ";
+    auto key = parsed->key;
+    if (key.size() == 1) key[0] = g_ascii_toupper(key[0]);
+    return result + key;
+  }
+  void ShortcutStatus(const std::string& method = "GetStatus") {
+    if (rendering || !shortcut_status) return;
+    const auto revision = page_revision;
+    LauncherCall(method, "", cancel, [this, life = alive, revision](Json status) {
+      if (!life->load() || revision != page_revision || !shortcut_status) return;
+      const std::map<std::string, std::string> names = {
+        {"recording", "正在录入"},
+        {"registered", "已绑定"}, {"pending", "等待桌面授权"}, {"conflict", "键位已被占用"},
+        {"not-granted", "未获授权"}, {"layout-unavailable", "当前键盘布局不可用"},
+        {"unavailable", "尚不可用"}, {"input-method", "仅在输入框中可用"}, {"unbound", "未绑定"}};
+      const auto actions = status.value("actions", Json::object());
+      std::string summary;
+      for (const auto& action : ShortcutActions()) {
+        const auto id = action.at("id").get<std::string>();
+        if (!actions.contains(id) || !shortcut_buttons.count(id)) continue;
+        const auto state = actions[id].value("state", "unavailable");
+        const auto label = names.count(state) ? names.at(state) : names.at("unavailable");
+        const auto text = action.at("title").get<std::string>() + "：" + label;
+        if (!summary.empty()) summary += "；";
+        summary += text;
+        const auto tip = text + "\n" + actions[id].value("trigger", "") +
+          "\n点击后按组合键；Delete 恢复默认，Esc 取消。";
+        gtk_widget_set_tooltip_text(shortcut_buttons.at(id), tip.c_str());
+        if (recording_action != id && status.value("backend", "") == "portal" && state == "registered") {
+          const auto actual = actions[id].value("trigger", "");
+          if (!actual.empty()) gtk_button_set_label(GTK_BUTTON(shortcut_buttons.at(id)), actual.c_str());
+        }
+      }
+      if (summary.empty()) summary = status.value("message", "无法获取桌面绑定状态。");
+      gtk_label_set_text(GTK_LABEL(shortcut_status), summary.c_str());
+      const auto detail = summary + "\n" + status.value("message", "");
+      gtk_widget_set_tooltip_text(shortcut_status, detail.c_str());
+    });
+  }
+  void StopShortcutRecording() {
+    if (!recording_token.empty() && !rendering)
+      LauncherCall("EndRecording", recording_token, nullptr, [](Json) {});
+    recording_action.clear(); recording_token.clear(); recording_ready = false;
+  }
+  void BeginShortcutRecording(const std::string& id) {
+    StopShortcutRecording();
+    recording_action = id; recording_token = RandomID(); recording_ready = rendering;
+    gtk_button_set_label(GTK_BUTTON(shortcut_buttons.at(id)), rendering ? "请按快捷键…" : "正在暂停全局绑定…");
+    gtk_widget_grab_focus(shortcut_buttons.at(id));
+    if (rendering) return;
+    const auto token = recording_token;
+    LauncherCall("BeginRecording", token, cancel, [this, life = alive, token](Json status) {
+      if (!life->load()) { LauncherCall("EndRecording", token, nullptr, [](Json) {}); return; }
+      if (recording_token != token) { LauncherCall("EndRecording", token, nullptr, [](Json) {}); return; }
+      if (!status.value("recording", false)) {
+        Message(status.value("message", "无法暂停全局快捷键，请启动 Fcitx5 后重试。"));
+        Select(route, subpage); return;
+      }
+      recording_ready = true;
+      if (shortcut_buttons.count(recording_action))
+        gtk_button_set_label(GTK_BUTTON(shortcut_buttons.at(recording_action)), "请按快捷键…");
+    });
+  }
+  bool RecordShortcut(GdkEventKey* event) {
+    if (recording_action.empty()) return false;
+    if (event->keyval == GDK_KEY_Escape) { Select(route, subpage); return true; }
+    if (!recording_ready) return true;
+    if (event->is_modifier) return true;
+    const auto id = recording_action;
+    Try([&] {
+      std::string chord;
+      const auto modifiers = event->state & (GDK_CONTROL_MASK | GDK_MOD1_MASK | GDK_SUPER_MASK | GDK_MOD4_MASK | GDK_SHIFT_MASK);
+      if (!modifiers && (event->keyval == GDK_KEY_BackSpace || event->keyval == GDK_KEY_Delete)) {
+        chord = DefaultShortcuts().at(id);
+      } else {
+        Shortcut value;
+        if (event->state & GDK_CONTROL_MASK) value.modifiers |= Shortcut::Control;
+        if (event->state & GDK_MOD1_MASK) value.modifiers |= Shortcut::Alt;
+        if (event->state & (GDK_SUPER_MASK | GDK_MOD4_MASK)) value.modifiers |= Shortcut::Logo;
+        if (event->state & GDK_SHIFT_MASK) value.modifiers |= Shortcut::Shift;
+        guint key = event->keyval;
+        // Store the base XKB symbol, even for Shift+1 or Shift+Tab.
+        if (event->hardware_keycode)
+          gdk_keymap_translate_keyboard_state(gdk_keymap_get_for_display(gtk_widget_get_display(window)),
+            event->hardware_keycode, static_cast<GdkModifierType>(0), event->group, &key, nullptr, nullptr, nullptr);
+        key = gdk_keyval_to_lower(key);
+        const char* name = gdk_keyval_name(key);
+        value.key = name ? name : "";
+        chord = value.Canonical();
+      }
+      auto next = saved; next["shortcuts"][id] = chord;
+      // Report a local validation failure without exposing persisted values.
+      try { ValidateShortcuts(next.at("shortcuts")); }
+      catch (const std::exception&) {
+        Message("请选择包含 Ctrl、Alt 或 Super 的组合键；不可重复或占用全选、粘贴键。"); return;
+      }
+      Save(next); Select(route, subpage);
+    });
+    return true;
+  }
+  void Shortcuts(GtkWidget* body) {
+    auto* rows = Column(Metric("shortcutRowSpacing")); Add(body, rows);
+    for (const auto& action : ShortcutActions()) {
+      const std::string id = action.at("id"), title = action.at("title");
+      auto* card = Class(gtk_event_box_new(), "shortcut-row");
+      auto* row = Row(Metric("shortcutControlSpacing"));
+      gtk_widget_set_margin_start(row, Metric("shortcutInsetHorizontal")); gtk_widget_set_margin_end(row, Metric("shortcutInsetHorizontal"));
+      gtk_widget_set_margin_top(row, Metric("shortcutInsetVertical")); gtk_widget_set_margin_bottom(row, Metric("shortcutInsetVertical"));
+      gtk_widget_set_size_request(card, Metric("shortcutRowWidth"), -1);
+      auto* title_label = Class(Label(title), "shortcut-title");
+      gtk_label_set_ellipsize(GTK_LABEL(title_label), PANGO_ELLIPSIZE_END);
+      Add(row, title_label); Add(row, Column(0), true);
+      auto* recorder = Button(ShortcutTitle(saved.at("shortcuts").at(id)), [this, id] {
+        const bool stop = recording_action == id;
+        for (const auto& [other, button] : shortcut_buttons)
+          gtk_button_set_label(GTK_BUTTON(button), ShortcutTitle(saved.at("shortcuts").at(other)).c_str());
+        if (stop) { StopShortcutRecording(); return; }
+        BeginShortcutRecording(id);
+      }, "shortcut-recorder");
+      gtk_widget_set_size_request(recorder, Metric("shortcutRecorderMinWidth"), -1);
+      auto* recorder_label = gtk_bin_get_child(GTK_BIN(recorder));
+      gtk_label_set_max_width_chars(GTK_LABEL(recorder_label), 22);
+      gtk_label_set_ellipsize(GTK_LABEL(recorder_label), PANGO_ELLIPSIZE_END);
+      atk_object_set_name(gtk_widget_get_accessible(recorder), (title + "快捷键").c_str());
+      gtk_widget_set_tooltip_text(recorder, "点击后按组合键；Delete 恢复默认，Esc 取消。");
+      g_signal_connect(recorder, "key-press-event", G_CALLBACK(+[](GtkWidget*, GdkEventKey* e, gpointer p) -> gboolean {
+        return static_cast<Settings*>(p)->RecordShortcut(e);
+      }), this);
+      g_signal_connect(recorder, "focus-out-event", G_CALLBACK(+[](GtkWidget* widget, GdkEventFocus*, gpointer p) -> gboolean {
+        auto* self = static_cast<Settings*>(p);
+        const auto found = self->shortcut_buttons.find(self->recording_action);
+        if (found != self->shortcut_buttons.end() && found->second == widget) {
+          gtk_button_set_label(GTK_BUTTON(widget), ShortcutTitle(self->saved.at("shortcuts").at(found->first)).c_str());
+          self->StopShortcutRecording();
+        }
+        return FALSE;
+      }), this);
+      shortcut_buttons[id] = recorder;
+      Add(row, recorder); gtk_container_add(GTK_CONTAINER(card), row); Add(rows, card);
+    }
+    Add(body, Button("恢复全部默认快捷键", [this] {
+      Try([&] { auto next = saved; next["shortcuts"] = DefaultShortcuts(); Save(next); Select(route, subpage); });
+    }));
+    auto* global_row = Row(16);
+    Add(global_row, Label("在其他输入法中使用全局快捷键", "name"), true);
+    auto* global = gtk_switch_new();
+    gtk_switch_set_active(GTK_SWITCH(global), saved.at("globalShortcuts"));
+    atk_object_set_name(gtk_widget_get_accessible(global), "在其他输入法中使用全局快捷键");
+    g_signal_connect(global, "notify::active", G_CALLBACK(+[](GObject* button, GParamSpec*, gpointer data) {
+      auto* self = static_cast<Settings*>(data);
+      self->Try([&] {
+        auto next = self->saved; next["globalShortcuts"] = static_cast<bool>(gtk_switch_get_active(GTK_SWITCH(button)));
+        self->Save(next); self->ShortcutStatus();
+      });
+    }), this);
+    Add(global_row, global); Add(body, global_row);
+    shortcut_status = Label("正在检查桌面快捷键…", "caption");
+    gtk_label_set_ellipsize(GTK_LABEL(shortcut_status), PANGO_ELLIPSIZE_END);
+    gtk_widget_set_size_request(shortcut_status, 650, -1);
+    Add(body, shortcut_status);
+    Add(body, Button("重新绑定全局快捷键", [this] { ShortcutStatus("Retry"); }));
+    Add(body, Label("若桌面未提供授权，可在系统自定义快捷键中绑定 rimes-launch buffer 或 capsule。", "caption"));
+    ShortcutStatus();
   }
 };
 
-GtkWidget *FindControl(GtkWidget *root, const std::string &name) {
+GtkWidget *FindControl(GtkWidget *root, const std::string &name, bool labels = false) {
   const auto *label = atk_object_get_name(gtk_widget_get_accessible(root));
-  if (label && name == label && !GTK_IS_LABEL(root))
+  if (label && name == label && (labels || !GTK_IS_LABEL(root)))
     return root;
   if (!GTK_IS_CONTAINER(root))
     return nullptr;
   auto *children = gtk_container_get_children(GTK_CONTAINER(root));
   GtkWidget *found = nullptr;
   for (auto *item = children; item && !found; item = item->next)
-    found = FindControl(GTK_WIDGET(item->data), name);
+    found = FindControl(GTK_WIDGET(item->data), name, labels);
   g_list_free(children);
   return found;
 }
@@ -773,6 +1357,143 @@ void SettleLayout() {
   g_main_loop_unref(loop);
 }
 
+int CodexSettingsSmoke(const std::filesystem::path& executable) {
+  char pattern[] = "/tmp/xsime-codex-settings-XXXXXX";
+  if (!mkdtemp(pattern)) return 1;
+  const auto root = std::filesystem::path(pattern);
+  setenv("RIMES_USER_DIR", root.c_str(), 1);
+  bool success = false;
+  std::string phase = "window";
+  try {
+    Settings app;
+    app.codex_test_executable = std::filesystem::absolute(executable);
+    app.codex_test_no_browser = true;
+    app.Build(true); app.rendering = false;
+    gtk_widget_show_all(app.window);
+    PrivateDirectory home(root / "ai/codex-home");
+    auto check = [](bool condition) { if (!condition) throw std::runtime_error("Codex settings state mismatch"); };
+    auto wait = [&](const auto& condition) {
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (!condition()) {
+        check(std::chrono::steady_clock::now() < deadline);
+        while (gtk_events_pending()) gtk_main_iteration();
+        g_usleep(10000);
+      }
+    };
+    auto control = [&](const char* name) {
+      auto* widget = FindControl(app.root, name);
+      if (!widget || !GTK_IS_BUTTON(widget)) throw std::runtime_error(std::string("Missing Codex control: ") + name);
+      return widget;
+    };
+    auto click = [&](const char* name) { gtk_button_clicked(GTK_BUTTON(control(name))); };
+    phase = "account probe";
+    home.Write("fixture-mode", "logged-out");
+    app.Select("core.connectors", "ai-model"); click("ChatGPT");
+    wait([&] { return app.codex_checked && !app.codex_busy; });
+    check(app.codex_error == CodexError::LoginRequired && app.codex_url.empty());
+    check(app.config.Load().at("activeConnector") == "codex-cli");
+    phase = "login and copy";
+    home.Write("fixture-mode", "login-cancel"); click("登录 Codex");
+    wait([&] { return !app.codex_url.empty(); });
+    check(app.codex_login_running && SafeCodexAuthorizationURL(app.codex_url));
+    SettleLayout(); click("复制登录链接");
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    wait([&] {
+      auto* copied = gtk_clipboard_wait_for_text(clipboard);
+      const bool ok = copied && std::string(copied) == app.codex_url;
+      g_free(copied); return ok;
+    });
+    phase = "cancel"; click("取消登录");
+    wait([&] { return !app.codex_busy; });
+    check(!app.codex_login_running && app.codex_url.empty() && app.codex_error == CodexError::Cancelled);
+    phase = "successful retry";
+    home.Write("fixture-mode", "login"); click("登录 Codex");
+    wait([&] { return !app.codex_busy; });
+    check(app.codex_error == CodexError::None && app.codex_credential && app.codex_feedback == "Codex 登录成功。");
+    control("重新授权 Codex");
+    phase = "unsafe login URL";
+    home.Write("fixture-mode", "bad-login-url"); click("重新授权 Codex");
+    wait([&] { return !app.codex_busy; });
+    check(app.codex_error == CodexError::Protocol && app.codex_url.empty());
+    phase = "leave page: start";
+    home.Write("fixture-mode", "login-cancel"); click("重新授权 Codex");
+    wait([&] { return !app.codex_url.empty(); }); phase = "leave page: choose provider"; click("AI Provider");
+    check(app.saved.at("activeConnector") == "openai-compatible");
+    gtk_widget_destroy(app.window);
+    success = true;
+  } catch (const std::exception& error) { std::cerr << "FAILED: Codex settings " << phase << ": " << error.what() << "\n"; }
+  std::filesystem::remove_all(root);
+  if (success) std::cout << "Codex GTK settings: account probe, explicit login, safe link copy, cancel, retry, reauthorize, malformed URL and page/window lifecycle passed\n";
+  return success ? 0 : 1;
+}
+
+int ClaudeSettingsSmoke(const std::filesystem::path& executable) {
+  char pattern[] = "/tmp/xsime-claude-settings-XXXXXX";
+  if (!mkdtemp(pattern)) return 1;
+  const auto root = std::filesystem::path(pattern);
+  setenv("RIMES_USER_DIR", root.c_str(), 1);
+  PrivateDirectory home(root / "home");
+  setenv("HOME", home.Path().c_str(), 1);
+  bool success = false;
+  std::string phase = "window";
+  try {
+    Settings app;
+    app.claude_test_executable = std::filesystem::absolute(executable);
+    app.Build(true); app.rendering = false; app.application_window = true;
+    gtk_widget_show_all(app.window);
+    auto check = [](bool condition) { if (!condition) throw std::runtime_error("Claude settings state mismatch"); };
+    auto wait = [&](const auto& condition) {
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (!condition()) {
+        check(std::chrono::steady_clock::now() < deadline);
+        while (gtk_events_pending()) gtk_main_iteration();
+        g_usleep(10000);
+      }
+    };
+    auto control = [&](const char* name) {
+      auto* widget = FindControl(app.root, name);
+      if (!widget || !GTK_IS_BUTTON(widget)) throw std::runtime_error(std::string("Missing Claude control: ") + name);
+      return widget;
+    };
+    auto click = [&](const char* name) { gtk_button_clicked(GTK_BUTTON(control(name))); };
+    phase = "account probe";
+    home.Write("fixture-mode", "logged-out");
+    app.Select("core.connectors", "ai-model"); click("Claude");
+    wait([&] { return app.claude_checked && !app.claude_busy; });
+    check(app.claude_error == ClaudeError::LoginRequired && app.claude_authenticated == false);
+    check(app.config.Load().at("activeConnector") == "claude-code-cli");
+    check(!home.Read("login-started", 128));
+    phase = "login";
+    home.Write("fixture-mode", "login-hold"); click("登录 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    check(app.claude_login_running && app.claude_feedback.find("PRIVATE-") == std::string::npos);
+    SettleLayout(); click("取消登录");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_authenticated == false && app.claude_feedback == "已取消 Claude 登录。");
+    phase = "successful retry";
+    home.Write("fixture-mode", "login"); click("登录 Claude");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_error == ClaudeError::None && app.claude_authenticated == true && app.claude_feedback == "Claude 登录成功。");
+    check(home.Read("logged-in", 128).has_value());
+    phase = "reauthorize and page lifecycle";
+    home.Remove("login-started"); home.Write("fixture-mode", "login-hold"); click("重新授权 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    click("AI Provider"); check(app.saved.at("activeConnector") == "openai-compatible");
+    click("Claude"); check(app.claude_login_running); click("取消登录");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_authenticated == true);
+    phase = "close during login";
+    home.Remove("login-started"); click("重新授权 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    gtk_widget_destroy(app.window);
+    success = true;
+  } catch (const std::exception& error) { std::cerr << "FAILED: Claude settings " << phase << ": " << error.what() << "\n"; }
+  while (gtk_events_pending()) gtk_main_iteration();
+  std::filesystem::remove_all(root);
+  if (success) std::cout << "Claude GTK settings: prompt-free probe, explicit login, secret output suppression, cancel, retry, reauthorize and page/window lifecycle passed\n";
+  return success ? 0 : 1;
+}
+
 int SettingsSmoke() {
   char pattern[] = "/tmp/xsime-settings-smoke-XXXXXX";
   if (!mkdtemp(pattern))
@@ -786,7 +1507,7 @@ int SettingsSmoke() {
     app.Build(true);
     gtk_widget_show_all(app.window);
     auto control = [&](const char *name) {
-      auto *widget = FindControl(app.root, name);
+      auto *widget = FindControl(app.root, name, std::string(name).find("配置预览") != std::string::npos);
       if (!widget)
         throw std::runtime_error("Missing control");
       return widget;
@@ -800,6 +1521,22 @@ int SettingsSmoke() {
       if (!value)
         throw std::runtime_error("UI state mismatch");
     };
+    phase = "statistics navigation";
+    app.Select("extension.statistics");
+    check(app.subpage == "daily" && app.statistics_pane != nullptr);
+    control("记录键频");
+    app.Select("extension.statistics", "history");
+    check(app.subpage == "history" && app.statistics_pane != nullptr);
+    control("记录日常输入");
+    phase = "article practice navigation";
+    app.Select("extension.typing-speed");
+    check(app.subpage == "overview" && app.practice_pane != nullptr);
+    control("选择测速文章"); control("开始或重新跟打");
+    app.Select("extension.typing-speed", "history");
+    check(app.practice_pane != nullptr); control("筛选输入方案与文章版本");
+    app.Select("extension.statistics", "test-results");
+    check(app.practice_pane != nullptr && app.statistics_pane == nullptr);
+    control("清空文章跟打成绩");
     phase = "buffer";
     app.Select("core.buffer");
     gtk_switch_set_active(GTK_SWITCH(control("最后一块上屏后关闭工作台")),
@@ -807,6 +1544,25 @@ int SettingsSmoke() {
     click("应用修改");
     check(app.config.Load().at("closeAfterLast") == false);
     check(app.config.Load().at("resetOnAppSwitch") == false);
+    phase = "shortcuts";
+    app.recording_action = "buffer";
+    app.recording_ready = true;
+    GdkEventKey event{}; event.keyval = GDK_KEY_j; event.state = GDK_CONTROL_MASK | GDK_MOD1_MASK;
+    check(app.RecordShortcut(&event));
+    check(app.config.Load().at("shortcuts").at("buffer") == "CTRL+ALT+j");
+    app.recording_action = "capsule";
+    app.recording_ready = true;
+    const auto before_conflict = app.config.Load();
+    check(app.RecordShortcut(&event)); check(app.config.Load() == before_conflict);
+    event.keyval = GDK_KEY_Escape; app.RecordShortcut(&event);
+    check(app.recording_action.empty());
+    app.recording_action = "buffer"; app.recording_ready = true;
+    event.keyval = GDK_KEY_Delete; event.state = 0; app.RecordShortcut(&event);
+    check(app.config.Load().at("shortcuts").at("buffer") == DefaultShortcuts().at("buffer"));
+    gtk_switch_set_active(GTK_SWITCH(control("在其他输入法中使用全局快捷键")), false);
+    check(app.config.Load().at("globalShortcuts") == false);
+    click("恢复全部默认快捷键");
+    check(app.config.Load().at("shortcuts") == DefaultShortcuts());
     phase = "theme";
     app.Select("core.appearance", "theme");
     click("翡翠");
@@ -837,6 +1593,43 @@ int SettingsSmoke() {
     click("保存");
     check(app.config.Load() == before);
     check(app.message.find("secret") == std::string::npos);
+    phase = "gateway";
+    app.Select("core.connectors", "local-gateway");
+    check(!std::filesystem::exists(root / "user/gateway/token"));
+    click("Codex");
+    check(std::string(gtk_label_get_text(GTK_LABEL(control("网关配置预览")))).find("bearer_token_env_var") != std::string::npos);
+    check(std::string(gtk_label_get_text(GTK_LABEL(control("附加配置预览")))).find("••••••••") != std::string::npos);
+    click("Claude Code");
+    check(std::string(gtk_label_get_text(GTK_LABEL(control("附加配置预览")))).find("claude mcp add") != std::string::npos);
+    check(!std::filesystem::exists(root / "user/gateway/token"));
+    gtk_switch_set_active(GTK_SWITCH(control("启用本地网关")), false);
+    while (gtk_events_pending()) gtk_main_iteration();
+    check(!app.config.Load().at("gatewayEnabled").get<bool>() && !gtk_widget_get_sensitive(control("复制配置")) && !gtk_widget_get_sensitive(control("Cursor")));
+    gtk_switch_set_active(GTK_SWITCH(control("启用本地网关")), true);
+    while (gtk_events_pending()) gtk_main_iteration();
+    check(app.config.Load().at("gatewayEnabled").get<bool>());
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    click("Cursor");
+    SettleLayout();
+    click("复制配置");
+    for (unsigned wait = 0; wait < 100 && app.message.find("已复制配置") == std::string::npos; ++wait) {
+      while (gtk_events_pending()) gtk_main_iteration();
+      g_usleep(10000);
+    }
+    check(app.message.find("已复制配置") != std::string::npos);
+    const auto token = GatewayAccess(root / "user/gateway").Current();
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    auto* copied = gtk_clipboard_wait_for_text(clipboard);
+    check(copied && std::string(copied).find(token) != std::string::npos);
+    g_free(copied);
+    check(gtk_clipboard_wait_is_target_available(clipboard, gdk_atom_intern_static_string("application/x-rimes-sensitive")));
+    check(std::string(gtk_label_get_text(GTK_LABEL(control("网关配置预览")))).find(token) == std::string::npos);
+    gtk_clipboard_set_text(clipboard, "new user clipboard", -1);
+    app.gateway_clipboard->CancelWrites();
+    copied = gtk_clipboard_wait_for_text(clipboard);
+    check(copied && std::string(copied) == "new user clipboard");
+    g_free(copied);
+#endif
     phase = "plugins";
     app.Select("core.plugins", "buffer-plugins");
     for (const auto &package : app.packages.Entries()) {
@@ -873,14 +1666,20 @@ int SettingsSmoke() {
 }
 } // namespace
 int main(int argc, char **argv) {
+    ConfigurePracticeInput();
   if (argc == 2 && std::string_view(argv[1]) == "--help") {
-    std::cout << "Usage: rimes-settings [--render DIRECTORY | --smoke]\n";
+    std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --render-codex DIRECTORY | --render-claude DIRECTORY | --smoke]\n";
     return 0;
   }
   try {
     const bool smoke = argc == 2 && std::string_view(argv[1]) == "--smoke";
-    const bool render = argc == 3 && std::string_view(argv[1]) == "--render";
-    if (argc != 1 && !render && !smoke)
+    const bool claude_smoke = argc == 3 && std::string_view(argv[1]) == "--claude-smoke";
+    const bool codex_smoke = argc == 3 && std::string_view(argv[1]) == "--codex-smoke";
+    const bool gateway_render = argc == 3 && std::string_view(argv[1]) == "--render-gateway";
+    const bool claude_render = argc == 3 && std::string_view(argv[1]) == "--render-claude";
+    const bool codex_render = argc == 3 && std::string_view(argv[1]) == "--render-codex";
+    const bool render = gateway_render || codex_render || claude_render || (argc == 3 && std::string_view(argv[1]) == "--render");
+    if (argc != 1 && !render && !smoke && !codex_smoke && !claude_smoke)
       return 2;
     const std::filesystem::path output = render ? argv[2] : "";
     if (render && !std::getenv("RIMES_USER_DIR")) {
@@ -893,13 +1692,92 @@ int main(int argc, char **argv) {
     }
     if (smoke)
       return SettingsSmoke();
+    if (claude_smoke)
+      return ClaudeSettingsSmoke(argv[2]);
+    if (codex_smoke)
+      return CodexSettingsSmoke(argv[2]);
+    if (!render) {
+      struct Session { std::unique_ptr<Settings> settings; bool failed = false; } session;
+      // Isolate test/user roots; normal launches in the same desktop session
+      // share one settings window, including activations from the IME.
+      const auto identity = "org.scholay.rimes.settings.u" + Sha256(UserRoot().string()).substr(0, 16);
+      auto *application = gtk_application_new(identity.c_str(), static_cast<GApplicationFlags>(0));
+      g_signal_connect(application, "activate", G_CALLBACK(+[](GtkApplication *application, gpointer data) {
+        auto *session = static_cast<Session *>(data);
+        try {
+          if (!session->settings || !session->settings->window) {
+            session->settings = std::make_unique<Settings>();
+            session->settings->Build(false, application);
+          }
+          gtk_widget_show_all(session->settings->window);
+          gtk_window_present(GTK_WINDOW(session->settings->window));
+        } catch (const std::exception &) {
+          session->failed = true;
+          g_printerr("XSIME 设置无法启动；现有配置已保留。\n");
+          g_application_quit(G_APPLICATION(application));
+        }
+      }), &session);
+      const int result = g_application_run(G_APPLICATION(application), argc, argv);
+      session.settings.reset();
+      g_object_unref(application);
+      return session.failed ? 1 : result;
+    }
     Settings app;
     app.Build(render);
     if (render) {
       std::filesystem::create_directories(output);
       gtk_widget_show_all(app.window);
       Json manifest = Json::array();
-      for (const auto &route : Visuals().at("routes"))
+      if (claude_render) {
+        for (const auto& state : ClaudeContract().at("settings").at("states")) {
+          app.saved["activeConnector"] = "claude-code-cli";
+          app.claude_checked = true; app.claude_busy = state.at("running");
+          app.claude_login_running = state.at("running");
+          app.claude_authenticated = state.at("authenticated").is_null() ? std::nullopt : std::optional<bool>(state.at("authenticated").get<bool>());
+          app.claude_error = state.at("ready") == true ? ClaudeError::None : state.at("state") == "missing" ? ClaudeError::Missing : ClaudeError::LoginRequired;
+          app.claude_feedback = state.at("feedback"); app.claude_feedback_error = state.at("state") == "failed";
+          app.Select("core.connectors", "ai-model");
+          gtk_window_resize(GTK_WINDOW(app.window), 980, 680); SettleLayout();
+          const auto name = "claude-" + state.at("state").get<std::string>() + ".png";
+          if (!FindControl(app.root, state.at("button"))) return 1;
+          if (!Render(app.root, (output / name).string())) return 1;
+          manifest.push_back({{"file", name}, {"state", state.at("state")}, {"theme", app.saved.at("theme")}, {"width", 980}, {"height", 680}});
+        }
+        std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n'; return 0;
+      }
+      if (codex_render) {
+        const auto contract = CodexContract();
+        for (const auto& state : contract.at("settings").at("states")) {
+          app.saved["activeConnector"] = "codex-cli";
+          app.codex_checked = true; app.codex_busy = state.at("running");
+          app.codex_login_running = state.at("running"); app.codex_credential = state.at("credential");
+          app.codex_error = state.at("ready") == true ? CodexError::None : state.at("state") == "missing" ? CodexError::Missing : CodexError::LoginRequired;
+          app.codex_url = state.at("copyLink") == true ? "https://auth.openai.com/public-fixture" : "";
+          app.codex_feedback = state.at("feedback"); app.codex_feedback_error = state.at("state") == "failed";
+          app.Select("core.connectors", "ai-model");
+          gtk_window_resize(GTK_WINDOW(app.window), 980, 680); SettleLayout();
+          const auto name = "codex-" + state.at("state").get<std::string>() + ".png";
+          if (!Render(app.root, (output / name).string())) return 1;
+          manifest.push_back({{"file", name}, {"state", state.at("state")}, {"theme", app.saved.at("theme")}, {"width", 980}, {"height", 680}});
+        }
+        std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n'; return 0;
+      }
+      if (gateway_render) {
+        for (bool enabled : {true, false}) for (const auto* client : {"cursor", "codex", "claudeCode", "genericMCP"}) {
+          app.saved["gatewayEnabled"] = enabled;
+          app.saved["gatewayPort"] = 47700;
+          app.gateway_client = client;
+          app.Select("core.connectors", "local-gateway");
+          gtk_window_resize(GTK_WINDOW(app.window), 980, 680);
+          SettleLayout();
+          const std::string name = std::string("gateway-") + client + (enabled ? "-enabled.png" : "-disabled.png");
+          if (!Render(app.root, (output / name).string())) return 1;
+          manifest.push_back({{"file", name}, {"client", client}, {"enabled", enabled}, {"theme", app.saved.at("theme")}, {"width", 980}, {"height", 680}});
+        }
+        std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n';
+        return 0;
+      }
+      for (const auto &route : app.routes)
         for (const auto &page : route.at("subpages")) {
           app.Select(route.at("id"), page[0]);
           gtk_window_resize(GTK_WINDOW(app.window), 980, 680);
@@ -916,8 +1794,6 @@ int main(int argc, char **argv) {
       file << manifest.dump(2) << '\n';
       return file ? 0 : 1;
     }
-    gtk_widget_show_all(app.window);
-    gtk_main();
     return 0;
   } catch (const std::exception &) {
     std::cerr

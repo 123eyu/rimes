@@ -1,0 +1,49 @@
+{
+  "purpose": "public-claude-settings",
+  "schemaVersion": 1,
+  "sources": {
+    "Sources/RimeBuffer/SettingsWindow.swift": "f35caf505c825a1fa0ce237685febf9cf6fb5a132ee15df9a36dd2ccfd728830"
+  },
+  "states": [
+    {
+      "authenticated": null,
+      "button": "授权 Claude",
+      "feedback": "",
+      "ready": false,
+      "running": false,
+      "state": "missing"
+    },
+    {
+      "authenticated": false,
+      "button": "登录 Claude",
+      "feedback": "",
+      "ready": false,
+      "running": false,
+      "state": "signed-out"
+    },
+    {
+      "authenticated": true,
+      "button": "重新授权 Claude",
+      "feedback": "",
+      "ready": true,
+      "running": false,
+      "state": "ready"
+    },
+    {
+      "authenticated": false,
+      "button": "取消登录",
+      "feedback": "等待浏览器完成 Claude 授权…",
+      "ready": false,
+      "running": true,
+      "state": "waiting"
+    },
+    {
+      "authenticated": false,
+      "button": "登录 Claude",
+      "feedback": "等待 Claude 登录超时，请重新发起授权。",
+      "ready": false,
+      "running": false,
+      "state": "failed"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-#include "settings_ui.hpp"
+﻿#include "settings_ui.hpp"
 #include "buffer_hotkey.hpp"
 #include "window.hpp"
 
@@ -76,11 +76,11 @@ FixtureWindows WindowsOnFixtureThread(DWORD thread) {
   return windows;
 }
 
-bool SettingsPrecedesBuffer(const FixtureWindows& windows) {
+bool BufferPrecedesSettings(const FixtureWindows& windows) {
   if (!windows.settings || !windows.buffer) return false;
-  for (HWND next = GetWindow(windows.settings, GW_HWNDNEXT); next;
+  for (HWND next = GetWindow(windows.buffer, GW_HWNDNEXT); next;
        next = GetWindow(next, GW_HWNDNEXT))
-    if (next == windows.buffer) return true;
+    if (next == windows.settings) return true;
   return false;
 }
 
@@ -146,7 +146,7 @@ LRESULT CALLBACK FixturePositionProcedure(HWND window, UINT message,
     // reopen case, its Runtime notification is appended after this barrier;
     // it cannot repair an incorrect stale restoration before we observe it.
     request->observed = WindowsOnFixtureThread(GetCurrentThreadId());
-    request->ordered = SettingsPrecedesBuffer(request->observed);
+    request->ordered = BufferPrecedesSettings(request->observed);
     request->buffer_style = GetWindowLongPtrW(request->observed.buffer, GWL_EXSTYLE);
     GUITHREADINFO state{sizeof(state)};
     request->inspected = GetGUIThreadInfo(GetCurrentThreadId(), &state) != FALSE;
@@ -164,7 +164,7 @@ LRESULT CALLBACK FixturePositionProcedure(HWND window, UINT message,
         request->x, request->y, request->width, request->height, request->flags) != FALSE;
     // Sample in the same UI dispatch as SetWindowPos. A later queued Runtime
     // update cannot repair an incorrect native order before this observation.
-    request->ordered = SettingsPrecedesBuffer(request->windows);
+    request->ordered = BufferPrecedesSettings(request->windows);
     request->buffer_style = GetWindowLongPtrW(request->windows.buffer, GWL_EXSTYLE);
     GetWindowRect(request->windows.buffer, &request->rectangle);
     GUITHREADINFO state{sizeof(state)};
@@ -193,8 +193,8 @@ void CloseSettingsAtUiBarrier(HWND driver, const FixtureWindows& windows,
         "settings destruction completes before the deferred-placement barrier");
   if (reopen) {
     Check(request.reopen_queued && request.observed.settings && request.ordered &&
-              !(request.buffer_style & WS_EX_TOPMOST),
-          "stale close restoration keeps reopened Settings above the Buffer before a Runtime update");
+              (request.buffer_style & WS_EX_TOPMOST),
+          "reopening Settings preserves the floating Buffer before a Runtime update");
   } else {
     Check(!request.observed.settings && (request.buffer_style & WS_EX_TOPMOST),
           "settings close restores Buffer topmost at the UI barrier without a Runtime update");
@@ -212,8 +212,8 @@ void CheckSynchronousBufferPosition(HWND driver, const FixtureWindows& windows) 
     Check(driver && SendMessageW(driver, kFixturePosition, 0,
                                  reinterpret_cast<LPARAM>(&request)) && request.positioned,
           "owned UI driver executes a native Buffer raise synchronously");
-    Check(request.ordered && !(request.buffer_style & WS_EX_TOPMOST),
-          "native Buffer raise remains behind Settings before any Runtime update");
+    Check(request.ordered && (request.buffer_style & WS_EX_TOPMOST),
+          "native Buffer raise stays floating while Settings is open");
     Check(request.inspected && request.active != windows.buffer &&
               (request.buffer_style & WS_EX_NOACTIVATE),
           "native no-activation raise keeps Buffer inactive");
@@ -230,8 +230,8 @@ void CheckSynchronousBufferPosition(HWND driver, const FixtureWindows& windows) 
             request.rectangle.left == request.x && request.rectangle.top == request.y &&
             request.rectangle.right - request.rectangle.left == request.width &&
             request.rectangle.bottom - request.rectangle.top == request.height &&
-            request.ordered && !(request.buffer_style & WS_EX_TOPMOST),
-        "Buffer movement and no-Z-order resizing retain requested geometry and Settings order");
+            request.ordered && (request.buffer_style & WS_EX_TOPMOST),
+        "Buffer movement and no-Z-order resizing retain floating placement and geometry");
   request.x = original.left;
   request.y = original.top;
   request.width = original.right - original.left;
@@ -267,13 +267,13 @@ void CheckProductionWindowPlacement(const FixtureWindows& windows) {
     return IsVisibleWithinFixture(windows.settings, windows.settings);
   }, "settings finishes showing before its native placement is checked");
   WaitUntil([&] {
-    return !(GetWindowLongPtrW(windows.buffer, GWL_EXSTYLE) & WS_EX_TOPMOST) &&
-           SettingsPrecedesBuffer(windows);
-  }, "settings appears above the retained Buffer in the normal window band");
+    return (GetWindowLongPtrW(windows.buffer, GWL_EXSTYLE) & WS_EX_TOPMOST) &&
+           BufferPrecedesSettings(windows);
+  }, "Buffer remains above ordinary Settings in the topmost window band");
   const auto buffer_style = GetWindowLongPtrW(windows.buffer, GWL_EXSTYLE);
   Check((buffer_style & (WS_EX_TOPMOST | WS_EX_NOACTIVATE)) ==
-            WS_EX_NOACTIVATE,
-        "opening settings temporarily demotes Buffer while retaining no-activation");
+            (WS_EX_TOPMOST | WS_EX_NOACTIVATE),
+        "opening settings preserves Buffer floating and no-activation roles");
   Check((GetWindowLongPtrW(windows.settings, GWL_EXSTYLE) &
          (WS_EX_TOPMOST | WS_EX_NOACTIVATE)) == 0 &&
             GetWindow(windows.settings, GW_OWNER) == nullptr,
@@ -292,12 +292,12 @@ void CheckProductionWindowPlacement(const FixtureWindows& windows) {
         "fixture positions the retained Buffer over settings content");
   GetWindowRect(windows.buffer, &overlapped_buffer);
   Check(IntersectRect(&overlap, &original, &overlapped_buffer) &&
-            SettingsPrecedesBuffer(windows),
-        "settings remains above the Buffer when their native rectangles overlap");
+            BufferPrecedesSettings(windows),
+        "Buffer remains floating when its native rectangle overlaps Settings");
   GUITHREADINFO state{sizeof(state)};
   Check(GetGUIThreadInfo(GetWindowThreadProcessId(windows.buffer, nullptr), &state) &&
             state.hwndActive != windows.buffer,
-        "temporary Buffer demotion and placement do not activate it");
+        "floating Buffer placement does not activate it");
   MoveWindow(windows.buffer, original_buffer.left, original_buffer.top,
              original_buffer.right - original_buffer.left,
              original_buffer.bottom - original_buffer.top, TRUE);
@@ -336,7 +336,7 @@ void TestNestedHitTargets() {
             "details own their hit region before the parent card");
       const auto& popup = layout.theme_popover;
       Check(popup.left > layout.content.left && popup.right < width &&
-                popup.bottom < layout.save.top,
+                popup.bottom < layout.body.bottom,
             "theme details remain inside content and clear Save");
       Check(ui::HitTestSettings(layout, popup.left + 3, popup.top + 3) == 600,
             "popover shields underlying card clicks");
@@ -370,7 +370,7 @@ void TestOwnedClicksAndTransientDetails() {
   ui::SettingsDraft draft;
   auto layout = Layout(window, draft);
   SendMessageW(window, WM_LBUTTONUP, 0,
-               Point(window, layout.save.left + 2, layout.save.top + 2));
+               Point(window, layout.body.right + 2, layout.body.bottom + 2));
   Check(host.IsOpen() && saves == 0, "unowned mouse release cannot Save");
   if (!host.IsOpen()) return;
   Click(window, layout.nav[1]);
@@ -400,9 +400,9 @@ void TestOwnedClicksAndTransientDetails() {
   Click(window, layout.theme_cards[3]);
   Check(preview == ui::ThemeId::kRasta && previews == 1,
         "normal owned card click still previews exactly once");
-  host.Close(false);
-  Check(preview == ui::ThemeId::kNight && saves == 0,
-        "closing unsaved settings restores the original theme");
+  host.Close();
+  Check(preview == ui::ThemeId::kRasta && saves == 1,
+        "closing settings retains the immediately applied theme");
 }
 void TestCandidateSettingsControls() {
   workbench::Settings saved;
@@ -426,7 +426,7 @@ void TestCandidateSettingsControls() {
   const auto vertical = GetDlgItem(window, 404);
   Check(IsVisibleWithinFixture(vertical, window), "vertical candidate option is exposed in appearance size settings");
   SendMessageW(window, WM_COMMAND, MAKEWPARAM(404, BN_CLICKED), reinterpret_cast<LPARAM>(vertical));
-  host.Close(true);
+  host.Close();
   Check(saves == 1 && saved.candidate_count == 5 && saved.vertical_candidates,
         "candidate controls save the requested count and arrangement");
 }
@@ -526,6 +526,20 @@ void TestBufferHotkeyRegistrationLifecycle() {
         "queued old ids and mismatched chord messages do not toggle Buffer");
   hotkey.Reset();
   Check(!hotkey.Registered() && can_claim(next), "closing the owner releases its real chord");
+  workbench::BufferHotkeyRegistration previous_plugin(fixture.owner, 4);
+  workbench::BufferHotkeyRegistration next_plugin(fixture.owner, 6);
+  Check(previous_plugin.Sync(true, old.modifiers, old.key) && next_plugin.Sync(true, next.modifiers, next.key) &&
+        !can_claim(old) && !can_claim(next), "both native plugin chords are reserved while Buffer owns input");
+  Check(previous_plugin.Matches(5, MAKELPARAM(old.modifiers, old.key)) &&
+        next_plugin.Matches(7, MAKELPARAM(next.modifiers, next.key)), "plugin directions own distinct native dispatch IDs");
+  Check(!previous_plugin.Sync(true, busy.modifiers, busy.key) && !previous_plugin.Registered() && can_claim(old),
+        "committed shortcut replacement failure releases the stale plugin chord");
+  Check(next_plugin.Sync(false, next.modifiers, next.key) && !next_plugin.Registered() && can_claim(next),
+        "focus loss or Buffer closure restores the plugin chord to the host");
+  Check(previous_plugin.Sync(true, old.modifiers, old.key) && !can_claim(old),
+        "new exact input lease can reserve its configured plugin chord again");
+  previous_plugin.Reset();
+
 }
 
 void TestBufferHotkeyModifierControl() {
@@ -585,24 +599,24 @@ void TestBufferHotkeyModifierControl() {
             "native combo handles popup confirmation/cancellation before the settings window");
     }
     // Saving an unrelated preference must keep the legacy modifier and letter.
-    host.Close(true);
-    Check(saves == 1 && saved.hotkey_modifiers == modifiers && saved.hotkey_key == 'J',
-          "ordinary Save preserves an explicitly configured complete shortcut");
+    host.Close();
+    Check(saves == 0 && current.hotkey_modifiers == modifiers && current.hotkey_key == 'J',
+          "opening and closing without edits never rewrites settings");
     choices = open_buffer_page();
     if (!choices) continue;
     const auto selected = (workbench::BufferHotkeyChoiceIndex(modifiers) + 1) % 3;
     SendMessageW(choices, CB_SETCURSEL, selected, 0);
     SendMessageW(host.hwnd(), WM_COMMAND, MAKEWPARAM(405, CBN_SELCHANGE),
                  reinterpret_cast<LPARAM>(choices));
-    host.Close(false);
-    Check(saves == 1 && current.hotkey_modifiers == modifiers,
-          "cancelled explicit modifier edits never invoke Save");
+    host.Close();
+    Check(saves == 1 && saved.hotkey_modifiers == workbench::kBufferHotkeyChoices[static_cast<std::size_t>(selected)].modifiers,
+          "modifier selection applies before settings closes");
     choices = open_buffer_page();
     if (!choices) continue;
     SendMessageW(choices, CB_SETCURSEL, selected, 0);
     SendMessageW(host.hwnd(), WM_COMMAND, MAKEWPARAM(405, CBN_SELCHANGE),
                  reinterpret_cast<LPARAM>(choices));
-    host.Close(true);
+    host.Close();
     Check(saves == 2 && saved.hotkey_modifiers ==
               workbench::kBufferHotkeyChoices[static_cast<std::size_t>(selected)].modifiers &&
               saved.hotkey_key == 'J',
@@ -640,14 +654,14 @@ void TestSendShortcutRecorder() {
   SetKeyboardState(keys);  // Test-thread state only; never sends desktop input.
   MSG message{}; message.hwnd = GetDlgItem(host.hwnd(), 410);
   message.message = WM_KEYDOWN; message.wParam = VK_F8;
-  Check(host.HandleDialogMessage(&message) && !host.RecordingShortcut() && saves == 0,
-        "keyboard-first recorder captures modifiers and non-Enter key without invoking Save");
+  Check(host.HandleDialogMessage(&message) && !host.RecordingShortcut() && saves == 1,
+        "keyboard-first recorder applies the complete shortcut immediately");
   message.lParam = 1LL << 30;
-  Check(host.HandleDialogMessage(&message) && saves == 0, "recorded-key repeats cannot activate settings controls");
+  Check(host.HandleDialogMessage(&message) && saves == 1, "recorded-key repeats cannot activate settings controls");
   message.message = WM_KEYUP;
   Check(host.HandleDialogMessage(&message), "recorder consumes the captured release");
   SetKeyboardState(saved_keys);
-  host.Close(true);
+  host.Close();
   Check(saves == 1 && current.hotkey_key == 'J' && current.hotkey_modifiers == (MOD_CONTROL | MOD_ALT) &&
         current.send_key == VK_F8 && current.send_modifiers == (MOD_CONTROL | MOD_SHIFT),
         "Save persists the send key independently and preserves the old global shortcut");
@@ -657,16 +671,48 @@ void TestSendShortcutRecorder() {
   Check(host.HandleDialogMessage(&message) && host.IsOpen() && !host.RecordingShortcut(),
         "Escape cancels recording rather than closing settings");
   record(); host.RecordShortcut(VK_DELETE, 0);
-  host.Close(false);
-  Check(current.send_key == VK_F8 && saves == 1, "closing without Save discards a reset draft");
+  host.Close();
+  Check(current.send_key == VK_RETURN && saves == 2, "closing settings retains a single shortcut reset");
   open();
   SendMessageW(GetDlgItem(host.hwnd(), 411), BM_CLICK, 0, 0);
-  host.Close(true);
-  Check(saves == 2 && current.hotkey_key == 'B' && current.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
+  host.Close();
+  Check(saves == 3 && current.hotkey_key == 'B' && current.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
         current.send_key == VK_RETURN && current.send_modifiers == (MOD_ALT | MOD_SHIFT),
         "explicit reset restores both requested Alt+Shift defaults");
 }
 
+void TestPluginShortcutControls() {
+  workbench::Settings current; int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [&] { return current; };
+  callbacks.save = [&](workbench::Settings value, const std::wstring&, bool, std::string*) { current = value; ++saves; return true; };
+  workbench::SettingsUiHost host(std::move(callbacks));
+  const auto open = [&] { host.OpenPage(nullptr, ui::SettingsPage::kBuffer); };
+  open();
+  for (int id : {418,419,420,421,422,423}) Check(IsVisibleWithinFixture(GetDlgItem(host.hwnd(), id), host.hwnd()), "plugin shortcut native controls visible");
+  SendMessageW(GetDlgItem(host.hwnd(), 418), BM_CLICK, 0, 0);
+  host.RecordShortcut(VK_DOWN, 5); Check(host.RecordingShortcut(), "previous cannot duplicate next");
+  host.RecordShortcut('K', 6); Check(!host.RecordingShortcut() && saves == 1 && current.previous_plugin_key == 'K', "previous recording applies immediately");
+  SendMessageW(GetDlgItem(host.hwnd(), 419), BM_CLICK, 0, 0);
+  host.RecordShortcut('M', 5); Check(host.RecordingShortcut(), "reject reserved Mailbox shortcut");
+  host.RecordShortcut('4', 5); Check(host.RecordingShortcut(), "reject reserved screenshot shortcut");
+  host.RecordShortcut('J', 3); host.Close();
+  Check(saves == 2 && current.previous_plugin_key == 'K' && current.previous_plugin_modifiers == 6 &&
+        current.next_plugin_key == 'J' && current.next_plugin_modifiers == 3, "save independent plugin shortcuts");
+  open(); wchar_t title[20]{}; GetWindowTextW(GetDlgItem(host.hwnd(), 420), title, 20);
+  Check(std::wstring(title) == L"K", "reopen restores custom previous key");
+  SetWindowTextW(GetDlgItem(host.hwnd(), 421), L"K");
+  SendMessageW(GetDlgItem(host.hwnd(), 423), CB_SETCURSEL, workbench::BufferHotkeyChoiceIndex(6), 0);
+  SendMessageW(host.hwnd(), WM_TIMER, 12, 0); Check(host.IsOpen() && saves == 2, "manual duplicate rejected without saving");
+  SendMessageW(GetDlgItem(host.hwnd(), 418), BM_CLICK, 0, 0); host.RecordShortcut(VK_DELETE, 0); host.Close();
+  Check(current.previous_plugin_key == VK_UP && saves == 3, "single reset is applied immediately");
+  open(); SendMessageW(GetDlgItem(host.hwnd(), 411), BM_CLICK, 0, 0); host.Close();
+  Check(saves == 4 && current.previous_plugin_key == VK_UP && current.next_plugin_key == VK_DOWN &&
+        current.previous_plugin_modifiers == 5 && current.next_plugin_modifiers == 5, "reset includes both cycle shortcuts");
+  ui::SettingsDraft draft; draft.page = ui::SettingsPage::kBuffer;
+  const auto layout = ui::LayoutSettings(860, 600, draft);
+  Check(layout.shortcut_feedback.bottom < layout.body.bottom, "four shortcut rows fit minimum height");
+}
 void TestHoverRepaintScopeAndResources() {
   workbench::SettingsUiCallbacks callbacks;
   callbacks.load = [] { return workbench::Settings{}; };
@@ -737,7 +783,7 @@ void TestHoverRepaintScopeAndResources() {
   if (!capture || !bitmap || !pixels) {
     if (bitmap) DeleteObject(bitmap);
     if (capture) DeleteDC(capture);
-    host.Close(false);
+    host.Close();
     return;
   }
   const auto selected = SelectObject(capture, bitmap);
@@ -803,7 +849,7 @@ void TestHoverRepaintScopeAndResources() {
   SelectObject(capture, selected);
   DeleteObject(bitmap);
   DeleteDC(capture);
-  host.Close(false);
+  host.Close();
 }
 void TestCodexConnectorSelector() {
   workbench::Settings original, saved;
@@ -824,19 +870,17 @@ void TestCodexConnectorSelector() {
   const auto window = host.hwnd();
   ui::SettingsDraft draft;
   Click(window, Layout(window, draft).nav[3]);
-  const HWND selector = GetDlgItem(window, 6005);
-  Check(IsVisibleWithinFixture(selector, window) && SendMessageW(selector, CB_GETCOUNT, 0, 0) == 2 &&
-      SendMessageW(selector, CB_GETCURSEL, 0, 0) == 1, "Codex selector reflects saved connector");
-  for (const WPARAM key : {VK_RETURN, VK_ESCAPE}) {
-    SendMessageW(selector, CB_SHOWDROPDOWN, TRUE, 0);
-    MSG message{}; message.hwnd = selector; message.message = WM_KEYDOWN; message.wParam = key;
-    Check(!host.HandleDialogMessage(&message) && saves == 0 && host.IsOpen(), "Codex popup does not accidentally Save or Close");
-    SendMessageW(selector, CB_SHOWDROPDOWN, FALSE, 0);
-  }
-  host.Close(true);
-  Check(saves == 1 && saved.ai_connector == "codex-cli" && saved.codex_path == original.codex_path &&
-      saved.codex_model == original.codex_model && saved.model == original.model &&
-      saved.hotkey_modifiers == original.hotkey_modifiers, "UI save preserves independent CLI/API options and shortcut");
+  Check(!GetDlgItem(window, 6005) && IsVisibleWithinFixture(GetDlgItem(window, 6060), window) &&
+      IsVisibleWithinFixture(GetDlgItem(window, 6062), window), "connector selection uses three cards");
+  Check(!IsWindowEnabled(GetDlgItem(window, 6061)), "unimplemented Claude connector stays disabled");
+  Check(IsVisibleWithinFixture(GetDlgItem(window,6040),window) &&
+      !IsVisibleWithinFixture(GetDlgItem(window,6008),window) &&
+      !IsVisibleWithinFixture(GetDlgItem(window,6006),window), "Codex detail prioritizes authorization and hides API secrets");
+  SendMessageW(GetDlgItem(window,6067), BM_CLICK, 0, 0);
+  Check(IsVisibleWithinFixture(GetDlgItem(window,6006),window) && saves == 0,
+      "advanced CLI fields expand without changing the selected connector");
+  host.Close();
+  Check(saves == 0, "opening and closing the connector selector does not rewrite settings");
 }
 
 void TestPluginManagementAndChordSelection() {
@@ -865,7 +909,7 @@ void TestPluginManagementAndChordSelection() {
   ShowWindow(window, SW_SHOWNOACTIVATE);
   ui::SettingsDraft draft;
   auto layout = Layout(window, draft);
-  Check(layout.nav.size() == 7, "core settings and chord extension pages");
+  Check(layout.nav.size() == 12, "brand home, core hosts and three native extension pages");
   Click(window, layout.nav[4]);
   const HWND toggle = GetDlgItem(window, 5101);
   // SSH/CTest's Session 0 desktop can be hidden even when these owned windows
@@ -902,6 +946,7 @@ void TestPluginManagementAndChordSelection() {
   SendMessageW(toggle, BM_CLICK, 0, 0);
   Check(changes == 1 && !fixture.enabled, "switch callback occurs exactly once");
   Click(window, layout.nav[0]);
+  draft.page = ui::SettingsPage::kInput;
   Check(IsVisibleWithinFixture(window, window), "navigation keeps the fixture parent shown");
   Check((GetWindowLongPtrW(toggle, GWL_STYLE) & WS_VISIBLE) == 0 &&
             !IsWindowVisible(toggle),
@@ -909,17 +954,16 @@ void TestPluginManagementAndChordSelection() {
   layout = Layout(window, draft);
   Check(layout.scheme_cards.size() == 7, "Wubi mixing and chording have separate scheme choices");
   Click(window, layout.scheme_cards[4]);
-  Click(window, layout.save);
+
   Check(saved_schema == "lingxi_wubi", "scheme control saves XSIME Wubi identity");
-  // Saving intentionally closes the real settings window; reopen before
-  // exercising the next selection instead of sending messages to a dead HWND.
-  host.Open(nullptr);
+  // Choosing another schema keeps the same settings window open.
+  host.OpenPage(nullptr, ui::SettingsPage::kInput);
   const HWND reopened = host.hwnd();
   layout = Layout(reopened, draft);
   Click(reopened, layout.scheme_cards[6]);
-  Click(reopened, layout.save);
+
   Check(saved_schema == "my_combo", "schema control saves chording identity");
-  host.Close(false);
+  host.Close();
 }
 
 void TestSettingsPreserveRuntimeAndStreaming() {
@@ -957,6 +1001,7 @@ void TestSettingsPreserveRuntimeAndStreaming() {
       return accepted.load();
     });
     workbench::UiCommands commands;
+    Check(commands.RequestSettings(), "one cold-start settings request is accepted before the window exists");
     // Posted request pointers remain valid until the UI thread is joined,
     // including timeout/error paths; each request is used only once.
     NativeSettingsCloseRequest close_requests[3];
@@ -979,8 +1024,19 @@ void TestSettingsPreserveRuntimeAndStreaming() {
       UnregisterClassW(driver_class.lpszClassName, driver_class.hInstance);
     });
     const auto windows = [&] { return WindowsOnFixtureThread(ui_thread.load()); };
-    WaitUntil([&] { return commands.RequestSettings(); }, "production settings dispatcher becomes ready");
-    WaitUntil([&] { return windows().settings != nullptr; }, "settings command opens the production settings host");
+    WaitUntil([&] { const auto h = windows().settings; return h && IsWindowVisible(h); }, "settings command opens the production settings host");
+    const auto initial_settings = windows().settings;
+    const auto initial_buffer = windows().buffer;
+    // Real WM_HOTKEY is queued, never a cross-thread sent message that can
+    // interrupt Open() while it is still presenting the initial native children.
+    PostMessageW(initial_buffer, WM_HOTKEY, 20, MAKELPARAM(MOD_ALT | MOD_SHIFT, 'S'));
+    WaitUntil([&] { return !IsWindowVisible(initial_settings); }, "queued settings shortcut finishes");
+    Check(windows().settings == initial_settings && !IsWindowVisible(initial_settings),
+          "Alt Shift S hides settings without destroying its draft");
+    SendMessageW(initial_buffer, WM_APP + 81, 0, WM_LBUTTONUP);
+    Check(windows().settings == initial_settings && IsWindowVisible(initial_settings) &&
+          !runtime.Snapshot().value("visible", true),
+          "tray left click opens settings without opening Buffer");
     CheckProductionWindowPlacement(windows());
     Check(!runtime.Snapshot().value("visible", true), "settings do not open a closed Buffer");
     Check(!IsVisibleWithinFixture(windows().buffer, windows().buffer),
@@ -989,10 +1045,10 @@ void TestSettingsPreserveRuntimeAndStreaming() {
     WaitUntil([&] {
       const auto current = windows();
       return IsVisibleWithinFixture(current.buffer, current.buffer) &&
-             SettingsPrecedesBuffer(current);
-    }, "Buffer opened after settings remains below it without a capture target");
+             BufferPrecedesSettings(current);
+    }, "Buffer opened after settings stays floating without a capture target");
     Check(!runtime.Snapshot().value("capture", true),
-          "opening the Buffer behind settings does not authorize host capture");
+          "floating Buffer placement does not authorize host capture");
     runtime.Close();
     WaitUntil([&] { return !IsVisibleWithinFixture(windows().buffer, windows().buffer); },
               "closing Buffer while settings is open preserves its hidden state");
@@ -1043,8 +1099,8 @@ void TestSettingsPreserveRuntimeAndStreaming() {
 
     CheckSynchronousBufferPosition(position_driver.load(), windows());
     runtime.Focus({});  // The real host can report focus loss after activation.
-    WaitUntil([&] { return SettingsPrecedesBuffer(windows()); },
-              "streaming runtime refresh restores settings above the retained Buffer");
+    WaitUntil([&] { return BufferPrecedesSettings(windows()); },
+              "streaming runtime refresh keeps the retained Buffer floating");
     Check(runtime.Snapshot().value("busy", false) &&
               runtime.Snapshot().value("preview", std::string()) == "Stream",
           "following host focus loss preserves the already-paused request");
@@ -1053,8 +1109,8 @@ void TestSettingsPreserveRuntimeAndStreaming() {
                  SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE);
     Check(commands.RequestSettings(), "repeated settings command posts");
     WaitUntil([&] {
-      return windows().settings == first_settings && SettingsPrecedesBuffer(windows());
-    }, "repeated settings request reuses the host and restores its order above Buffer");
+      return windows().settings == first_settings && BufferPrecedesSettings(windows());
+    }, "repeated settings request reuses the host without demoting Buffer");
     CloseSettingsAtUiBarrier(position_driver.load(), windows(), commands,
                              close_requests[1], true);
     Check(runtime.Snapshot().value("busy", false) &&
@@ -1142,11 +1198,12 @@ void TestBufferBehaviorControls() {
   RECT import_bounds{};
   GetWindowRect(schemes, &import_bounds);
   MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&import_bounds), 2);
-  const auto scheme_layout = Layout(window, ui::SettingsDraft{});
+  ui::SettingsDraft scheme_draft; scheme_draft.page = ui::SettingsPage::kInput;
+  const auto scheme_layout = Layout(window, scheme_draft);
   const float dpi_scale = static_cast<float>(GetDpiForWindow(window)) / 96.0f;
   Check(!scheme_layout.scheme_cards.empty() &&
         import_bounds.top >= scheme_layout.scheme_cards.back().bottom * dpi_scale &&
-        import_bounds.bottom < scheme_layout.save.top * dpi_scale,
+        import_bounds.bottom < scheme_layout.body.bottom * dpi_scale,
         "scheme import button clears all scheme rows and the save footer");
   SendMessageW(schemes, BM_CLICK, 0, 0);
   Check(scheme_opens == 1, "scheme manager button dispatches its own callback");
@@ -1156,70 +1213,491 @@ void TestBufferBehaviorControls() {
   SendMessageW(GetDlgItem(window, 414), CB_SETCURSEL, 1, 0);
   SendMessageW(window, WM_COMMAND, MAKEWPARAM(412, BN_CLICKED), reinterpret_cast<LPARAM>(GetDlgItem(window, 412)));
   Check(scheme_opens == 1, "Buffer close-after-send does not dispatch the scheme manager");
-  host.Close(true);
+  host.Close();
   Check(saves == 1 && saved.auto_send_seconds == 5 && saved.close_after_send && saved.translation_provider == "ai",
         "Buffer behavior controls persist their values");
 }
 void TestParityDraftsAndConnections() {
-  workbench::Settings current, saved;
-  current.theme="rasta"; current.follow_system_theme=true;
-  std::map<std::string,std::wstring> keys;
-  int saves=0;
+  workbench::Settings current;
+  current.theme = "rasta"; current.follow_system_theme = true;
+  std::map<std::string, std::wstring> vault;
+  int saves = 0;
   workbench::SettingsUiCallbacks callbacks;
-  callbacks.load=[&] {return current;};
-  callbacks.load_theme=[] {return ui::ThemeId::kNight;};
-  callbacks.save_connections=[&](workbench::Settings value,const auto& secrets,std::string*) {
-    saved=std::move(value); keys=secrets; current=saved; ++saves; return true;
+  callbacks.load = [&] { return current; };
+  callbacks.load_theme = [] { return ui::ThemeId::kNight; };
+  callbacks.connectors.has_secret = [&](const auto& c) { return vault.contains(c.id) && !vault[c.id].empty(); };
+  callbacks.save_connections = [&](workbench::Settings value, const auto& secrets, std::string*) {
+    current = std::move(value);
+    for (const auto& [id, key] : secrets) vault[id] = key;
+    ++saves; return true;
   };
   workbench::SettingsUiHost host(std::move(callbacks));
-  host.OpenPage(nullptr,ui::SettingsPage::kApi,0,false);
-  auto window=host.hwnd();
-  auto edit=[&](int id,const wchar_t* text) { SetWindowTextW(GetDlgItem(window,id),text); };
-  auto press=[&](int id) { SendMessageW(GetDlgItem(window,id),BM_CLICK,0,0); };
+  host.OpenPage(nullptr, ui::SettingsPage::kApi, 0, false);
+  auto window = host.hwnd();
+  auto edit = [&](int id, const wchar_t* text) { SetWindowTextW(GetDlgItem(window,id), text); };
+  auto press = [&](int id) { SendMessageW(GetDlgItem(window,id), BM_CLICK, 0, 0); };
+  auto flush = [&] { SendMessageW(window, WM_TIMER, 12, 0); };
   edit(6004,L"API A"); edit(6006,L"https://a.invalid/v1"); edit(6007,L"model-a"); edit(6008,L"synthetic-a");
+  flush();
+  Check(saves == 1 && vault["legacy-api"] == L"synthetic-a" && host.IsOpen(),
+        "connection and credential edits persist while settings stays open");
+  Check(GetWindowTextLengthW(GetDlgItem(window,6008)) == 11,
+        "automatic persistence keeps the masked credential editor intact");
   press(6001);
   edit(6004,L"API B"); edit(6006,L"https://b.invalid/v1"); edit(6007,L"model-b"); edit(6008,L"synthetic-b");
-  SendMessageW(GetDlgItem(window,6000),CB_SETCURSEL,0,0);
-  SendMessageW(window,WM_COMMAND,MAKEWPARAM(6000,CBN_SELCHANGE),reinterpret_cast<LPARAM>(GetDlgItem(window,6000)));
-  host.Close(true);
-  Check(saves==1 && saved.connections.size()==3 && saved.active_connection=="legacy-api" &&
-    saved.connections.front().name=="API A" && saved.connections.back().model=="model-b" &&
-    keys.size()==2 && keys["legacy-api"]==L"synthetic-a" && keys[saved.connections.back().id]==L"synthetic-b",
-    "native connection controls preserve unsaved profiles and isolate their key drafts");
-  Check(workbench::ValidConnections(saved),"new GUID profile identity is valid for persisted settings");
-  Check(saved.theme=="rasta" && saved.follow_system_theme,"saving another page retains the fixed fallback while following system appearance");
-  host.OpenPage(nullptr,ui::SettingsPage::kChord,1,false); window=host.hwnd();
+  flush();
+  const auto second_id = current.connections.back().id;
+  Check(current.connections.size() == 3 && current.active_connection == "legacy-api" &&
+        current.connections.front().name == "API A" && current.connections.back().model == "model-b" &&
+        vault["legacy-api"] == L"synthetic-a" && vault[second_id] == L"synthetic-b",
+        "automatic settings saves isolate provider credentials and preserve the active model");
+  Check(workbench::ValidConnections(current), "new provider has a valid persisted identity");
+  Check(current.theme == "rasta" && current.follow_system_theme,
+        "saving another page retains the fallback while following system appearance");
+  press(6042);
+  Check(current.active_connection == second_id, "selecting the text model applies immediately");
+  host.Close();
+  host.OpenPage(nullptr, ui::SettingsPage::kChord, 1, false); window = host.hwnd();
   edit(6021,L"dvi"); edit(6022,L"hao"); press(6024);
-  edit(6010,L"Cancelled keymap"); host.Close(false);
-  Check(saves==1 && saved.chord_profile["name"]=="isaac2026","Cancel does not apply a keymap draft");
-  host.OpenPage(nullptr,ui::SettingsPage::kChord,1,false); window=host.hwnd();
-  edit(6021,L"dvi"); edit(6022,L"hao"); press(6024);
+  bool mapping = false;
+  for (const auto& row : current.chord_profile["mappings"])
+    if (row["keys"] == "dvi" && row["output"] == "hao") mapping = true;
+  Check(mapping, "adding a validated mapping is immediately applied");
+  edit(6010,L"My keymap"); host.Close();
+  Check(current.chord_profile["name"] == "My keymap", "closing flushes pending keymap text");
+  host.OpenPage(nullptr, ui::SettingsPage::kAppearance, 1, false); window = host.hwnd();
   edit(6030,L"900"); edit(6031,L"1600"); edit(6033,L"640"); edit(6034,L"44"); edit(6035,L"12");
-  host.Close(true);
-  bool mapping=false;
-  for(const auto& row:saved.chord_profile["mappings"]) if(row["keys"]=="dvi" && row["output"]=="hao") mapping=true;
-  Check(saves==2 && mapping && saved.buffer_width==900 && saved.send_hold_ms==1600 &&
-    saved.candidate_width==640 && saved.candidate_height==44 && saved.candidate_label_size==12,
-    "native keymap, Buffer and candidate fields save through the production settings host");
-  host.OpenPage(nullptr,ui::SettingsPage::kApi,0,false); window=host.hwnd();
-  edit(6008,L"erased-synthetic-key");
-  for (const int selection : {2, 0}) {
-    SendMessageW(GetDlgItem(window,6000),CB_SETCURSEL,selection,0);
-    SendMessageW(window,WM_COMMAND,MAKEWPARAM(6000,CBN_SELCHANGE),reinterpret_cast<LPARAM>(GetDlgItem(window,6000)));
-  }
-  edit(6008,L""); host.Close(true);
-  Check(saves==3 && keys.empty(),
-    "erasing a previously captured key draft preserves the saved vault credential");
+  flush();
+  Check(current.buffer_width == 900 && current.send_hold_ms == 1600 &&
+        current.candidate_width == 640 && current.candidate_height == 44 && current.candidate_label_size == 12,
+        "numeric settings apply after the editor debounce without closing");
+  const int valid_saves = saves;
+  edit(6033,L""); flush();
+  Check(saves == valid_saves && current.candidate_width == 640 && host.IsOpen(),
+        "incomplete numbers retain the previous setting without a modal dialog");
+  edit(6033,L"680"); flush();
+  Check(current.candidate_width == 680 && saves == valid_saves + 1,
+        "correcting an invalid field resumes automatic persistence");
+  host.Close();
+  host.OpenPage(nullptr, ui::SettingsPage::kApi, 0, false); window = host.hwnd();
+  edit(6008,L"temporary-draft"); edit(6008,L""); flush();
+  Check(vault[second_id] == L"synthetic-b", "blank credential edit preserves the stored secret");
+  press(6041);
+  Check(vault.contains(second_id) && vault[second_id].empty(), "explicit clear immediately reaches the credential transaction");
+  host.Close();
 }
 
-int main() {
+void TestConnectorInteractions() {
+  workbench::Settings current;
+  int saves = 0, opens = 0, copies = 0, confirms = 0;
+  bool confirm = false;
+  std::atomic<int> login_attempts{0};
+  std::atomic<bool> authorized{false}, allow_login{false};
+  const std::string login_url = "https://auth.openai.com/oauth/authorize?state=fixture&code_challenge=fixture";
+  workbench::SettingsUiCallbacks cb;
+  cb.load = [&] { return current; };
+  cb.save_connections = [&](auto value, const auto&, std::string*) { current = value; ++saves; return true; };
+  cb.connectors.has_secret = [](const auto&) { return false; };
+  cb.connectors.probe = [&](const auto&, const auto&) {
+    return workbench::ConnectionProbeResult{authorized.load(), authorized ? "Ready" : "Not authorized", {}};
+  };
+  cb.connectors.login = [&](const auto&, const auto& cancelled, const auto& url, std::string*) {
+    ++login_attempts; url(login_url);
+    const auto start = GetTickCount64();
+    while (!cancelled() && !allow_login && GetTickCount64() - start < 2500) Sleep(2);
+    authorized = !cancelled() && allow_login; return authorized.load();
+  };
+  cb.connectors.copy_private = [&](const auto& url) { Check(workbench::Utf8(url) == login_url, "copy exact active login URL"); ++copies; return true; };
+  cb.connectors.open_url = [&](const auto&) { ++opens; return true; };
+  cb.connectors.confirm_delete = [&](HWND, const auto&) { ++confirms; return confirm; };
+  workbench::SettingsUiHost host(std::move(cb));
+  host.OpenPage(nullptr, ui::SettingsPage::kApi, 0, false);
+  const auto window = host.hwnd();
+  const auto h = [&](int id) { return GetDlgItem(window,id); };
+  const auto visible = [&](int id) { return (GetWindowLongPtrW(h(id), GWL_STYLE) & WS_VISIBLE) != 0; };
+  const auto press = [&](int id) { SendMessageW(h(id),BM_CLICK,0,0); };
+  const auto tick = [&] { SendMessageW(window,WM_TIMER,13,0); };
+  Check(!IsWindowEnabled(h(6009)) && !IsWindowEnabled(h(6042)), "missing API config gates discovery and activation");
+  const int initial = saves; press(6061);
+  Check(saves == initial, "disabled Claude cannot alter settings");
+  press(6060);
+  Check(current.ai_connector == "codex-cli" && saves == initial+1, "ChatGPT card activates immediately");
+  WaitUntil([&] { tick(); return IsWindowEnabled(h(6040)); }, "authorization status check completes");
+  press(6040);
+  WaitUntil([&] { tick(); return visible(6065); }, "login publishes copy link during waiting");
+  press(6065); Check(copies == 1, "login link copy uses its explicit action");
+  press(6040);
+  WaitUntil([&] { tick(); return IsWindowEnabled(h(6040)) && !visible(6065); }, "cancel retires login and removes URL");
+  allow_login = true; press(6040);
+  WaitUntil([&] { tick(); return authorized && IsWindowEnabled(h(6040)); }, "login can succeed after cancellation");
+  Check(login_attempts == 2 && saves == initial+1, "authorization progress never rewrites settings");
+  press(6062);
+  Check(current.ai_connector == "openai-compatible", "API card reactivates saved provider immediately");
+  press(6001);
+  const auto created = current.connections.back().id;
+  SetWindowTextW(h(6006), L"http://127.0.0.1:11434/v1");
+  SetWindowTextW(h(6007), L"fixture-model");
+  SetWindowTextW(h(6063), L"https://example.com/docs");
+  SendMessageW(window,WM_TIMER,12,0);
+  Check(IsWindowEnabled(h(6009)) && IsWindowEnabled(h(6042)), "configured loopback provider can work without a key");
+  Check(current.connections.back().documentation_url == "https://example.com/docs", "documentation edits save immediately");
+  press(6064); Check(opens == 1, "valid documentation opens through explicit action");
+  press(6042); Check(current.active_connection == created, "current text model changes immediately");
+  const int before_delete = saves; press(6003);
+  Check(confirms == 1 && saves == before_delete && current.active_connection == created, "cancelled deletion preserves settings without saving");
+  confirm = true; press(6003);
+  Check(confirms == 2 && current.active_connection != created && current.connections.size() == 2, "confirmed deletion removes only selected provider");
+  host.OpenPage(nullptr,ui::SettingsPage::kApi,1,false);
+  const bool was_enabled = current.gateway_enabled; press(6050);
+  Check(current.gateway_enabled != was_enabled && !IsWindowEnabled(h(6056)), "gateway switch applies immediately and disables copy when off");
+  ui::SettingsDraft draft; draft.page = ui::SettingsPage::kApi; draft.subpage = 1;
+  auto layout = Layout(window,draft); Click(window,layout.nav[0]); Click(window,layout.nav[3]);
+  Check(visible(6050) && !visible(6060), "navigation remembers connector subpage");
+  host.Close();
+}
+
+void TestPageControlBounds() {
+  workbench::SettingsUiHost host({});
+  host.Open(nullptr, false);
+  const auto window = host.hwnd();
+  const auto dpi = GetDpiForWindow(window);
+  for (const auto size : {SIZE{860, 600}, SIZE{980, 680}}) {
+    RECT outer{0, 0, MulDiv(size.cx, dpi, 96), MulDiv(size.cy, dpi, 96)};
+    AdjustWindowRectExForDpi(&outer, WS_OVERLAPPEDWINDOW, FALSE, 0, dpi);
+    SetWindowPos(window, nullptr, 0, 0, outer.right - outer.left,
+                 outer.bottom - outer.top, SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    for (int page = 0; page < ui::kSettingsPageCount; ++page) {
+      for (int subpage = 0; subpage < ui::SettingsTabCount(static_cast<ui::SettingsPage>(page)); ++subpage) {
+        const auto selected = static_cast<ui::SettingsPage>(page);
+        host.OpenPage(nullptr, selected, subpage, false);
+        ui::SettingsDraft draft; draft.page = selected; draft.subpage = subpage;
+        const auto layout = Layout(window, draft);
+        std::vector<RECT> bounds;
+        for (auto child = GetWindow(window, GW_CHILD); child; child = GetWindow(child, GW_HWNDNEXT)) {
+          if (!(GetWindowLongPtrW(child, GWL_STYLE) & WS_VISIBLE)) continue;
+          RECT rect{}; GetWindowRect(child, &rect);
+          const auto region = CreateRectRgn(0,0,0,0);
+          if (GetWindowRgn(child, region) != ERROR) {
+            RECT clipped{}; GetRgnBox(region, &clipped);
+            OffsetRect(&clipped, rect.left, rect.top); IntersectRect(&rect, &rect, &clipped);
+          }
+          DeleteObject(region);
+          MapWindowPoints(nullptr, window, reinterpret_cast<POINT*>(&rect), 2);
+          Check(rect.left >= layout.body.left * dpi / 96 &&
+                rect.right <= layout.width_dip * dpi / 96 &&
+                rect.top >= layout.body.top * dpi / 96 &&
+                rect.bottom <= layout.body.bottom * dpi / 96 + 1,
+                "every page keeps native controls inside the content and above the footer");
+          for (const auto& previous : bounds) {
+            RECT overlap{};
+            Check(!IntersectRect(&overlap, &previous, &rect),
+                  "visible native controls do not overlap at minimum and default window sizes");
+          }
+          bounds.push_back(rect);
+        }
+      }
+    }
+  }
+  host.Close();
+}
+
+void TestNativeControlBackgrounds() {
+  for (const auto theme : {ui::ThemeId::kNight, ui::ThemeId::kDay}) {
+    workbench::SettingsUiCallbacks callbacks;
+    callbacks.load = [theme] { workbench::Settings value; value.theme = ui::ThemeIdString(theme); return value; };
+    workbench::SettingsUiHost host(std::move(callbacks));
+    host.Open(nullptr, false);
+    // Reuse the same native HWNDs across pages, as in the reported regression.
+    host.OpenPage(nullptr, ui::SettingsPage::kApi, 0, false);
+    const auto window = host.hwnd();
+    HDC dc = CreateCompatibleDC(nullptr);
+    HBITMAP bitmap = CreateBitmap(1024, 768, 1, 32, nullptr);
+    const auto old = SelectObject(dc, bitmap);
+    constexpr COLORREF poison = RGB(255, 0, 255);
+    for (const auto id : {6104, 6106, 6107, 6108, 6001, 6009}) {
+      const auto child = GetDlgItem(window, id);
+      RECT client{}; GetClientRect(child, &client);
+      ui::FillRectColor(dc, client, poison);
+      if (id >= 6100) {
+        SendMessageW(window, WM_CTLCOLORSTATIC, reinterpret_cast<WPARAM>(dc),
+                     reinterpret_cast<LPARAM>(child));
+      } else {
+        DRAWITEMSTRUCT draw{};
+        draw.CtlType = ODT_BUTTON; draw.CtlID = id; draw.hwndItem = child;
+        draw.hDC = dc; draw.rcItem = client; draw.itemAction = ODA_DRAWENTIRE;
+        SendMessageW(window, WM_DRAWITEM, id, reinterpret_cast<LPARAM>(&draw));
+      }
+      Check(GetPixel(dc, 0, 0) == ui::ToColorRef(ui::Palette(theme).surface_secondary),
+            "native label and rounded button corners repaint the current card background");
+      Check(GetPixel(dc, client.right - 1, client.bottom - 1) != poison,
+            "native controls clear stale pixels across their full client rectangle");
+    }
+    const auto disabled_edit = GetDlgItem(window, 6008);
+    const auto brush = reinterpret_cast<HBRUSH>(SendMessageW(window, WM_CTLCOLORSTATIC,
+        reinterpret_cast<WPARAM>(dc), reinterpret_cast<LPARAM>(disabled_edit)));
+    Check(brush != GetStockObject(HOLLOW_BRUSH),
+          "disabled credential edits keep an opaque field background");
+    SelectObject(dc, old); DeleteObject(bitmap); DeleteDC(dc);
+    host.Close();
+  }
+}
+
+void TestPeerHostsAndPluginKinds() {
+  std::vector<workbench::PluginView> entries;
+  for (int i = 0; i < 7; ++i) {
+    workbench::PluginView item;
+    item.id = "fixture." + std::to_string(i);
+    item.name = "Fixture " + std::to_string(i);
+    item.installed = item.enabled = true;
+    item.kind = i < 4 ? "buffer" : i < 6 ? "capsule" : "extension";
+    item.can_install = i < 4;
+    entries.push_back(item);
+  }
+  std::string changed;
+  int mailbox_opens = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [] { return workbench::Settings{}; };
+  callbacks.plugins = [&] { return entries; };
+  callbacks.open_mailbox = [&] { ++mailbox_opens; };
+  callbacks.manage_plugin = [&](const std::string& id, const std::string&, std::string*) {
+    changed = id;
+    return true;
+  };
+  workbench::SettingsUiHost host(std::move(callbacks));
+  host.OpenPage(nullptr, ui::SettingsPage::kPlugins);
+  const auto window = host.hwnd();
+  ShowWindow(window, SW_SHOWNOACTIVATE);
+  ui::SettingsDraft draft;
+  const auto layout = Layout(window, draft);
+  Check(layout.nav[2].top < layout.nav[8].top && layout.nav[8].top < layout.nav[7].top &&
+            layout.nav[7].top < layout.nav[3].top && layout.nav[5].top < layout.nav[6].top,
+        "Buffer, Mailbox and Capsule are adjacent core hosts before Extensions");
+  Check(IsWindowEnabled(GetDlgItem(window, 5114)), "plugin catalog exposes later pages");
+  SendMessageW(GetDlgItem(window, 5114), BM_CLICK, 0, 0);
+  SendMessageW(GetDlgItem(window, 5101), BM_CLICK, 0, 0);
+  Check(changed == "fixture.4", "second-page switch addresses the selected plugin identity");
+  Check(!IsVisibleWithinFixture(GetDlgItem(window, 5100), window) &&
+            IsVisibleWithinFixture(GetDlgItem(window, 5101), window),
+        "compiled host modules expose enablement without unsupported package actions");
+  const auto filter = GetDlgItem(window, 5112);
+  SendMessageW(filter, CB_SETCURSEL, 4, 0);
+  SendMessageW(window, WM_COMMAND, MAKEWPARAM(5112, CBN_SELCHANGE), reinterpret_cast<LPARAM>(filter));
+  SendMessageW(GetDlgItem(window, 5101), BM_CLICK, 0, 0);
+  Check(changed == "fixture.6" && !IsWindowEnabled(GetDlgItem(window, 5114)),
+        "extension filter resets pagination and retains identity-based actions");
+  SendMessageW(filter, CB_SETCURSEL, 3, 0);
+  SendMessageW(window, WM_COMMAND, MAKEWPARAM(5112, CBN_SELCHANGE), reinterpret_cast<LPARAM>(filter));
+  Check(!IsVisibleWithinFixture(GetDlgItem(window, 5101), window),
+        "empty host category cannot expose a stale plugin switch");
+  host.OpenPage(nullptr, ui::SettingsPage::kBuffer);
+  SendMessageW(window, WM_KEYDOWN, VK_DOWN, 0);
+  // The first core host after Buffer is Mailbox, irrespective of enum ordinals.
+  SendMessageW(GetDlgItem(window, 416), BM_CLICK, 0, 0);
+  Check(mailbox_opens == 1, "keyboard navigation from Buffer opens the peer Mailbox host");
+  host.Close();
+}
+
+void TestBrandHome() {
+  std::vector<std::wstring> opened;
+  int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [] { return workbench::Settings{}; };
+  callbacks.open_brand_link = [&](const std::wstring& url) { opened.push_back(url); return true; };
+  callbacks.save = [&](workbench::Settings, const std::wstring&, bool, std::string*) { ++saves; return true; };
+  workbench::SettingsUiHost host(callbacks);
+  host.Open(nullptr);
+  const auto window = host.hwnd();
+  ShowWindow(window, SW_SHOWNOACTIVATE);
+  ui::SettingsDraft draft;
+  const auto layout = Layout(window, draft);
+  Check(draft.page == ui::SettingsPage::kHome && ui::kSettingsNavOrder.front() == ui::SettingsPage::kHome &&
+        layout.nav[11].top < layout.nav[0].top && layout.nav[10].bottom < layout.body.bottom,
+        "brand home is first, without crowding the last sidebar entry or renumbering existing pages");
+  const auto shown = [&](int id) { return (GetWindowLongPtrW(GetDlgItem(window, id), GWL_STYLE) & WS_VISIBLE) != 0; };
+  Check(!shown(415) && shown(417), "brand home exposes software updates without stale input controls");
+  for (int opening = 0; opening < 2; ++opening) {
+    SendMessageW(GetDlgItem(window, 417), BM_CLICK, 0, 0);
+    const auto updater = FindWindowW(L"XSIMEApplicationUpdate", nullptr);
+    Check(updater && IsWindowVisible(updater) && GetWindow(updater, GW_OWNER) == window,
+          "settings opens and reopens its owned update window");
+    Check(updater && IsWindowEnabled(GetDlgItem(updater, 1)) &&
+              !IsWindowEnabled(GetDlgItem(updater, 2)) && !IsWindowEnabled(GetDlgItem(updater, 3)),
+          "fresh updater requires checking and a verified download before installation");
+    if (updater) SendMessageW(updater, WM_CLOSE, 0, 0);
+    Check(!IsWindow(updater) && host.IsOpen() && saves == 0 && opened.empty(),
+          "closing updates preserves settings without launching a browser or installer");
+  }
+  SendMessageW(window, WM_KEYDOWN, VK_DOWN, 0);
+  Check(shown(415), "down from the default home selects input settings");
+  SendMessageW(window, WM_KEYDOWN, VK_UP, 0);
+  Check(!shown(415), "up from input returns to home");
+  const wchar_t* expected[] = {L"https://xsime.com", L"mailto:pm@scholay.com", L"https://github.com/scholay/xsime",
+      L"https://github.com/scholay/xsime/blob/main/README.md", L"https://github.com/scholay/xsime/blob/main/LICENSE"};
+  for (int tab = 1; tab < 6; ++tab) {
+    Click(window, layout.subpage_tabs[tab]);
+    Check(shown(417) && opened.size() == static_cast<std::size_t>(tab - 1), "selecting a home tab exposes its button without opening anything");
+    // Native button keeps Tab focus, accessibility text, and Enter activation.
+    SetFocus(window);
+    MSG message{}; message.hwnd = window; message.message = WM_KEYDOWN; message.wParam = VK_TAB;
+    Check(host.HandleDialogMessage(&message) && GetFocus() == GetDlgItem(window, 417), "Tab reaches the home link button");
+    message.hwnd = GetFocus(); message.wParam = VK_RETURN;
+    host.HandleDialogMessage(&message);
+    Check(opened.size() == static_cast<std::size_t>(tab) && opened.back() == expected[tab - 1] && saves == 0 && host.IsOpen(),
+          "Enter opens exactly the selected home destination without saving or closing");
+  }
+  Click(window, layout.nav[0]);
+  SendMessageW(GetDlgItem(window, 417), BM_CLICK, 0, 0);
+  Check(!shown(417) && opened.size() == 5, "leaving home hides the button and prevents stale link activation");
+  host.Close();
+  host.Open(nullptr, false);
+  Check(!((GetWindowLongPtrW(GetDlgItem(host.hwnd(), 415), GWL_STYLE)) & WS_VISIBLE), "reopening settings starts at home");
+  host.Close();
+}
+
+void TestImmediateSettingsAndIcons() {
+  workbench::Settings current;
+  int saves = 0;
+  bool fail_save = false;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [&] { return current; };
+  callbacks.save_connections = [&](workbench::Settings value, const auto&, std::string* error) {
+    if (fail_save) { *error = "Fixture write failed"; return false; }
+    current = std::move(value); ++saves; return true;
+  };
+  workbench::SettingsUiHost host(std::move(callbacks));
+  host.OpenPage(nullptr, ui::SettingsPage::kBuffer, 1, false);
+  auto window = host.hwnd();
+  wchar_t title[32]{}; GetWindowTextW(window, title, 32);
+  Check(std::wstring(title) == L"设置" && SendMessageW(window, WM_GETICON, ICON_SMALL, 0),
+        "settings caption is a gear and Settings, without the product title");
+  Check(ui::EnsureFluentIcons(), "official Fluent icon font is embedded in the production UI fixture");
+  const auto dc = GetDC(window);
+  const auto font = CreateFontW(-20,0,0,0,FW_NORMAL,FALSE,FALSE,FALSE,DEFAULT_CHARSET,
+      OUT_TT_PRECIS,CLIP_DEFAULT_PRECIS,ANTIALIASED_QUALITY,DEFAULT_PITCH,L"FluentSystemIcons-Regular");
+  const auto old = SelectObject(dc,font);
+  for (auto icon : ui::kSettingsPageIcons) {
+    const wchar_t character = static_cast<wchar_t>(icon); WORD glyph = 0;
+    Check(GetGlyphIndicesW(dc,&character,1,&glyph,GGI_MARK_NONEXISTING_GLYPHS) != GDI_ERROR && glyph != 0xffff,
+          "every sidebar symbol resolves to an upstream font glyph");
+  }
+  SelectObject(dc,old); DeleteObject(font); ReleaseDC(window,dc);
+  ui::SettingsDraft draft; draft.page = ui::SettingsPage::kBuffer; draft.subpage = 1;
+  const auto layout = Layout(window,draft);
+  Check(ui::HitTestSettings(layout,layout.width_dip-160,layout.height_dip-26) == -1 &&
+        ui::HitTestSettings(layout,layout.width_dip-60,layout.height_dip-26) == -1,
+        "removed footer buttons have no hidden hit targets");
+  Check(saves == 0, "opening settings never writes preferences");
+  const auto combo = GetDlgItem(window,413);
+  SendMessageW(combo,CB_SETCURSEL,3,0);
+  SendMessageW(window,WM_COMMAND,MAKEWPARAM(413,CBN_SELCHANGE),reinterpret_cast<LPARAM>(combo));
+  Check(saves == 1 && current.auto_send_seconds == 3 && host.IsOpen(), "output countdown is immediately applied");
+  SendMessageW(GetDlgItem(window,412),BM_CLICK,0,0);
+  Check(saves == 2 && !current.close_after_send, "close-after-send switch applies immediately");
+  host.OpenPage(nullptr,ui::SettingsPage::kAppearance,1,false);
+  auto field = GetDlgItem(window,6033);
+  ShowWindow(window, SW_SHOWNOACTIVATE);
+  SetFocus(field);
+  SetWindowTextW(field,L"720");
+  SendMessageW(field, EM_SETSEL, 1, 2);
+  Check(saves == 2, "text changes wait for a short idle interval instead of rewriting every keystroke");
+  const auto start = GetTickCount64();
+  while (saves == 2 && GetTickCount64() - start < 1500) {
+    MSG message{};
+    while (PeekMessageW(&message,window,0,0,PM_REMOVE)) DispatchMessageW(&message);
+    Sleep(2);
+  }
+  Check(current.candidate_width == 720 && saves == 3 && host.IsOpen(), "real debounce timer applies text while settings stays open");
+  DWORD selection_start = 0, selection_end = 0;
+  SendMessageW(field, EM_GETSEL, reinterpret_cast<WPARAM>(&selection_start), reinterpret_cast<LPARAM>(&selection_end));
+  Check(GetFocus() == field && selection_start == 1 && selection_end == 2,
+        "automatic persistence keeps editor focus and selection");
+  fail_save = true;
+  SetWindowTextW(field,L"800"); SendMessageW(window,WM_TIMER,12,0);
+  Check(saves == 3 && current.candidate_width == 720 && host.IsOpen(), "failed persistence keeps the last working configuration without a modal prompt");
+  fail_save = false;
+  SetWindowTextW(field,L"840");
+  SendMessageW(window,WM_CLOSE,0,0);
+  Check(!host.IsOpen() && current.candidate_width == 840 && saves == 4, "native close flushes a pending valid edit");
+  host.OpenPage(nullptr,ui::SettingsPage::kAppearance,1,false); window=host.hwnd();
+  SetWindowTextW(GetDlgItem(window,6033),L"");
+  SendMessageW(window,WM_CLOSE,0,0);
+  Check(!host.IsOpen() && current.candidate_width == 840 && saves == 4, "closing an incomplete field preserves the last valid value");
+}
+
+void TestCapsuleRecordingSettings() {
+  bool enabled = true;
+  int saves = 0;
+  workbench::SettingsUiCallbacks callbacks;
+  callbacks.load = [] { return workbench::Settings{}; };
+  callbacks.load_clipboard_recording = [&] { return enabled; };
+  callbacks.save_clipboard_recording = [&](bool value, std::string*) { enabled = value; ++saves; return true; };
+  workbench::SettingsUiHost host(callbacks);
+  host.OpenPage(nullptr, ui::SettingsPage::kCapsule);
+  const auto toggle = GetDlgItem(host.hwnd(), 424);
+  Check(IsVisibleWithinFixture(toggle, host.hwnd()) && IsWindowEnabled(toggle) && enabled,
+        "Capsule settings expose the default-on recording preference");
+  SendMessageW(toggle, BM_CLICK, 0, 0);
+  Check(!enabled && saves == 1 && host.IsOpen(), "recording changes apply immediately without closing settings");
+  host.Close(); host.OpenPage(nullptr, ui::SettingsPage::kCapsule);
+  Check(!enabled && saves == 1, "reopening settings does not restore a default over the saved preference");
+  SendMessageW(GetDlgItem(host.hwnd(), 424), BM_CLICK, 0, 0);
+  Check(enabled && saves == 2, "recording can resume immediately");
+  host.OpenPage(nullptr, ui::SettingsPage::kMailbox);
+  Check(!IsVisibleWithinFixture(GetDlgItem(host.hwnd(), 424), host.hwnd()), "recording belongs only to Capsule settings");
+}
+int main(int argc, char** argv) {
+  if (argc == 2 && std::string(argv[1]) == "--first-show") {
+    workbench::SettingsUiCallbacks callbacks;
+    callbacks.load = [] { return workbench::Settings{}; };
+    workbench::SettingsUiHost host(callbacks);
+    host.Open(nullptr);
+    Check(host.hwnd() && IsWindowVisible(host.hwnd()),
+          "first settings invocation is visible even when the process starts hidden");
+    host.OpenPage(nullptr, ui::SettingsPage::kInput);
+    const auto draft_field = FindWindowExW(host.hwnd(), nullptr, L"EDIT", nullptr);
+    SetWindowTextW(draft_field, L"19");
+    const auto window = host.hwnd();
+    host.Toggle(nullptr);
+    Check(host.hwnd() == window && !IsWindowVisible(window), "toggle hides without destroying settings");
+    host.Toggle(nullptr);
+    Check(host.hwnd() == window && IsWindowVisible(window), "toggle restores settings");
+    wchar_t draft[32]{}; GetWindowTextW(draft_field, draft, 32);
+    Check(std::wstring(draft) == L"19", "toggle preserves unsaved settings text");
+    host.Close();
+    return failures ? EXIT_FAILURE : EXIT_SUCCESS;
+  }
+  wchar_t executable[32768]{};
+  GetModuleFileNameW(nullptr, executable, 32768);
+  std::wstring command = L"\"" + std::wstring(executable) + L"\" --first-show";
+  STARTUPINFOW startup{sizeof(startup)};
+  startup.dwFlags = STARTF_USESHOWWINDOW; startup.wShowWindow = SW_HIDE;
+  PROCESS_INFORMATION process{};
+  const bool started = CreateProcessW(executable, command.data(), nullptr, nullptr, FALSE,
+                                     0, nullptr, nullptr, &startup, &process) != FALSE;
+  Check(started, "hidden-start settings fixture launches");
+  if (started) {
+    const auto waited = WaitForSingleObject(process.hProcess, 10000);
+    DWORD code = 1;
+    if (waited == WAIT_OBJECT_0) GetExitCodeProcess(process.hProcess, &code);
+    else { TerminateProcess(process.hProcess, 1); WaitForSingleObject(process.hProcess, 1000); }
+    Check(waited == WAIT_OBJECT_0 && code == 0, "hidden-start settings fixture passes");
+    CloseHandle(process.hThread); CloseHandle(process.hProcess);
+  }
+  TestImmediateSettingsAndIcons();
+  TestBrandHome();
+  TestPeerHostsAndPluginKinds();
+  TestConnectorInteractions();
+  TestPageControlBounds();
+  TestNativeControlBackgrounds();
   TestParityDraftsAndConnections();
   TestBufferBehaviorControls();
   TestNestedHitTargets();
   TestOwnedClicksAndTransientDetails();
   TestCandidateSettingsControls();
+  TestCapsuleRecordingSettings();
   TestBufferHotkeyRegistrationLifecycle();
   TestBufferHotkeyModifierControl();
+  TestPluginShortcutControls();
   TestSendShortcutRecorder();
   TestCodexConnectorSelector();
   TestHoverRepaintScopeAndResources();

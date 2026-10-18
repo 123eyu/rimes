@@ -1,8 +1,11 @@
-#include "codex_cli.hpp"
+﻿#include "codex_cli.hpp"
+#include "codex_app_server.hpp"
+#include <condition_variable>
 #include <algorithm>
 #include <array>
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <thread>
 
 namespace rimes::windows::workbench {
@@ -30,14 +33,15 @@ std::wstring Environment(const wchar_t* name) {
 }
 // Let the official CLI resolve its own saved login, without reading credentials
 // here or forwarding ambient API tokens, hooks, plugins, or task instructions.
-std::vector<wchar_t> ChildEnvironment() {
+std::vector<wchar_t> ChildEnvironment(bool private_codex) {
   std::vector<std::wstring> entries;
   for (const auto* name : {L"APPDATA", L"LOCALAPPDATA", L"USERPROFILE", L"HOMEDRIVE",
-      L"HOMEPATH", L"SYSTEMROOT", L"WINDIR", L"TEMP", L"TMP", L"PATH", L"CODEX_HOME",
+      L"HOMEPATH", L"SYSTEMROOT", L"WINDIR", L"TEMP", L"TMP", L"PATH", L"PATHEXT", L"COMSPEC",
       L"HTTPS_PROXY", L"HTTP_PROXY", L"ALL_PROXY", L"NO_PROXY", L"SSL_CERT_FILE", L"SSL_CERT_DIR"}) {
     auto value = Environment(name);
     if (!value.empty()) entries.push_back(std::wstring(name) + L"=" + value);
   }
+  if (private_codex) entries.push_back(L"CODEX_HOME=" + CodexHome().wstring());
   std::sort(entries.begin(), entries.end());
   std::vector<wchar_t> result;
   for (const auto& entry : entries) {
@@ -122,7 +126,7 @@ std::wstring QuoteWindowsArgument(const std::wstring& value) {
   out.append(slashes * 2, L'\\'); return out + L"\"";
 }
 std::vector<std::wstring> CodexTextArguments(const std::filesystem::path& workspace,
-                                            const std::string& model) {
+                                            const std::string& model, const std::string& effort) {
   std::vector<std::wstring> out{L"exec", L"--ignore-user-config", L"--ignore-rules",
       L"--strict-config", L"--skip-git-repo-check", L"--ephemeral", L"--json", L"--color", L"never"};
   for (const auto* flag : {L"shell_tool", L"unified_exec", L"shell_snapshot", L"apply_patch_freeform",
@@ -144,7 +148,16 @@ std::vector<std::wstring> CodexTextArguments(const std::filesystem::path& worksp
       "include_apps_instructions=false", "include_collaboration_mode_instructions=false",
       "include_permissions_instructions=false"}) { out.push_back(L"-c"); out.push_back(Wide(value)); }
   if (!model.empty()) { out.push_back(L"--model"); out.push_back(Wide(model)); }
+  if (!effort.empty()) { out.push_back(L"-c"); out.push_back(Wide("model_reasoning_effort=" + Json(effort).dump())); }
   out.push_back(L"-"); return out;
+}
+std::vector<std::wstring> CodexAppServerArguments(const std::filesystem::path& workspace) {
+  const auto exec = CodexTextArguments(workspace, {});
+  std::vector<std::wstring> args{L"app-server", L"--strict-config"};
+  // Everything after --color never and before stdin is a shared isolation override.
+  args.insert(args.end(), exec.begin() + 9, exec.end() - 1);
+  args.insert(args.end(), {L"--listen", L"stdio://"});
+  return args;
 }
 std::filesystem::path ResolveCodex(const std::string& override_path) {
   if (!override_path.empty()) {
@@ -180,10 +193,23 @@ std::filesystem::path ResolveCodex(const std::string& override_path) {
   }
   throw std::runtime_error("Codex CLI not found. Install/login with Codex and configure its .exe path.");
 }
+std::filesystem::path CodexHome() {
+  const auto local = Environment(L"LOCALAPPDATA");
+  Require(!local.empty());
+  auto path = std::filesystem::path(local) / L"RIMES/ai/codex-home";
+  std::filesystem::create_directories(path);
+  for (auto parent = path; parent != std::filesystem::path(local); parent = parent.parent_path()) {
+    const auto attributes = GetFileAttributesW(parent.c_str());
+    Require(attributes != INVALID_FILE_ATTRIBUTES && !(attributes & FILE_ATTRIBUTE_REPARSE_POINT));
+  }
+  return path;
+}
 static bool RunTextProcess(const std::filesystem::path& executable,
     const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
     const std::string& input, const std::function<bool(const std::string&)>& chunk,
-    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms, bool codex) {
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms, bool codex,
+    bool private_codex = false, const Generation* streaming_job = nullptr,
+    const std::function<void(std::string_view)>& control_output = {}) {
   try {
     if (cancelled()) return false;
     Require(ValidExecutable(executable) && input.size() <= Model::kLimit + 65536);
@@ -210,7 +236,7 @@ static bool RunTextProcess(const std::filesystem::path& executable,
     JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
     limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
     Require(SetInformationJobObject(job.value, JobObjectExtendedLimitInformation, &limits, sizeof(limits)) != FALSE);
-    auto environment = ChildEnvironment(); PROCESS_INFORMATION pi{};
+    auto environment = ChildEnvironment(codex || private_codex); PROCESS_INFORMATION pi{};
     Require(CreateProcessW(executable.c_str(), command.data(), nullptr, nullptr, TRUE,
         CREATE_NO_WINDOW | CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
         environment.data(), workspace.c_str(), &startup.StartupInfo, &pi) != FALSE);
@@ -221,25 +247,51 @@ static bool RunTextProcess(const std::filesystem::path& executable,
     Require(ResumeThread(main_thread.value) != static_cast<DWORD>(-1));
     in_read.Reset(); out_write.Reset(); err_write.Reset();
     std::atomic<bool> written = false;
+    std::mutex write_mutex; std::condition_variable write_event;
+    std::deque<std::string> outgoing; bool writer_stopping = false;
+    const auto enqueue = [&](const std::string& message) {
+      std::lock_guard lock(write_mutex);
+      if (writer_stopping || outgoing.size() >= 8) return false;
+      outgoing.push_back(message); write_event.notify_one(); return true;
+    };
+    if (!streaming_job) outgoing.push_back(input);
     std::jthread writer([&] {
-      std::size_t offset = 0;
-      while (offset < input.size()) {
-        DWORD count = 0;
-        if (!WriteFile(in_write.value, input.data() + offset,
-            static_cast<DWORD>((std::min)(input.size() - offset, std::size_t{8192})), &count, nullptr) || !count) break;
-        offset += count;
+      for (;;) {
+        std::string message;
+        {
+          std::unique_lock lock(write_mutex);
+          write_event.wait(lock, [&] { return writer_stopping || !outgoing.empty(); });
+          if (writer_stopping) break;
+          message = std::move(outgoing.front()); outgoing.pop_front();
+        }
+        std::size_t offset = 0;
+        while (offset < message.size()) {
+          DWORD count = 0;
+          if (!WriteFile(in_write.value, message.data() + offset,
+              static_cast<DWORD>((std::min)(message.size() - offset, std::size_t{8192})), &count, nullptr) || !count) break;
+          offset += count;
+        }
+        written = offset == message.size();
+        if (!written || !streaming_job) break;
       }
-      written = offset == input.size(); in_write.Reset();
+      in_write.Reset();
     });
+    const auto stop_writer = [&] {
+      { std::lock_guard lock(write_mutex); writer_stopping = true; }
+      write_event.notify_all();
+      if (writer.joinable()) { CancelSynchronousIo(writer.native_handle()); writer.join(); }
+    };
     struct StopTree {
-      Handle& job; Handle& process; std::jthread& writer;
-      ~StopTree() {
-        job.Reset();
-        WaitForSingleObject(process.value, 2000);
-        if (writer.joinable()) { CancelSynchronousIo(writer.native_handle()); writer.join(); }
-      }
-    } stop_tree{job, process, writer};
+      Handle& job; Handle& process; const std::function<void()> stop;
+      ~StopTree() { job.Reset(); WaitForSingleObject(process.value, 2000); stop(); }
+    } stop_tree{job, process, stop_writer};
     CodexJsonDecoder decoder; std::string raw; const auto started = GetTickCount64();
+    std::unique_ptr<CodexAppServer> server;
+    if (streaming_job) {
+      server = std::make_unique<CodexAppServer>(Utf8(workspace.wstring()), input,
+          streaming_job->model, streaming_job->effort, enqueue, chunk, streaming_job->progress);
+      Require(server->Start());
+    }
     bool valid = true, stopped = false; std::size_t stderr_bytes = 0;
     std::array<char, 8192> buffer{};
     for (;;) {
@@ -251,8 +303,10 @@ static bool RunTextProcess(const std::filesystem::path& executable,
         while (available) {
           DWORD count = 0;
           if (!ReadFile(handle, buffer.data(), (std::min)(available, static_cast<DWORD>(buffer.size())), &count, nullptr) || !count) break;
+          if (control_output) control_output(std::string_view(buffer.data(), count));
           if (output) {
-            if (codex) valid = decoder.Feed(std::string_view(buffer.data(), count));
+            if (server) valid = server->Feed(std::string_view(buffer.data(), count));
+            else if (codex) valid = decoder.Feed(std::string_view(buffer.data(), count));
             else if (raw.size() + count > Model::kLimit * 6 + 65536) valid = false;
             else raw.append(buffer.data(), count);
           }
@@ -262,10 +316,11 @@ static bool RunTextProcess(const std::filesystem::path& executable,
         }
         if (!valid) break;
       }
-      if (!valid) break;
+      if (!valid || (server && server->Done())) break;
       if (WaitForSingleObject(process.value, 10) == WAIT_OBJECT_0) {
         DWORD available = 0;
         if (PeekNamedPipe(out_read.value, nullptr, 0, nullptr, &available, nullptr) && available) continue;
+        if (control_output && PeekNamedPipe(err_read.value, nullptr, 0, nullptr, &available, nullptr) && available) continue;
         break;
       }
     }
@@ -273,7 +328,12 @@ static bool RunTextProcess(const std::filesystem::path& executable,
     // connector never leaves background workers running after Buffer closes.
     DWORD exit_code = 1; GetExitCodeProcess(process.value, &exit_code);
     job.Reset(); WaitForSingleObject(process.value, 2000);
-    CancelSynchronousIo(writer.native_handle()); writer.join();
+    stop_writer();
+    if (server) {
+      const bool ok = !stopped && valid && server->Done() && !cancelled();
+      if (!ok && error) *error = "ChatGPT 流式请求未完成或连接不兼容，原文已保留。";
+      return ok;
+    }
     if (stopped || !valid || !written || exit_code != 0 || (codex && !decoder.Finish()) || cancelled()) {
       if (error) *error = stopped ? "Codex cancelled or timed out. Source retained."
           : "Codex failed or violated the text-only protocol. Check CLI/login. Source retained.";
@@ -285,11 +345,147 @@ static bool RunTextProcess(const std::filesystem::path& executable,
     return false;
   }
 }
+// The offline translator keeps model weights warm. It has a private pipe and
+// job, and never receives a second request until the first response is drained.
+// Cancellation/protocol errors retire the entire worker before reuse.
+class LocalTextWorker {
+ public:
+  ~LocalTextWorker() { Stop(); }
+  bool Run(const std::filesystem::path& executable, const std::vector<std::wstring>& arguments,
+      const std::filesystem::path& workspace, const std::string& input,
+      const std::function<bool(const std::string&)>& chunk, const std::function<bool()>& cancelled,
+      std::string* error, unsigned timeout_ms) {
+    std::lock_guard lock(mutex_);
+    try {
+      if (cancelled()) { Stop(); return false; }
+      Require(ValidExecutable(executable) && input.size() <= Model::kLimit * 6 + 65536 && input.find('\n') == std::string::npos);
+      std::wstring command = QuoteWindowsArgument(executable.wstring());
+      for (const auto& arg : arguments) command += L" " + QuoteWindowsArgument(arg);
+      Require(command.size() < 32767);
+      if (command != identity_ || workspace != workspace_ || !process.value || WaitForSingleObject(process.value, 0) != WAIT_TIMEOUT) {
+        Stop(); Launch(executable, command, workspace); identity_ = command; workspace_ = workspace;
+      }
+      const std::string line = input + "\n";
+      std::atomic<bool> written = false;
+      std::jthread writer([&] {
+        std::size_t offset = 0;
+        while (offset < line.size()) {
+          DWORD count = 0;
+          if (!WriteFile(in_write.value, line.data() + offset,
+              static_cast<DWORD>((std::min)(line.size() - offset, std::size_t{8192})), &count, nullptr) || !count) break;
+          offset += count;
+        }
+        written = offset == line.size();
+      });
+      struct WriterGuard {
+        LocalTextWorker& worker; std::jthread& thread; bool keep = false;
+        ~WriterGuard() {
+          if (!keep) worker.StopProcess();
+          if (thread.joinable()) { CancelSynchronousIo(thread.native_handle()); thread.join(); }
+          if (!keep) worker.Stop();
+        }
+      } guard{*this, writer};
+      std::string raw; std::size_t stderr_bytes = 0;
+      const auto started = GetTickCount64(); std::array<char,8192> buffer{};
+      for (;;) {
+        if (cancelled() || GetTickCount64() - started >= timeout_ms) throw std::runtime_error("cancelled");
+        for (bool output : {true, false}) {
+          auto handle = output ? out_read.value : err_read.value; DWORD available = 0;
+          Require(PeekNamedPipe(handle, nullptr, 0, nullptr, &available, nullptr) != FALSE);
+          while (available) {
+            DWORD count = 0;
+            Require(ReadFile(handle, buffer.data(), (std::min)(available, DWORD(buffer.size())), &count, nullptr) && count);
+            if (output) { raw.append(buffer.data(), count); Require(raw.size() <= Model::kLimit * 6 + 65536); }
+            else { stderr_bytes += count; Require(stderr_bytes <= 1024 * 1024); }
+            available -= count;
+          }
+        }
+        const auto newline = raw.find('\n');
+        if (newline != std::string::npos && written) {
+          Require(newline == raw.size() - 1); writer.join(); Require(!cancelled());
+          raw.pop_back(); if (!raw.empty() && raw.back() == '\r') raw.pop_back();
+          guard.keep = chunk(raw) && !cancelled(); return guard.keep;
+        }
+        Require(WaitForSingleObject(process.value, 10) == WAIT_TIMEOUT);
+      }
+    } catch (...) {
+      Stop(); if (error) *error = "本地翻译已取消、超时或暂不可用，原文已保留。"; return false;
+    }
+  }
+ private:
+  void StopProcess() {
+    job.Reset();
+    if (process.value) WaitForSingleObject(process.value, 2000);
+  }
+  void Stop() {
+    StopProcess();
+    process.Reset(); in_write.Reset(); out_read.Reset(); err_read.Reset();
+    identity_.clear(); workspace_.clear();
+  }
+  void Launch(const std::filesystem::path& executable, std::wstring command, const std::filesystem::path& workspace) {
+    Handle in_read, out_write, err_write, main_thread;
+    Pipe(in_read, in_write, false); Pipe(out_read, out_write, true); Pipe(err_read, err_write, true);
+    // Whitelist exactly three stdio handles: no Broker/TSF handles may leak.
+    SIZE_T attribute_bytes = 0;
+    InitializeProcThreadAttributeList(nullptr, 1, 0, &attribute_bytes);
+    std::vector<unsigned char> storage(attribute_bytes);
+    auto* attributes = reinterpret_cast<LPPROC_THREAD_ATTRIBUTE_LIST>(storage.data());
+    Require(InitializeProcThreadAttributeList(attributes, 1, 0, &attribute_bytes) != FALSE);
+    struct Attributes { LPPROC_THREAD_ATTRIBUTE_LIST p; ~Attributes() { DeleteProcThreadAttributeList(p); } } cleanup{attributes};
+    HANDLE allowed[] = {in_read.value, out_write.value, err_write.value};
+    Require(UpdateProcThreadAttribute(attributes, 0, PROC_THREAD_ATTRIBUTE_HANDLE_LIST,
+        allowed, sizeof(allowed), nullptr, nullptr) != FALSE);
+    STARTUPINFOEXW startup{}; startup.StartupInfo.cb = sizeof(startup);
+    startup.StartupInfo.dwFlags = STARTF_USESTDHANDLES;
+    startup.StartupInfo.hStdInput = in_read.value; startup.StartupInfo.hStdOutput = out_write.value;
+    startup.StartupInfo.hStdError = err_write.value; startup.lpAttributeList = attributes;
+    job.value = CreateJobObjectW(nullptr, nullptr); Require(job.value != nullptr);
+    JOBOBJECT_EXTENDED_LIMIT_INFORMATION limits{};
+    limits.BasicLimitInformation.LimitFlags = JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE;
+    Require(SetInformationJobObject(job.value, JobObjectExtendedLimitInformation, &limits, sizeof(limits)) != FALSE);
+    auto environment = ChildEnvironment(false); PROCESS_INFORMATION pi{};
+    Require(CreateProcessW(executable.c_str(), command.data(), nullptr, nullptr, TRUE,
+        CREATE_NO_WINDOW | CREATE_SUSPENDED | EXTENDED_STARTUPINFO_PRESENT | CREATE_UNICODE_ENVIRONMENT,
+        environment.data(), workspace.c_str(), &startup.StartupInfo, &pi) != FALSE);
+    process.value = pi.hProcess; main_thread.value = pi.hThread;
+    if (!AssignProcessToJobObject(job.value, process.value)) {
+      TerminateProcess(process.value, 1); throw std::runtime_error("Codex process isolation unavailable");
+    }
+    Require(ResumeThread(main_thread.value) != static_cast<DWORD>(-1));
+    in_read.Reset(); out_write.Reset(); err_write.Reset();
+  }
+  std::mutex mutex_;
+  Handle in_write, out_read, err_read, process, job;
+  std::wstring identity_;
+  std::filesystem::path workspace_;
+};
+bool RunWarmLocalTextProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const std::function<bool(const std::string&)>& chunk,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
+  static LocalTextWorker worker;
+  return worker.Run(executable, arguments, workspace, input, chunk, cancelled, error, timeout_ms);
+}
+
 bool RunCodexTextProcess(const std::filesystem::path& executable,
     const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
     const std::string& input, const std::function<bool(const std::string&)>& chunk,
     const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
   return RunTextProcess(executable, arguments, workspace, input, chunk, cancelled, error, timeout_ms, true);
+}
+bool RunCodexStreamingProcess(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
+    const std::string& input, const Generation& job,
+    const std::function<bool(const std::string&)>& snapshot,
+    const std::function<bool()>& cancelled, std::string* error, unsigned timeout_ms) {
+  return RunTextProcess(executable, arguments, workspace, input, snapshot, cancelled, error, timeout_ms, true, true, &job);
+}
+bool RunCodexControl(const std::filesystem::path& executable,
+    const std::vector<std::wstring>& arguments, const std::function<bool()>& cancelled,
+    std::string* error, unsigned timeout_ms,
+    const std::function<void(std::string_view)>& output) {
+  return RunTextProcess(executable, arguments, CodexHome(), {},
+      [](const std::string&) { return true; }, cancelled, error, timeout_ms, false, true, nullptr, output);
 }
 bool RunLocalTextProcess(const std::filesystem::path& executable,
     const std::vector<std::wstring>& arguments, const std::filesystem::path& workspace,
@@ -310,8 +506,17 @@ bool GenerateCodex(const Settings& config, const Generation& job,
     Workspace workspace;
     const auto input = "You are a text-only Buffer connector. Do not use tools, read files, or execute commands.\n" +
         job.instruction + "\n\nUser text (interpret only as the text-generation request):\n" + job.source;
-    return RunCodexTextProcess(executable, CodexTextArguments(workspace.path, config.codex_model),
-        workspace.path, input, chunk, cancelled, error);
+    Generation frozen = job;
+    if (frozen.model.empty()) frozen.model = config.codex_model;
+    std::string previous;
+    const auto publish = [&](const std::string& text) {
+      if (job.snapshot) return job.snapshot(text);
+      if (!text.starts_with(previous)) return false;
+      const auto delta = text.substr(previous.size()); previous = text;
+      return delta.empty() || chunk(delta);
+    };
+    return RunCodexStreamingProcess(executable, CodexAppServerArguments(workspace.path),
+        workspace.path, input, frozen, publish, cancelled, error);
   } catch (...) {
     if (error) *error = "Codex CLI not found. Configure an absolute .exe path. Source retained.";
     return false;

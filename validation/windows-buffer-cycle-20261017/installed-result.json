@@ -1,0 +1,16 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-buffer-cycle.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-cycle.20261017-823c910b600c-82b4e2a2ad74",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "2615edb434ca71ca1fbcc0e5ce796694a782873b91ac7bacf175762256d9cdf5",
+    "requiresSignOut":  true,
+    "brokerPid":  11168,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-cycle.20261017-823c910b600c-82b4e2a2ad74\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-cycle-20261017-222901",
+    "schema":  "my_combo",
+    "ascii":  false
+}

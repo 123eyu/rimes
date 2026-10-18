@@ -70,7 +70,7 @@ The [1.0.0 preparation checklist](RELEASE-1.0.0.md) remains historical context.
 
 The current development branch also repairs the Buffer workbench: the default
 Alt+Shift+Enter chord sends one ready block on release or drains the frozen queue
-after a 1.2-second hold by default, including in hosts that intercept modified
+after a 0.6-second hold by default, including in hosts that intercept modified
 Enter. Settings → Buffer → Shortcuts accepts a 500–3000 ms hold threshold.
 Alt+Shift+S opens Settings. Candidate geometry follows the Buffer insertion caret;
 source editing supports block navigation, select-all and paste. AI generation
@@ -111,6 +111,17 @@ digits, decimal and operators (also with Shift) pass directly to the host;
 composing candidate selection and Buffer capture still go through the engine.
 Idle spaces in both modes and all idle
 ASCII-mode keys also pass through, including at the TSF test callback.
+Key prediction does not require a document read lock: a host may be holding
+its text-store lock during the first test callback. The real key callback
+still validates the input scope under a granted read lock before forwarding
+input to the Broker. The first-key regressions exercise this boundary on
+initial focus and refocus; real Codex/Electron acceptance remains separate.
+Native `my_combo` batches also retain a host-only zero-width marked-text guard
+from the first owned key down until Rime preedit is available. The pending
+batch flag is distinct from Rime's composing flag; held keys do not repeatedly
+rewrite the guard, and cancellation/focus loss clears it without committing it.
+Run `Invoke-RimesImeE2E.ps1 -Architecture x64 -Chord` (and x86) separately from
+the AppContainer probe to exercise actual simultaneous chord keys and releases.
 The initial mode and subsequent mode flags are exchanged only when both TSF
 and Broker negotiate the key-routing capability, preserving the legacy wire
 format. A modifier-only state update with no composition or committed text
@@ -137,18 +148,39 @@ verification, so an upgrade also updates the language-bar icon without removing
 the profile or changing the user's enabled/default input-method choice.
 
 Windows product shortcuts default to **Alt+Shift+…**: **Alt+Shift+B** toggles
-Buffer globally; **Alt+Shift+Enter** sends from the captured Buffer. Settings →
+Buffer globally; **Alt+Shift+Enter** sends from the captured Buffer;
+**Alt+Shift+Up/Down** cycles through enabled Buffer plugins. Settings →
 Buffer → Shortcuts supports independent modifier/key editing, click-to-record,
 Escape to cancel recording, Delete to reset that binding, and reset-all.
 Changes take effect on Save; closing without Save discards the draft. Letters,
 digits, function and navigation keys are supported. A global shortcut requires
 Ctrl, Alt or Win; only local send may use bare Enter or F6–F12. Editing shortcuts,
-unsafe system chords and duplicate action bindings are rejected. Global OS
+unsafe system chords and duplicate action bindings are rejected. Buffer summon
 registration conflicts or failed saves leave the previous binding active; the
 tray remains available. Settings v3 preserves explicit old/custom shortcuts
 (including the indistinguishable legacy defaults) and v1/v2 key-only meanings.
 Missing shortcut fields and explicit Reset use the new defaults. Save/load never
 resets dictionaries, credentials or unrelated preferences.
+
+Plugin cycling also reserves its configured native hotkeys while Buffer owns
+the current foreground input target and has no unsettled composition or pending
+delivery. This lets the Broker consume the chord before host accelerators even
+when a running application still has an older TSF DLL loaded. Switching preserves
+the exact input lease and draft, without activating or rebinding a window. Closing,
+pausing, moving focus, or borrowing input for Capsule/Mailbox releases the scoped
+chords; a changed binding releases the previous chord even if the new one is busy.
+Conflicts show a tray notice. During composition, the updated TSF settle-and-cycle
+path handles the chord. Applications retaining an older DLL must be fully restarted,
+or Windows signed out and back in, to use that composition path.
+
+Buffer remembers the last explicitly selected plugin, including Input, across
+ordinary close/reopen and Broker restarts. Menu selection and plugin-cycle
+shortcuts share the preference. It is stored atomically as a plugin ID in
+`official-plugins-v1/buffer-selection.json`, separately from draft settings,
+Buffer text/results and execution grants. The first explicit opening revalidates
+the installed/enabled Buffer catalog; disabled, removed or invalid choices fall
+back to Input. Re-enabling a plugin does not select it. A missing preference
+starts in Input; startup never opens Buffer or restores old draft text.
 
 Buffer's initial geometry follows macOS `BufferWindowGeometry`: align the
 left edge and width to the current input field, clamp width to 520–1100 DIPs
@@ -159,8 +191,8 @@ fresh, trustworthy caret is unavailable, use the current width (680 DIPs on
 first launch) and center near the bottom of the mouse's monitor. Work-area
 edges retain an 8-DIP margin. Expansion goes away from the input.
 
-Only an explicit opening/rebinding recalculates this geometry; typing does
-not reset a manually dragged panel. Windows probes only geometry, never
+Explicit opening/rebinding and a verified new input focus recalculate this
+geometry; typing does not reset a manually dragged panel. Windows probes only geometry, never
 field text, through native EDIT caret bounds, a fresh TSF edit-session caret,
 and bounded UI Automation queries for the focused field width. TextPattern2
 is optional when TSF supplies the caret. The opening reply is tied to the
@@ -169,13 +201,25 @@ after typing, focus changes or manual dragging. Password and stale-focus
 providers are rejected. Actual coverage of browser/Electron/Office providers still needs
 the manual host pass; fallback positioning is intentional.
 
+An open Buffer folds to its toolbar 600 ms after losing input capture, matching
+macOS's grace period for transient focus changes. Draft blocks, completed
+results, selected plugin and in-flight generation stay in the workbench.
+A fresh external TSF focus receives a short-lived, exact-session challenge;
+only a foreground editable selection and fresh caret under a granted read lock
+can answer it. The answer creates a new capture/opening revision, expands the
+rails immediately and positions them at that caret. Password/read-only fields,
+settings, obsolete replies and previously queued insertions cannot inherit
+capture. Explicit close/protection disarms automatic reopening; peripheral
+review still requires an explicit bind. This requires the updated TSF DLL in
+each host: running applications using an older DLL must restart (or sign out).
+
 Each accepted Rime commit now remains one source block. Only uninterrupted
 ASCII/direct-input keystrokes merge into an editable tail; Backspace deletes
 a finalized commit block, but edits the direct-input tail by character.
 Pasted text is separately segmented without changing its concatenated text.
 
 The configured send chord (default **Alt+Shift+Enter**) sends one block on
-release, or drains the frozen queue after a 1.2-second hold. Plain/Shift Return
+release, or drains the frozen queue after a 0.6-second hold. Plain/Shift Return
 only settles composition and never submits the host field or sends staged text.
 A composing send press only settles Rime, even for a custom non-Enter binding;
 its repeats/release cannot send. The physical key owns its release even if
@@ -374,6 +418,8 @@ alone does not prove Windows librime, TSF or the final installer works.
 - Display-attribute underline depends on the host querying
   `ITfDisplayAttributeProvider`. The registrar does not add a new TSF
   category, so some hosts may skip the dotted underline.
-- Capsule and Mailbox have no Windows frontend yet; Buffer and AI are available in this branch.
+- This development tree adds Capsule and Mailbox preview windows through the tray,
+  Settings and Alt+Shift+V / Alt+Shift+M. See [PERIPHERALS.md](PERIPHERALS.md) for
+  implemented workflows and remaining macOS parity gaps. This is not an installed-version claim.
 - The 1.1.0 release uses an unsigned EXE installer. Windows security prompts may appear; signing is optional.
 - The EXE installer handles elevated dual-architecture registration. The actual upgrade was verified; fresh-install coverage and broader host acceptance remain separate follow-up checks.

@@ -1,3 +1,4 @@
+#include "../ui/layered_frame.hpp"
 #include "CandidateWindow.h"
 
 #include <algorithm>
@@ -59,7 +60,7 @@ HFONT MakeFont(int height_px, int weight, bool mono) {
   return CreateFontW(-height_px, 0, 0, 0, weight, FALSE, FALSE, FALSE,
                      DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                      CLEARTYPE_QUALITY, DEFAULT_PITCH | FF_DONTCARE,
-                     mono ? L"Consolas" : L"Segoe UI");
+                     mono ? L"Consolas" : L"Microsoft YaHei UI");
 }
 
 int MeasureText(HDC dc, HFONT font, const std::wstring& text) {
@@ -133,6 +134,7 @@ void CandidateWindow::Hide() noexcept {
 }
 
 bool CandidateWindow::EnsureWindow() noexcept {
+  if (!smooth_shapes_) smooth_shapes_ = ui::AcquireSmoothShapes();
   if (window_ != nullptr) return true;
   HINSTANCE instance = module::Instance();
   if (instance == nullptr) instance = GetModuleHandleW(nullptr);
@@ -154,9 +156,6 @@ bool CandidateWindow::EnsureWindow() noexcept {
                                 WS_EX_LAYERED,
                             kCandidateWindowClass, L"", WS_POPUP, 0, 0, 0, 0,
                             owner_, nullptr, instance, this);
-  if (window_ != nullptr) {
-    SetLayeredWindowAttributes(window_, 0, 255, LWA_ALPHA);
-  }
   return window_ != nullptr;
 }
 
@@ -200,8 +199,7 @@ void CandidateWindow::LayoutAndShow(
   const auto metrics = Metrics();
   const ScreenRect work = WorkAreaFromCaret(snapshot.caret_rect);
   const float available_dip =
-      (std::min)(static_cast<float>(metrics.max_strip_width_dip),
-      static_cast<float>(work.width()) * 96.0f / static_cast<float>(dpi));
+      static_cast<float>(work.width()) * 96.0f / static_cast<float>(dpi);
 
   HDC device = GetDC(window_);
   const int cand_px = ui::ScaleDip(metrics.candidate_font_dip, dpi);
@@ -255,7 +253,8 @@ void CandidateWindow::LayoutAndShow(
       ? ui::LayoutCandidateMatrixMeasured(items, snapshot.matrix_rows, metrics, (std::min)(available_dip, 640.f), snapshot.highlighted)
       : ui::LayoutCandidateStripMeasured(
       items, metrics, available_dip, vertical_,
-      static_cast<float>(work.height()) * 96.f / static_cast<float>(dpi));
+      static_cast<float>((std::max)(1L, work.bottom -
+          (std::max)(work.top, snapshot.caret_rect.top))) * 96.f / static_cast<float>(dpi));
   hit_pills_ = layout.pills;
   matrix_labels_.assign(snapshot.items.size(), L"");
   std::size_t offset = 0;
@@ -275,22 +274,11 @@ void CandidateWindow::LayoutAndShow(
   const ScreenRect caret{snapshot.caret_rect.left, snapshot.caret_rect.top,
                          snapshot.caret_rect.right, snapshot.caret_rect.bottom};
   const ScreenPoint origin = PlaceCandidateWindow(caret, width, height, work,
-                            ui::ScaleDip(metrics.caret_gap_dip, dpi));
+                            ui::ScaleDip(metrics.caret_gap_dip, dpi),
+                            vertical_ && snapshot.matrix_rows.empty());
   snapshot_.window_rect = ToRect(origin, width, height);
   PublishSnapshot(snapshot_);
 
-  // Keep the outer corners transparent; GDI on a layered HWND otherwise fills
-  // the entire rectangle.
-  auto rounded_region = [dpi](const ui::DipRect& r, int radius) {
-    const float scale = static_cast<float>(dpi) / 96.f;
-    return CreateRoundRectRgn(static_cast<int>(std::lround(r.left * scale)),
-        static_cast<int>(std::lround(r.top * scale)),
-        static_cast<int>(std::lround(r.right * scale)) + 1,
-        static_cast<int>(std::lround(r.bottom * scale)) + 1,
-        ui::ScaleDip(radius * 2, dpi), ui::ScaleDip(radius * 2, dpi));
-  };
-  HRGN region = rounded_region(layout.strip, metrics.strip_radius_dip);
-  if (region && !SetWindowRgn(window_, region, FALSE)) DeleteObject(region);
   const bool was_visible = IsWindowVisible(window_) != FALSE;
   SetWindowPos(window_, HWND_TOPMOST, origin.x, origin.y, width, height,
                SWP_NOACTIVATE | SWP_SHOWWINDOW);
@@ -299,17 +287,16 @@ void CandidateWindow::LayoutAndShow(
   InvalidateRect(window_, nullptr, TRUE);
 }
 
-void CandidateWindow::Paint(HDC device) const {
+void CandidateWindow::Paint(HDC) const {
   RECT client{};
   GetClientRect(window_, &client);
   const unsigned dpi = WindowDpi(window_);
   const auto& palette = ui::Palette(theme_);
   const auto metrics = Metrics();
 
-  HDC mem = CreateCompatibleDC(device);
-  HBITMAP bitmap =
-      CreateCompatibleBitmap(device, client.right, client.bottom);
-  HGDIOBJ old_bmp = SelectObject(mem, bitmap);
+  ui::LayeredFrame frame;
+  if (!frame.Resize(client.right, client.bottom)) return;
+  HDC mem = frame.dc();
   ui::FillRectColor(mem, client, ui::ToColorRef(palette.candidate));
 
   const float scale = static_cast<float>(dpi) / 96.0f;
@@ -429,10 +416,8 @@ void CandidateWindow::Paint(HDC device) const {
   if (cand_bold) DeleteObject(cand_bold);
   if (ann_font) DeleteObject(ann_font);
 
-  BitBlt(device, 0, 0, client.right, client.bottom, mem, 0, 0, SRCCOPY);
-  SelectObject(mem, old_bmp);
-  DeleteObject(bitmap);
-  DeleteDC(mem);
+  frame.RoundAlpha(static_cast<float>(ui::ScaleDip(metrics.strip_radius_dip, dpi)));
+  frame.Present(window_);
 }
 
 LRESULT CALLBACK CandidateWindow::WindowProcedure(HWND window, UINT message,

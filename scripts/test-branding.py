@@ -58,7 +58,7 @@ class BrandingTests(unittest.TestCase):
 
     def test_updater_keeps_package_contract(self):
         source = text("Sources/RimeBuffer/UpdateManager.swift")
-        for fragment in ['repositoryID = "1327328463"', '["rimes", "xsime"]', 'githubRepo = "xsime"', 'return "RIMES-\\(version).pkg"', 'matchingAssets.count == 1']:
+        for fragment in ['repositoryID = "1327328463"', '["rimes", "xsime"]', 'githubRepo = "xsime"', 'return "RIMES-\\(version).pkg"', 'update-manifest.json', 'UpdateNetworkRules.isExactReleaseAssetURL(url', 'SHA256.hash(data: data)']:
             self.assertIn(fragment, source)
 
     def test_official_homepage_does_not_change_compatibility_links(self):

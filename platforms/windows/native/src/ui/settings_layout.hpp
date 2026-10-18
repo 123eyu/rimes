@@ -7,7 +7,9 @@
 
 #include "candidate_strip.hpp"
 #include "icons.hpp"
+#include "fluent_icons.hpp"
 #include "theme.hpp"
+#include "../core/product_brand.hpp"
 
 namespace rimes::windows::ui {
 
@@ -19,29 +21,69 @@ enum class SettingsPage {
   kPlugins = 4,
   kAbout = 5,
   kChord = 6,
+  kCapsule = 7,
+  kMailbox = 8,
+  kTyping = 9,
+  kStatistics = 10,
+  kHome = 11,
 };
 
-inline constexpr int kSettingsPageCount = 7;
-inline constexpr const wchar_t* kSettingsPageTitles[] = {
-    L"输入法", L"外观", L"Buffer", L"连接器", L"插件", L"维护", L"并击"};
-inline constexpr IconId kSettingsPageIcons[] = {
-    IconId::kKeyboard, IconId::kPalette, IconId::kGrid, IconId::kLink,
-    IconId::kGrid, IconId::kSettings, IconId::kKeyboard};
+inline constexpr int kSettingsPageCount = 12;
+// Stable page identities are independent of sidebar order. Core hosts are
+// peers; only plugin-contributed input features belong in Extensions.
+inline constexpr std::array<SettingsPage, kSettingsPageCount> kSettingsNavOrder = {
+    SettingsPage::kHome, SettingsPage::kInput, SettingsPage::kAppearance, SettingsPage::kBuffer,
+    SettingsPage::kMailbox, SettingsPage::kCapsule, SettingsPage::kApi,
+    SettingsPage::kPlugins, SettingsPage::kAbout, SettingsPage::kChord,
+    SettingsPage::kTyping, SettingsPage::kStatistics};
+inline int SettingsNavIndex(SettingsPage page) {
+  return static_cast<int>(std::find(kSettingsNavOrder.begin(),
+      kSettingsNavOrder.end(), page) - kSettingsNavOrder.begin());
+}
+inline const wchar_t* const kSettingsPageTitles[] = {
+    L"输入法", L"外观", L"Buffer", L"连接器", L"插件", L"维护", L"并击", L"Capsule", L"Mailbox", L"打字测速", L"统计", rimes::branding::Name()};
+inline constexpr FluentIcon kSettingsPageIcons[] = {
+    FluentIcon::kKeyboard, FluentIcon::kPalette, FluentIcon::kBuffer, FluentIcon::kConnector,
+    FluentIcon::kPlugin, FluentIcon::kMaintenance, FluentIcon::kChord, FluentIcon::kCapsule,
+    FluentIcon::kMailbox, FluentIcon::kTyping, FluentIcon::kStatistics, FluentIcon::kHome};
 inline constexpr const wchar_t* kSettingsSchemeTitles[] = {
     L"雾凇全拼", L"自然码双拼", L"小鹤双拼", L"五笔 86", L"犀术五笔", L"英文", L"isaac2026"};
-inline constexpr IconId kSettingsSchemeIcons[] = {
-    IconId::kAlphabet, IconId::kKeyboard, IconId::kBird, IconId::kGrid, IconId::kGrid,
-    IconId::kEnglish, IconId::kKeyboard};
+inline constexpr FluentIcon kSettingsSchemeIcons[] = {
+    FluentIcon::kText, FluentIcon::kKeyboard, FluentIcon::kKeyboard, FluentIcon::kGrid,
+    FluentIcon::kGrid, FluentIcon::kLanguage, FluentIcon::kChord};
 inline constexpr int kSettingsSchemeCount = sizeof(kSettingsSchemeTitles) / sizeof(kSettingsSchemeTitles[0]);
-inline constexpr const wchar_t* kSettingsSubpageLabels[][2] = {
+inline const wchar_t* const kSettingsSubpageLabels[][6] = {
     {L"输入方案", L"选项"},
     {L"主题", L"尺寸"},
     {L"快捷键", L"行为"},
-    {L"AI 模型", L"连接检测"},
-    {L"管理", L"说明"},
+    {L"AI 模型", L"本地网关"},
+    {L"全部", L"缓冲插件", L"Capsule 插件", L"Mailbox 插件", L"内置扩展"},
     {L"版本", L"诊断"},
     {L"isaac2026", L"键位与预览"},
+    {L"内容库", L"说明"},
+    {L"工作区", L"说明"},
+    {L"文章跟打", L"成绩"},
+    {L"每日", L"历史", L"测速成绩"},
+    {rimes::branding::Name(), L"官网", L"邮箱", L"开源项目", L"README", L"License"},
 };
+inline int SettingsTabCount(SettingsPage page) { return page == SettingsPage::kHome ? 6 : page == SettingsPage::kPlugins ? 5 : page == SettingsPage::kStatistics ? 3 : 2; }
+
+struct SettingsHomeLink {
+  const wchar_t* title;
+  const wchar_t* summary;
+  const wchar_t* action;
+  const wchar_t* destination;
+};
+inline constexpr SettingsHomeLink kSettingsHomeLinks[] = {
+    {L"xsime.com", L"访问 {brand} 官网，了解产品与项目动态。", L"打开官网", L"https://xsime.com"},
+    {L"pm@scholay.com", L"反馈使用体验、问题或合作想法。", L"写邮件", L"mailto:pm@scholay.com"},
+    {L"scholay / xsime", L"查看源码、提交问题或参与改进。", L"查看源码", L"https://github.com/scholay/xsime"},
+    {L"从这里了解 {brand}", L"输入法、Buffer、Capsule 与 Mailbox 的功能和安装说明。", L"阅读 README", L"https://github.com/scholay/xsime/blob/main/README.md"},
+    {L"Apache License 2.0", L"查看 {brand} 的开源许可原文。", L"查看完整许可", L"https://github.com/scholay/xsime/blob/main/LICENSE"},
+};
+inline const SettingsHomeLink* HomeLink(int subpage) {
+  return subpage >= 1 && subpage <= 5 ? &kSettingsHomeLinks[subpage - 1] : nullptr;
+}
 
 struct SettingsMetrics {
   int client_width_dip = 980;
@@ -71,9 +113,10 @@ struct SettingsMetrics {
 };
 
 struct SettingsDraft {
+  std::array<bool, 3> extensions_enabled{true, true, true};
   ThemeId theme = ThemeId::kNight;
   ThemeId preview_theme = ThemeId::kNight;
-  SettingsPage page = SettingsPage::kInput;
+  SettingsPage page = SettingsPage::kHome;
   int subpage = 0;
   int schema_index = 0;
   std::wstring imported_schema;
@@ -95,14 +138,23 @@ struct SettingsDraft {
   unsigned hotkey_modifiers = MOD_ALT | MOD_SHIFT;
   wchar_t hotkey = L'B';
   unsigned send_modifiers = MOD_ALT | MOD_SHIFT, send_key = VK_RETURN;
+  std::array<unsigned, 2> plugin_keys{VK_UP, VK_DOWN}, plugin_modifiers{MOD_ALT | MOD_SHIFT, MOD_ALT | MOD_SHIFT};
   std::wstring base_url;
   std::wstring model;
   int ai_connector_index = 0;
   std::wstring codex_path, codex_model;
   std::wstring target_language = L"English";
+  std::wstring source_language = L"Chinese";
   std::wstring api_key;  // fixture / draft only; never loaded from secrets
   std::wstring about_text;
+  std::wstring save_error;
 };
+
+inline bool SettingsPageAvailable(const SettingsDraft& draft, SettingsPage page) {
+  return page == SettingsPage::kChord ? draft.extensions_enabled[0] :
+      page == SettingsPage::kTyping ? draft.extensions_enabled[1] :
+      page == SettingsPage::kStatistics ? draft.extensions_enabled[2] : true;
+}
 
 struct SettingsLayout {
   float width_dip = 980;
@@ -114,20 +166,20 @@ struct SettingsLayout {
   DipRect heading{};
   DipRect body{};
   DipRect status_bar{};
-  DipRect save{};
-  DipRect close{};
   std::array<DipRect, kSettingsPageCount> nav{};
   std::vector<DipRect> scheme_cards;
   std::vector<DipRect> theme_cards;
   std::vector<DipRect> theme_details;
   DipRect theme_popover{};
-  std::array<DipRect, 2> subpage_tabs{};
+  std::array<DipRect, 6> subpage_tabs{};
+  DipRect home_hero{}, home_action{};
   DipRect font_edit{};
   DipRect candidate_count_edit{};
   DipRect check_vertical{};
   DipRect hotkey_modifiers{};
   DipRect hotkey_edit{};
   DipRect send_modifiers{}, send_edit{}, hotkey_record{}, send_record{}, shortcut_reset{}, shortcut_feedback{};
+  std::array<DipRect, 2> plugin_modifiers{}, plugin_edit{}, plugin_record{};
   DipRect base_edit{};
   DipRect connector_combo{}, codex_path_edit{}, codex_model_edit{};
   DipRect model_edit{};
@@ -137,6 +189,7 @@ struct SettingsLayout {
   DipRect check_trad{};
   DipRect check_punct{};
   DipRect auto_send_combo{}, close_after_check{}, translation_combo{}, buffer_language{};
+  DipRect buffer_source_language{};
 };
 
 [[nodiscard]] inline float SettingsBodyWidth(float client_width_dip,
@@ -171,12 +224,14 @@ struct SettingsLayout {
   layout.body = {static_cast<float>(m.body_origin_x_dip),
                  static_cast<float>(m.body_origin_y_dip),
                  static_cast<float>(m.body_origin_x_dip) + body_w,
-                 height_dip - 64.0f};
+                 height_dip - 16.0f};
 
   const float pad = static_cast<float>(m.sidebar_pad_x_dip);
   float ny = static_cast<float>(m.sidebar_row_y_dip);
-  for (int i = 0; i < kSettingsPageCount; ++i) {
-    if (i == 6) ny += 28;
+  for (const auto page : kSettingsNavOrder) {
+    const auto i = static_cast<int>(page);
+    if (page == SettingsPage::kChord) ny += 28;
+    if (!SettingsPageAvailable(draft, page)) continue;
     layout.nav[static_cast<std::size_t>(i)] = {
         pad, ny, side_w - pad,
         ny + static_cast<float>(m.sidebar_row_height_dip)};
@@ -184,23 +239,24 @@ struct SettingsLayout {
   }
 
   float tab_x = layout.content.left + 24.0f;
-  for (int i = 0; i < 2; ++i) {
-    const float tab_width = (std::max)(76.0f, 28.0f + 13.0f * static_cast<float>(
-        std::char_traits<wchar_t>::length(
-            kSettingsSubpageLabels[static_cast<int>(draft.page)][i])));
+  for (int i = 0; i < SettingsTabCount(draft.page); ++i) {
+    float text_width = 0;
+    for (const wchar_t* c = kSettingsSubpageLabels[static_cast<int>(draft.page)][i]; *c; ++c)
+      text_width += *c == L' ' ? 3.5f : *c < 128 ? 6.5f : 11.0f;
+    const float tab_width = (std::max)(44.0f, 20.0f + text_width);
     layout.subpage_tabs[static_cast<std::size_t>(i)] = {
-        tab_x, 8, tab_x + tab_width, 38};
+        tab_x, 12, tab_x + tab_width, 34};
     tab_x += tab_width;
   }
-  layout.status_bar = {layout.content.left, height_dip - 30,
-                       layout.content.right, height_dip};
-
-  layout.save = {width_dip - 220.0f, height_dip - 66.0f, width_dip - 116.0f,
-                 height_dip - 38.0f};
-  layout.close = {width_dip - 108.0f, height_dip - 66.0f, width_dip - 24.0f,
-                  height_dip - 38.0f};
+  layout.status_bar = {tab_x + 16, 8, layout.content.right - 12, 38};
 
   const float gap = static_cast<float>(m.choice_gap_dip);
+  if (draft.page == SettingsPage::kHome) {
+    layout.home_hero = {layout.body.left, layout.body.top, layout.body.right, layout.body.top + 168};
+    if (draft.subpage == 0) layout.home_action = {layout.body.left, layout.body.top + 220, layout.body.left + 160, layout.body.top + 254};
+    if (HomeLink(draft.subpage))
+      layout.home_action = {layout.body.left, layout.body.top + 106, layout.body.left + 160, layout.body.top + 140};
+  }
   if (draft.page == SettingsPage::kInput && draft.subpage == 0 && draft.imported_schema.empty()) {
     const int columns = 3;
     const float card_h = static_cast<float>(m.choice_card_height_dip);
@@ -252,32 +308,39 @@ struct SettingsLayout {
     layout.auto_send_combo = {x, y + 22, layout.body.right - 18, y + 52};
     layout.close_after_check = {layout.body.left + 18, y + 78, layout.body.right - 18, y + 108};
     layout.translation_combo = {x, y + 172, layout.body.right - 18, y + 202};
-    layout.buffer_language = {x, y + 224, layout.body.right - 18, y + 254};
+    layout.buffer_source_language = {x, y + 216, layout.body.right - 18, y + 246};
+    layout.buffer_language = {x, y + 260, layout.body.right - 18, y + 290};
   } else if (draft.page == SettingsPage::kBuffer) {
-    layout.hotkey_modifiers = {layout.body.left, layout.body.top + 48.0f,
-                              layout.body.left + 130.0f, layout.body.top + 74.0f};
-    layout.hotkey_edit = {layout.body.left + 172.0f, layout.body.top + 48.0f,
-                          layout.body.left + 280.0f, layout.body.top + 74.0f};
+    layout.hotkey_modifiers = {layout.body.left, layout.body.top + 28.0f,
+                              layout.body.left + 130.0f, layout.body.top + 54.0f};
+    layout.hotkey_edit = {layout.body.left + 172.0f, layout.body.top + 28.0f,
+                          layout.body.left + 280.0f, layout.body.top + 54.0f};
     layout.hotkey_modifiers.right = layout.body.left + 160.0f;
-    layout.send_modifiers = {layout.hotkey_modifiers.left, layout.body.top + 122.0f,
-                             layout.hotkey_modifiers.right, layout.body.top + 148.0f};
+    layout.send_modifiers = {layout.hotkey_modifiers.left, layout.body.top + 92.0f,
+                             layout.hotkey_modifiers.right, layout.body.top + 118.0f};
     layout.send_edit = {layout.hotkey_edit.left, layout.send_modifiers.top,
                         layout.hotkey_edit.right, layout.send_modifiers.bottom};
     layout.hotkey_record = {layout.body.left + 296, layout.hotkey_edit.top,
                             layout.body.left + 414, layout.hotkey_edit.bottom};
     layout.send_record = {layout.hotkey_record.left, layout.send_edit.top,
                           layout.hotkey_record.right, layout.send_edit.bottom};
-    layout.shortcut_reset = {layout.body.left, layout.body.top + 174,
-                             layout.body.left + 170, layout.body.top + 202};
-    layout.shortcut_feedback = {layout.body.left, layout.body.top + 220,
-                                layout.body.right, layout.body.top + 310};
+    for (int i = 0; i < 2; ++i) {
+      const float y = layout.body.top + 156 + i * 64.f;
+      layout.plugin_modifiers[i] = {layout.hotkey_modifiers.left, y, layout.hotkey_modifiers.right, y + 26};
+      layout.plugin_edit[i] = {layout.hotkey_edit.left, y, layout.hotkey_edit.right, y + 26};
+      layout.plugin_record[i] = {layout.hotkey_record.left, y, layout.hotkey_record.right, y + 26};
+    }
+    layout.shortcut_reset = {layout.body.left, layout.body.top + 312,
+                             layout.body.left + 170, layout.body.top + 340};
+    layout.shortcut_feedback = {layout.body.left, layout.body.top + 350,
+                                layout.body.right, layout.body.top + 422};
   }
   if (draft.page == SettingsPage::kAppearance && draft.subpage == 0 &&
       draft.theme_detail >= 0 && draft.theme_detail < 4) {
     const auto& anchor = layout.theme_details[static_cast<std::size_t>(draft.theme_detail)];
     const float left = (std::clamp)(anchor.right - 260.0f,
                                     layout.content.left + 12.0f, width_dip - 272.0f);
-    const float top = (std::min)(anchor.bottom + 8.0f, layout.save.top - 148.0f);
+    const float top = (std::min)(anchor.bottom + 8.0f, layout.body.bottom - 148.0f);
     layout.theme_popover = {left, top, left + 260.0f, top + 136.0f};
   }
   return layout;
@@ -301,8 +364,6 @@ struct SettingsLayout {
     if (hit(layout.scheme_cards[i])) return 100 + static_cast<int>(i);
   for (std::size_t i = 0; i < layout.theme_cards.size(); ++i)
     if (hit(layout.theme_cards[i])) return 200 + static_cast<int>(i);
-  if (hit(layout.save)) return 300;
-  if (hit(layout.close)) return 301;
   return -1;
 }
 

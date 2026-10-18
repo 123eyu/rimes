@@ -126,11 +126,23 @@ add_library(RimesWorkbench STATIC
     src/workbench/connection_probe.cpp
     src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
     src/workbench/runtime.cpp
-    src/workbench/settings_ui.cpp
+    src/workbench/settings_ui.cpp src/workbench/application_update.cpp
+    src/workbench/metrics.cpp
+    src/workbench/metrics_articles.cpp
+    src/workbench/metrics_ui.cpp
     src/workbench/window.cpp
+    src/workbench/local_gateway.cpp
     src/workbench/buffer_anchor.cpp
+    src/peripherals/store.cpp
+    src/peripherals/terminal.cpp
+    src/peripherals/window.cpp
+    src/peripherals/media.cpp
+    src/peripherals/clipboard_actions.cpp
+    src/peripherals/capture.cpp
+    src/peripherals/messages.cpp
 )
-target_link_libraries(RimesWorkbench PUBLIC RimesCore RimesSchemeImport comdlg32 winhttp bcrypt advapi32 user32 d2d1 dwrite shell32 wtsapi32 ole32 oleaut32 uuid comctl32 gdi32 dwmapi)
+target_link_libraries(RimesWorkbench PUBLIC RimesCore RimesSchemeImport comdlg32 winhttp ws2_32 bcrypt crypt32 advapi32 user32 d2d1 dwrite shell32 wtsapi32 ole32 oleaut32 uuid comctl32 gdi32 msimg32 dwmapi windowscodecs icu normaliz imm32)
+target_include_directories(RimesWorkbench SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 rimes_harden_target(RimesWorkbench)
 
 add_executable(RimesBroker
@@ -250,6 +262,12 @@ if(RIMES_BUILD_TESTS)
     add_test(NAME RimesCaretRegression COMMAND RimesCaretRegressionTests)
     get_target_property(ui_test_sources RimesCaretRegressionTests SOURCES)
     list(REMOVE_ITEM ui_test_sources src/e2e/caret_regression.cpp)
+    add_executable(RimesFirstKeyTests src/e2e/first_key_tests.cpp ${ui_test_sources})
+    target_include_directories(RimesFirstKeyTests PRIVATE src/e2e src/tsf src)
+    target_link_libraries(RimesFirstKeyTests PRIVATE RimesTsfCore advapi32 gdi32 msimg32 ole32 oleaut32 user32 uuid)
+    rimes_harden_target(RimesFirstKeyTests)
+    rimes_use_static_runtime(RimesFirstKeyTests)
+    add_test(NAME RimesFirstKey COMMAND RimesFirstKeyTests)
     add_executable(RimesCandidateUITests src/e2e/candidate_ui_tests.cpp ${ui_test_sources})
     target_include_directories(RimesCandidateUITests PRIVATE src/e2e src/tsf src)
     target_link_libraries(RimesCandidateUITests PRIVATE RimesTsfCore advapi32 gdi32 msimg32 ole32 oleaut32 user32 uuid)
@@ -326,7 +344,25 @@ if(RIMES_BUILD_TESTS)
     target_link_libraries(RimesProductProbe PRIVATE RimesEngine RimesWorkbench)
     rimes_harden_target(RimesProductProbe)
     rimes_use_unicode_console_entrypoint(RimesProductProbe)
+    add_executable(RimesSurfaceTests src/workbench/surface_tests.cpp)
+    target_link_libraries(RimesSurfaceTests PRIVATE RimesWorkbench windowscodecs)
+    rimes_harden_target(RimesSurfaceTests)
+    rimes_use_unicode_console_entrypoint(RimesSurfaceTests)
+    add_test(NAME RimesSurface COMMAND RimesSurfaceTests)
     add_executable(RimesRuntimeTests src/workbench/runtime_tests.cpp)
+    add_executable(RimesMetricsTests src/workbench/metrics_tests.cpp)
+    target_link_libraries(RimesMetricsTests PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesMetricsTests)
+    add_test(NAME RimesMetrics COMMAND RimesMetricsTests)
+    add_executable(RimesMetricsUiTests src/workbench/metrics_ui_tests.cpp)
+    target_link_libraries(RimesMetricsUiTests PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesMetricsUiTests)
+    rimes_use_unicode_console_entrypoint(RimesMetricsUiTests)
+    add_executable(RimesPeripheralTests src/peripherals/tests.cpp)
+    target_link_libraries(RimesPeripheralTests PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesPeripheralTests)
+    rimes_use_unicode_console_entrypoint(RimesPeripheralTests)
+    add_test(NAME RimesPeripherals COMMAND RimesPeripheralTests)
     target_link_libraries(RimesRuntimeTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesRuntimeTests)
     add_test(NAME RimesRuntime COMMAND RimesRuntimeTests)
@@ -347,16 +383,26 @@ if(RIMES_BUILD_TESTS)
     target_link_libraries(RimesCodexTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesCodexTests)
     add_executable(RimesCodexFixture src/workbench/codex_cli_fixture.cpp)
+    target_link_libraries(RimesCodexFixture PRIVATE RimesCore)
     rimes_harden_target(RimesCodexFixture)
     rimes_use_unicode_console_entrypoint(RimesCodexFixture)
     add_test(NAME RimesCodexConnector COMMAND RimesCodexTests $<TARGET_FILE:RimesCodexFixture>)
     add_executable(RimesCodexProbe src/workbench/codex_cli_probe.cpp)
+    add_executable(RimesConnectorProbe src/workbench/connector_probe.cpp)
+    target_link_libraries(RimesConnectorProbe PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesConnectorProbe)
+    rimes_use_unicode_console_entrypoint(RimesConnectorProbe)
+    add_executable(RimesGatewayTests src/workbench/local_gateway_tests.cpp)
+    target_link_libraries(RimesGatewayTests PRIVATE RimesWorkbench)
+    rimes_harden_target(RimesGatewayTests)
+    add_test(NAME RimesLocalGateway COMMAND RimesGatewayTests)
     target_link_libraries(RimesCodexProbe PRIVATE RimesWorkbench)
     rimes_harden_target(RimesCodexProbe)
     rimes_use_unicode_console_entrypoint(RimesCodexProbe)
     rimes_harden_target(RimesSseTests)
     add_test(NAME RimesSseControl COMMAND RimesSseTests)
-    add_executable(RimesWorkbenchTests src/workbench/model.cpp src/workbench/model_tests.cpp)
+    add_executable(RimesWorkbenchTests src/workbench/model_tests.cpp)
+    target_link_libraries(RimesWorkbenchTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesWorkbenchTests)
     add_test(NAME RimesWorkbench COMMAND RimesWorkbenchTests)
     add_executable(RimesBufferLayoutTests src/workbench/buffer_layout_tests.cpp)
@@ -442,13 +488,8 @@ if(RIMES_BUILD_TESTS)
     rimes_harden_target(RimesCandidateWindowTests)
     add_test(NAME RimesCandidateWindow COMMAND RimesCandidateWindowTests)
 
-    add_executable(RimesSettingsTests
-        src/workbench/settings_tests.cpp
-        src/workbench/provider.cpp
-        src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
-        src/workbench/model.cpp
-    )
-    target_link_libraries(RimesSettingsTests PRIVATE RimesCore RimesSchemeImport winhttp advapi32)
+    add_executable(RimesSettingsTests src/workbench/settings_tests.cpp)
+    target_link_libraries(RimesSettingsTests PRIVATE RimesWorkbench)
     rimes_harden_target(RimesSettingsTests)
     add_test(NAME RimesSettings COMMAND RimesSettingsTests)
 
@@ -471,6 +512,10 @@ if(RIMES_BUILD_TESTS)
     rimes_harden_target(RimesSettingsUiTests)
     add_test(NAME RimesSettingsUi COMMAND RimesSettingsUiTests)
     set_tests_properties(RimesSettingsUi PROPERTIES TIMEOUT 45)
+
+    add_test(NAME RimesBrokerHelp COMMAND RimesBroker --help)
+    set_tests_properties(RimesBrokerHelp PROPERTIES
+        TIMEOUT 10 PASS_REGULAR_EXPRESSION "--settings")
 
     # Fail-open contract for a disconnected BrokerClient. Does not launch a
     # Broker or touch Session 1; safe as a default CTest.
@@ -524,7 +569,7 @@ if(RIMES_BUILD_TESTS)
 
     add_executable(RimesVisualPreview WIN32
         src/visual_preview/main.cpp
-        src/workbench/settings_ui.cpp
+        src/workbench/settings_ui.cpp src/workbench/application_update.cpp
         src/workbench/parity_settings.cpp
         src/workbench/connection_probe.cpp
         src/workbench/chord_profile.cpp
@@ -539,7 +584,7 @@ if(RIMES_BUILD_TESTS)
         "${CMAKE_CURRENT_SOURCE_DIR}/src/tsf"
         "${CMAKE_CURRENT_SOURCE_DIR}/src/workbench"
     )
-    target_link_libraries(RimesVisualPreview PRIVATE RimesSchemeImport windowscodecs comctl32
+    target_link_libraries(RimesVisualPreview PRIVATE RimesWorkbench windowscodecs comctl32
         RimesCore
         dwmapi
         d2d1
@@ -654,5 +699,13 @@ foreach(versioned_target RimesTsf RimesBroker RimesRegistrar RimesTsfTestHost Ri
         endif()
         configure_file(src/product_version.rc.in "generated/${versioned_target}.rc" @ONLY)
         target_sources(${versioned_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/${versioned_target}.rc")
+    endif()
+endforeach()
+
+# The same licensed vector glyphs are embedded in production and UI fixtures.
+configure_file(src/fluent_icons.rc.in generated/fluent_icons.rc @ONLY)
+foreach(icon_target RimesBroker RimesVisualPreview RimesSettingsUiTests RimesSurfaceTests RimesE2EBroker RimesMetricsUiTests RimesUiCommandTests RimesPeripheralTests)
+    if(TARGET ${icon_target})
+        target_sources(${icon_target} PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/fluent_icons.rc")
     endif()
 endforeach()

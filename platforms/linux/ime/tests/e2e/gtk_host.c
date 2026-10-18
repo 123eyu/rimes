@@ -7,6 +7,18 @@ static const char *kOutputPath = NULL;
 static GtkWidget *g_entry = NULL;
 
 static void WriteState(const char *kind, const char *text) {
+    // GTK can emit an empty preedit after changed/commit. Keep the committed
+    // value readable while retaining the separate composition event trace.
+    gchar *events_path = g_strdup_printf("%s.events", kOutputPath);
+    FILE *events = fopen(events_path, "a");
+    g_free(events_path);
+    if (events != NULL) {
+        fprintf(events, "%s\t%s\n", kind, text ? text : "");
+        fclose(events);
+    }
+    if (strcmp(kind, "preedit") == 0) {
+        return;
+    }
     FILE *file = fopen(kOutputPath, "w");
     if (file == NULL) {
         return;

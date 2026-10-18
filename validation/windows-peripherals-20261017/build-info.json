@@ -1,0 +1,17 @@
+{
+  "baseCommit": "823c910b600c14f674e41ac906435eea0757972f",
+  "sourceHasLocalChanges": true,
+  "installed": false,
+  "recordedAt": "2026-10-17T11:23:52.0314299+08:00",
+  "binaries": [
+    {
+      "path": "platforms/windows/native/out/build/windows-x64/Release/RimesBroker.exe",
+      "sha256": "e0a066e81483ffd7ec2fac21afad1bcb93744c8ed5a1d2b6b2cb1116903e3444"
+    },
+    {
+      "path": "platforms/windows/native/out/build/windows-x86/Release/RimesBroker.exe",
+      "sha256": "5b90253b55cb445252955e3572896bd47d67e02311ee792faef103df8911df0e"
+    }
+  ],
+  "uiRendersPerArchitecture": 32
+}

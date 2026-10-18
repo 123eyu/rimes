@@ -250,6 +250,7 @@ enum CapsuleRailSmoke {
         )
         window.titleVisibility = .hidden
         window.titlebarAppearsTransparent = true
+        window.appearance = RimeUI.appKitAppearance
         CapsuleWindowGeometry.install(contentController: pane, in: window)
         window.setContentSize(size)
         pane.reloadFromStore()
@@ -257,6 +258,7 @@ enum CapsuleRailSmoke {
         while Date() < deadline {
             RunLoop.current.run(until: Date().addingTimeInterval(0.05))
         }
+        pane.prepareManagerPreviewForSmoke()
         pane.view.layoutSubtreeIfNeeded()
         pane.view.displayIfNeeded()
         guard let bitmap = pane.view.bitmapImageRepForCachingDisplay(in: pane.view.bounds) else {
@@ -266,6 +268,11 @@ enum CapsuleRailSmoke {
         guard let data = bitmap.representation(using: .png, properties: [:]) else {
             return false
         }
+        guard let geometry = try? JSONSerialization.data(
+            withJSONObject: pane.managerPreviewGeometryForSmoke(),
+            options: [.prettyPrinted, .sortedKeys]
+        ), (try? geometry.write(to: URL(fileURLWithPath: path + ".json"),
+                                options: .atomic)) != nil else { return false }
         return (try? data.write(to: URL(fileURLWithPath: path), options: .atomic)) != nil
     }
 

@@ -1,0 +1,42 @@
+{
+  "card-0": {
+    "height": 92,
+    "width": 155,
+    "x": 0,
+    "y": 58
+  },
+  "card-1": {
+    "height": 92,
+    "width": 155,
+    "x": 165,
+    "y": 58
+  },
+  "card-2": {
+    "height": 92,
+    "width": 155,
+    "x": 330,
+    "y": 58
+  },
+  "card-3": {
+    "height": 92,
+    "width": 155,
+    "x": 495,
+    "y": 58
+  },
+  "keyboard": {
+    "height": 260,
+    "width": 650,
+    "x": 0,
+    "y": 413
+  },
+  "page": {
+    "height": 738,
+    "width": 698
+  },
+  "trend": {
+    "height": 190,
+    "width": 650,
+    "x": 0,
+    "y": 188
+  }
+}

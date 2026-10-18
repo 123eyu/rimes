@@ -1,0 +1,17 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-metrics.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-metrics.20261017-823c910b600c-86d0b257d601",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "b863baf2a9f6f46da5b7e260de4b3c3d516e0ebcd0460d38b0d70eaa8d25d237",
+    "requiresSignOut":  true,
+    "brokerPid":  96936,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-metrics.20261017-823c910b600c-86d0b257d601\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-metrics-20261017-145434",
+    "schema":  "my_combo",
+    "ascii":  false,
+    "actualCodexFirstChord":  "Pending user verification after host reload"
+}

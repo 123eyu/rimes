@@ -1,18 +1,8 @@
 import Foundation
 import CRimeBridge
 
-/// Activates each bundled 呦呦音形 preset through the real keymap activation
-/// path in the disposable engine-smoke tree, then plays physical chords the
-/// way a keyboard delivers them. librime's chord_composer settles a chord on
-/// its last release, the yoyo popping processor commits, and the result is
-/// compared with the codes the scheme publishes.
-func runYoyoEngineSmokeTest() -> Bool {
-    func fail(_ message: String) -> Bool {
-        print("yoyo-engine-smoke: FAIL \(message)")
-        return false
-    }
-
-    struct Expectation {
+enum YoyoEngineFixtures {
+    struct Expectation: Encodable {
         let chords: [String]
         let commit: String
         let firstCandidate: String?
@@ -20,7 +10,7 @@ func runYoyoEngineSmokeTest() -> Bool {
     // Fingerings from yoyo's zigen_table/fingering-{yx,hm}.json. The right
     // hand is the left-hand mirror each fingering declares in yoyo.yaml:
     // 折梅 q↔[ a↔; 4↔9 …, 寒梅 q↔p a↔; z↔/ ….
-    let cases: [(ChordKeymapProfile, [Expectation])] = [
+    static let cases: [(ChordKeymapProfile, [Expectation])] = [
         (NativeChordSchemeCatalog.yoyoZhemei, [
             .init(chords: ["q"], commit: "吃", firstCandidate: nil),
             .init(chords: ["["], commit: "没有", firstCandidate: nil),
@@ -42,6 +32,18 @@ func runYoyoEngineSmokeTest() -> Bool {
             .init(chords: ["wdfoi", "sfl,m"], commit: "", firstCandidate: "动物园"),
         ]),
     ]
+}
+
+/// Activates each bundled 呦呦音形 preset through the real keymap activation
+/// path in the disposable engine-smoke tree, then plays physical chords the
+/// way a keyboard delivers them. librime's chord_composer settles a chord on
+/// its last release, the yoyo popping processor commits, and the result is
+/// compared with the codes the scheme publishes.
+func runYoyoEngineSmokeTest() -> Bool {
+    func fail(_ message: String) -> Bool {
+        print("yoyo-engine-smoke: FAIL \(message)")
+        return false
+    }
 
     let root = ChordKeymapRuntimeFiles.userRoot
     let files = ChordKeymapRuntimeFiles(root: root)
@@ -52,7 +54,7 @@ func runYoyoEngineSmokeTest() -> Bool {
 
     var failures: [String] = []
     var started = false
-    for (preset, expectations) in cases {
+    for (preset, expectations) in YoyoEngineFixtures.cases {
         let deployStart = Date()
         do {
             _ = try files.prepare(preset)

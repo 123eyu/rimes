@@ -1,0 +1,202 @@
+[
+  {
+    "classes": [
+      "background",
+      "chord-surface"
+    ],
+    "height": 246,
+    "type": "GtkOffscreenWindow",
+    "width": 698,
+    "x": 0,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-page"
+    ],
+    "height": 224,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "全部 427 项 · 已练 0 · 已掌握 0",
+    "type": "GtkLabel",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 21
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 31
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "双键基础",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 31
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "掌握 0/127 · 尝试 0 次 · 正确率 0%",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 51
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 82
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 92
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "三键进阶",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 92
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "掌握 0/204 · 尝试 0 次 · 正确率 0%",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 112
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 143
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 153
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "四键强化",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 153
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "掌握 0/96 · 尝试 0 次 · 正确率 0%",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 173
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 650,
+    "x": 24,
+    "y": 204
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "清空学习进度…",
+    "type": "GtkLabel",
+    "width": 634,
+    "x": 32,
+    "y": 204
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 1,
+    "text": "",
+    "type": "GtkLabel",
+    "width": 1,
+    "x": 0,
+    "y": 0
+  }
+]

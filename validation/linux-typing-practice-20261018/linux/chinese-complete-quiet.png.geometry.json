@@ -1,0 +1,72 @@
+{
+  "card-0": {
+    "height": 92,
+    "width": 154,
+    "x": 26,
+    "y": 86
+  },
+  "card-1": {
+    "height": 92,
+    "width": 154,
+    "x": 190,
+    "y": 86
+  },
+  "card-2": {
+    "height": 92,
+    "width": 154,
+    "x": 354,
+    "y": 86
+  },
+  "card-3": {
+    "height": 92,
+    "width": 154,
+    "x": 518,
+    "y": 86
+  },
+  "editor": {
+    "height": 139,
+    "width": 646,
+    "x": 26,
+    "y": 456
+  },
+  "page": {
+    "height": 961,
+    "width": 698
+  },
+  "progress": {
+    "height": 12,
+    "width": 603,
+    "x": 26,
+    "y": 226
+  },
+  "result-0": {
+    "height": 92,
+    "width": 209,
+    "x": 26,
+    "y": 609
+  },
+  "result-1": {
+    "height": 92,
+    "width": 209,
+    "x": 245,
+    "y": 609
+  },
+  "result-2": {
+    "height": 92,
+    "width": 208,
+    "x": 464,
+    "y": 609
+  },
+  "target": {
+    "height": 189,
+    "width": 646,
+    "x": 26,
+    "y": 253
+  },
+  "trend": {
+    "height": 165,
+    "width": 646,
+    "x": 26,
+    "y": 768
+  }
+}

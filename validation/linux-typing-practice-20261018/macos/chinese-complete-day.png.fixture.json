@@ -1,0 +1,973 @@
+{
+  "articleID" : "rimes.morning-street",
+  "clock" : 130,
+  "context" : {
+    "chordCountingAvailable" : false,
+    "inputSourceID" : "public.source",
+    "mode" : "practice",
+    "schemaID" : "rime_ice"
+  },
+  "editor" : "天刚亮，街角的早餐店已经开门。老板把热气腾腾的豆浆放在柜台上，又将刚出锅的包子装进竹篮。赶早班的人快步走来，熟悉的客人只需点点头，店员就知道他今天想吃什么。我在靠窗的位置坐下，看见阳光慢慢爬上对面的屋顶，昨夜留下的雨水还在树叶上闪着光。一位老人牵着小狗经过。小狗对每一片落叶都很好奇，走几步便停下来闻一闻。老人并不催促，只在路口等它跟上。骑车送货的年轻人按了一下铃，大家便自然地让开一点。街道不算宽，却容得下各种各样的脚步，每个人都在自己的节奏里开始新的一天。吃完早餐，我决定绕一段路去车站。巷子深处有一家小花店，门前摆着新到的鲜花。店主正在给花换水，见我停下，便笑着说今天的天气适合散步。我没有买花，却记住了那几朵淡黄色的小花。它们让这条每天经过的路，看起来有了一点不同。到车站时，下一班车还要等几分钟。我收起手机，听远处的车声和近处的鸟鸣。过去总觉得早晨只属于匆忙，今天才发现，普通生活里也有很多值得停留的瞬间。不必特意寻找风景，只要愿意慢一点，认真看看身边的人和事，平常的一天也能有一个温暖的开头。",
+  "height" : 961,
+  "history" : [
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1792304059.5132799,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "BEBA3FCB-4867-4C66-B14F-59134A60A86F",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 120,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 452,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 1.0399999999999991
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 2.0800000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 3.120000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 4.1600000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 5.1999999999999993
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 6.240000000000002
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 7.2800000000000011
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 8.3200000000000003
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 9.3599999999999994
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 10.399999999999999
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 11.439999999999998
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 12.48
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 13.52
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 14.560000000000002
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 15.600000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 16.640000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 17.68
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 18.719999999999999
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 19.760000000000002
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 20.800000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 21.84
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 22.879999999999995
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 23.920000000000002
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 24.960000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 26
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 27.039999999999999
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 28.079999999999998
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 29.120000000000005
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 30.159999999999997
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 31.200000000000003
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 32.240000000000002
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 33.280000000000001
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 34.32
+          },
+          {
+            "effectiveCPM" : 0,
+            "elapsedSeconds" : 35.359999999999999
+          },
+          {
+            "effectiveCPM" : 226,
+            "elapsedSeconds" : 120
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780001500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "56C74666-5CE4-4D0F-B33E-393B08C93682",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 90,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 301.33333333333331,
+            "elapsedSeconds" : 90
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780001000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "DFF68AEC-7046-417A-8182-42313452A4D1",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 100,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 271.19999999999999,
+            "elapsedSeconds" : 100
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+        "focusLost"
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780000500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "E143DA50-0469-4C00-BF91-62B499BBE483",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 110,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 246.54545454545453,
+            "elapsedSeconds" : 110
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780000000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "EA184279-B266-4E2F-A014-880E8A1E5AA6",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 120,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 226,
+            "elapsedSeconds" : 120
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    }
+  ],
+  "metrics" : {
+    "attemptedCharacterCount" : 452,
+    "backspaceCount" : 0,
+    "committedBackspaceCount" : 0,
+    "committedCharacterCount" : 452,
+    "compositionBackspaceCount" : 0,
+    "correctAttemptCount" : 452,
+    "correctCharacterCount" : 452,
+    "correctionCount" : 0,
+    "deletedCharacterCount" : 0,
+    "elapsedSeconds" : 120,
+    "expectedCharacterCount" : 452,
+    "extraCharacterCount" : 0,
+    "omissionCount" : 0,
+    "physicalKeyCount" : 452,
+    "repeatKeyCount" : 0,
+    "speedSamples" : [
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 1.0399999999999991
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 2.0800000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 3.120000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 4.1600000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 5.1999999999999993
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 6.240000000000002
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 7.2800000000000011
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 8.3200000000000003
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 9.3599999999999994
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 10.399999999999999
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 11.439999999999998
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 12.48
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 13.52
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 14.560000000000002
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 15.600000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 16.640000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 17.68
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 18.719999999999999
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 19.760000000000002
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 20.800000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 21.84
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 22.879999999999995
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 23.920000000000002
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 24.960000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 26
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 27.039999999999999
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 28.079999999999998
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 29.120000000000005
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 30.159999999999997
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 31.200000000000003
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 32.240000000000002
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 33.280000000000001
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 34.32
+      },
+      {
+        "effectiveCPM" : 0,
+        "elapsedSeconds" : 35.359999999999999
+      },
+      {
+        "effectiveCPM" : 226,
+        "elapsedSeconds" : 120
+      }
+    ],
+    "substitutionCount" : 0
+  },
+  "phase" : "complete",
+  "purpose" : "public-typing-practice-dashboard",
+  "targetStates" : [
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct",
+    "correct"
+  ],
+  "theme" : "day",
+  "width" : 698
+}

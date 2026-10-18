@@ -1,3 +1,4 @@
+#include "session/protected_input.hpp"
 #include "native_buffer_metrics.hpp"
 #include "buffer_service.hpp"
 #include "buffer_application.hpp"
@@ -47,7 +48,13 @@ rimes::buffer::CaretRect CaretFromIc(InputContext* ic) {
     caret.y = rect.top();
     caret.width = rect.width();
     caret.height = rect.height();
-    caret.valid = caret.width >= 0 && caret.height >= 0 &&
+    // A Wayland/RelativeRect cursor is surface-local. It is never an absolute
+    // monitor anchor, and the client scale does not turn it into one.
+    caret.valid = ic->display().rfind("x11:", 0) == 0 &&
+                  !ic->capabilityFlags().test(CapabilityFlag::RelativeRect) &&
+                  std::abs(static_cast<std::int64_t>(caret.x)) < 1000000 &&
+                  std::abs(static_cast<std::int64_t>(caret.y)) < 1000000 &&
+                  caret.width >= 0 && caret.width < 100000 && caret.height >= 0 && caret.height < 100000 &&
                   (caret.width > 0 || caret.height > 0 || caret.x != 0 || caret.y != 0);
     return caret;
 }
@@ -140,15 +147,19 @@ BufferService::BufferService(Instance* instance, PostFn post)
       focus_grace_ms_(FocusGraceMsFromEnv()),
       auto_capture_(EnvFlag("RIMES_BUFFER_AUTO_CAPTURE")),
       headless_(EnvFlag("RIMES_BUFFER_HEADLESS")) {
+    translation_.SetSegmenter([this](std::string_view text) { return model_.SplitSegments(text); });
     if (const char* close_after = std::getenv("RIMES_BUFFER_CLOSE_AFTER_LAST")) {
         model_.set_close_after_last(std::strcmp(close_after, "0") != 0);
     }
+    InitializeInbox();
     StartSocket();
     Publish();
 }
 
 BufferService::~BufferService() {
+    auto_send_timer_.reset();
     alive_->store(false);
+    StopInbox();
     CancelDerived();
     CancelHoldTimer();
     CancelFocusGraceTimer();
@@ -232,6 +243,10 @@ void BufferService::EndDrag() {
     // in Firefox's shared IC. Never retain a time window that consumes it.
     dragging_ = false;
     CancelDragHardTimer();
+    if (model_.capture_enabled() && !LiveTarget()) {
+        DropCaptureForSwitch("drag-ended-without-target");
+        Publish();
+    }
 }
 
 void BufferService::ConsumeDragBlip() {
@@ -272,7 +287,7 @@ bool BufferService::OnCommit(InputContext* ic, std::string_view text) {
     if (ic == nullptr || text.empty()) {
         return false;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password) || model_.secure() ||
+    if (ProtectedInput(ic->capabilityFlags()) || model_.secure() ||
         model_.password_field()) {
         return false;
     }
@@ -298,7 +313,10 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
     if (ic == nullptr) {
         return false;
     }
-    if (IsToggleHotkey(event)) {
+    if (gesture_.pending() && !event.isRelease() && !IsReturnKey(event.rawKey()) && !IsReturnKey(event.key())) {
+        gesture_.cancel(); CancelHoldTimer(); model_.set_hold_progress(0);
+    }
+    if (!managed_hotkey_ && IsToggleHotkey(event)) {
         Toggle(ic);
         event.filterAndAccept();
         return true;
@@ -316,7 +334,7 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
         return true;
     }
 
-    const bool password = ic->capabilityFlags().test(CapabilityFlag::Password);
+    const bool password = ProtectedInput(ic->capabilityFlags());
     OnPasswordField(ic, password);
     if (password || model_.secure()) {
         return false;
@@ -354,8 +372,22 @@ bool BufferService::HandleEarlyKey(KeyEvent& event, bool composing) {
             if (!is_repeat) {
                 eat_return_until_release_ = true;
             }
-            ApplyReturnAction(gesture_.on_press(false, is_repeat, now), ic, composing);
-            if (!is_repeat && !gesture_.settle_only()) {
+            SynchronizeDerived();
+            const bool derived = plugins_ && !plugins_->SelectedBuffer().empty();
+            if (derived && !CanDeliverDerived()) {
+                if (!is_repeat) {
+                    gesture_.cancel(); CancelHoldTimer();
+                    // Return requests generation only when there is no ready
+                    // output to send. A missing target or a commit conflict is
+                    // not permission to replace an existing result.
+                    if (!delivery_conflict_ && derived_.Phase() != rimes::buffer::DerivedPhase::Ready &&
+                        !(Translating() && translation_.Head())) Generate();
+                }
+                event.filterAndAccept(); return true;
+            }
+            ApplyReturnAction(gesture_.on_press(false, is_repeat, now, derived), ic, composing);
+            return_generation_ = model_.generation();
+            if (!is_repeat && gesture_.pending() && !gesture_.settle_only()) {
                 ArmHoldTimer();
             }
         }
@@ -434,6 +466,50 @@ void BufferService::Configure(bool close_after_last, bool reset_on_app_switch, i
     Publish();
 }
 
+void BufferService::ConfigureAutoSend(bool enabled, int seconds) {
+    if (seconds != 1 && seconds != 2 && seconds != 3 && seconds != 5) return;
+    if (auto_send_ != enabled || auto_send_seconds_ != seconds) auto_send_clock_.Reset();
+    auto_send_ = enabled; auto_send_seconds_ = seconds;
+    Publish();
+}
+
+void BufferService::SynchronizeAutoSend() {
+    const auto plugin = plugins_ ? plugins_->SelectedBuffer() : std::string{};
+    auto_send_clock_.Synchronize(plugin, model_.blocks());
+    if (model_.secure() || model_.password_field() || model_.last_reason() == rimes::buffer::MutationReason::PrivacyDiscard)
+        auto_send_clock_.Reset();
+    const bool active = auto_send_ && plugin.empty() && model_.visible() && model_.processing_active() &&
+        model_.capture_enabled() && !model_.secure() && !model_.password_field() && !model_.empty() && LiveTarget();
+    if (!active) { auto_send_clock_.Pause(); return; }
+    if (!auto_send_timer_ && instance_) {
+        auto_send_timer_ = instance_->eventLoop().addTimeEvent(CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 100000, 0,
+            [this](EventSourceTime* timer, uint64_t) {
+                (void)timer;
+                auto_send_scheduled_ = false;
+                AutoSendTick();
+                return true;
+            });
+    }
+    if (auto_send_timer_ && !auto_send_scheduled_) {
+        auto_send_timer_->setTime(now(CLOCK_MONOTONIC) + 100000); auto_send_timer_->setOneShot();
+        auto_send_scheduled_ = true;
+    }
+}
+
+void BufferService::AutoSendTick() {
+    SynchronizeAutoSend();
+    const bool active = auto_send_ && (!plugins_ || plugins_->SelectedBuffer().empty()) &&
+        model_.visible() && model_.processing_active() && model_.capture_enabled() &&
+        !model_.secure() && !model_.password_field() && LiveTarget();
+    const auto head = auto_send_clock_.Tick(static_cast<double>(now(CLOCK_MONOTONIC)) / 1000000.0,
+                                           active, auto_send_seconds_);
+    // Stable earlier blocks may age while composing; no timer settles preedit
+    // or competes with a physical Return/drag operation.
+    if (head && model_.preedit().empty() && !gesture_.pending() && !dragging_ &&
+        !model_.blocks().empty() && model_.blocks().front().id == *head) Deliver(false);
+    else if (active && !model_.empty()) Publish();
+}
+
 void BufferService::BindPlugins(rimes::plugins::Registry& registry,
     std::function<bool(const rimes::plugins::Lease&)> validate,
     std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze) {
@@ -452,35 +528,73 @@ void BufferService::RegisterDerivedAdapter(std::string id, std::string capabilit
     derived_adapters_.emplace(std::move(id), DerivedAdapter{std::move(capability), std::move(run), live_expand});
 }
 
+void BufferService::BindImages(StartImage start, std::function<rimes::mailbox::ImageState()> state,
+                               std::function<void()> cancel, std::function<void(const std::string&)> open) {
+    start_image_ = std::move(start); image_state_ = std::move(state);
+    cancel_image_ = std::move(cancel); open_image_ = std::move(open);
+}
+bool BufferService::ImageMode() const {
+    return image_skill_ && plugins_ && plugins_->SelectedBuffer() == "builtin.codex-cli";
+}
+
 void BufferService::CancelDerived() {
+    CancelTranslation(false);
     if (derived_cancel_) derived_cancel_->store(true);
     derived_cancel_.reset();
     derived_request_.reset();
     derived_.Cancel();
+    result_pending_.clear(); result_pending_id_.clear();
+    derived_logical_blocks_.clear(); derived_error_.clear();
 }
 
 void BufferService::SynchronizeDerived() {
     // A permission check may refresh configuration and publish a new snapshot.
     if (synchronizing_derived_) return;
     synchronizing_derived_ = true;
+    if (model_.last_reason() == rimes::buffer::MutationReason::PrivacyDiscard) translation_.Clear();
     bool grant = false;
     try { grant = derived_request_ && validate_ && validate_(derived_request_->lease); }
     catch (const std::exception&) { grant = false; }
     derived_.Synchronize(model_.blocks(), plugins_ ? plugins_->SelectedBuffer() : "",
         configuration_revision_, {model_.capture_token(), focus_epoch_},
-        model_.visible() && model_.processing_active(), model_.secure() || model_.password_field());
+        model_.visible() && model_.processing_active() && !focus_suspended_, model_.secure() || model_.password_field());
+    if (Translating()) {
+        SynchronizeTranslation();
+        synchronizing_derived_ = false;
+        return;
+    }
+    CancelTranslation(true);
     if (derived_request_ && !derived_.Owns(*derived_request_, grant)) CancelDerived();
+    SynchronizeResultDelivery();
+    if (derived_.Phase() != rimes::buffer::DerivedPhase::Failed &&
+        derived_.Phase() != rimes::buffer::DerivedPhase::Running) derived_error_.clear();
     synchronizing_derived_ = false;
+}
+
+void BufferService::ConfigurePluginOptions(const rimes::runtime::Json& configuration) {
+    plugin_options_.clear();
+    for (const auto* id : {"builtin.codex-cli", "builtin.claude-code-cli"}) {
+        const auto settings = rimes::runtime::ConfigurationStore::NormalizePlugin(id,
+            configuration.at("plugins").value(id, rimes::runtime::Json::object()));
+        for (const auto& field : rimes::runtime::PluginFields(id)) {
+            if (field.kind != rimes::runtime::FieldKind::Choice) continue;
+            rimes::buffer::PluginOption option{field.id, field.title, settings.at(field.id), {}};
+            for (const auto& [value, name] : field.choices) option.choices.push_back({value, name});
+            plugin_options_[id].push_back(std::move(option));
+        }
+    }
 }
 
 bool BufferService::SelectPlugin(const std::string& id) {
     if (!plugins_ || (!id.empty() && !derived_adapters_.count(id)) || !plugins_->SelectBuffer(id)) return false;
     CancelDerived();
+    gesture_.cancel(); CancelHoldTimer();
     Publish();
     return true;
 }
 
 bool BufferService::Generate() {
+    if (Translating()) return TranslationTick(true);
     SynchronizeDerived();
     if (!plugins_ || !freeze_ || !validate_) return false;
     const auto adapter = derived_adapters_.find(plugins_->SelectedBuffer());
@@ -494,22 +608,42 @@ bool BufferService::Generate() {
         const auto request = derived_.Begin(*lease);
         if (!request) return false;
         started = true;
+        if (ImageMode()) {
+            derived_.Cancel();
+            const bool accepted = start_image_ && start_image_(*request, configuration);
+            derived_error_ = accepted ? "" : "无法开始图片任务，请启用 Mailbox 收件箱后重试";
+            Publish();
+            return accepted;
+        }
+        derived_error_.clear(); derived_logical_blocks_.clear();
         if (derived_cancel_) derived_cancel_->store(true);
         derived_request_ = request;
         derived_cancel_ = std::make_shared<std::atomic<bool>>(false);
-        auto receive = [this, alive = alive_, post = post_, request = *request](unsigned alternative,
-                            std::string text, bool finished, bool success) {
+        auto receive = [this, alive = alive_, post = post_, request = *request](ResultUpdate update) {
             if (!alive->load()) return;
-            post([this, alive, request, alternative, text = std::move(text), finished, success] {
+            post([this, alive, request, update = std::move(update)] {
                 if (!alive->load()) return;
+                const auto& [alternative, text, finished, success, message, blocks] = update;
                 SynchronizeDerived();
-                const bool grant = validate_ && validate_(request.lease);
-                if (!derived_.Accepts(request, grant)) return;
+                bool grant = false;
+                try { grant = validate_ && validate_(request.lease); } catch (const std::exception&) {}
+                if (!derived_.Accepts(request, grant)) { Publish(); return; }
+                if (!finished && !message.empty() && message.size() <= 512 && message.find('\0') == message.npos)
+                    derived_error_ = message;
+                if (finished && success) derived_error_.clear();
                 const bool valid = text.empty() || derived_.Update(request, grant, alternative, text);
+                if (finished && success && !blocks.empty()) {
+                    std::string joined;
+                    for (const auto& block : blocks) joined += block;
+                    if (blocks.size() <= 20 && joined == text) derived_logical_blocks_[alternative] = blocks;
+                }
                 if (finished || !valid) {
                     derived_.Finish(request, grant, success && valid);
                     if (derived_cancel_) derived_cancel_->store(true);
-                    if (derived_.Phase() == rimes::buffer::DerivedPhase::Failed) derived_request_.reset();
+                    if (derived_.Phase() == rimes::buffer::DerivedPhase::Failed) {
+                        derived_request_.reset();
+                        derived_error_ = message.size() <= 512 && message.find('\0') == message.npos ? message : "生成失败，原文已保留";
+                    }
                 }
                 Publish();
             });
@@ -527,9 +661,13 @@ bool BufferService::Generate() {
 }
 
 void BufferService::OnActivate(InputContext* ic) {
+    InvalidateMailboxFocus();
     if (ic == nullptr) {
         return;
     }
+    OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
+    if (model_.secure() || model_.password_field()) return;
+    focus_suspended_ = false;
     const auto token = TokenFor(ic);
     FCITX_LOGC(rimes_buffer_log, Info)
         << "activate token=" << token << " capturing=" << model_.capture_enabled()
@@ -547,7 +685,7 @@ void BufferService::OnActivate(InputContext* ic) {
         if (dragging_) {
             ConsumeDragBlip();
             RefreshCaret(ic);
-            OnPasswordField(ic, ic->capabilityFlags().test(CapabilityFlag::Password));
+            OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
             Publish();
             return;
         }
@@ -572,17 +710,23 @@ void BufferService::OnActivate(InputContext* ic) {
         }
         last_external_program_ = program;
     }
-    OnPasswordField(ic, ic->capabilityFlags().test(CapabilityFlag::Password));
-    if (auto_capture_ && !ic->capabilityFlags().test(CapabilityFlag::Password)) {
+    OnPasswordField(ic, ProtectedInput(ic->capabilityFlags()));
+    if (auto_capture_ && !ProtectedInput(ic->capabilityFlags())) {
         ShowAndCapture(ic);
     }
     Publish();
 }
 
 void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
+    InvalidateMailboxFocus();
     FCITX_LOGC(rimes_buffer_log, Info)
         << "deactivate switch_im=" << switching_im << " capturing=" << model_.capture_enabled()
         << " drag=" << dragging_;
+    if (switching_im && ic && ProtectedInput(ic->capabilityFlags())) {
+        OnPasswordField(ic, true);
+        ClearClientPreedit(ic);
+        return;
+    }
     if (switching_im && model_.captures(TokenFor(ic))) {
         CloseAndPause();
         return;
@@ -591,19 +735,26 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     if (!model_.captures(TokenFor(ic))) {
         return;
     }
+    gesture_.cancel(); CancelHoldTimer();
     if (dragging_) {
+        // A window-manager move temporarily deactivates the same IC. Keep
+        // generation ownership until this drag ends or another IC activates;
+        // native delivery still requires LiveTarget() on every commit.
+        Publish();
         return;
     }
-    // Do not drop capture yet. A toolbar drag or a brief WM grab will
-    // activate this same IC again; a real field switch activates another.
+    focus_suspended_ = true;
     ++focus_epoch_;
     CancelDerived();
+    // Do not drop capture yet. A toolbar drag or a brief WM grab will
+    // activate this same IC again; a real field switch activates another.
     pending_unfocus_token_ = TokenFor(ic);
     ArmFocusGraceTimer();
     Publish();
 }
 
 void BufferService::OnInputContextDestroyed(InputContext* ic) {
+    InvalidateMailboxFocus();
     if (ic == nullptr) {
         return;
     }
@@ -625,8 +776,20 @@ void BufferService::OnInputContextDestroyed(InputContext* ic) {
 }
 
 void BufferService::OnPasswordField(InputContext* ic, bool password) {
-    (void)ic;
+    // Capability events from background ICs must not shield or unshield the
+    // active workspace. null is used by the host's isolated policy tests.
+    if (ic && !ic->hasFocus()) return;
+    if (password != model_.password_field()) InvalidateMailboxFocus();
     if (password) {
+        eat_return_until_release_ = false;
+        if (!model_.password_field()) {
+            ++focus_epoch_;
+            CancelDerived(); translation_.Clear();
+            gesture_.cancel(); CancelHoldTimer(); CancelFocusGraceTimer();
+            dragging_ = false; CancelDragHardTimer(); pending_unfocus_token_.clear();
+            raw_input_.clear(); model_.set_preedit({});
+            target_token_.clear(); model_.set_target_name({});
+        }
         model_.set_password_field(true);
         if (model_.capture_enabled()) {
             model_.route_direct_preserving_content("password");
@@ -638,6 +801,32 @@ void BufferService::OnPasswordField(InputContext* ic, bool password) {
         model_.set_password_field(false);
         Publish();
     }
+}
+
+void BufferService::OnSessionProtection(bool protected_session) {
+    if (model_.secure() == protected_session) return;
+    InvalidateMailboxFocus();
+    if (protected_session) {
+        // Protected key events bypass Buffer, including a held Return's key-up.
+        eat_return_until_release_ = false;
+        restore_after_session_ = model_.visible();
+        model_.set_secure(true);
+        ++focus_epoch_;
+        CancelDerived(); translation_.Clear();
+        gesture_.cancel(); CancelHoldTimer(); CancelFocusGraceTimer(); CancelDragHardTimer();
+        dragging_ = false; pending_unfocus_token_.clear(); raw_input_.clear();
+        target_token_.clear(); model_.set_target_name({});
+        auto_send_clock_.Reset(); focus_suspended_ = true;
+        // Keep source blocks and geometry, but retire all target association,
+        // preedit, results and automatic processing without calling an old IC.
+        model_.pause_capture_preserving_content();
+    } else {
+        model_.set_secure(false);
+        if (restore_after_session_) model_.set_visible(true);
+        restore_after_session_ = false;
+        // Showing chrome is not permission to reuse a previous input target.
+    }
+    Publish();
 }
 
 void BufferService::Toggle(InputContext* ic) {
@@ -653,23 +842,27 @@ void BufferService::Toggle(InputContext* ic) {
 }
 
 void BufferService::ShowAndCapture(InputContext* ic) {
-    if (ic == nullptr) {
+    if (model_.secure() || model_.password_field()) return;
+    if (ic == nullptr && instance_) {
+        focus_suspended_ = false;
         instance_->inputContextManager().foreachFocused([&](InputContext* focused) {
             ic = focused;
             return false;
         });
     }
     if (ic == nullptr) {
+        focus_suspended_ = false;
         model_.set_visible(true);
         model_.resume_workbench_processing();
         EnsureUi();
         Publish();
         return;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password)) {
+    if (ProtectedInput(ic->capabilityFlags())) {
         return;
     }
     RefreshCaret(ic);
+    focus_suspended_ = false;
     ++focus_epoch_;
     model_.activate_capture(TokenFor(ic));
     model_.set_visible(true);
@@ -680,6 +873,7 @@ void BufferService::ShowAndCapture(InputContext* ic) {
 }
 
 void BufferService::CloseAndPause() {
+    restore_after_session_ = false;
     ++focus_epoch_;
     CancelDerived();
     gesture_.cancel();
@@ -725,8 +919,10 @@ void BufferService::ArmFocusGraceTimer() {
         return;
     }
     const uint64_t delay_us = static_cast<uint64_t>(focus_grace_ms_) * 1000;
+    // Zero selects sd-event's 250 ms coalescing window. Revocation must use
+    // the configured grace deadline, not an additional scheduling grace.
     focus_grace_timer_ = instance_->eventLoop().addTimeEvent(
-        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + delay_us, 0,
+        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + delay_us, 1000,
         [this](EventSourceTime*, uint64_t) {
             if (!pending_unfocus_token_.empty()) {
                 DropCaptureForSwitch("focus-out");
@@ -780,15 +976,14 @@ void BufferService::ApplyReturnAction(rimes::buffer::ReturnGesture::Action actio
 }
 
 bool BufferService::Deliver(bool all) {
-    // Derived output is delivered through its ownership-aware path (task 7).
-    // Never send source text behind the user's selected transform.
-    if (plugins_ && !plugins_->SelectedBuffer().empty()) return false;
+    if (!model_.preedit().empty()) return false;
+    if (plugins_ && !plugins_->SelectedBuffer().empty()) return DeliverDerived(all);
     auto* ic = LiveTarget();
     if (ic == nullptr) {
         FCITX_LOGC(rimes_buffer_log, Info) << "delivery rejected: no live target";
         return false;
     }
-    if (ic->capabilityFlags().test(CapabilityFlag::Password) || model_.secure() ||
+    if (ProtectedInput(ic->capabilityFlags()) || model_.secure() ||
         model_.password_field()) {
         return false;
     }
@@ -819,6 +1014,11 @@ bool BufferService::Deliver(bool all) {
 }
 
 void BufferService::HandleCommand(const rimes::buffer::Command& command) {
+    if (command.op == rimes::buffer::CommandOp::ReceiveMailbox) { ReceiveMailbox(command); return; }
+    if ((model_.secure() || model_.password_field()) && command.op != rimes::buffer::CommandOp::Hello &&
+        command.op != rimes::buffer::CommandOp::Query && command.op != rimes::buffer::CommandOp::Close) {
+        Publish(); return;
+    }
     InputContext* ic = LiveTarget();
     if (ic == nullptr) {
         instance_->inputContextManager().foreachFocused([&](InputContext* focused) {
@@ -844,6 +1044,18 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             break;
         case rimes::buffer::CommandOp::SendAll:
             SendAll();
+            break;
+        case rimes::buffer::CommandOp::CycleAutoSend:
+            if ((!plugins_ || plugins_->SelectedBuffer().empty()) && !model_.secure() && cycle_auto_send_) {
+                try { cycle_auto_send_(); }
+                catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "自动发送设置未保存，请重新加载设置后重试")); }
+            }
+            break;
+        case rimes::buffer::CommandOp::ToggleCloseAfterLast:
+            if ((!plugins_ || plugins_->SelectedBuffer().empty()) && !model_.secure() && toggle_close_after_last_) {
+                try { toggle_close_after_last_(); }
+                catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "发送完关闭设置未保存，请重新加载设置后重试")); }
+            }
             break;
         case rimes::buffer::CommandOp::RemoveLast:
             model_.remove_last_block();
@@ -872,15 +1084,37 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             FCITX_LOGC(rimes_buffer_log, Info) << "toolbar drag_end received";
             EndDrag();
             return;
+        case rimes::buffer::CommandOp::ConfigurePlugin:
+            if (save_plugin_option_ && plugins_ && model_.visible() && !model_.secure() && !model_.password_field() &&
+                plugins_->SelectedBuffer() == command.plugin && plugin_options_.count(command.plugin)) {
+                const auto& options = plugin_options_.at(command.plugin);
+                const auto field = std::find_if(options.begin(), options.end(), [&](const auto& option) { return option.id == command.id; });
+                if (field != options.end() && std::any_of(field->choices.begin(), field->choices.end(), [&](const auto& choice) { return choice.id == command.text; })) {
+                    try { save_plugin_option_(command.plugin, command.id, command.text); }
+                    catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "AI 选项未保存，请重试")); }
+                }
+            }
+            break;
         case rimes::buffer::CommandOp::SelectPlugin:
             SelectPlugin(command.id);
             break;
         case rimes::buffer::CommandOp::Generate:
             Generate();
             break;
+        case rimes::buffer::CommandOp::OpenMailboxImage:
+            if (ImageMode() && image_state_ && open_image_ && !model_.secure() && !model_.password_field()) {
+                const auto image = image_state_();
+                if (image.phase == rimes::mailbox::ImagePhase::Ready && command.id == image.thread) open_image_(image.thread);
+            }
+            break;
         case rimes::buffer::CommandOp::CancelGeneration:
+            if (ImageMode() && cancel_image_) cancel_image_();
+            CancelDerived();
+            break;
         case rimes::buffer::CommandOp::ReturnToEdit:
             CancelDerived();
+            delivery_conflict_ = false;
+            if (Translating()) translation_.ReturnToEdit();
             break;
         case rimes::buffer::CommandOp::SelectResult:
             SynchronizeDerived();
@@ -888,8 +1122,17 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             break;
         case rimes::buffer::CommandOp::CopyResult: {
             SynchronizeDerived();
+            if (TranslationActive()) {
+                if (translation_.Complete() && command.id == translation_result_id_) {
+                    const auto text = translation_.Preview();
+                    if (!text.empty()) WriteAll(rimes::runtime::Json{{"v", 1}, {"type", "copy_result"}, {"id", command.id}, {"text", text}}.dump());
+                }
+                break;
+            }
             const auto request = derived_request_;
-            const bool grant = request && validate_ && validate_(request->lease);
+            bool grant = false;
+            try { grant = request && validate_ && validate_(request->lease); }
+            catch (const std::exception&) { CancelDerived(); break; }
             SynchronizeDerived();
             if (request && derived_.Owns(*request, grant) &&
                 derived_.SelectResult(command.id)) {
@@ -899,6 +1142,7 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             }
             break;
         }
+        case rimes::buffer::CommandOp::ReceiveMailbox:
         case rimes::buffer::CommandOp::Unknown:
             break;
     }
@@ -1072,7 +1316,7 @@ void BufferService::AcceptClient() {
     SetCloexec(fd);
     {
         std::lock_guard<std::recursive_mutex> lock(clients_mu_);
-        clients_.push_back(Client{fd, {}});
+        clients_.push_back(Client{fd, {}, ++next_client_generation_});
     }
     post_([this] { Publish(); });
 }
@@ -1102,6 +1346,8 @@ void BufferService::ReadClient(Client* client) {
             WriteAll(rimes::buffer::EncodeError("bad_command", error));
             continue;
         }
+        command.peer = client->fd;
+        command.peer_generation = client->generation;
         post_([this, command] { HandleCommand(command); });
     }
 }
@@ -1112,6 +1358,7 @@ void BufferService::CloseClient(int fd) {
         std::lock_guard<std::recursive_mutex> lock(clients_mu_);
         for (auto iterator = clients_.begin(); iterator != clients_.end(); ++iterator) {
             if (iterator->fd == fd) {
+                post_([this, life = alive_, fd, generation = iterator->generation] { if (life->load()) CancelMailboxPeer(fd, generation); });
                 close(fd);
                 clients_.erase(iterator);
                 clients_empty = clients_.empty();
@@ -1172,6 +1419,7 @@ void BufferService::WriteAll(const std::string& payload) {
     for (auto iterator = clients_.begin(); iterator != clients_.end();) {
         const auto written = send(iterator->fd, frame.data(), frame.size(), MSG_NOSIGNAL);
         if (written != static_cast<ssize_t>(frame.size())) {
+            post_([this, life = alive_, peer = iterator->fd, generation = iterator->generation] { if (life->load()) CancelMailboxPeer(peer, generation); });
             close(iterator->fd);
             iterator = clients_.erase(iterator);
             continue;
@@ -1181,25 +1429,76 @@ void BufferService::WriteAll(const std::string& payload) {
 }
 
 void BufferService::Publish() {
+    SynchronizeMailbox();
     SynchronizeDerived();
+    SynchronizeAutoSend();
     if (model_.visible()) {
         EnsureUi();
     }
     auto snapshot = rimes::buffer::MakeSnapshot(model_);
+    snapshot.mailbox_scope = MailboxScope();
     snapshot.width = width_;
     snapshot.theme = theme_;
+    snapshot.auto_send_seconds = auto_send_ ? auto_send_seconds_ : 0;
+    if (auto_send_ && (!plugins_ || plugins_->SelectedBuffer().empty()) && model_.visible() &&
+        model_.processing_active() && !model_.secure() && LiveTarget())
+        for (const auto& block : snapshot.blocks)
+            snapshot.auto_send_progress[block.id] = std::clamp(auto_send_clock_.Age(block.id) / auto_send_seconds_, 0.0, 1.0);
     snapshot.active_plugin = derived_.Plugin();
     const auto adapter = derived_adapters_.find(snapshot.active_plugin);
     snapshot.live_expand = adapter == derived_adapters_.end() || adapter->second.live_expand;
     snapshot.phase = derived_.Phase();
+    snapshot.message = derived_error_;
     snapshot.can_generate = derived_.CanGenerate();
     snapshot.results = derived_.Results();
+    snapshot.result_blocks = result_pending_;
     if (const auto* selected = derived_.SelectedResult()) snapshot.selected_result = selected->id;
+    if (TranslationActive()) {
+        const bool running = translation_.Running() || (translation_.HasPending() && !translation_.Paused() && translation_configuration_ &&
+            (translation_configuration_->plugin.value("continuous", true) || translation_explicit_));
+        snapshot.phase = translation_.Complete() ? rimes::buffer::DerivedPhase::Ready :
+            translation_.Failed() || translation_source_invalid_ ? rimes::buffer::DerivedPhase::Failed : running ? rimes::buffer::DerivedPhase::Running : rimes::buffer::DerivedPhase::Idle;
+        if (translation_source_invalid_) snapshot.message = "原文过长，请分段翻译";
+        else if (translation_.Failed()) snapshot.message = "本地翻译未完成，请检查语言资源或重试";
+        else if (translation_.Paused()) snapshot.message = "翻译已暂停";
+        snapshot.can_generate = !translation_.All().empty() && !translation_.Running();
+        snapshot.results.clear(); snapshot.selected_result.clear();
+        snapshot.result_blocks.clear();
+        auto append_blocks = [&](const auto& units) {
+            for (const auto& unit : units) {
+                if (unit.phase != rimes::translation::Phase::Ready) break;
+                for (const auto& block : unit.children) {
+                    if (snapshot.result_blocks.size() < 200)
+                        snapshot.result_blocks.push_back({block.id, block.text, rimes::buffer::Origin::Local, 0});
+                    else { snapshot.result_blocks.back().id = "overflow-" + translation_result_id_; snapshot.result_blocks.back().text += block.text; }
+                }
+            }
+        };
+        append_blocks(translation_.Retired()); append_blocks(translation_.All());
+        const auto preview = translation_.Preview();
+        if (!preview.empty()) {
+            snapshot.results.push_back({translation_result_id_, preview, 0, translation_.Complete()});
+            snapshot.selected_result = translation_result_id_;
+        }
+    }
     if (plugins_) for (const auto& state : plugins_->Entries()) {
         if (state.descriptor.kind == rimes::plugins::Kind::Buffer && state.installed && state.enabled &&
             derived_adapters_.count(state.descriptor.id))
             snapshot.plugins.push_back({state.descriptor.id, state.descriptor.name});
     }
+    if (plugin_options_.count(snapshot.active_plugin)) snapshot.plugin_options = plugin_options_.at(snapshot.active_plugin);
+    snapshot.can_deliver = !snapshot.active_plugin.empty() && CanDeliverDerived();
+    if (ImageMode() && image_state_) {
+        const auto image = image_state_();
+        snapshot.mailbox_image = true; snapshot.message = derived_error_.empty() ? image.message : derived_error_;
+        snapshot.mailbox_thread = image.phase == rimes::mailbox::ImagePhase::Ready ? image.thread : "";
+        snapshot.phase = image.Running() ? rimes::buffer::DerivedPhase::Running :
+            image.phase == rimes::mailbox::ImagePhase::Ready ? rimes::buffer::DerivedPhase::Ready :
+            image.phase == rimes::mailbox::ImagePhase::Failed ? rimes::buffer::DerivedPhase::Failed : rimes::buffer::DerivedPhase::Idle;
+        snapshot.can_generate = !image.Running() && derived_.CanGenerate();
+        snapshot.can_deliver = false; snapshot.results.clear(); snapshot.result_blocks.clear(); snapshot.selected_result.clear();
+    }
+    if (delivery_conflict_) snapshot.message = "上屏状态未确认，请返回编辑后继续";
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::buffer::EncodeSnapshot(snapshot);
     WriteAll(json);
@@ -1224,6 +1523,13 @@ void BufferService::ArmHoldTimer() {
     hold_timer_ = instance_->eventLoop().addTimeEvent(
         CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + kHoldTickUs, kHoldTickUs,
         [this](EventSourceTime* source, uint64_t) {
+            // Rearm explicitly only while this gesture is live. Retain the
+            // disabled source until release instead of destroying its callback
+            // from inside an aborted tick.
+            source->setEnabled(false);
+            if (model_.generation() != return_generation_ || !model_.preedit().empty()) {
+                gesture_.cancel(); model_.set_hold_progress(0); Publish(); return true;
+            }
             const auto now_tp = std::chrono::steady_clock::now();
             const auto action = gesture_.on_tick(now_tp);
             model_.set_hold_progress(gesture_.progress(now_tp));

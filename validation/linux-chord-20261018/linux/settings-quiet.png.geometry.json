@@ -1,0 +1,207 @@
+[
+  {
+    "classes": [
+      "background",
+      "chord-surface"
+    ],
+    "height": 183,
+    "type": "GtkOffscreenWindow",
+    "width": 698,
+    "x": 0,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-page"
+    ],
+    "height": 161,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 51,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 31,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "vertical"
+    ],
+    "height": 31,
+    "type": "GtkBox",
+    "width": 514,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "已停用",
+    "type": "GtkLabel",
+    "width": 514,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "请先在“插件 · 内置扩展”中启用并击。",
+    "type": "GtkLabel",
+    "width": 514,
+    "x": 36,
+    "y": 28
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 31,
+    "type": "GtkButton",
+    "width": 104,
+    "x": 558,
+    "y": 10
+  },
+  {
+    "classes": [],
+    "height": 31,
+    "text": "设为当前输入方案",
+    "type": "GtkLabel",
+    "width": 88,
+    "x": 566,
+    "y": 10
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 34,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 59
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "当前键位方案：飞耀输入",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 69
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 60,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 101
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "组键间隔",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 111
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 20,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 131
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 20,
+    "type": "GtkSpinButton",
+    "width": 100,
+    "x": 36,
+    "y": 131
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 20,
+    "text": "秒",
+    "type": "GtkLabel",
+    "width": 10,
+    "x": 144,
+    "y": 131
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 162,
+    "y": 131
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "恢复默认",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 170,
+    "y": 131
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 1,
+    "text": "",
+    "type": "GtkLabel",
+    "width": 1,
+    "x": 0,
+    "y": 0
+  }
+]

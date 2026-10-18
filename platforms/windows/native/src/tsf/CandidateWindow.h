@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <memory>
 #include <optional>
 #include <string>
 #include <vector>
@@ -89,6 +90,7 @@ class CandidateWindow {
   static bool GetLastSnapshot(CandidateSnapshot* snapshot) noexcept;
 
  private:
+  std::shared_ptr<void> smooth_shapes_;
   bool EnsureWindow() noexcept;
   void LayoutAndShow(const CandidateSnapshot& snapshot);
   void Paint(HDC device) const;

@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "baseline": "823c910",
-  "scope": "30 core tasks authorized 2026-10-17; optional plugins and cross-device sync excluded",
+  "scope": "30 core task IDs retained; 29 active tasks after task 25 was deferred by the maintainer on 2026-10-18; optional plugins and cross-device sync excluded",
   "tasks": [
     {
       "order": 1,
@@ -113,9 +113,10 @@
         "语言和连续翻译配置生效；原文编辑、取消、重试及部分结果有清楚反馈。",
         "验证快速连续输入、中文标点、多段粘贴、修改前段/尾段、错误重试和迟到结果。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 156,
-      "url": "https://github.com/scholay/xsime/issues/156"
+      "url": "https://github.com/scholay/xsime/issues/156",
+      "visual_status": "pending"
     },
     {
       "order": 7,
@@ -132,9 +133,10 @@
         "翻译单元首个子块交付后原子退休精确原文，其余译文不可变且不被重复翻译。",
         "可选自动发送采用单调时间，隐藏/暂停/保护不计龄；不强制收束组字，不重复投递，失败保留。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 157,
-      "url": "https://github.com/scholay/xsime/issues/157"
+      "url": "https://github.com/scholay/xsime/issues/157",
+      "visual_status": "pending"
     },
     {
       "order": 8,
@@ -152,9 +154,10 @@
         "网络任务不阻塞 Fcitx；支持 SSE 流式、取消、超时、鉴权失败、限流和有界响应。",
         "使用隔离协议服务器覆盖真实传输、碎片流、错误及失效任务；联通实际可用渠道时记录独立验收。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 158,
-      "url": "https://github.com/scholay/xsime/issues/158"
+      "url": "https://github.com/scholay/xsime/issues/158",
+      "visual_status": "pending"
     },
     {
       "order": 9,
@@ -172,9 +175,10 @@
         "焦点、输入源和 IC 退役立即撤销授权；恢复后不能复用旧任务/旧输入框。",
         "覆盖 Firefox 禁用 IM 的密码框、同 IC 换框、进程退出和锁屏恢复，记录平台可检测边界。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 159,
-      "url": "https://github.com/scholay/xsime/issues/159"
+      "url": "https://github.com/scholay/xsime/issues/159",
+      "visual_status": "pending"
     },
     {
       "order": 10,
@@ -191,9 +195,10 @@
         "跨输入法显式唤出时选择 XSIME 并等待新鲜焦点；关闭不切回旧输入法，尊重用户随后切换。",
         "采用 X11/Wayland 各自支持的注册机制，冲突与不支持时给出可操作入口；验证登录和重启恢复。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 160,
-      "url": "https://github.com/scholay/xsime/issues/160"
+      "url": "https://github.com/scholay/xsime/issues/160",
+      "visual_status": "pending"
     },
     {
       "order": 11,
@@ -211,9 +216,10 @@
         "实现 X11 与支持 layer-shell 的 Wayland 放置、多屏缩放及位置恢复；GNOME/KDE 提供明确可用的降级行为。",
         "验证拖动、首击、跨屏、全屏、缩放和遮挡；候选与 Buffer 不相互覆盖且目标身份不伪造。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 161,
-      "url": "https://github.com/scholay/xsime/issues/161"
+      "url": "https://github.com/scholay/xsime/issues/161",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 12,
@@ -232,9 +238,10 @@
         "扩展持久化类型及可靠附件存储，兼容既有 Markdown/UUID/revision；停用不删除用户数据。",
         "保持精确目标插入及复制分离，覆盖键鼠导航、关闭、重启和跨框失效。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 162,
-      "url": "https://github.com/scholay/xsime/issues/162"
+      "url": "https://github.com/scholay/xsime/issues/162",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 13,
@@ -250,9 +257,10 @@
         "保留非本产品拥有的 front matter，坏记录单条降级，并发修订冲突不覆盖。",
         "卡片详情支持逐行复制/插入，整条插入仍可用；覆盖外部编辑冲突、资产哈希及迁移。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 163,
-      "url": "https://github.com/scholay/xsime/issues/163"
+      "url": "https://github.com/scholay/xsime/issues/163",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 14,
@@ -269,9 +277,10 @@
         "保护期间停止读取，恢复只建基线；机密/临时及本产品敏感复制不得进入历史。",
         "X11 与 Wayland 使用各自支持的读取/恢复机制；文本经原生输入提交，其他类型仅显式恢复剪贴板。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 164,
-      "url": "https://github.com/scholay/xsime/issues/164"
+      "url": "https://github.com/scholay/xsime/issues/164",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 15,
@@ -288,9 +297,10 @@
         "提供有界图片/文本/PDF 预览、导入与文件复制；引用元数据及单条文献格式与 macOS 当前范围对齐。",
         "验证丢失文件、路径/链接限制、附件持久化、搜索、备份恢复和旧 PDF/Skill 兼容。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 165,
-      "url": "https://github.com/scholay/xsime/issues/165"
+      "url": "https://github.com/scholay/xsime/issues/165",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 16,
@@ -307,9 +317,10 @@
         "图片/视频保存到私有内容库，支持预览、复制、收藏和来源标注；收藏不受临时清理影响。",
         "覆盖 X11 与 Wayland portal，验证取消/锁屏/失败的资源释放、声音和格式能力边界。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 166,
-      "url": "https://github.com/scholay/xsime/issues/166"
+      "url": "https://github.com/scholay/xsime/issues/166",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 17,
@@ -327,9 +338,10 @@
         "机密默认脱敏；详情 60 秒授权、单字段 15 秒显示、显式复制后条件清理，禁止进入历史或云同步。",
         "覆盖 TOTP 标准向量、密码错误、凭据变更、失焦/睡眠遮蔽、并发写入及损坏数据；无明文日志。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 167,
-      "url": "https://github.com/scholay/xsime/issues/167"
+      "url": "https://github.com/scholay/xsime/issues/167",
+      "visual_status": "comparison_requires_review"
     },
     {
       "order": 18,
@@ -348,9 +360,10 @@
         "实现兼容 schema-v1 的会话/消息/附件存储、原子写入及迁移；停用或关闭不删除内容。",
         "验证空态、长内容、最小尺寸、深浅主题、重启、损坏记录及通知打开同一窗口。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 168,
-      "url": "https://github.com/scholay/xsime/issues/168"
+      "url": "https://github.com/scholay/xsime/issues/168",
+      "visual_status": "requires_review"
     },
     {
       "order": 19,
@@ -368,9 +381,10 @@
         "附件复制到独立私有目录后原子发布，存入 Capsule 后不依赖 Mailbox 原附件。",
         "外部内容加入 Buffer 需明确接受且通过来源/焦点/修订检查；验证失败回滚、取消和删除后的独立性。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 169,
-      "url": "https://github.com/scholay/xsime/issues/169"
+      "url": "https://github.com/scholay/xsime/issues/169",
+      "visual_status": "requires_review"
     },
     {
       "order": 20,
@@ -387,9 +401,10 @@
         "外部输入进入待审核收件，不自动上屏或拉起 Buffer；支持接受/拒绝和撤销来源。",
         "覆盖未授权、坏请求、重放/重复、取消、关窗和安全态；不扩展到尚未在 macOS 落地的 SSE/SSH 客户端。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 170,
-      "url": "https://github.com/scholay/xsime/issues/170"
+      "url": "https://github.com/scholay/xsime/issues/170",
+      "visual_status": "requires_review"
     },
     {
       "order": 21,
@@ -409,9 +424,10 @@
         "图片任务由 Mailbox 持有，Buffer 关闭可继续；产物只保存并预览于 Mailbox，Skill 按渠道显式挂载。",
         "覆盖 CLI 不存在、需要登录、协议错误、取消进程树、迟到结果和文本/图像不同生命周期。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 171,
-      "url": "https://github.com/scholay/xsime/issues/171"
+      "url": "https://github.com/scholay/xsime/issues/171",
+      "visual_status": "requires_review"
     },
     {
       "order": 22,
@@ -430,9 +446,10 @@
         "源缓冲作为完整请求，显式发起；支持超时、取消和进程回收，凭据由渠道自己管理。",
         "覆盖协议碎片、CLI 缺失、认证失败、用户改文/换框以及插件停用后旧结果拒绝。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 172,
-      "url": "https://github.com/scholay/xsime/issues/172"
+      "url": "https://github.com/scholay/xsime/issues/172",
+      "visual_status": "requires_review"
     },
     {
       "order": 23,
@@ -451,9 +468,10 @@
         "每个会话固定 Provider/模型路由，部分流只在内存，最终回复完成后持久化。",
         "覆盖恢复、取消、错误重试和全局配置变化；明确操作才把结果加入 Buffer。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 173,
-      "url": "https://github.com/scholay/xsime/issues/173"
+      "url": "https://github.com/scholay/xsime/issues/173",
+      "visual_status": "requires_review"
     },
     {
       "order": 24,
@@ -472,15 +490,16 @@
         "切页或关窗保留正在运行的进程；显式结束才终止，应用重启不伪造重建旧进程。",
         "文件列表/预览有界，按会话 UUID 手动收取至 Mailbox；覆盖退出、取消、并行会话和附件原子性。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 174,
-      "url": "https://github.com/scholay/xsime/issues/174"
+      "url": "https://github.com/scholay/xsime/issues/174",
+      "visual_status": "requires_review"
     },
     {
       "order": 25,
       "key": "LINUX-PARITY-25",
       "priority": "P1",
-      "title": "意识流输入插件与本地/AI 候选",
+      "title": "意识流输入插件与独立 AI 渠道候选",
       "depends_on": [
         4,
         7,
@@ -488,13 +507,15 @@
       ],
       "area": "buffer",
       "acceptance": [
-        "实现连续全拼 raw 输入、本地 Rime/Octagram 优先解码与独立 AI 回退，1–5 个完整候选。",
+        "恢复开发时跟随当前 macOS：自由输入使用独立 AI 渠道，提供 1–5 个完整候选；本地 Rime/Octagram 仅用于普通输入。",
         "候选数、延迟配置、硬/软边界和确认/发送分离，保留当前普通输入方案。",
         "覆盖粘贴校验、编辑、部分发送后续写、取消、旧候选失效和原生投递。"
       ],
-      "status": "planned",
+      "status": "deferred",
       "issue": 175,
-      "url": "https://github.com/scholay/xsime/issues/175"
+      "url": "https://github.com/scholay/xsime/issues/175",
+      "deferred_on": "2026-10-18",
+      "deferred_reason": "维护者要求意识流输入功能暂时不做；保留任务，恢复前不开发、不计为完成。"
     },
     {
       "order": 26,
@@ -504,18 +525,18 @@
       "depends_on": [
         1,
         3,
-        9,
-        25
+        9
       ],
       "area": "plugins",
       "acceptance": [
         "实现当前统一并击行为、物理批次与精确上下文保护；支持已应用键位快照和跨批配对。",
         "提供复制/编辑/导入/导出键位、草稿与应用分离；部署验证失败恢复旧配置和方案。",
-        "验证普通输入与意识流共用配置、键位类型、焦点/编辑/方案变化取消及单键不吞字。"
+        "验证普通输入的键位类型、焦点/编辑/方案变化取消及单键不吞字；意识流联动随第 25 项暂缓，不作为本轮依赖。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 176,
-      "url": "https://github.com/scholay/xsime/issues/176"
+      "url": "https://github.com/scholay/xsime/issues/176",
+      "visual_status": "requires_review"
     },
     {
       "order": 27,
@@ -533,9 +554,12 @@
         "按开关采集脱敏计数，保护字段和测速练习排除；仅保存本地聚合而不保存输入正文。",
         "验证采集启停、时间口径、重启、并击批次及数据导出/删除。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 177,
-      "url": "https://github.com/scholay/xsime/issues/177"
+      "url": "https://github.com/scholay/xsime/issues/177",
+      "visual_status": "requires_review",
+      "implementation_status": "implemented",
+      "validation": "statistics/VALIDATION.md"
     },
     {
       "order": 28,
@@ -554,9 +578,12 @@
         "按连续时间、正确成文、字准、物理键、并击批次和回退独立计分，与日常统计隔离。",
         "只保存本机聚合和文章/配置身份；验证中英文、重启、取消、重试和输入法方案切换。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 178,
-      "url": "https://github.com/scholay/xsime/issues/178"
+      "url": "https://github.com/scholay/xsime/issues/178",
+      "visual_status": "requires_review",
+      "implementation_status": "implemented",
+      "validation": "typing-practice/VALIDATION.md"
     },
     {
       "order": 29,
@@ -588,7 +615,6 @@
         22,
         23,
         24,
-        25,
         26,
         27,
         28
@@ -599,9 +625,12 @@
         "验证输入、双轨翻译、AI、剪贴板、捕获、密码、Mailbox、快捷键、锁屏和跨屏完整流程。",
         "记录确切提交、构建、桌面、通过项与不支持项；源码测试、容器测试与真实桌面结果分别呈现。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 179,
-      "url": "https://github.com/scholay/xsime/issues/179"
+      "url": "https://github.com/scholay/xsime/issues/179",
+      "implementation_status": "partial",
+      "visual_status": "requires_review",
+      "validation": "validation/desktop-acceptance.md"
     },
     {
       "order": 30,
@@ -633,7 +662,6 @@
         22,
         23,
         24,
-        25,
         26,
         27,
         28,
@@ -645,9 +673,11 @@
         "验证新装、升级、重装和卸载，保留用户词库、学习记录、笔记、会话和凭据；校验源安装清单兼容。",
         "同步安装、使用、权限、卸载和发布文档；生成并验证确切版本产物，不把配置完成等同已公开发布。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 180,
-      "url": "https://github.com/scholay/xsime/issues/180"
+      "url": "https://github.com/scholay/xsime/issues/180",
+      "implementation_status": "implemented",
+      "validation": "validation/release-lifecycle.md"
     }
   ],
   "milestone": {

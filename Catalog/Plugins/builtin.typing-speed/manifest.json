@@ -22,7 +22,15 @@
   "nameZH": "打字测速",
   "notice": "RIMES Official Plugins\nCopyright 2026 scholay\n\nCore maintainer / 核心维护者: 学术海\nMaintainer homepage: https://pm.scholay.com\nPlugin repository: https://github.com/scholay/rimes-plugins\nHost project: https://github.com/scholay/rimes\n\nThis repository is maintained for official free plugins for RIMES.\nRIMES provides Chinese text input using the Rime Input Method Engine (librime).\nRime / librime: https://github.com/rime/librime\n\nThe Rime reference identifies the host platform's input engine. Individual\nplugins have their own component dependencies and attribution records.\nSee THIRD_PARTY_NOTICES.md and individual plugin documentation.\n",
   "platforms": {
+    "linux": {
+      "distribution": "bundled",
+      "legacyID": "builtin.typing-speed"
+    },
     "macos": {
+      "distribution": "bundled",
+      "legacyID": "builtin.typing-speed"
+    },
+    "windows": {
       "distribution": "bundled",
       "legacyID": "builtin.typing-speed"
     }
@@ -32,5 +40,5 @@
   "sdkVersion": 1,
   "summaryEN": "Typing practice official plugin; user data remains owned by the RIMES host.",
   "summaryZH": "打字测速官方插件；用户数据由 RIMES 宿主管理。",
-  "version": "2.0.0"
+  "version": "2.1.0"
 }

@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "70258f373ba1aa73c655e595b47f7c17eb655d4d",
+  "sourceFiles": {
+    ".github/workflows/linux-ime.yml": "e7c945c025680a34699d1641e2e9e75f69025d894f029498c4feff0dfd27b808",
+    "platforms/linux/ime/src/desktop/desktop_shortcuts.cpp": "13b27c1f118d3fac0d988492e8e285344d2aecfa802ceb9cbc04637a50d2abd3",
+    "platforms/linux/ime/src/desktop/workspace_launcher.cpp": "ae1d24343f4d9d44fc309e2ab99a0ea26bb21033650a65cc547ec3a5620bcd65",
+    "platforms/linux/ime/tests/desktop_shortcuts_tests.cpp": "36ffc81bc0ac03e23d4e0ecb60a9eac2846d41cefe81ddb73c771f1f99bba5a9",
+    "platforms/linux/ime/tests/e2e/desktop_hosts.py": "6fd0cd0a55c83673cfe576abdd2a1855b878c6e4f8f6420788401b582b793720",
+    "platforms/linux/ime/tests/e2e/dbus_client.py": "5e108f23ad35607fea0a43754d985a5202c64382d085c2434dbfc5261c0842e4",
+    "platforms/linux/ime/tests/e2e/dbus_capsule_client.py": "8259504449343d0970d3dae149a72b58b612dcdd270f40ef667e7295b7dee16a",
+    "platforms/linux/ime/tests/e2e/e2e.sh": "347ba154c6624575841c20b3bd700c730ce34ae38883f24c71c321ef05fc4aa1",
+    "platforms/linux/ime/tests/e2e/gtk_host.c": "16ee3ac9edb550b2487427bfe6e9ab4e89e676f59e209231be2e90288e32345b",
+    "platforms/linux/ime/tests/e2e/qt_host.cpp": "e5cff2d2d1d4151103dd00d1bb4a6a3f6e836e0ff2c7652e8207dfb441d8d803",
+    "platforms/linux/validation/visual_inventory.py": "e9783dfaeee7d6300bcdc7cee3bf364f4f6d4734e1d420dab4cac71161a0229f",
+    "platforms/linux/ime/src/fcitx/rimes_ime.cpp": "e1836b7d3503ff62632086df50634e994382527a5396ecb900a676d46d49b876",
+    "platforms/linux/ime/tests/capsule_fcitx_e2e.cpp": "92dc689f6be8d46fe9f8e36477a9b115396042dd69d8c16c1c3407b7d1bc0945"
+  },
+  "environment": {
+    "distribution": "Ubuntu 24.04 arm64 Docker",
+    "fcitx": "5.1.7",
+    "gtk": "3.24.41",
+    "qt": "5.15.13",
+    "windowManager": "Xfwm4 on Xvfb",
+    "browser": "Mozilla Firefox 158.0",
+    "browserArchiveSHA256": "ad647ee920828da7495de7a5f3eb5ddad457b107e4932b3fac49ce700bbbb2b2",
+    "browserArchiveURL": "https://download.mozilla.org/?product=firefox-latest-ssl&os=linux64-aarch64&lang=en-US",
+    "browserIsolation": "fresh profile and local public page; SkipTermsOfUse/SkipOnboarding/DisableTelemetry policies only in the extracted temporary test binary; sandbox defaults retained"
+  },
+  "visual": {
+    "manifests": 19,
+    "pairs": 229,
+    "status": "requires_review"
+  },
+  "desktopAcceptance": "partial; GNOME/KDE, physical Wayland, locking, suspension and multi-monitor acceptance pending",
+  "deferredTask": 25
+}

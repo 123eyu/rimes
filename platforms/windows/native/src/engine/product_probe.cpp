@@ -1,3 +1,4 @@
+#include <atomic>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -13,13 +14,14 @@ namespace {
 class RuntimePreferences {
  public:
   explicit RuntimePreferences(const std::filesystem::path& log_dir) {
+    static std::atomic<unsigned long long> serial{0};
     wchar_t previous[32768]{};
     const auto length = GetEnvironmentVariableW(L"LOCALAPPDATA", previous, 32768);
     if (length >= 32768) return;
     if (length) previous_ = previous;
     const auto root = log_dir / (L"workbench-shift-probe-" +
         std::to_wstring(GetCurrentProcessId()) + L"-" +
-        std::to_wstring(GetTickCount64()));
+        std::to_wstring(GetTickCount64()) + L"-" + std::to_wstring(++serial));
     if (!std::filesystem::create_directory(root)) return;
     active_ = SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str()) != 0;
   }
@@ -124,17 +126,20 @@ bool TestNativeIsaac2026(RimeEngine& engine, const std::filesystem::path& log_di
 bool TestPausedBufferShift(RimeEngine& engine,
                           const std::filesystem::path& log_dir) {
   using namespace rimes::windows;
-  RuntimePreferences preferences(log_dir);
-  if (!preferences.active()) {
-    std::cerr << "Could not isolate Buffer probe preferences";
-    return false;
-  }
   constexpr auto down = static_cast<std::uint32_t>(core::KeyEventFlags::kKeyDown);
   constexpr auto repeat = static_cast<std::uint32_t>(core::KeyEventFlags::kRepeat);
   constexpr auto tap = static_cast<std::uint32_t>(core::KeyEventFlags::kShiftTap);
   constexpr auto shift = static_cast<std::uint32_t>(core::KeyModifiers::kShift);
   for (const auto capabilities : {0ULL, core::kModifierSnapshotsCapability}) {
     for (const bool pending_result : {false, true}) {
+      // Plugin selection is intentionally remembered across Runtime instances.
+      // Each scenario needs its own preferences, otherwise the translated-result
+      // case changes the following plain-input case into translation mode.
+      RuntimePreferences preferences(log_dir);
+      if (!preferences.active()) {
+        std::cerr << "Could not isolate Buffer probe preferences";
+        return false;
+      }
       workbench::Runtime runtime([](const workbench::Settings&, const workbench::Generation&,
           const std::function<bool(const std::string&)>& chunk,
           const std::function<bool()>&, std::string*) {
@@ -169,6 +174,17 @@ bool TestPausedBufferShift(RimeEngine& engine,
       runtime.Focus(target);
       runtime.Bind(peer);
       if (!runtime.Capturing(target)) return fail("capture binding");
+      if (pending_result) {
+        // Complete translation before composing another word. Switching
+        // plugins with an owned preedit intentionally queues settlement, and
+        // returning to plain input parks the translation rather than sending it.
+        runtime.Paste("Original.");
+        runtime.Generate(true);
+        const auto deadline = GetTickCount64() + 3000;
+        while (runtime.Snapshot()["result"] != "Translated output." && GetTickCount64() < deadline)
+          Sleep(2);
+        if (runtime.Snapshot()["result"] != "Translated output.") return fail("result generation");
+      }
       std::uint64_t sequence = 1;
       auto key = [&](std::uint32_t vk, std::uint32_t flags,
                      std::uint32_t modifiers, core::InputState* state) {
@@ -188,16 +204,11 @@ bool TestPausedBufferShift(RimeEngine& engine,
           state.composition != "ni" || runtime.Snapshot()["preedit"] != "ni")
         return fail("initial real Rime preedit");
       const auto revision = state.revision;
-      runtime.Paste(pending_result ? "Original." : std::string(workbench::Model::kLimit, 'x'));
       if (pending_result) {
-        runtime.Generate(true);
-        const auto deadline = GetTickCount64() + 3000;
-        while (runtime.Snapshot()["result"] != "Translated output." && GetTickCount64() < deadline)
-          Sleep(2);
-        if (runtime.Snapshot()["result"] != "Translated output.") return fail("result generation");
-        runtime.ReturnToInput();
         runtime.Send(false);
         if (runtime.Snapshot()["status"] != "Sending...") return fail("pending result delivery");
+      } else {
+        runtime.Paste(std::string(workbench::Model::kLimit, 'x'));
       }
       const auto before = runtime.Snapshot();
       for (const auto vk : {VK_SHIFT, VK_LSHIFT, VK_RSHIFT}) {

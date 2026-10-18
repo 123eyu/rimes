@@ -1,0 +1,8 @@
+platforms/windows/native/src/peripherals/appearance.hpp
+platforms/windows/native/src/peripherals/window.cpp
+platforms/windows/native/src/ui/fluent_d2d.hpp
+platforms/windows/native/src/ui/fluent_icons.hpp
+platforms/windows/native/src/workbench/surface_tests.cpp
+platforms/windows/native/CMakeLists.txt
+platforms/windows/native/src/ui/buffer_paint.hpp
+platforms/windows/native/src/ui/settings_paint.hpp

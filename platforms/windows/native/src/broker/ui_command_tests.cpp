@@ -125,7 +125,7 @@ void TestInputOnlyConnectionCannotReachWorkbench() {
   int requests = 0;
   const auto before = runtime.Snapshot();
   for (const auto* op : {"open_settings", "snapshot", "focus", "wait", "ack",
-                         "toggle", "bind", "send", "generate", "unknown"}) {
+                         "toggle", "bind", "send", "generate", "buffer_transition", "focus_ready", "delivery_guard", "unknown"}) {
     broker::BrokerConnection connection(42, nullptr, &runtime,
                                         [&] { ++requests; return true; }, true);
     core::Frame response;
@@ -164,7 +164,8 @@ LRESULT CALLBACK FixtureProcedure(HWND window, UINT message, WPARAM wparam,
 }
 void TestUiDispatcherRetiresItsWindow() {
   workbench::UiCommands commands;
-  Check(!commands.RequestSettings(), "dispatcher waits for UI creation");
+  Check(commands.RequestSettings(), "dispatcher queues a settings request before UI creation");
+  Check(commands.RequestSettings(), "duplicate startup requests coalesce");
   Check(!commands.RequestExit(), "maintenance exit waits for UI creation");
   WNDCLASSW fixture{};
   fixture.lpfnWndProc = FixtureProcedure;
@@ -176,6 +177,10 @@ void TestUiDispatcherRetiresItsWindow() {
   Check(window != nullptr, "disposable message-only UI destination created");
   if (!window) return;
   commands.Attach(window);
+  MSG startup{};
+  while (PeekMessageW(&startup, window, 0, 0, PM_REMOVE)) DispatchMessageW(&startup);
+  Check(posted_commands == 1, "queued startup request reaches the UI once after attachment");
+  posted_commands = 0;
   Check(commands.RequestSettings(), "ready dispatcher posts a settings request");
   Check(posted_commands == 0, "request never executes UI work on the caller thread");
   MSG message{};

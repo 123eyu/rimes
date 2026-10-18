@@ -1,0 +1,542 @@
+[
+  {
+    "page": "keymap-day",
+    "width": 698,
+    "height": 876,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 136
+      },
+      {
+        "x": 24,
+        "y": 146,
+        "width": 650,
+        "height": 187
+      },
+      {
+        "x": 24,
+        "y": 343,
+        "width": 650,
+        "height": 319
+      },
+      {
+        "x": 24,
+        "y": 672,
+        "width": 650,
+        "height": 113
+      },
+      {
+        "x": 24,
+        "y": 795,
+        "width": 650,
+        "height": 57
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "keymap-night",
+    "width": 698,
+    "height": 876,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 136
+      },
+      {
+        "x": 24,
+        "y": 146,
+        "width": 650,
+        "height": 187
+      },
+      {
+        "x": 24,
+        "y": 343,
+        "width": 650,
+        "height": 319
+      },
+      {
+        "x": 24,
+        "y": 672,
+        "width": 650,
+        "height": 113
+      },
+      {
+        "x": 24,
+        "y": 795,
+        "width": 650,
+        "height": 57
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "keymap-quiet",
+    "width": 698,
+    "height": 876,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 136
+      },
+      {
+        "x": 24,
+        "y": 146,
+        "width": 650,
+        "height": 187
+      },
+      {
+        "x": 24,
+        "y": 343,
+        "width": 650,
+        "height": 319
+      },
+      {
+        "x": 24,
+        "y": 672,
+        "width": 650,
+        "height": 113
+      },
+      {
+        "x": 24,
+        "y": 795,
+        "width": 650,
+        "height": 57
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "keymap-rasta",
+    "width": 698,
+    "height": 876,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 136
+      },
+      {
+        "x": 24,
+        "y": 146,
+        "width": 650,
+        "height": 187
+      },
+      {
+        "x": 24,
+        "y": 343,
+        "width": 650,
+        "height": 319
+      },
+      {
+        "x": 24,
+        "y": 672,
+        "width": 650,
+        "height": 113
+      },
+      {
+        "x": 24,
+        "y": 795,
+        "width": 650,
+        "height": 57
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "lessons-day",
+    "width": 698,
+    "height": 197,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 61,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 122,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "lessons-night",
+    "width": 698,
+    "height": 197,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 61,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 122,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "lessons-quiet",
+    "width": 698,
+    "height": 197,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 61,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 122,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "lessons-rasta",
+    "width": 698,
+    "height": 197,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 61,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 122,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "practice-day",
+    "width": 698,
+    "height": 236,
+    "cards": [
+      {
+        "x": 24,
+        "y": 28,
+        "width": 650,
+        "height": 186
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "practice-night",
+    "width": 698,
+    "height": 236,
+    "cards": [
+      {
+        "x": 24,
+        "y": 28,
+        "width": 650,
+        "height": 186
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "practice-quiet",
+    "width": 698,
+    "height": 236,
+    "cards": [
+      {
+        "x": 24,
+        "y": 28,
+        "width": 650,
+        "height": 186
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "practice-rasta",
+    "width": 698,
+    "height": 236,
+    "cards": [
+      {
+        "x": 24,
+        "y": 28,
+        "width": 650,
+        "height": 186
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "progress-day",
+    "width": 698,
+    "height": 246,
+    "cards": [
+      {
+        "x": 24,
+        "y": 21,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 82,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 143,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "progress-night",
+    "width": 698,
+    "height": 246,
+    "cards": [
+      {
+        "x": 24,
+        "y": 21,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 82,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 143,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "progress-quiet",
+    "width": 698,
+    "height": 246,
+    "cards": [
+      {
+        "x": 24,
+        "y": 21,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 82,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 143,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "progress-rasta",
+    "width": 698,
+    "height": 246,
+    "cards": [
+      {
+        "x": 24,
+        "y": 21,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 82,
+        "width": 650,
+        "height": 53
+      },
+      {
+        "x": 24,
+        "y": 143,
+        "width": 650,
+        "height": 53
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "settings-day",
+    "width": 698,
+    "height": 183,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 51
+      },
+      {
+        "x": 24,
+        "y": 59,
+        "width": 650,
+        "height": 34
+      },
+      {
+        "x": 24,
+        "y": 101,
+        "width": 650,
+        "height": 60
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "settings-night",
+    "width": 698,
+    "height": 183,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 51
+      },
+      {
+        "x": 24,
+        "y": 59,
+        "width": 650,
+        "height": 34
+      },
+      {
+        "x": 24,
+        "y": 101,
+        "width": 650,
+        "height": 60
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "settings-quiet",
+    "width": 698,
+    "height": 183,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 51
+      },
+      {
+        "x": 24,
+        "y": 59,
+        "width": 650,
+        "height": 34
+      },
+      {
+        "x": 24,
+        "y": 101,
+        "width": 650,
+        "height": 60
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  },
+  {
+    "page": "settings-rasta",
+    "width": 698,
+    "height": 183,
+    "cards": [
+      {
+        "x": 24,
+        "y": 0,
+        "width": 650,
+        "height": 51
+      },
+      {
+        "x": 24,
+        "y": 59,
+        "width": 650,
+        "height": 34
+      },
+      {
+        "x": 24,
+        "y": 101,
+        "width": 650,
+        "height": 60
+      }
+    ],
+    "geometry": "equal",
+    "pixelReview": "pending"
+  }
+]

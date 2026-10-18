@@ -15,10 +15,10 @@ function Reject([string]$Name,[scriptblock]$Run,[string]$Message){
     if(-not $failure.Contains($Message)){throw "Unexpected signing fixture failure ($Name): $failure"}
     Check $Name $true
 }
-function New-Archive([string]$Name,[string]$Mode){
+function New-Archive([string]$Name,[string]$Mode,[string]$Version='1.1.2-preview.7'){
     $stage=Join-Path $OutputDirectory $Name
     New-Item -ItemType Directory -Path $stage | Out-Null
-    @{product='RIMES';version='1.1.2-preview.7';signing=@{mode=$Mode;thumbprint=$(if($Mode -eq 'authenticode'){$thumb}else{$null})}} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath "$stage\PACKAGE.json" -Encoding UTF8
+    @{product='RIMES';version=$Version;signing=@{mode=$Mode;thumbprint=$(if($Mode -eq 'authenticode'){$thumb}else{$null})}} | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath "$stage\PACKAGE.json" -Encoding UTF8
     Compress-Archive -LiteralPath "$stage\PACKAGE.json" -DestinationPath "$stage.zip"
     return "$stage.zip"
 }
@@ -31,6 +31,16 @@ $unsigned=New-Archive 'unsigned-payload' 'unsigned'
 $signed=New-Archive 'signed-payload' 'authenticode'
 $plain=& $builder -PackageArchive $unsigned -OutputDirectory (Destination 'unsigned')
 Check 'unsigned local build remains explicitly unsigned' ($plain.Signing -eq 'unsigned' -and (Get-AuthenticodeSignature -LiteralPath $plain.Path).Status -eq 'NotSigned')
+$localVersion='1.1.5-win-connectors.20261017'
+$localArchive=New-Archive 'local-payload' 'unsigned' $localVersion
+$local=& $builder -PackageArchive $localArchive -OutputDirectory (Destination 'local')
+$localInfo=(Get-Item -LiteralPath $local.Path).VersionInfo
+Check 'local package version survives the EXE wrapper' ($local.Version -eq $localVersion -and $localInfo.ProductVersion -eq $localVersion -and $localInfo.FileVersion -eq '1.1.5.0')
+foreach($version in @('1.1.5-win-connectors.20261017/escape','1.1.5-win-connectors.20261017"',"1.1.5-win-connectors.20261017`n",('1.1.5-win-'+('a'*48)+'.20261017'))){
+    $fixtureName='invalid-version-'+[guid]::NewGuid().ToString('N')
+    $archive=New-Archive $fixtureName 'unsigned' $version
+    Reject 'invalid local version cannot enter a filename or generated code' {& $builder -PackageArchive $archive -OutputDirectory (Destination $fixtureName)} 'Invalid product or version'
+}
 Reject 'invalid signer is rejected before compilation' {& $builder -PackageArchive $unsigned -OutputDirectory (Destination 'invalid') -SigningCertificateThumbprint 'not-a-fingerprint'} 'Invalid Setup signing'
 Reject 'signed payload cannot produce an unsigned bootstrapper' {& $builder -PackageArchive $signed -OutputDirectory (Destination 'downgrade')} 'requires Setup to be signed'
 Reject 'signed payload cannot change signer' {& $builder -PackageArchive $signed -OutputDirectory (Destination 'different') -SigningCertificateThumbprint ('b'*40)} 'requires Setup to be signed'

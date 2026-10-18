@@ -243,6 +243,8 @@ HRESULT STDMETHODCALLTYPE FakeContext::QueryInterface(REFIID interface_id,
     *object = static_cast<ITfContextView*>(this);
   } else if (InlineIsEqualGUID(interface_id, IID_ITfProperty)) {
     *object = static_cast<ITfProperty*>(this);
+  } else if (InlineIsEqualGUID(interface_id, IID_ITfInputScope)) {
+    *object = static_cast<ITfInputScope*>(this);
   } else {
     return E_NOINTERFACE;
   }
@@ -267,6 +269,13 @@ HRESULT STDMETHODCALLTYPE FakeContext::RequestEditSession(
     TfClientId, ITfEditSession* session, DWORD flags, HRESULT* result) {
   if (session == nullptr || result == nullptr) {
     return E_POINTER;
+  }
+  if ((flags & TF_ES_READWRITE) == TF_ES_READ) {
+    ++read_requests;
+    if (refuse_read_edits) {
+      *result = TF_E_SYNCHRONOUS;
+      return S_OK;
+    }
   }
   if ((flags & TF_ES_READWRITE) == TF_ES_READWRITE) {
     ++write_requests;
@@ -380,9 +389,12 @@ HRESULT STDMETHODCALLTYPE FakeContext::GetProperty(REFGUID,
   return S_OK;
 }
 
-HRESULT STDMETHODCALLTYPE FakeContext::GetAppProperty(REFGUID,
-                                                      ITfReadOnlyProperty**) {
-  return NotImpl();
+HRESULT STDMETHODCALLTYPE FakeContext::GetAppProperty(REFGUID guid,
+                                                      ITfReadOnlyProperty** property) {
+  if (!property) return E_POINTER;
+  *property = nullptr;
+  if (!password_scope || guid != GUID_PROP_INPUTSCOPE) return NotImpl();
+  *property = static_cast<ITfProperty*>(this); AddRef(); return S_OK;
 }
 HRESULT STDMETHODCALLTYPE FakeContext::TrackProperties(const GUID**, ULONG,
                                                        const GUID**, ULONG,
@@ -545,8 +557,18 @@ HRESULT STDMETHODCALLTYPE FakeContext::EnumRanges(TfEditCookie, IEnumTfRanges**,
   return NotImpl();
 }
 HRESULT STDMETHODCALLTYPE FakeContext::GetValue(TfEditCookie, ITfRange*,
-                                                VARIANT*) {
-  return NotImpl();
+                                                VARIANT* value) {
+  if (!password_scope) return NotImpl();
+  if (!value) return E_POINTER;
+  VariantInit(value); value->vt = VT_UNKNOWN;
+  value->punkVal = static_cast<ITfInputScope*>(this); AddRef(); return S_OK;
+}
+HRESULT STDMETHODCALLTYPE FakeContext::GetInputScopes(InputScope** scopes, UINT* count) {
+  if (!scopes || !count) return E_POINTER;
+  *count = 0;
+  *scopes = static_cast<InputScope*>(CoTaskMemAlloc(sizeof(InputScope)));
+  if (!*scopes) return E_OUTOFMEMORY;
+  **scopes = password_scope ? IS_PASSWORD : IS_DEFAULT; *count = 1; return S_OK;
 }
 HRESULT STDMETHODCALLTYPE FakeContext::SetValue(TfEditCookie, ITfRange*,
                                                 const VARIANT*) {

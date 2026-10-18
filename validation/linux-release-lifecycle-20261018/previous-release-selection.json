@@ -1,0 +1,12 @@
+{
+  "repository": "scholay/xsime",
+  "currentVersion": "1.1.5",
+  "releaseCount": 28,
+  "amd64": [
+    "1.1.4",
+    "v1.1.4",
+    "fcitx5-rimes_1.1.4_amd64.deb"
+  ],
+  "arm64": null,
+  "meaning": "null means no verified older matching package and checksum asset pair; controlled fixture required"
+}

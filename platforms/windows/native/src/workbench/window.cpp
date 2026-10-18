@@ -1,3 +1,4 @@
+﻿#include "ai_choices.hpp"
 #include "../core/product_brand.hpp"
 #include "rimes_version.hpp"
 #include "window.hpp"
@@ -6,9 +7,11 @@
 #include <d2d1.h>
 #include <dwrite.h>
 #include <shellapi.h>
+#include <shlobj.h>
 #include <wtsapi32.h>
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <map>
 #include <memory>
@@ -19,6 +22,7 @@
 #include "../broker/autostart.hpp"
 #include "../broker/default_paths.hpp"
 #include "../ui/buffer_layout.hpp"
+#include "../ui/layered_frame.hpp"
 #include "../ui/buffer_paint.hpp"
 #include "../ui/icons.hpp"
 #include "../ui/menu_draw.hpp"
@@ -26,6 +30,8 @@
 #include "buffer_hotkey.hpp"
 #include "buffer_anchor.hpp"
 #include "settings_ui.hpp"
+#include "translation_speech.hpp"
+#include "../peripherals/window.hpp"
 
 #pragma comment(lib, "comctl32.lib")
 
@@ -38,6 +44,7 @@ constexpr UINT kMaintenanceExit = WM_APP + 84;
 constexpr int kToggle = 100, kSettings = 101, kDeploy = 102, kStartup = 103,
               kAbout = 105, kExit = 104, kPasteMenu = 106;
 constexpr int kModeInput = 110, kModeGenerate = 111, kModeTranslate = 112;
+constexpr int kCapsule = 113, kMailbox = 114;
 
 std::wstring BufferHotkeyTitle(const Settings& settings) {
   return ShortcutTitle(settings.hotkey_key, settings.hotkey_modifiers);
@@ -97,6 +104,7 @@ ui::BufferLayout WorkbenchLayout(const ui::BufferPaintState& paint, float width)
 }
 
 struct Window {
+  std::shared_ptr<ui::SmoothShapesSession> smooth_shapes = ui::AcquireSmoothShapes();
   Runtime& runtime;
   std::function<void()> stop, deploy;
   UiCommands* commands = nullptr;
@@ -104,10 +112,13 @@ struct Window {
   HWND window = nullptr;
   bool destroying = false;
   std::unique_ptr<SettingsUiHost> settings;
+  std::unique_ptr<peripherals::Windows> peripherals;
+  std::uint64_t peripheral_tick = 0;
   std::atomic<HWND> notification{nullptr};
   ID2D1Factory* factory = nullptr;
   IDWriteFactory* write = nullptr;
-  ID2D1HwndRenderTarget* render = nullptr;
+  ID2D1DCRenderTarget* render = nullptr;
+  ui::LayeredFrame paint_frame;
   ID2D1SolidColorBrush* brush = nullptr;
   IDWriteTextFormat* format = nullptr;
   IDWriteTextFormat* label_format = nullptr;
@@ -120,6 +131,9 @@ struct Window {
   int hover = -1;
   HWND tooltip = nullptr;
   std::wstring tooltip_text;
+  TranslationSpeech speech;
+  std::uint64_t pressed_speech_block = 0;
+  std::string speech_language;
   std::jthread maintenance;
   std::atomic_bool deploying = false;
   HICON product_icon = nullptr;
@@ -127,6 +141,8 @@ struct Window {
   std::map<UINT, std::wstring> menu_labels;
   std::unique_ptr<BufferHotkeyRegistration> buffer_hotkey;
   std::unique_ptr<BufferHotkeyRegistration> send_hotkey;
+  std::array<std::unique_ptr<BufferHotkeyRegistration>, 2> plugin_hotkeys;
+  std::array<bool, 2> plugin_hotkey_warning{};
   unsigned held_send_key = 0;
   std::uint64_t shown_revision = 0;
   std::size_t shown_insertion = 0;
@@ -135,6 +151,7 @@ struct Window {
   float last_result_width = 0;
   HICON target_icon = nullptr;
   DWORD target_pid = 0;
+  unsigned target_icon_dpi = 0;
   std::uint64_t placed_opening_revision = 0;
   std::uint64_t placed_geometry_revision = 0;
   BufferOpeningSide opening_side = BufferOpeningSide::kBottomFallback;
@@ -163,6 +180,14 @@ struct Window {
   }
   void EnsureSettings();
   void OpenSettings();
+  void OpenPeripheral(bool mailbox, bool toggle = false) {
+    try {
+      if (!peripherals) peripherals = std::make_unique<peripherals::Windows>(runtime);
+      if (toggle) peripherals->Toggle(mailbox);
+      else peripherals->Open(mailbox);
+      UpdateBufferZOrder();
+    } catch (const std::exception& e) { MessageBoxW(window, Wide(e.what()).c_str(), L"XSIME", MB_OK | MB_ICONERROR); }
+  }
   void UpdateBufferZOrder();
   void Paint();
   void Update();
@@ -172,7 +197,9 @@ struct Window {
   void Paste();
   void ApplyHit(ui::BufferHitKind hit);
   void PopupModeMenu();
-  void PopupMoreMenu();
+  void PopupTranslationLanguage(bool source);
+  std::uint64_t SpeechBlockAt(float x, float y);
+  void PopupAIChoice(bool model);
   void PopupTrayMenu();
   void AddTrayIcon();
   void RefreshTrayIcon();
@@ -191,12 +218,30 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   paint.theme = theme;
   paint.folded = folded;
   paint.mode = static_cast<ui::BufferMode>(state.value("mode", 0));
+  for (const auto& plugin : runtime.BufferPlugins())
+    if (plugin.id == state.value("plugin", "")) { paint.plugin_name = Wide(plugin.name); break; }
   paint.insertion = state.value("insertion", std::size_t{});
   paint.preedit_caret = state.value("preedit_caret", 0U);
   paint.selected = state.value("selected", false);
   paint.auto_send_seconds = state.value("auto_send_seconds", 0U);
   paint.close_after_send = state.value("close_after_send", false);
+  paint.live_metrics = Wide(state.value("live_metrics", std::string()));
+  paint.show_ai_choices = state.value("plugin", "") == "builtin.codex-cli";
+  paint.ai_model = Wide(state.value("chatgpt_model", "gpt-6-sol"));
+  for (const auto& choice : kChatGPTModels) if (state.value("chatgpt_model", "") == choice.id) paint.ai_model = choice.title;
+  paint.ai_effort = Wide(state.value("chatgpt_effort", "medium"));
+  paint.translation_speech = state.value("translation_speech", false);
+  paint.translation_controls_enabled = state.value("translation_controls_enabled", true);
+  auto language_title = [](const std::string& value) {
+    const auto id = TranslationLanguageID(value);
+    for (const auto& language : kTranslationLanguages)
+      if (id == language.id) return std::wstring(language.title);
+    return Wide(value);
+  };
+  paint.source_language = language_title(state.value("source_language", std::string("Chinese")));
+  paint.target_language = language_title(state.value("target_language", std::string("English")));
   paint.spinner_phase = static_cast<float>(GetTickCount64() % 1000) * 0.006283f;
+  paint.send_hold_progress = state.value("send_hold_progress", -1.0f);
   paint.busy = state.value("busy", false);
   paint.translate = state.value("translate", false);
   paint.capturing = state.value("capture", false);
@@ -240,6 +285,11 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
   paint.paste_enabled = status != "Sending...";
   paint.preedit = Wide(state.value("preedit", std::string()));
   paint.preview = Wide(state.value("preview", std::string()));
+  paint.reasoning_summary = Wide(state.value("reasoning_summary", std::string()));
+  if (paint.mode == ui::BufferMode::kTranslate && !has_result) {
+    paint.result_hint = (status == "Buffer" || status == "Ready" || status == "Delivered")
+        ? L"等待翻译…" : paint.status;
+  }
   paint.scroll_source = scroll[0];
   paint.scroll_result = scroll[1];
   paint.hover = hover;
@@ -248,26 +298,44 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
       : rimes::branding::Text(L"先点击宿主输入框，再点击这里开始输入（需选中 {brand}）").c_str();
   for (const auto& block : state["source_blocks"])
     paint.source_blocks.push_back(
-        {Wide(block.value("text", std::string())), false});
+        {Wide(block.value("text", std::string())), false,
+         paint.mode == ui::BufferMode::kInput && paint.auto_send_seconds
+             ? float(block.value("age_ms", 0ULL)) / (paint.auto_send_seconds * 1000) : 0});
   for (const auto& block : state["result_blocks"])
     paint.result_blocks.push_back(
         {Wide(block.value("text", std::string())), false});
-  if (state.value("auto_remaining_ms", 0LL) > 0)
-    paint.status = std::to_wstring((state.value("auto_remaining_ms", 0LL) + 999) / 1000) + L" 秒后上屏";
-  // Do NOT append preview into result_blocks — painter draws preview as the
-  // single streaming tail to avoid duplicated waiting output.
+  if (state.contains("stream_blocks") && !state["stream_blocks"].empty()) {
+    paint.preview.clear();
+    for (const auto& block : state["stream_blocks"])
+      paint.result_blocks.push_back({Wide(block.value("text", std::string())), true});
+  }
+  if (paint.busy && paint.result_blocks.empty()) paint.result_hint = paint.status;
   return paint;
 }
 
 void Window::EnsureSettings() {
   if (settings) return;
   SettingsUiCallbacks cb;
+  cb.connectors = NativeConnectorUiServices();
+  cb.metrics = runtime.Metrics();
   cb.open_schemes = [this] {
     wchar_t path[32768]{};
     const DWORD count = GetModuleFileNameW(nullptr, path, 32768);
     return count > 0 && count < 32768 && reinterpret_cast<INT_PTR>(ShellExecuteW(window, L"open", path, L"--schemes", nullptr, SW_SHOWNORMAL)) > 32;
   };
   cb.load = [this] { return runtime.Configuration(); };
+  cb.open_capsule = [this] { OpenPeripheral(false); };
+  cb.open_mailbox = [this] { OpenPeripheral(true); };
+  cb.load_clipboard_recording = [this] {
+    try { return peripherals && peripherals->CollectClipboard(); } catch (...) { return false; }
+  };
+  cb.save_clipboard_recording = [this](bool enabled, std::string* error) {
+    try {
+      if (!peripherals) peripherals = std::make_unique<peripherals::Windows>(runtime);
+      peripherals->SetCollectClipboard(enabled);
+      return true;
+    } catch (const std::exception& failure) { if (error) *error = failure.what(); return false; }
+  };
   cb.save_connections = [this](Settings value, const std::map<std::string, std::wstring>& secrets, std::string* error) {
     const auto result = buffer_hotkey->Update(value.hotkey_modifiers, value.hotkey_key,
         [&] { return runtime.Configure(value, L"", false, error, secrets); });
@@ -300,15 +368,32 @@ void Window::EnsureSettings() {
     InvalidateRect(window, nullptr, FALSE);
     return true;
   };
-  cb.plugins = [this] { return runtime.Plugins(); };
-  cb.manage_plugin = [this](const std::string& id, const std::string& action, std::string* error) { return runtime.ManagePlugin(id, action, error); };
+  cb.plugins = [this] {
+    auto entries = runtime.Plugins();
+    if (peripherals) {
+      auto modules = peripherals->Plugins();
+      entries.insert(entries.end(), modules.begin(), modules.end());
+    }
+    return entries;
+  };
+  cb.manage_plugin = [this](const std::string& id, const std::string& action, std::string* error) {
+    if (id.starts_with("builtin.capsule.") || id.starts_with("builtin.mailbox.")) {
+      if (peripherals && (action == "enable" || action == "disable"))
+        return peripherals->SetPluginEnabled(id, action == "enable", error);
+      if (error) *error = "此内置插件随宿主安装，可在这里启用或停用。";
+      return false;
+    }
+    return runtime.ManagePlugin(id, action, error);
+  };
   cb.plugin_status = [this] { return runtime.PluginStatus(); };
   cb.load_theme = [this] { return ActiveTheme(); };
   cb.on_theme_preview = [this](ui::ThemeId preview) {
     theme = preview;
+    if (peripherals) peripherals->PreviewTheme(preview);
     InvalidateRect(window, nullptr, FALSE);
   };
   cb.on_closed = [this] {
+    if (peripherals) peripherals->PreviewTheme(std::nullopt);
     // Settings' WM_DESTROY callback runs before DestroyWindow has finished.
     // Defer native placement until that operation has unwound; a reentrant
     // SetWindowPos can succeed without applying the topmost style change.
@@ -336,15 +421,10 @@ void Window::UpdateBufferZOrder() {
   constexpr UINT flags = SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE;
   const bool topmost =
       (GetWindowLongPtrW(window, GWL_EXSTYLE) & WS_EX_TOPMOST) != 0;
-  if (settings && settings->IsOpen()) {
-    // A retained Buffer must not cover the ordinary Settings window. Repeat
-    // its relative placement after ShowWindow/stream updates, without making
-    // Settings topmost or moving either window above other applications.
-    if (topmost) SetWindowPos(window, HWND_NOTOPMOST, 0, 0, 0, 0, flags);
-    SetWindowPos(window, settings->hwnd(), 0, 0, 0, 0, flags);
-  } else if (!topmost) {
-    // The deferred close message also restores a hidden Buffer without showing
-    // it, activating it, or resuming its revoked capture authority.
+  if (!topmost) {
+    // Like macOS's floating NSPanel, Buffer has its own presentation lifetime.
+    // Keeping Settings open must not demote it behind the external input host.
+    // Placement neither activates Buffer nor grants text-delivery authority.
     SetWindowPos(window, HWND_TOPMOST, 0, 0, 0, 0, flags);
   }
 }
@@ -381,78 +461,81 @@ HMENU Window::BuildOwnerMenu(const std::vector<ui::OwnerMenuItem>& items) {
 }
 
 void Window::PopupModeMenu() {
-  auto menu = BuildOwnerMenu({{kModeInput, L"输入", mode == ui::BufferMode::kInput},
-                              {kModeGenerate, L"生成",
-                               mode == ui::BufferMode::kGenerate},
-                              {kModeTranslate, L"翻译",
-                               mode == ui::BufferMode::kTranslate}});
+  const auto plugins = runtime.BufferPlugins();
+  const auto selected = runtime.Snapshot().value("plugin", "");
+  std::vector<ui::OwnerMenuItem> items;
+  for (std::size_t i = 0; i < plugins.size(); ++i)
+    items.push_back({static_cast<UINT>(kModeInput + i), Wide(plugins[i].name), plugins[i].id == selected});
+  auto menu = BuildOwnerMenu(items);
   POINT cursor{};
   GetCursorPos(&cursor);
   const auto command =
       TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, cursor.x, cursor.y, 0,
                      window, nullptr);
   DestroyMenu(menu);
-  if (command == kModeInput || command == kModeGenerate ||
-      command == kModeTranslate) {
-    // Retire the previous producer before changing mode. Translation then
-    // arms its sentence debounce; AI generation remains an explicit action.
-    runtime.ReturnToInput();
-    mode = command == kModeInput ? ui::BufferMode::kInput
-        : command == kModeGenerate ? ui::BufferMode::kGenerate
-                                   : ui::BufferMode::kTranslate;
-    if (mode == ui::BufferMode::kGenerate) runtime.SelectAIMode();
-    if (mode == ui::BufferMode::kTranslate) runtime.SelectTranslationMode();
-  }
+  if (command >= kModeInput && static_cast<std::size_t>(command - kModeInput) < plugins.size())
+    runtime.SelectBufferPlugin(plugins[command - kModeInput].id);
   InvalidateRect(window, nullptr, FALSE);
 }
 
-void Window::PopupMoreMenu() {
-  auto menu = BuildOwnerMenu({{1, L"绑定 / 暂停"},
-                              {kPasteMenu, L"粘贴"},
-                              {2, L"生成"},
-                              {3, L"翻译"},
-                              {4, L"取消"},
-                              {5, L"下一块"},
-                              {6, L"全部发送"},
-                              {2901, folded ? L"展开 Buffer" : L"折叠为工具栏"},
-                              {0, L"", false, true},
-                              {7, L"设置"}});
-  POINT cursor{};
-  GetCursorPos(&cursor);
-  const auto command =
-      TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, cursor.x, cursor.y, 0,
-                     window, nullptr);
-  DestroyMenu(menu);
-  switch (command) {
-    case 1:
-      Action(0);
-      break;
-    case 2901:
-      folded = !folded; Update(); break;
-    case kPasteMenu:
-      Paste();
-      break;
-    case 2:
-      Action(2);
-      break;
-    case 3:
-      Action(3);
-      break;
-    case 4:
-      Action(4);
-      break;
-    case 5:
-      Action(5);
-      break;
-    case 6:
-      Action(6);
-      break;
-    case 7:
-      Action(8);
-      break;
-    default:
-      break;
+void Window::PopupTranslationLanguage(bool source) {
+  const auto config = runtime.Configuration();
+  std::vector<ui::OwnerMenuItem> items;
+  const auto selected = TranslationLanguageID(source ? config.source_language : config.target_language);
+  for (std::size_t i = 0; i < kTranslationLanguages.size(); ++i) {
+    const auto& language = kTranslationLanguages[i];
+    if (config.translation_provider == "local" && !LocalTranslationLanguage(language.id)) continue;
+    items.push_back({static_cast<UINT>(3000 + i), language.title, selected == language.id});
   }
+  const auto menu = BuildOwnerMenu(items);
+  POINT cursor{}; GetCursorPos(&cursor);
+  const auto command = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY,
+      cursor.x, cursor.y, 0, window, nullptr);
+  DestroyMenu(menu);
+  if (command < 3000 || static_cast<std::size_t>(command - 3000) >= kTranslationLanguages.size()) return;
+  auto from = config.source_language, to = config.target_language;
+  (source ? from : to) = kTranslationLanguages[command - 3000].name;
+  // Selecting the other side's language swaps the pair, as on macOS.
+  if (TranslationLanguageID(from) == TranslationLanguageID(to))
+    (source ? to : from) = source ? config.source_language : config.target_language;
+  if (!runtime.SetTranslationLanguages(from, to)) MessageBeep(MB_OK);
+}
+
+std::uint64_t Window::SpeechBlockAt(float x, float y) {
+  const auto snapshot = runtime.Snapshot();
+  const auto state = MakePaintState(snapshot);
+  if (!snapshot.value("visible", false) || state.mode != ui::BufferMode::kTranslate ||
+      !state.translation_speech || !last_layout.result_text.contains(x, y)) return 0;
+  float left = last_layout.result_text.left - scroll[1];
+  for (std::size_t i = 0; i < state.result_blocks.size(); ++i) {
+    const auto width = ui::MeasureBufferContent(write, format, {state.result_blocks[i]}, L"", false);
+    if (x >= left && x < left + width - 5)
+      return state.result_blocks[i].streaming ? 0 : snapshot["result_blocks"][i].value("id", 0ULL);
+    left += width;
+  }
+  return 0;
+}
+
+void Window::PopupAIChoice(bool model) {
+  const auto config = runtime.Configuration();
+  std::vector<ui::OwnerMenuItem> items;
+  if (model) {
+    for (std::size_t i = 0; i < kChatGPTModels.size(); ++i)
+      items.push_back({static_cast<UINT>(3100 + i), kChatGPTModels[i].title, config.chatgpt_model == kChatGPTModels[i].id});
+  } else {
+    for (std::size_t i = 0; i < kChatGPTEfforts.size(); ++i)
+      items.push_back({static_cast<UINT>(3100 + i), Wide(std::string(kChatGPTEfforts[i])),
+          config.chatgpt_effort == kChatGPTEfforts[i], false, ValidAIEffort(config.chatgpt_model, kChatGPTEfforts[i])});
+  }
+  const auto menu = BuildOwnerMenu(items);
+  POINT cursor{}; GetCursorPos(&cursor);
+  const auto command = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, cursor.x, cursor.y, 0, window, nullptr);
+  DestroyMenu(menu);
+  if (command < 3100 || static_cast<std::size_t>(command - 3100) >= (model ? kChatGPTModels.size() : kChatGPTEfforts.size())) return;
+  auto selected_model = model ? std::string(kChatGPTModels[command - 3100].id) : config.chatgpt_model;
+  auto selected_effort = model ? config.chatgpt_effort : std::string(kChatGPTEfforts[command - 3100]);
+  if (!ValidAIEffort(selected_model, selected_effort)) selected_effort = "max";
+  if (!runtime.SetChatGPTInference(selected_model, selected_effort)) MessageBeep(MB_OK);
 }
 
 void Window::PopupTrayMenu() {
@@ -461,6 +544,8 @@ void Window::PopupTrayMenu() {
   broker::QueryBrokerAutostart(&startup_command, &startup_enabled);
   auto menu = BuildOwnerMenu(
       {{kToggle, L"打开 / 绑定 Buffer"},
+       {kCapsule, L"Capsule 内容库    Alt+Shift+V"},
+       {kMailbox, L"Mailbox 工作区    Alt+Shift+M"},
        {kSettings, L"设置"},
        {kDeploy, L"重新部署词库"},
        {kStartup, L"登录时启动", startup_enabled},
@@ -474,9 +559,7 @@ void Window::PopupTrayMenu() {
       TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, cursor.x, cursor.y, 0,
                      window, nullptr);
   DestroyMenu(menu);
-  // The tray's foreground requirement can raise a demoted Buffer. Restore
-  // its relative order even when the menu is cancelled and no action updates
-  // the Runtime; never force Settings back above another application.
+  // Preserve the floating window role after the native tray-menu lifecycle.
   UpdateBufferZOrder();
   PostMessageW(window, WM_COMMAND, command, 0);
 }
@@ -486,12 +569,15 @@ void Window::UpdateTooltip(int hit) {
   tooltip_text.clear();
   auto& text = tooltip_text;
   switch (static_cast<ui::BufferHitKind>(hit)) {
-    case ui::BufferHitKind::kMode:
-      text = L"模式";
+    case ui::BufferHitKind::kMode: {
+      const auto config = runtime.Configuration();
+      text = L"切换缓冲插件\n上一个：" + ShortcutTitle(config.previous_plugin_key, config.previous_plugin_modifiers) +
+          L"\n下一个：" + ShortcutTitle(config.next_plugin_key, config.next_plugin_modifiers);
       break;
-    case ui::BufferHitKind::kMore:
-      text = L"更多";
-      break;
+    }
+    case ui::BufferHitKind::kReasoning: text = L"思考摘要\n" + Wide(runtime.Snapshot().value("reasoning_summary", std::string())); break;
+    case ui::BufferHitKind::kAIModel: text = L"选择 ChatGPT 模型；仅影响新请求"; break;
+    case ui::BufferHitKind::kAIEffort: text = L"选择推理深度；仅影响新请求"; break;
     case ui::BufferHitKind::kClose:
       text = L"关闭";
       break;
@@ -507,13 +593,20 @@ void Window::UpdateTooltip(int hit) {
       text = state.value("busy", false) ? L"正在处理…" :
           state.value("mode", 0) != 0 && state.value("result", std::string()).empty()
               ? (state.value("mode", 0) == 2 ? L"翻译原文" : L"生成结果") : L"发送下一块";
-      text += L"（" + ShortcutTitle(config.send_key, config.send_modifiers) + L"；长按 1 秒全部上屏）";
+      text += L"（" + ShortcutTitle(config.send_key, config.send_modifiers) + L"；长按至进度条满，全部上屏）";
       break;
     }
-    case ui::BufferHitKind::kConfigure: text = L"当前插件设置（Alt+Shift+S 打开设置）"; break;
     case ui::BufferHitKind::kEdit: text = L"返回编辑，放弃当前生成结果"; break;
     case ui::BufferHitKind::kAutoSend: text = L"自动发送：手动 / 1 / 2 / 3 / 5 秒"; break;
     case ui::BufferHitKind::kCloseAfter: text = L"发送最后一块后关闭 Buffer"; break;
+    case ui::BufferHitKind::kSourceLanguage: text = L"原文语言"; break;
+    case ui::BufferHitKind::kTargetLanguage: text = L"目标语言"; break;
+    case ui::BufferHitKind::kSwapLanguages: text = L"交换原文语言和目标语言"; break;
+    case ui::BufferHitKind::kSpeech:
+      text = runtime.Configuration().translation_speech
+          ? L"朗读已开启：点按译文块或发送时朗读该块；点按关闭"
+          : L"朗读已关闭；点按开启";
+      break;
     case ui::BufferHitKind::kBind:
       text = L"在当前输入框接收输入到 Buffer";
       break;
@@ -614,22 +707,31 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
       (hit == ui::BufferHitKind::kSend && !state.send_enabled))
     return;
   switch (hit) {
-    case ui::BufferHitKind::kConfigure:
-      OpenSettings();
-      settings->OpenPage(window, state.mode == ui::BufferMode::kGenerate
-          ? ui::SettingsPage::kApi : ui::SettingsPage::kBuffer,
-          state.mode == ui::BufferMode::kGenerate ? 0 : 1);
+    case ui::BufferHitKind::kSourceLanguage:
+    case ui::BufferHitKind::kTargetLanguage:
+      if (state.translation_controls_enabled) PopupTranslationLanguage(hit == ui::BufferHitKind::kSourceLanguage);
+      break;
+    case ui::BufferHitKind::kSwapLanguages: {
+      const auto config = runtime.Configuration();
+      if (state.translation_controls_enabled)
+        runtime.SetTranslationLanguages(config.target_language, config.source_language);
+      break;
+    }
+    case ui::BufferHitKind::kSpeech:
+      runtime.SetTranslationSpeech(!state.translation_speech);
       break;
     case ui::BufferHitKind::kEdit:
       runtime.ReturnToEdit();
       break;
     case ui::BufferHitKind::kAutoSend: {
+      if (state.mode != ui::BufferMode::kInput) break;
       const auto seconds = state.auto_send_seconds;
       runtime.SetAutoSend(seconds == 0 ? 1 : seconds == 1 ? 2 : seconds == 2 ? 3 : seconds == 3 ? 5 : 0,
           state.close_after_send);
       break;
     }
     case ui::BufferHitKind::kCloseAfter:
+      if (state.mode != ui::BufferMode::kInput) break;
       runtime.SetAutoSend(state.auto_send_seconds, !state.close_after_send);
       break;
     case ui::BufferHitKind::kBind:
@@ -638,9 +740,8 @@ void Window::ApplyHit(ui::BufferHitKind hit) {
     case ui::BufferHitKind::kMode:
       PopupModeMenu();
       break;
-    case ui::BufferHitKind::kMore:
-      PopupMoreMenu();
-      break;
+    case ui::BufferHitKind::kAIModel: PopupAIChoice(true); break;
+    case ui::BufferHitKind::kAIEffort: PopupAIChoice(false); break;
     case ui::BufferHitKind::kClose:
       runtime.Close();
       break;
@@ -707,8 +808,9 @@ void Window::PositionForOpening(const core::Json& state) {
 }
 
 void Window::UpdateTargetIcon(DWORD process) {
-  if (target_pid == process) return;
-  target_pid = process;
+  const auto dpi = GetDpiForWindow(window);
+  if (target_pid == process && target_icon_dpi == dpi) return;
+  target_pid = process; target_icon_dpi = dpi;
   if (target_icon) { DestroyIcon(target_icon); target_icon = nullptr; }
   if (!process) return;
   HANDLE handle = OpenProcess(PROCESS_QUERY_LIMITED_INFORMATION, FALSE, process);
@@ -716,7 +818,9 @@ void Window::UpdateTargetIcon(DWORD process) {
   wchar_t path[32768]{}; DWORD length = static_cast<DWORD>(std::size(path));
   if (QueryFullProcessImageNameW(handle, 0, path, &length)) {
     SHFILEINFOW info{};
-    if (SHGetFileInfoW(path, 0, &info, sizeof(info), SHGFI_ICON | SHGFI_SMALLICON))
+    const auto size = MulDiv(18, static_cast<int>(dpi), 96);
+    SHDefExtractIconW(path, 0, 0, &target_icon, nullptr, MAKELONG(size, 0));
+    if (!target_icon && SHGetFileInfoW(path, 0, &info, sizeof(info), SHGFI_ICON | SHGFI_LARGEICON))
       target_icon = info.hIcon;
   }
   CloseHandle(handle);
@@ -741,11 +845,16 @@ void Window::Update() {
   // Keep unsaved settings theme preview while the settings host is open.
   if (!settings || !settings->IsOpen()) theme = ActiveTheme();
   auto state = runtime.Snapshot();
-  // A new input or summon reveals the draft again; folded geometry must never
-  // leave an active candidate anchor pointing into a hidden source rail.
-  if (folded && (state.value("revision", 0ULL) != shown_revision ||
-      Wide(state.value("preedit", std::string())) != shown_preedit ||
-      state.value("opening_revision", 0ULL) != placed_opening_revision)) folded = false;
+  const auto language = state.value("target_language", std::string());
+  if (!state.value("speech_allowed", false) || !state.value("translate", false) ||
+      !state.value("translation_speech", false) || language != speech_language) speech.Stop();
+  speech_language = language;
+  const auto request = runtime.TakeTranslationSpeech();
+  if (request.is_object() && !speech.Speak(Wide(request.value("text", std::string())),
+                                         request.value("language", language))) MessageBeep(MB_OK);
+  // Only a validated focus lease reveals the rail. Background output or a
+  // retained draft changing is not authority to expand into the active app.
+  folded = state.value("folded", false);
   mode = static_cast<ui::BufferMode>(state.value("mode", 0));
   UpdateTargetIcon(state.value("target_pid", 0U));
   const auto config = runtime.Configuration();
@@ -764,6 +873,27 @@ void Window::Update() {
         core::ValidShortcut(config.send_key, config.send_modifiers))
       send_hotkey->RegisterInitial(config.send_modifiers, config.send_key);
     else send_hotkey->Reset();
+  }
+  // Own the complete chord at the native dispatcher while Buffer has a live
+  // lease. Older DLLs and host accelerators must not receive the arrow first.
+  // In-progress composition stays on the existing TSF settle-and-cycle path.
+  const bool plugin_shortcuts = state.value("visible", false) && state.value("capture", false) &&
+      !state.value("pending", false) && state.value("preedit", std::string()).empty() &&
+      state.value("target_pid", 0U) == ForegroundProcess();
+  const unsigned plugin_keys[] = {config.previous_plugin_key, config.next_plugin_key};
+  const unsigned plugin_modifiers[] = {config.previous_plugin_modifiers, config.next_plugin_modifiers};
+  for (std::size_t i = 0; i < plugin_hotkeys.size(); ++i) {
+    if (!plugin_hotkeys[i]) continue;
+    const bool available = plugin_hotkeys[i]->Sync(plugin_shortcuts, plugin_modifiers[i], plugin_keys[i]);
+    if (plugin_shortcuts && !available && !plugin_hotkey_warning[i]) {
+      const auto notice = ShortcutTitle(plugin_keys[i], plugin_modifiers[i]) +
+          L" 已被占用。请修改插件切换快捷键，或使用 Buffer 的插件按钮。";
+      wcscpy_s(tray.szInfoTitle, L"插件切换快捷键未启用");
+      wcscpy_s(tray.szInfo, notice.c_str());
+      tray.dwInfoFlags = NIIF_WARNING; tray.uFlags |= NIF_INFO;
+      Shell_NotifyIconW(NIM_MODIFY, &tray); tray.uFlags &= ~NIF_INFO;
+    }
+    plugin_hotkey_warning[i] = plugin_shortcuts && !available;
   }
   const auto clipboard_action = runtime.TakeClipboardAction();
   if (clipboard_action == 'V') { Paste(); return; }
@@ -831,42 +961,46 @@ void Window::Paint() {
   RECT rect{};
   GetClientRect(window, &rect);
   if (!render) {
-    factory->CreateHwndRenderTarget(
-        D2D1::RenderTargetProperties(),
-        D2D1::HwndRenderTargetProperties(
-            window, D2D1::SizeU(static_cast<UINT32>(rect.right),
-                                static_cast<UINT32>(rect.bottom))),
-        &render);
+    const auto properties = D2D1::RenderTargetProperties(D2D1_RENDER_TARGET_TYPE_SOFTWARE,
+        D2D1::PixelFormat(DXGI_FORMAT_B8G8R8A8_UNORM, D2D1_ALPHA_MODE_PREMULTIPLIED));
+    factory->CreateDCRenderTarget(&properties, &render);
     if (render) {
       const auto dpi = static_cast<float>(GetDpiForWindow(window));
       render->SetDpi(dpi, dpi);
       render->CreateSolidColorBrush(D2D1::ColorF(0, 0, 0), &brush);
     }
   }
-  if (render && brush && format && label_format) {
+  if (render && brush && format && label_format && paint_frame.Resize(rect.right, rect.bottom) &&
+      SUCCEEDED(render->BindDC(paint_frame.dc(), &rect))) {
     const auto dpi = static_cast<float>(GetDpiForWindow(window));
     const float width = static_cast<float>(rect.right) * 96.0f / dpi;
     auto state = runtime.Snapshot();
+    UpdateTargetIcon(state.value("target_pid", 0U));
     auto paint_state = MakePaintState(state);
     last_layout = WorkbenchLayout(paint_state, width);
+    render->SetDpi(dpi, dpi);
+    render->SetAntialiasMode(D2D1_ANTIALIAS_MODE_PER_PRIMITIVE);
+    render->SetTextAntialiasMode(D2D1_TEXT_ANTIALIAS_MODE_GRAYSCALE);
     render->BeginDraw();
     render->Clear(ui::ColorF(0, 0));
     ui::DrawBufferWorkbench(
         ui::BufferPaintContext{render, write, format, label_format, brush, dpi},
         paint_state, last_layout);
-    if (render->EndDraw() == D2DERR_RECREATE_TARGET) {
+    const auto drawn = render->EndDraw();
+    if (drawn == D2DERR_RECREATE_TARGET) {
       if (brush) brush->Release();
       brush = nullptr;
       render->Release();
       render = nullptr;
     }
-    if (target_icon && paint_state.bound) {
+    if (SUCCEEDED(drawn) && target_icon && paint_state.bound) {
       const auto box = last_layout.association;
       const float scale = dpi / 96.0f;
-      DrawIconEx(paint.hdc, static_cast<int>((box.left + 2) * scale),
-          static_cast<int>((box.top + 2) * scale), target_icon,
-          static_cast<int>(18 * scale), static_cast<int>(18 * scale), 0, nullptr, DI_NORMAL);
+      const LONG x = static_cast<LONG>((box.left + 2) * scale), y = static_cast<LONG>((box.top + 2) * scale);
+      const LONG size = static_cast<LONG>(18 * scale);
+      paint_frame.DrawIcon(target_icon, {x, y, x + size, y + size});
     }
+    if (SUCCEEDED(drawn)) paint_frame.Present(window);
   }
   EndPaint(window, &paint);
 }
@@ -900,26 +1034,33 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         return 0;
       case WM_MOUSEACTIVATE:
         return MA_NOACTIVATE;
-      case WM_WINDOWPOSCHANGING: {
-        auto* position = reinterpret_cast<WINDOWPOS*>(lparam);
-        if (position && !(position->flags & SWP_NOZORDER) &&
-            !self->destroying && self->settings && self->settings->IsOpen()) {
-          // Constrain native Z-order raises before Windows applies
-          // them, including paths that produce no Runtime notification. Keep
-          // coordinates and sizing flags intact; DefWindowProc still enforces
-          // native thickframe constraints below. NOACTIVATE cannot be changed
-          // here: Windows ignores changes to that flag in this message.
-          position->hwndInsertAfter = self->settings->hwnd();
-        }
-        break;
-      }
       case WM_PAINT:
         self->Paint();
         return 0;
       case WM_ERASEBKGND:
         return 1;
       case WM_HOTKEY:
-        if (wparam == 20) { self->OpenSettings(); return 0; }
+        if (wparam >= 20 && wparam <= 23 && self->settings && self->settings->RecordingShortcut()) {
+          self->settings->RecordShortcut(HIWORD(lparam), LOWORD(lparam) & ~MOD_NOREPEAT);
+          return 0;
+        }
+        if (wparam == 23) { if (self->peripherals) self->peripherals->CaptureArea(); return 0; }
+        if (wparam == 20) {
+          self->runtime.PauseCapture();
+          self->EnsureSettings();
+          self->settings->Toggle(hwnd);
+          self->UpdateBufferZOrder();
+          return 0;
+        }
+        if (wparam == 21 || wparam == 22) { self->OpenPeripheral(wparam == 22, true); return 0; }
+        for (const auto& hotkey : self->plugin_hotkeys) {
+          if (!hotkey || !hotkey->Matches(wparam, lparam)) continue;
+          const unsigned key = HIWORD(lparam), modifiers = LOWORD(lparam) & ~MOD_NOREPEAT;
+          if (self->settings && self->settings->RecordingShortcut())
+            self->settings->RecordShortcut(key, modifiers);
+          else self->runtime.PluginShortcut(ForegroundProcess(), key, modifiers);
+          return 0;
+        }
         if (self->send_hotkey && self->send_hotkey->Matches(wparam, lparam)) {
           if (self->runtime.ShortcutDown(ForegroundProcess())) self->held_send_key = HIWORD(lparam);
           return 0;
@@ -947,16 +1088,23 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         self->UpdateBufferZOrder();
         return 0;
       case WM_TIMER:
+        if (self->peripherals && GetTickCount64() >= self->peripheral_tick) {
+          self->peripheral_tick = GetTickCount64() + 100;
+          self->peripherals->Tick();
+        }
         if (self->held_send_key && !(GetAsyncKeyState(static_cast<int>(self->held_send_key)) & 0x8000)) {
           self->held_send_key = 0; self->runtime.ShortcutUp();
         }
         {
           const auto state = self->runtime.Snapshot();
-          if (state.value("capture", false) && state.value("target_pid", 0U) != ForegroundProcess())
-            self->runtime.PauseCapture();
-          if (state.value("busy", false)) InvalidateRect(hwnd, nullptr, FALSE);
+          self->runtime.ObserveForeground(ForegroundProcess());
+          if (state.value("busy", false) || state.value("send_hold_progress", -1.0f) >= 0)
+            InvalidateRect(hwnd, nullptr, FALSE);
         }
         self->runtime.Tick();
+        return 0;
+      case WM_CLIPBOARDUPDATE:
+        if (self->peripherals) { try { self->peripherals->ClipboardChanged(); } catch (...) {} }
         return 0;
       case WM_MEASUREITEM: {
         auto* measure = reinterpret_cast<MEASUREITEMSTRUCT*>(lparam);
@@ -995,6 +1143,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
             -MulDiv(12, HIWORD(wparam), 96), 0, 0, 0, FW_NORMAL, FALSE, FALSE,
             FALSE, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
             CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
+        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
       case WM_ENTERSIZEMOVE:
@@ -1030,7 +1179,9 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
               static_cast<float>(cursor.x) / dpi,
               static_cast<float>(cursor.y) / dpi);
           SetCursor(LoadCursorW(nullptr, hit == ui::BufferHitKind::kBind
-              ? IDC_IBEAM : hit == ui::BufferHitKind::kNone ? IDC_ARROW : IDC_HAND));
+              ? IDC_IBEAM : hit == ui::BufferHitKind::kReasoning ? IDC_ARROW : hit == ui::BufferHitKind::kNone &&
+                  !self->SpeechBlockAt(static_cast<float>(cursor.x) / dpi, static_cast<float>(cursor.y) / dpi)
+                  ? IDC_ARROW : IDC_HAND));
           return TRUE;
         }
         break;
@@ -1048,6 +1199,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         const float y =
             static_cast<float>(static_cast<short>(HIWORD(lparam))) / dpi;
         self->pressed_hit = ui::HitTestBuffer(self->last_layout, x, y);
+        self->pressed_speech_block = self->pressed_hit == ui::BufferHitKind::kNone ? self->SpeechBlockAt(x, y) : 0;
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
@@ -1059,6 +1211,8 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
             static_cast<float>(static_cast<short>(HIWORD(lparam))) / dpi;
         const auto hit = ui::HitTestBuffer(self->last_layout, x, y);
         const auto pressed = self->pressed_hit;
+        const auto spoken = self->pressed_speech_block;
+        self->pressed_speech_block = 0;
         self->pressed_hit = ui::BufferHitKind::kNone;
         InvalidateRect(hwnd, nullptr, FALSE);
         if (hit == ui::BufferHitKind::kBind && hit == pressed) {
@@ -1072,7 +1226,9 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
             at += width; ++index;
           }
           self->runtime.SetInsertion(index);
-        } else if (hit != ui::BufferHitKind::kNone && hit == pressed)
+        } else if (spoken && hit == ui::BufferHitKind::kNone && spoken == self->SpeechBlockAt(x, y))
+          self->runtime.RequestTranslationSpeech(spoken);
+        else if (hit != ui::BufferHitKind::kNone && hit == pressed)
           self->ApplyHit(hit);
         return 0;
       }
@@ -1123,16 +1279,6 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         self->PublishLogicalCaret(self->MakePaintState(self->runtime.Snapshot()));
         break;
       case WM_SIZE: {
-        if (self->render)
-          self->render->Resize(D2D1::SizeU(LOWORD(lparam), HIWORD(lparam)));
-        const int dpi = static_cast<int>(GetDpiForWindow(hwnd));
-        const int inset = MulDiv(2, dpi, 96);
-        const int radius = MulDiv(22, dpi, 96);
-        auto region = CreateRoundRectRgn(inset, inset,
-                                         LOWORD(lparam) - inset + 1,
-                                         HIWORD(lparam) - inset + 1,
-                                         radius, radius);
-        if (region && !SetWindowRgn(hwnd, region, TRUE)) DeleteObject(region);
         if (self->tooltip) {
           TOOLINFOW info{};
           info.cbSize = sizeof(info);
@@ -1142,6 +1288,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
           SendMessageW(self->tooltip, TTM_NEWTOOLRECTW, 0,
                        reinterpret_cast<LPARAM>(&info));
         }
+        InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
       case WM_NCHITTEST: {
@@ -1165,7 +1312,7 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
       }
       case kTray:
         if (lparam == WM_LBUTTONUP) {
-          self->runtime.Toggle(ForegroundProcess());
+          self->OpenSettings();
           return 0;
         }
         if (lparam == WM_RBUTTONUP) {
@@ -1180,6 +1327,9 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
             break;
           case kSettings:
             self->OpenSettings();
+            break;
+          case kCapsule: case kMailbox:
+            self->OpenPeripheral(LOWORD(wparam) == kMailbox);
             break;
           case kDeploy:
             if (!self->deploying.exchange(true)) {
@@ -1222,11 +1372,19 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         return 0;
       case WM_WTSSESSION_CHANGE:
         if (wparam == WTS_SESSION_LOCK || wparam == WTS_SESSION_LOGOFF ||
-            wparam == WTS_REMOTE_DISCONNECT || wparam == WTS_CONSOLE_DISCONNECT)
+            wparam == WTS_REMOTE_DISCONNECT || wparam == WTS_CONSOLE_DISCONNECT) {
           self->runtime.Protect();
+          if (self->peripherals) self->peripherals->Protect();
+        } else if (wparam == WTS_SESSION_UNLOCK || wparam == WTS_CONSOLE_CONNECT ||
+                   wparam == WTS_REMOTE_CONNECT) {
+          if (self->peripherals) self->peripherals->Resume();
+        }
         return 0;
       case WM_POWERBROADCAST:
-        if (wparam == PBT_APMSUSPEND) self->runtime.Protect();
+        if (wparam == PBT_APMSUSPEND) { self->runtime.Protect(); if (self->peripherals) self->peripherals->Protect(); }
+        else if (wparam == PBT_APMRESUMESUSPEND || wparam == PBT_APMRESUMEAUTOMATIC) {
+          if (self->peripherals) self->peripherals->Resume();
+        }
         return TRUE;
       case WM_CLOSE:
         DestroyWindow(hwnd);
@@ -1238,7 +1396,12 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
         self->runtime.SetNotify({});
         if (self->buffer_hotkey) self->buffer_hotkey->Reset();
         if (self->send_hotkey) self->send_hotkey->Reset();
+        for (const auto& hotkey : self->plugin_hotkeys) if (hotkey) hotkey->Reset();
         UnregisterHotKey(hwnd, 20);
+        UnregisterHotKey(hwnd, 21);
+        UnregisterHotKey(hwnd, 22);
+        UnregisterHotKey(hwnd, 23);
+        RemoveClipboardFormatListener(hwnd);
         WTSUnRegisterSessionNotification(hwnd);
         Shell_NotifyIconW(NIM_DELETE, &self->tray);
         self->settings.reset();
@@ -1259,11 +1422,17 @@ LRESULT CALLBACK Window::Procedure(HWND hwnd, UINT message, WPARAM wparam,
 void UiCommands::Attach(HWND window) {
   std::lock_guard lock(mutex_);
   window_ = window;
+  if (!window) { retired_ = true; pending_settings_ = false; return; }
+  retired_ = false;
+  if (pending_settings_ && PostMessageW(window_, kOpenSettings, 0, 0))
+    pending_settings_ = false;
 }
 
 bool UiCommands::RequestSettings() {
   std::lock_guard lock(mutex_);
-  return window_ && PostMessageW(window_, kOpenSettings, 0, 0);
+  if (retired_) return false;
+  if (!window_) { pending_settings_ = true; return true; }
+  return PostMessageW(window_, kOpenSettings, 0, 0) != FALSE;
 }
 
 bool UiCommands::RequestExit() {
@@ -1322,10 +1491,10 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
                   DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                   CLEARTYPE_QUALITY, DEFAULT_PITCH, L"Segoe UI");
   HWND window = CreateWindowExW(
-      WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST, wc.lpszClassName,
+      WS_EX_NOACTIVATE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST | WS_EX_LAYERED, wc.lpszClassName,
       rimes::branding::Text(L"{brand} Buffer").c_str(), WS_POPUP | WS_THICKFRAME,
-      area.left + ((area.right - area.left) - MulDiv(680, dpi, 96)) / 2,
-      area.bottom - MulDiv(120 + 73, dpi, 96), MulDiv(680, dpi, 96),
+      area.left + ((area.right - area.left) - MulDiv(760, dpi, 96)) / 2,
+      area.bottom - MulDiv(120 + 73, dpi, 96), MulDiv(760, dpi, 96),
       MulDiv(73, dpi, 96), nullptr, nullptr, wc.hInstance, &ui);
   if (!window) {
     runtime.Stop();
@@ -1341,8 +1510,14 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   ui.theme = ui::ThemeIdOrDefault(config.theme);
   ui.buffer_hotkey = std::make_unique<BufferHotkeyRegistration>(window);
   ui.send_hotkey = std::make_unique<BufferHotkeyRegistration>(window, 8);
+  for (std::size_t i = 0; i < ui.plugin_hotkeys.size(); ++i)
+    ui.plugin_hotkeys[i] = std::make_unique<BufferHotkeyRegistration>(window, 4 + static_cast<int>(i) * 2);
   ui.buffer_hotkey->RegisterInitial(config.hotkey_modifiers, config.hotkey_key);
   RegisterHotKey(window, 20, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'S');
+  RegisterHotKey(window, 21, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'V');
+  RegisterHotKey(window, 22, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, 'M');
+  const bool capture_hotkey_registered = RegisterHotKey(window, 23, MOD_ALT | MOD_SHIFT | MOD_NOREPEAT, '4') != FALSE;
+  try { ui.peripherals = std::make_unique<peripherals::Windows>(runtime); AddClipboardFormatListener(window); } catch (...) {}
   ui.product_icon = ui::CreateTrayIcon(GetSystemMetrics(SM_CXSMICON));
   ui.tray.cbSize = sizeof(ui.tray);
   ui.tray.hWnd = window;
@@ -1355,6 +1530,12 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   if (!ui.buffer_hotkey->Registered())
     wcscpy_s(ui.tray.szTip, rimes::branding::Text(L"{brand} · Buffer 快捷键不可用，请使用托盘").c_str());
   ui.AddTrayIcon();
+  if (!capture_hotkey_registered) {
+    wcscpy_s(ui.tray.szInfoTitle, L"截图快捷键未启用");
+    wcscpy_s(ui.tray.szInfo, L"Alt+Shift+4 已被占用。可从 Capsule 的截图按钮打开框选截图。");
+    ui.tray.dwInfoFlags = NIIF_WARNING; ui.tray.uFlags |= NIF_INFO;
+    Shell_NotifyIconW(NIM_MODIFY, &ui.tray); ui.tray.uFlags &= ~NIF_INFO;
+  }
   if (!ui.buffer_hotkey->Registered()) {
     const auto notice = BufferHotkeyTitle(config) +
         L" 未能注册。仍可从托盘打开 Buffer，在设置中选择其他组合或字母。";
@@ -1385,6 +1566,7 @@ void RunWindow(Runtime& runtime, const std::function<void()>& stop,
   if (open_settings) ui.OpenSettings();
   MSG message{};
   while (GetMessageW(&message, nullptr, 0, 0) > 0) {
+    if (ui.peripherals && ui.peripherals->HandleMessage(&message)) continue;
     if (ui.settings && ui.settings->HandleDialogMessage(&message)) continue;
     TranslateMessage(&message);
     DispatchMessageW(&message);

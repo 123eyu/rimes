@@ -12,6 +12,7 @@ require(releaseCredentials.values.all { it.isNullOrBlank() } || hasReleaseSignin
     "Supply all four RIMES_ANDROID signing environment variables, or none for an unsigned build"
 }
 android {
+    buildFeatures { buildConfig = true }
     testBuildType = providers.gradleProperty("rimesTestBuildType").getOrElse("debug")
     namespace = "org.scholay.rimes.android"
     compileSdk { version = release(37) { minorApiLevel = 2 } }
@@ -21,7 +22,7 @@ android {
         targetSdk = 37
         testInstrumentationRunner = "org.scholay.rimes.android.EngineInstrumentation"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
-        versionCode = 19
+        versionCode = 20
         versionName = rimesVersion
     }
     ndkVersion = "29.0.14206865"

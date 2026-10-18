@@ -1,0 +1,18 @@
+[
+  {
+    "path": "platforms/windows/native/src/workbench/runtime.cpp",
+    "sha256": "15516e147ecc97c479df942b6bd7a2a409ca9aa6daaaae4aaff17569449cdda4"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/runtime.hpp",
+    "sha256": "b23421d6620a9fe28129c36eecc220f14d463a6d9cf46b6ce86884fd354682c1"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/runtime_tests.cpp",
+    "sha256": "f712a83d2a39a319eb5ce6b51a8310459a1f1cfd80a92548963d94fcd964d910"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/window.cpp",
+    "sha256": "a7c1cd2ea7997d0c37dedd87598f0f8b6ad2c5f3032ae39f643ab75006669d1e"
+  }
+]

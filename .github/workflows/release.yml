@@ -35,10 +35,8 @@ on:
       - 'scripts/release/**'
       - '.github/workflows/release.yml'
       - '.github/workflows/linux-deb.yml'
-      - 'platforms/linux/ime/**'
+      - 'platforms/linux/**'
       - 'scripts/input-schemes/repair-rime-table.py'
-      - 'platforms/linux/buffer/**'
-      - 'platforms/linux/capsule/**'
       - 'scripts/platform-preview/**'
       - 'VERSION'
   schedule:
@@ -1836,11 +1834,24 @@ jobs:
 
           notes="$stage/RELEASE-NOTES.md"
           cat >"$notes" <<'EOF'
-          ## RIMES vVERSION_PLACEHOLDER
+          ## 犀术IME / 犀術IME / XSIME VERSION_PLACEHOLDER
 
-          现代 macOS 中文输入法（IMK + librime）。**自包含**：librime 引擎与 Rime
-          词库已打包在 app 内，**无需单独安装 Squirrel**，装一个就能用。通用二进制
-          （Apple Silicon + Intel）。
+          本版补齐五端设置中的应用更新入口，并收敛 Linux、Windows 与官方插件改动。
+
+          ### 下载与更新
+          | 平台 | 安装包 / 渠道 | 更新方式 |
+          |---|---|---|
+          | macOS（Apple Silicon / Intel） | `RIMES-VERSION_PLACEHOLDER.pkg` | 设置内下载，系统安装器授权安装 |
+          | Windows（x64 / x86） | `RIMES-Windows-VERSION_PLACEHOLDER-Setup.exe` | 设置内下载并运行完整安装器，按提示注销或重启 |
+          | Android | `RIMES-Android-VERSION_PLACEHOLDER.apk` | 设置内下载，Android 系统确认安装；使用原长期签名 |
+          | Linux（Ubuntu 24.04 amd64） | `fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` | 设置内下载，授权系统包管理器安装后重新登录 |
+          | iOS | [App Store](https://apps.apple.com/app/id6814620242) | 通过商店更新，可用版本以商店为准 |
+
+          旧版尚无更新入口的客户端，首次请下载本版安装包升级；之后可从设置检查、下载并安装。
+          下载包会验证版本、大小及 SHA-256，打开安装器或商店不会被当作更新完成。
+          Android 的 AAB 用于商店分发，直接安装请选择 APK。Windows EXE 当前未签名。
+
+          macOS 包自带 librime 引擎与 Rime 词库，无需单独安装 Squirrel。
 
           ### 安装（推荐：向导式安装器）
           下载 **`RIMES-VERSION_PLACEHOLDER.pkg`** → 双击 → 按向导安装
@@ -1937,7 +1948,7 @@ jobs:
 
   publish_staged_release:
     name: Approve and publish staged macOS release
-    needs: [build_and_smoke, sign_and_stage, build_linux_deb]
+    needs: [build_and_smoke, sign_and_stage, build_linux_deb, build_windows_release, build_android_release, verify_signed_install]
     if: >-
       needs.build_and_smoke.result == 'success' &&
       needs.sign_and_stage.result == 'success' &&
@@ -1945,8 +1956,8 @@ jobs:
       github.repository == 'scholay/xsime'
     runs-on: macos-15
     # This separate environment holds no signing or notarization credentials.
-    # Required reviewers must inspect recorded real-Mac signed-stage rehearsal
-    # evidence before approving this publish-only job. Its first step also
+    # Required reviewers inspect the signed-stage rehearsal evidence. The
+    # 1.1.6 maintainer-authorized run uses a disposable hosted Mac. This job also
     # refuses a missing or weakened server-side environment configuration.
     environment: macos-publish
     permissions:
@@ -2120,7 +2131,7 @@ jobs:
             "$stage/$PKG" "$stage/SHA256SUMS" \
             --verify-tag \
             --latest \
-            --title "RIMES v$VERSION" \
+            --title "犀术IME / 犀術IME / XSIME $VERSION" \
             --notes-file "$stage/RELEASE-NOTES.md"
 
       - name: Read back the official Release assets
@@ -2206,3 +2217,135 @@ jobs:
             fi
           done
           (cd "$readback" && sha256sum -c "$package.sha256")
+
+  build_windows_release:
+    needs: build_and_smoke
+    if: needs.build_and_smoke.outputs.is_release == 'true'
+    uses: ./.github/workflows/windows-ime.yml
+    with:
+      package_version: ${{ needs.build_and_smoke.outputs.version }}
+
+  build_android_release:
+    needs: build_and_smoke
+    if: needs.build_and_smoke.outputs.is_release == 'true'
+    uses: ./.github/workflows/android.yml
+    with:
+      signed_release: true
+    secrets: inherit
+
+  publish_update_manifest:
+    name: Publish verified Android, Windows and complete update feed
+    needs: [build_and_smoke, build_windows_release, build_android_release, publish_staged_release, attach_linux_deb]
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: scholay/xsime
+      VERSION: ${{ needs.build_and_smoke.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: RIMES-Windows-release-${{ github.sha }}
+          path: ${{ runner.temp }}/windows-release
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: RIMES-Android-release-${{ github.sha }}
+          path: ${{ runner.temp }}/android-release
+      - name: Verify source identities and prepare unique release assets
+        run: |
+          python3 - <<'PY'
+          import json, os, shutil
+          from pathlib import Path
+          root = Path(os.environ['RUNNER_TEMP'])
+          out = root/'application-release'; out.mkdir()
+          version, commit = os.environ['VERSION'], os.environ['GITHUB_SHA']
+          windows = root/'windows-release'; android = root/'android-release'
+          for path in [windows/'BUILD-INFO.json', android/f'RIMES-Android-{version}-BUILD-INFO.json']:
+              info = json.loads(path.read_text(encoding='utf-8-sig'))
+              assert info['sourceCommit'] == commit and info['version'] == version, path.name
+          for name in [f'RIMES-Windows-{version}-Setup.exe', f'RIMES-Windows-{version}.zip']:
+              shutil.copyfile(windows/name, out/name)
+          for name in ['BUILD-INFO.json', 'SOURCE-FILES.json', 'SETUP-VERIFICATION.json', 'SHA256SUMS']:
+              shutil.copyfile(windows/name, out/f'RIMES-Windows-{version}-{name}')
+          for path in android.iterdir():
+              assert path.is_file() and path.name.startswith(f'RIMES-Android-{version}')
+              shutil.copyfile(path, out/path.name)
+          PY
+      - name: Upload and read back each package before activating updates
+        run: |
+          set -euo pipefail
+          assets="$RUNNER_TEMP/application-release"
+          readback="$RUNNER_TEMP/application-readback"
+          mkdir "$readback"
+          for file in "$assets"/*; do
+            name="$(basename "$file")"
+            if ! gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
+              gh release upload "$GITHUB_REF_NAME" "$file"
+            fi
+            gh release download "$GITHUB_REF_NAME" --pattern "$name" --dir "$readback"
+            cmp "$file" "$readback/$name"
+          done
+          gh release download "$GITHUB_REF_NAME" --pattern "RIMES-$VERSION.pkg" --pattern "fcitx5-rimes_${VERSION}_amd64.deb" --dir "$readback"
+          code=$(python3 -c 'import json,os; from pathlib import Path; print(json.loads((Path(os.environ["RUNNER_TEMP"])/"android-release"/("RIMES-Android-"+os.environ["VERSION"]+"-BUILD-INFO.json")).read_text())["versionCode"])')
+          python3 scripts/release/update_manifest.py "$readback" --version "$VERSION" --commit "$GITHUB_SHA" --android-build "$code"
+          # This is the final activation step. No partial platform set is advertised.
+          if gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -Fxq update-manifest.json; then
+            mkdir "$RUNNER_TEMP/feed-readback"
+            gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
+            cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
+          else
+            gh release upload "$GITHUB_REF_NAME" "$readback/update-manifest.json"
+            mkdir "$RUNNER_TEMP/feed-readback"
+            gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
+            cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
+          fi
+
+  verify_signed_install:
+    name: Install the exact signed package on a disposable Mac
+    needs: [build_and_smoke, sign_and_stage]
+    runs-on: macos-15
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: scholay/xsime
+      VERSION: ${{ needs.build_and_smoke.outputs.version }}
+      PKG: ${{ needs.sign_and_stage.outputs.pkg }}
+      EXPECTED_PKG_SHA: ${{ needs.sign_and_stage.outputs.pkg_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: ${{ needs.sign_and_stage.outputs.artifact_name }}
+          path: ${{ runner.temp }}/signed-stage
+      - name: Upgrade from the preceding public signed release
+        run: |
+          set -euo pipefail
+          [[ "$PKG" == "RIMES-$VERSION.pkg" ]]
+          stage="$RUNNER_TEMP/signed-stage"
+          [[ "$(shasum -a 256 "$stage/$PKG" | awk '{print $1}')" == "$EXPECTED_PKG_SHA" ]]
+          gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName > "$RUNNER_TEMP/public-versions.json"
+          previous=$(python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          current = tuple(map(int, os.environ['VERSION'].split('.')))
+          tags = [r['tagName'] for r in json.loads((Path(os.environ['RUNNER_TEMP'])/'public-versions.json').read_text())]
+          stable = [t for t in tags if re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', t) and tuple(map(int, t[1:].split('.'))) < current]
+          assert stable, 'A previous public stable installer is required for the upgrade rehearsal'
+          print(max(stable, key=lambda t: tuple(map(int, t[1:].split('.')))))
+          PY
+          )
+          mkdir "$RUNNER_TEMP/previous-installer"
+          gh release download "$previous" --pattern "RIMES-${previous#v}.pkg" --pattern SHA256SUMS --dir "$RUNNER_TEMP/previous-installer"
+          (cd "$RUNNER_TEMP/previous-installer" && shasum -a 256 -c SHA256SUMS)
+          scripts/rehearse-release-pkg.sh --pkg "$RUNNER_TEMP/previous-installer/RIMES-${previous#v}.pkg" --install-packagekit
+          scripts/rehearse-release-pkg.sh --pkg "$stage/$PKG" --install-packagekit
+          printf 'Signed package upgrade %s -> v%s passed on a disposable GitHub-hosted Mac.\n' "$previous" "$VERSION" >> "$GITHUB_STEP_SUMMARY"

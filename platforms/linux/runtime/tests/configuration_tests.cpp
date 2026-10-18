@@ -1,4 +1,5 @@
 #include "configuration.hpp"
+#include "shortcuts.hpp"
 #include <iostream>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -43,6 +44,47 @@ int main() {
               snapshot.provider.at("model") == "fixture-model",
           "credential did not reach frozen request");
     PrivateDirectory prefs(root / "settings");
+    const auto route = ProviderRoute(store.Load().at("providers")[0]);
+    auto selection = store.Load();
+    auto second = provider;
+    second["id"] = RandomID();
+    second["model"] = "other-model";
+    selection["providers"].push_back(second);
+    selection["activeProvider"] = second.at("id");
+    store.Save(selection, selection.at("revision"));
+    Check(ConfigurationStore(root / "settings").FreezeProvider(route).credential == secret &&
+              store.FreezeProvider(route).provider.at("model") == "fixture-model",
+          "global selection rerouted saved conversation");
+    selection = store.Load();
+    selection["activeProvider"] = id;
+    store.Save(selection, selection.at("revision"));
+    auto legacy = store.Load();
+    for (auto& item : legacy["providers"])
+        item.erase("revision");
+    legacy.erase("autoSendSeconds");
+    legacy.erase("gatewayEnabled"); legacy.erase("gatewayPort"); legacy.erase("gatewayBlockedSources");
+    legacy.erase("shortcuts"); legacy.erase("globalShortcuts");
+    prefs.Write("preferences.json", legacy.dump());
+    Check(store.Load().at("autoSendSeconds") == 1 &&
+          store.Load().at("revision") == legacy.at("revision"), "legacy auto-send migration lost revision");
+    Check(store.Load().at("shortcuts") == DefaultShortcuts() && store.Load().at("globalShortcuts") == true,
+          "legacy shortcut migration failed");
+    Check(store.Load().at("gatewayEnabled") == true && store.Load().at("gatewayPort") == 47700 && store.Load().at("gatewayBlockedSources").empty(), "legacy gateway migration failed");
+    for (const auto& invalid : std::vector<Json>{Json{{"gatewayPort", 80}}, Json{{"gatewayPort", 65536}}, Json{{"gatewayEnabled", "yes"}}, Json{{"gatewayBlockedSources", {"bad:source"}}}, Json{{"gatewayBlockedSources", {"http:one", "http:one"}}}}) {
+      auto candidate = store.Load(); candidate.update(invalid);
+      const auto original = store.Load();
+      Reject([&] { store.Save(candidate, candidate.at("revision")); });
+      Check(store.Load() == original, "invalid gateway settings changed durable data");
+    }
+    ValidateShortcuts(DefaultShortcuts());
+    for (const auto* chord : {"b", "SHIFT+b", "CTRL+a", "CTRL+v", "LOGO+v", "CTRL+CTRL+b", "CTRL+SHIFT+B", "SHIFT+CTRL+b", "CTRL+bad", "CTRL+b\n"})
+      Reject([&] { ParseShortcut(chord); });
+    Check(!ParseShortcut("") && ParseShortcut("CTRL+ALT+F12")->Fcitx() == "Control+Alt+F12", "shortcut encoding failed");
+    auto duplicate = store.Load(); duplicate["shortcuts"]["capsule"] = duplicate["shortcuts"]["buffer"];
+    Reject([&] { store.Save(duplicate, duplicate.at("revision")); });
+    auto invalid_lifetime = store.Load();
+    invalid_lifetime["autoSendSeconds"] = 4;
+    Reject([&] { store.Save(invalid_lifetime, invalid_lifetime.at("revision")); });
     Check(prefs.Read("preferences.json", 1048576)->find(secret) ==
               std::string::npos,
           "credential leaked to ordinary preferences");
@@ -56,6 +98,9 @@ int main() {
     Check(snapshot.credential == secret &&
               snapshot.provider.at("model") == "fixture-model",
           "save mutated in-flight snapshot");
+    Reject([&] { store.FreezeProvider(route); });
+    const auto edited_route = ProviderRoute(store.Load().at("providers")[0]);
+    Check(edited_route.at("profileRevision") == 2, "provider edit did not invalidate saved route");
     ConfigurationStore restarted(root / "settings");
     Check(restarted.Freeze("builtin.openai-compatible").credential ==
               "replacement-credential",
@@ -112,6 +157,9 @@ int main() {
           "cleanup touched an unsafe linked file");
     Check(store.Freeze("builtin.openai-compatible").credential.empty(),
           "explicit credential deletion failed");
+    Reject([&] { store.FreezeProvider(edited_route); });
+    Check(ProviderRoute(store.Load().at("providers")[0]).at("profileRevision") == 3,
+          "credential rotation did not invalidate route");
     const auto intact = store.Load();
     prefs.Write("preferences.json", "invalid");
     Reject([&] { store.Load(); });

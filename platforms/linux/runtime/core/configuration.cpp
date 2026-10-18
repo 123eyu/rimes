@@ -1,8 +1,10 @@
-#include "native_buffer_metrics.hpp"
 #include "configuration.hpp"
+#include "native_buffer_metrics.hpp"
+#include "shortcuts.hpp"
 #include <algorithm>
 #include <cmath>
 #include <curl/curl.h>
+#include <limits>
 #include <memory>
 
 namespace rimes::runtime {
@@ -36,6 +38,15 @@ std::string URLPart(CURLU *url, CURLUPart part) {
 } // namespace
 
 std::vector<Field> PluginFields(std::string_view id) {
+  if (id == "builtin.statistics")
+    return {{"recordsKeyFrequency", "记录键频", "只在本机保存按键次数。", FieldKind::Toggle, true, {}},
+            {"recordsTypingActivity", "记录日常输入", "只保存字数、按键、并击次数和活跃时间。", FieldKind::Toggle, true, {}}};
+  if (id == "builtin.fly-chord-learning")
+    return {{"durationMilliseconds", "组键间隔", "单位为毫秒；调整同一批按键的结算间隔。", FieldKind::Number, 100, {}, 20, 500}};
+  if (id == "builtin.capsule.temporary")
+    return {{"captureEnabled", "允许收录剪贴板内容",
+             "XSIME 运行时后台收录；安全输入、锁屏和休眠期间不会读取。",
+             FieldKind::Toggle, false, {}}};
   if (id == "builtin.apple-translation")
     return {
         Choice("sourceLanguage", "源语言", "zh-Hans",
@@ -68,7 +79,8 @@ std::vector<Field> PluginFields(std::string_view id) {
                     {"high", "high"},
                     {"xhigh", "xhigh"},
                     {"max", "max"},
-                    {"ultra", "ultra"}})};
+                    {"ultra", "ultra"}}),
+            Choice("skill", "Skill", "", {{"", "不使用"}, {"imagegen", "图片 · imagegen"}})};
   if (id == "builtin.claude-code-cli")
     return {Choice("model", "模型", "claude-opus-5-5",
                    {{"claude-opus-5-5", "Claude Opus 5.5"},
@@ -215,13 +227,16 @@ Json ConfigurationStore::Defaults() {
   return {{"schemaVersion", 1},       {"revision", RandomID()},
           {"theme", "night"},         {"bufferWidth", 760},
           {"closeAfterLast", true},   {"resetOnAppSwitch", false},
-          {"autoSend", false},        {"activeConnector", "openai-compatible"},
+          {"autoSend", false},        {"autoSendSeconds", 1},
+          {"globalShortcuts", true},  {"shortcuts", DefaultShortcuts()},
+          {"gatewayEnabled", true}, {"gatewayPort", 47700}, {"gatewayBlockedSources", Json::array()},
+          {"activeConnector", "openai-compatible"},
           {"activeProvider", ""},     {"providers", Json::array()},
           {"plugins", Json::object()}};
 }
-ConfigurationStore::ConfigurationStore(const std::filesystem::path &root)
+ConfigurationStore::ConfigurationStore(const std::filesystem::path &root, bool wait_for_seed)
     : files_(root), credentials_(root / "credentials") {
-  auto lock = files_.Lock();
+  auto lock = files_.Lock(wait_for_seed);
   if (!files_.Read("preferences.json", 1024 * 1024))
     files_.Write("preferences.json", Defaults().dump());
 }
@@ -269,15 +284,29 @@ Json ConfigurationStore::NormalizePlugin(std::string_view id,
   return normalized;
 }
 void ConfigurationStore::Validate(const Json &value) {
-  Require(value.is_object() && value.size() == 11 &&
+  Require(value.is_object() && value.size() == 17 &&
           value.at("schemaVersion") == 1 && Identity(value.at("revision")));
   Require(value.at("theme") == "night" || value.at("theme") == "day" ||
           value.at("theme") == "quiet" || value.at("theme") == "rasta" ||
           value.at("theme") == "liquidGlass");
   Require(value.at("bufferWidth").is_number_integer() &&
           value.at("bufferWidth") >= rimes::native::bufferMinimumWidth && value.at("bufferWidth") <= rimes::native::bufferMaximumWidth);
-  for (auto key : {"closeAfterLast", "resetOnAppSwitch", "autoSend"})
+  for (auto key : {"closeAfterLast", "resetOnAppSwitch", "autoSend", "globalShortcuts"})
     Require(value.at(key).is_boolean());
+  Require(value.at("gatewayEnabled").is_boolean() && value.at("gatewayPort").is_number_integer() &&
+          value.at("gatewayPort") >= 1024 && value.at("gatewayPort") <= 65535 &&
+          value.at("gatewayBlockedSources").is_array() && value.at("gatewayBlockedSources").size() <= 100);
+  std::set<std::string> blocked;
+  for (const auto& item : value.at("gatewayBlockedSources")) {
+    Require(item.is_string());
+    const auto name = item.get<std::string>();
+    Require(Plain(name, 160) && (name.rfind("http:", 0) == 0 || name.rfind("mcp:", 0) == 0) &&
+            blocked.insert(name).second);
+  }
+  ValidateShortcuts(value.at("shortcuts"));
+  Require(value.at("autoSendSeconds").is_number_integer() &&
+          (value.at("autoSendSeconds") == 1 || value.at("autoSendSeconds") == 2 ||
+           value.at("autoSendSeconds") == 3 || value.at("autoSendSeconds") == 5));
   Require(value.at("activeConnector") == "openai-compatible" ||
           value.at("activeConnector") == "codex-cli" ||
           value.at("activeConnector") == "claude-code-cli");
@@ -290,6 +319,9 @@ void ConfigurationStore::Validate(const Json &value) {
             Identity(provider.at("id")));
     Require(ids.insert(provider.at("id")).second);
     provider.erase("id");
+    Require(provider.contains("revision") && provider.at("revision").is_number_unsigned() &&
+            provider.at("revision").get<std::uint64_t>() > 0);
+    provider.erase("revision");
     if (provider.contains("credential")) {
       Require(Identity(provider.at("credential")));
       provider.erase("credential");
@@ -312,26 +344,50 @@ Json ConfigurationStore::Load() const {
   if (!bytes)
     throw std::runtime_error("设置文件缺失，请恢复备份后重试。");
   auto value = Json::parse(*bytes);
+  if (value.is_object() && !value.contains("autoSendSeconds")) value["autoSendSeconds"] = 1;
+  if (value.is_object() && !value.contains("shortcuts")) value["shortcuts"] = DefaultShortcuts();
+  if (value.is_object() && !value.contains("globalShortcuts")) value["globalShortcuts"] = true;
+  if (value.is_object() && !value.contains("gatewayEnabled")) value["gatewayEnabled"] = true;
+  if (value.is_object() && !value.contains("gatewayPort")) value["gatewayPort"] = 47700;
+  if (value.is_object() && !value.contains("gatewayBlockedSources")) value["gatewayBlockedSources"] = Json::array();
+  for (auto& provider : value.at("providers"))
+      if (!provider.contains("revision"))
+          provider["revision"] = std::uint64_t(1);
   Validate(value);
   return value;
+}
+void ConfigurationStore::WithGateway(const std::string& revision,
+                                     const std::function<void()>& action) const {
+  auto lock = files_.Lock(false);
+  const auto state = Load();
+  Require(state.at("gatewayEnabled") == true && state.at("revision") == revision);
+  action();
 }
 bool ConfigurationStore::Save(
     Json next, const std::string &expected,
     const std::map<std::string, std::string> &changes) {
   auto lock = files_.Lock();
+  if (next.is_object() && !next.contains("autoSendSeconds")) next["autoSendSeconds"] = 1;
+  if (next.is_object() && !next.contains("shortcuts")) next["shortcuts"] = DefaultShortcuts();
+  if (next.is_object() && !next.contains("globalShortcuts")) next["globalShortcuts"] = true;
+  if (next.is_object() && !next.contains("gatewayEnabled")) next["gatewayEnabled"] = true;
+  if (next.is_object() && !next.contains("gatewayPort")) next["gatewayPort"] = 47700;
+  if (next.is_object() && !next.contains("gatewayBlockedSources")) next["gatewayBlockedSources"] = Json::array();
   const auto current = Load();
   if (current.at("revision") != expected)
     throw std::runtime_error("设置已在其他窗口更新，请重新加载后再保存。");
   // UI callers cannot bind a provider to someone else's saved credential.
-  for (const auto &provider : next.at("providers")) {
-    const auto id = provider.at("id").get<std::string>();
-    const auto old = std::find_if(
-        current.at("providers").begin(), current.at("providers").end(),
-        [&](const Json &p) { return p.at("id") == id; });
-    const auto old_ref = old == current.at("providers").end()
-                             ? ""
-                             : old->value("credential", "");
-    Require(provider.value("credential", "") == old_ref);
+  for (auto& provider : next.at("providers")) {
+      const auto id = provider.at("id").get<std::string>();
+      const auto old = std::find_if(current.at("providers").begin(), current.at("providers").end(),
+                                    [&](const Json& p) { return p.at("id") == id; });
+      const auto old_ref = old == current.at("providers").end() ? "" : old->value("credential", "");
+      Require(provider.value("credential", "") == old_ref);
+      const auto old_revision = old == current.at("providers").end()
+                                    ? std::uint64_t(1)
+                                    : old->at("revision").get<std::uint64_t>();
+      Require(!provider.contains("revision") || provider.at("revision") == old_revision);
+      provider["revision"] = old_revision;
   }
   for (auto it = next.at("plugins").begin(); it != next.at("plugins").end();
        ++it)
@@ -350,6 +406,16 @@ bool ConfigurationStore::Save(
       credentials_.Write(id + "." + reference, secret);
       (*provider)["credential"] = reference;
     }
+  }
+  for (auto& provider : next.at("providers")) {
+      const auto old =
+          std::find_if(current.at("providers").begin(), current.at("providers").end(),
+                       [&](const Json& value) { return value.at("id") == provider.at("id"); });
+      if (old != current.at("providers").end() && *old != provider) {
+          const auto revision = old->at("revision").get<std::uint64_t>();
+          Require(revision < std::numeric_limits<std::uint64_t>::max());
+          provider["revision"] = revision + 1;
+      }
   }
   next["revision"] = RandomID();
   files_.Write("preferences.json", next.dump());
@@ -409,5 +475,43 @@ RequestConfiguration ConfigurationStore::Freeze(std::string_view id) const {
         result.provider.erase("credential");
       }
   return result;
+}
+// Linux currently stores one text model per profile. Both UUIDs identify that
+// stable slot; profile revision changes on edits/credential rotation, not on
+// unrelated UI settings or the globally selected provider.
+Json ProviderRoute(const Json& provider) {
+    const auto id = provider.at("id").get<std::string>();
+    Require(Identity(id));
+    const auto uuid = id.substr(0, 8) + "-" + id.substr(8, 4) + "-" + id.substr(12, 4) + "-" +
+                      id.substr(16, 4) + "-" + id.substr(20);
+    return {{"profileID", uuid}, {"routeID", uuid}, {"profileRevision", provider.at("revision")}};
+}
+RequestConfiguration ConfigurationStore::FreezeProvider(const Json& route) const {
+    auto lock = files_.Lock();
+    const auto value = Load();
+    for (const auto& provider : value.at("providers")) {
+        auto expected = ProviderRoute(provider);
+        auto normalized = route;
+        for (const auto* key : {"profileID", "routeID"}) {
+            auto id = normalized.at(key).get<std::string>();
+            std::transform(id.begin(), id.end(), id.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+            normalized[key] = id;
+        }
+        if (expected != normalized)
+            continue;
+        Require(!provider.at("model").get<std::string>().empty());
+        RequestConfiguration result{value.at("revision"), Json::object(), provider, {}};
+        if (provider.contains("credential")) {
+            const auto bytes = credentials_.Read(provider.at("id").get<std::string>() + "." +
+                                                     provider.at("credential").get<std::string>(),
+                                                 8192);
+            Require(bytes.has_value() && Plain(*bytes, 8192));
+            result.credential = *bytes;
+        }
+        result.provider.erase("credential");
+        return result;
+    }
+    throw std::runtime_error("已保存的 Provider 模型路由不可用，请新建会话后重新选择模型");
 }
 } // namespace rimes::runtime

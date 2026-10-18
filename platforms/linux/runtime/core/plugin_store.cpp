@@ -62,7 +62,7 @@ void ValidateContribution(const Json& value) {
 
 PackageStore::PackageStore(std::filesystem::path root, Json catalog,
     std::map<std::string, std::string> bundled, std::map<std::string, Descriptor> adapters,
-    std::string host_version)
+    std::string host_version, bool wait_for_seed)
     : files_(root), catalog_(std::move(catalog)), bundled_(std::move(bundled)),
       adapters_(std::move(adapters)), host_version_(std::move(host_version)) {
     (void)Version(host_version_);
@@ -75,7 +75,7 @@ PackageStore::PackageStore(std::filesystem::path root, Json catalog,
             throw std::runtime_error("Invalid plugin catalog identity");
         (void)Version(entry.at("version"));
     }
-    Seed();
+    Seed(wait_for_seed);
 }
 
 const Json& PackageStore::Entry(const std::string& id) const {
@@ -88,8 +88,8 @@ bool PackageStore::Available(const std::string& id) const {
     return adapters_.count(id) && entry.at("platforms").contains("linux");
 }
 
-void PackageStore::Seed() {
-    auto lock = files_.Lock();
+void PackageStore::Seed(bool wait) {
+    auto lock = files_.Lock(wait);
     for (const auto& entry : catalog_.at("plugins")) {
         const auto id = entry.at("id").get<std::string>();
         // Unsupported entries have no local receipt. A later native port can
@@ -99,7 +99,7 @@ void PackageStore::Seed() {
         if (files_.Read(id + ".state.json", 8192)) continue;
         const bool bundled = Available(id) && entry.at("platforms").at("linux").at("distribution") == "bundled";
         if (bundled) (void)Verified(id, bundled_.at(id));
-        WriteState(id, {{"installed", bundled}, {"enabled", bundled && id != "builtin.fly-chord-learning"},
+        WriteState(id, {{"installed", bundled}, {"enabled", bundled && id != "builtin.fly-chord-learning" && id != "builtin.statistics"},
                        {"bundled", bundled}, {"sha256", entry.at("sha256")}});
     }
 }
@@ -170,6 +170,23 @@ Json PackageStore::Package(const std::string& id) const {
     const auto state = State(id);
     if (!state.at("enabled").get<bool>()) throw std::runtime_error("Plugin is disabled");
     return Verified(id, Bytes(id, state));
+}
+
+void PackageStore::WithEnabledGrant(const std::string& id, const std::string& grant,
+                                    const std::function<void()>& action, bool wait) const {
+    WithEnabledGrants({{id, grant}}, action, wait);
+}
+
+void PackageStore::WithEnabledGrants(const std::vector<std::pair<std::string, std::string>>& grants,
+                                    const std::function<void()>& action, bool wait) const {
+    if (grants.empty()) throw std::runtime_error("Plugin grant is required");
+    auto lock = files_.Lock(wait);
+    for (const auto& [id, grant] : grants) {
+        const auto state = CheckedState(id, grant);
+        if (!state.at("enabled").get<bool>()) throw std::runtime_error("Plugin is disabled");
+        (void)Verified(id, Bytes(id, state));
+    }
+    action();
 }
 
 Json PackageStore::CheckedState(const std::string& id, const std::string& expected_grant) const {

@@ -41,7 +41,9 @@ void TestInputEmptyShowsRail() {
   auto state = BaseState();
   state.mode = BufferMode::kInput;
   const auto layout = LayoutBuffer(state, 760);
-  Check(layout.height_dip == 73, "empty open buffer stays 73 DIP");
+  Check(layout.height_dip == 89 && layout.show_live_metrics, "Default includes its permanent 16 DIP live metrics row");
+  Check(layout.toolbar.height() == 30 && layout.source_rail.top == 36 && layout.source_rail.height() == 32,
+        "current macOS shelf and centered standard rail geometry");
   Check(!layout.toolbar_only, "empty open buffer is not toolbar-only");
   Check(layout.source_rail.height() > 0, "empty open buffer shows source rail");
   Check(BufferLayoutFullyContained(layout), "empty input layout contained");
@@ -92,7 +94,31 @@ void TestTranslation() {
   state.result_blocks = {{L"compact candidate strip", false}};
   const auto layout = LayoutBuffer(state, 760);
   Check(layout.height_dip == 105, "translation uses 105 DIP");
+  Check(layout.source_rail.top == 41 && layout.source_rail.height() == 25 &&
+            layout.result_rail.top == 70 && layout.result_rail.height() == 25,
+        "current macOS translation rails preserve 5pt internal vertical insets");
   Check(BufferLayoutFullyContained(layout), "translation contained");
+  using Hit = rimes::windows::ui::BufferHitKind;
+  for (const float width : {520.f, 680.f, 760.f, 1100.f}) {
+    const auto compact = LayoutBuffer(state, width);
+    Check(BufferLayoutFullyContained(compact) && compact.show_languages,
+          "translation toolbar fits narrow and wide Buffer layouts");
+    Check(compact.source_language.right < compact.swap_languages.left &&
+          compact.swap_languages.right < compact.target_language.left &&
+          compact.target_language.right < compact.speech.left &&
+          compact.speech.right < compact.association.left && !compact.show_auto_send &&
+          compact.auto_send.width() == 0 && compact.close_after.width() == 0 &&
+          compact.close_after.right < compact.association.left,
+          "language controls and send controls never overlap");
+    Check(HitTestBuffer(compact, compact.swap_languages.left + 2, compact.swap_languages.top + 2) == Hit::kSwapLanguages,
+          "swap control is clickable rather than window drag chrome");
+    Check(HitTestBuffer(compact, compact.target_language.left + 2, compact.target_language.top + 2) == Hit::kTargetLanguage,
+          "target language owns its complete hit area");
+  }
+  state.source_blocks.clear(); state.result_blocks.clear();
+  const auto empty = LayoutBuffer(state, 680);
+  Check(empty.show_source && !empty.show_result && empty.height_dip == 73,
+        "empty translation exposes the editable source instead of an empty result-only rail");
 }
 
 void TestErrorStatus() {
@@ -100,7 +126,7 @@ void TestErrorStatus() {
   state.source_blocks = {{L"Keep source", false}};
   state.status = L"API 失败，原文保留";
   const auto layout = LayoutBuffer(state, 760);
-  Check(layout.height_dip == 73, "error with source-only stays 73");
+  Check(layout.height_dip == 89, "Default error preserves live metrics row");
   Check(BufferLayoutFullyContained(layout), "error layout contained");
 }
 
@@ -179,6 +205,18 @@ int main() {
   TestFoldedHasNoOffWindowHits();
   TestScrollClamp();
   TestPrimaryActionCluster();
+  for (const float width : {520.f, 760.f, 1100.f}) {
+    auto state=BaseState(); state.mode=BufferMode::kInput;
+    auto layout=LayoutBuffer(state,width);
+    Check(layout.show_live_metrics && layout.auto_send.left > width-140 &&
+        layout.close_after.width()==26 && layout.close_after.right < layout.association.left, "Default metrics and compact controls align right");
+    state.mode=BufferMode::kGenerate; state.show_ai_choices=true; state.busy=true;
+    state.reasoning_summary=L"正在整理公开信息"; state.result_blocks={{L"第一块",true},{L"第二块",true}};
+    layout=LayoutBuffer(state,width);
+    Check(BufferLayoutFullyContained(layout) && layout.show_reasoning &&
+        layout.ai_model.right < layout.ai_effort.left && layout.ai_effort.right < layout.association.left,
+        "ChatGPT controls and public summary fit narrow and wide windows");
+  }
   ExpectContained(BaseState(), "default contained");
   if (g_failures) {
     std::cerr << g_failures << " buffer layout failures\n";

@@ -42,4 +42,12 @@ inline constexpr bool HasHostCommandModifier(std::uint32_t modifiers) noexcept {
       static_cast<std::uint32_t>(KeyModifiers::kAltGr);
   return (modifiers & commands) != 0;
 }
+inline constexpr int BufferPluginCycleDirection(std::uint32_t key,
+    std::uint32_t modifiers, std::uint32_t previous_key = 0x26,
+    std::uint32_t previous_modifiers = 5U, std::uint32_t next_key = 0x28,
+    std::uint32_t next_modifiers = 5U) noexcept {
+  if (IsBufferSendChord(key, modifiers, previous_key, previous_modifiers)) return -1;
+  if (IsBufferSendChord(key, modifiers, next_key, next_modifiers)) return 1;
+  return 0;
+}
 }  // namespace rimes::windows::core

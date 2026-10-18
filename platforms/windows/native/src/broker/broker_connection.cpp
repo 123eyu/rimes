@@ -29,6 +29,17 @@ constexpr bool HasFlag(std::uint32_t value, std::uint32_t flag) noexcept {
   return (value & flag) != 0;
 }
 
+void ObserveCommit(workbench::Runtime* runtime, DWORD process,
+                   const std::string& text) noexcept {
+  if (!runtime || text.empty()) return;
+  try {
+    runtime->Metrics()->ObserveCommit(process,
+        static_cast<unsigned>(metrics::Characters(text).size()));
+  } catch (...) {
+    // A best-effort aggregate must never affect actual text delivery.
+  }
+}
+
 void LogEngineFailure(std::string_view operation,
                       std::uint64_t broker_session_id, std::string_view error) {
   std::clog << "RIMES broker " << operation << " failed for session "
@@ -118,6 +129,37 @@ ClientAction BrokerConnection::Handle(const core::Frame& request,
         MakeError(request, core::BrokerErrorCode::kUnsupportedMessage,
                   "workbench controls require an interactive Broker", response);
         return ClientAction::kCloseAfterResponse;
+      }
+      if (message->value("op", "") == "buffer_transition") {
+        const auto found = sessions_.find(message->value("session", 0ULL));
+        const bool valid = verified_client_process_id == peer_process_ && engine_ && found != sessions_.end() &&
+            found->second.engine_session_id && runtime_->CompleteBufferTransition(found->second.target,
+                message->value("request", 0ULL), [&](engine::EngineSnapshot* output) {
+          auto& session = found->second;
+          if (!session.composing && !session.chord.Pending()) return false;
+          if (session.chord.Pending() && session.chord_profile) {
+            const auto flush = session.chord.Flush(*session.chord_profile);
+            bool replaced = false;
+            if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
+                flush.replace ? flush.raw : "", session.chord_snapshot, output, &replaced, nullptr)) return false;
+            ObserveCommit(settings_, peer_process_, output->commit_text);
+            session.composing = output->composing;
+            session.chord.Reset(); session.chord_snapshot = {};
+          }
+          if (session.composing) {
+            engine::EngineSnapshot settled;
+            if (!engine_->CommitComposition(session.engine_session_id, &settled, nullptr)) return false;
+            ObserveCommit(settings_, peer_process_, settled.commit_text);
+            settled.commit_text = output->commit_text + settled.commit_text;
+            *output = std::move(settled);
+            session.composing = output->composing;
+          }
+          ++session.revision;
+          return !session.composing;
+        });
+        MakeResponse(request, core::MessageType::kControlState,
+                     core::EncodeControl({{"kind", valid ? "ok" : "stale"}}), response);
+        return ClientAction::kContinue;
       }
       auto output = runtime_->Control(*message, verified_client_process_id);
       MakeResponse(request, core::MessageType::kControlState,
@@ -362,8 +404,9 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   if (settings_) {
     const auto settings_revision = settings_->ConfigurationRevision();
     const bool capture = runtime_ && runtime_->Capturing(session.target);
+    const auto input_route = runtime_ ? runtime_->InputRoute(session.target) : 0;
     if (session.settings_revision != settings_revision ||
-        session.capture != capture) {
+        session.capture != capture || session.input_route != input_route) {
       const auto config = settings_->Configuration();
       if (!engine_->Configure(session.engine_session_id, (pending_chord_ && config.schema == "my_combo" ? "rime_ice" : config.schema),
                               config.ascii, config.traditional,
@@ -378,6 +421,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
       session.settings_revision = config.revision;
       session.composing = false;
       session.capture = capture;
+      session.input_route = input_route;
     }
   }
 
@@ -394,7 +438,9 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     state.sequence_id = key.sequence_id;
     state.revision = session.revision;
     const bool likely_handled =
-        key_down ? IsLikelyHandledForTest(key, session.composing || session.chord.Pending())
+        key_down ? (IsLikelyHandledForTest(key, session.composing || session.chord.Pending()) ||
+                    (runtime_ && runtime_->InputRoute(session.target) == 1 &&
+                     runtime_->PluginCycleDirection(key) != 0))
                  : session.handled_key_downs.test(key.virtual_key);
     if (likely_handled) {
       state.state_flags = StateFlag(core::InputStateFlags::kHandled);
@@ -403,6 +449,8 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   }
 
   // Resolve the current Rime composition before a Buffer source edit. This
+  // Observation is after the actual-key/privacy gate, never OnTestKey*.
+  if (settings_) settings_->Metrics()->ObserveKey(peer_process_, key, session.composing || session.chord.Pending());
   // is an internal engine operation, never a synthesized host key/paste.
   const auto command_modifiers = key.modifiers & ~static_cast<unsigned>(core::KeyModifiers::kCapsLock);
   const auto physical_key = TranslateWindowsKey(key);
@@ -415,20 +463,28 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
       session.chord_profile && session.chord.Pending() &&
       !physical_chord_key) {
     const auto flush = session.chord.Flush(*session.chord_profile);
+    if (settings_ && flush.settled) settings_->Metrics()->ObserveChord(peer_process_);
     engine::EngineSnapshot settled; bool replaced = false;
     if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
         flush.replace ? flush.raw : "", session.chord_snapshot, &settled, &replaced, nullptr))
       return RespondPassThrough(request, key, session, response);
+    ObserveCommit(settings_, peer_process_, settled.commit_text);
     runtime_->Capture(session.target, &settled);
     session.composing = settled.composing;
     session.chord.Reset(); session.chord_snapshot = {};
   }
-  if (!test_only && runtime_ && runtime_->Capturing(session.target) && session.composing && key_down &&
-      command_modifiers == static_cast<unsigned>(core::KeyModifiers::kControl) &&
-      (key.virtual_key == 'A' || key.virtual_key == 'V')) {
+  const bool workbench_transition = runtime_ && runtime_->InputRoute(session.target) == 1 &&
+      (runtime_->PluginCycleDirection(key) != 0 ||
+       (key.virtual_key == VK_ESCAPE && !core::HasHostCommandModifier(key.modifiers)));
+  if (runtime_ && runtime_->Capturing(session.target) && session.composing && key_down &&
+      ((command_modifiers == static_cast<unsigned>(core::KeyModifiers::kControl) &&
+        (key.virtual_key == 'A' || key.virtual_key == 'V')) || workbench_transition)) {
     engine::EngineSnapshot settled;
-    if (!engine_->ProcessKey(session.engine_session_id, 0xff0d, 0, &settled, nullptr))
-      return RespondPassThrough(request, key, session, response);
+    const bool resolved = workbench_transition
+        ? engine_->CommitComposition(session.engine_session_id, &settled, nullptr)
+        : engine_->ProcessKey(session.engine_session_id, 0xff0d, 0, &settled, nullptr);
+    if (!resolved) return RespondPassThrough(request, key, session, response);
+    ObserveCommit(settings_, peer_process_, settled.commit_text);
     runtime_->Capture(session.target, &settled);
     session.composing = settled.composing;
   }
@@ -498,6 +554,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   if (chord_key) {
     const auto chord = session.chord.Key(*session.chord_profile, static_cast<char>(translated->keycode),
                                         key_down, GetTickCount64(), session.chord_interval_ms);
+    if (settings_ && chord.settled) settings_->Metrics()->ObserveChord(peer_process_);
     bool replaced = false;
     if (chord.handled) {
       processed = engine_->ProcessChordText(session.engine_session_id, chord.text,
@@ -511,6 +568,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     std::string prefix_commit;
     if (session.chord_profile && session.chord.Pending()) {
       const auto flush = session.chord.Flush(*session.chord_profile); bool replaced = false;
+      if (settings_ && flush.settled) settings_->Metrics()->ObserveChord(peer_process_);
       if (!engine_->ProcessChordText(session.engine_session_id, flush.text,
           flush.replace ? flush.raw : "", session.chord_snapshot, &snapshot, &replaced, &engine_error))
         return RespondPassThrough(request, key, session, response);
@@ -541,7 +599,10 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
       snapshot.handled = true;
       snapshot.commit_text.assign(1, static_cast<char>(translated->keycode));
     }
+    ObserveCommit(settings_, peer_process_, snapshot.commit_text);
     runtime_->Capture(session.target, &snapshot, direct_input);
+  } else if (settings_ && !snapshot.commit_text.empty()) {
+    ObserveCommit(settings_, peer_process_, snapshot.commit_text);
   }
   std::uint64_t next_revision = session.revision;
   if (snapshot.handled || snapshot.modifier_snapshot) {

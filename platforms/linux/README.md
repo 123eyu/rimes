@@ -8,7 +8,8 @@ Linux 现在有两层，互相独立：
    暂存后再上屏；Capsule 用本机 Markdown 笔记库，经 `commitString` 插入选中笔记。
    规格见 [buffer/SPEC.md](buffer/SPEC.md) 与 [capsule/SPEC.md](capsule/SPEC.md)，
    真机清单见各自 `MANUAL-TEST.md` 与 [ime/MANUAL-TEST.md](ime/MANUAL-TEST.md)。
-   Mailbox 尚未移植。
+   **[Mailbox](mailbox/README.md)** 已有独立 GTK 窗口、三模块导航、兼容会话存储、AI 对话、真实 PTY 终端与手动成果收取；像素和真实桌面验收继续按路线图完成。
+   **[普通并击](chord/README.md)** 支持飞耀跨批配对、自定义键位、学习进度，以及呦呦音形的折梅、寒梅预设；意识流输入暂缓。
 2. **下面的 Data / Input-Schemes Preview** — 仍把同一批 57 个审核文件装进用户已有的
    Fcitx5 Rime 或 IBus Rime。数据包保持原样，不依赖上面的 addon。
 
@@ -17,6 +18,9 @@ IBus 自己的 XSIME 引擎尚未开始；需要什么见 IME README。
 **安装完整 Linux 输入法：Debian／Ubuntu 推荐使用项目 `v*` Release 附带的 deb。**
 用 `apt install ./fcitx5-rimes_<版本>_<架构>.deb` 安装或升级，
 用 `apt remove fcitx5-rimes` 卸载并保留用户词库与学习记录。
+Capsule 内容、Mailbox 会话/附件、插件配置和凭据、统计与跟打成绩同样保留。
+每次项目 `v*` 发布同步构建、验证并附带 deb 与校验文件；新装、旧版本升级、重装、卸载
+逐步检查用户数据及权限。首次没有历史 deb 时会明确使用升级夹具，不冒充历史版本迁移验收。
 源码安装、完整输入法卸载脚本及发布维护要求见
 [完整输入法安装与卸载说明](ime/README.md#install-and-upgrade-debian--ubuntu-recommended)。
 下文的安装／卸载脚本仅适用于数据预览包。

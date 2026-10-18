@@ -42,5 +42,12 @@ int main() {
   auto nested = core::Json::object();
   for (int i = 0; i < 18; ++i) nested = core::Json{{"a", nested}};
   Check(!core::DecodeControl(core::EncodeControl(nested)), "bounded nesting");
+  std::string body, summary, activity;
+  workbench::SseDecoder thinking([&](const std::string& text) { body += text; return true; },
+      [&](bool public_summary, const std::string& text) { (public_summary ? summary : activity) = text; return true; });
+  Check(thinking.Feed("data: {\"choices\":[{\"delta\":{\"reasoning_content\":\"never show raw chain\"}}]}\n\n") &&
+      body.empty() && summary.empty() && activity == "模型正在思考…", "raw reasoning emits activity only");
+  Check(thinking.Feed("data: {\"choices\":[{\"delta\":{\"reasoning_summary\":\"公开摘要\",\"content\":\"正文\"}}]}\n\ndata: [DONE]\n\n") &&
+      thinking.Done() && body == "正文" && summary == "公开摘要", "public summary and answer use separate channels");
   std::cout << "SSE/control tests passed\n";
 }

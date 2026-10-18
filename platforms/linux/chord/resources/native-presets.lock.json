@@ -1,0 +1,23 @@
+{
+  "files": {
+    "licenses/yoyo-SOURCE.md": "5a33dc05f2a52a2313830135d378e08f1635c188d9c2ed156697f445bce80b79",
+    "lua/yoyo/commit_raw.lua": "7cde8b1052eab5b7b4cad89f3da8a6bf752593df4ef02c12c4d15b0fa06a5ad3",
+    "lua/yoyo/popping.lua": "f895cb3baa686f32a6fabdaf0b703f43102a0f452eaa8f932cbe88a495d56a01",
+    "lua/yoyo/yoyo.lua": "b34c156d39f43277e7cc2a61bbc3139984d2104b4f786401717acd63e013cd72",
+    "yoyo-yx-char.dict.yaml": "14ae9b2c1e9e0a4b0257a777d9d7df95ad826576efbbcefc6d24ecbefc8eb71e",
+    "yoyo-yx-hm.dict.yaml": "986733db582206f37046aeeff0376a9b43a74137f9bb257586af7f537cfdaf49",
+    "yoyo-yx-hm.schema.yaml": "c3c036501bad66e54729d93449ea4d6bfb881d2cb87bedb3c17300f26f178d58",
+    "yoyo-yx-word.dict.yaml": "703b60c094f9acebfaa31fc252d8809ed0af8a05a0b94edfc94866bcd9548284",
+    "yoyo-yx.dict.yaml": "d16e2395655132b8fc00ab3a05023ad46e6bbdaa517f20a7017a2f22067339e5",
+    "yoyo-yx.schema.yaml": "4e77d96fdf6bc87a7b4610b2c59e244b1ba5e385aae4e7d2f1eae1c4245c6751",
+    "yoyo.yaml": "c1df2b6e519503c3f5e9e12cd2615de10b9790308b71a10c4ad11aa0a3809361",
+    "yoyo_kf.dict.yaml": "304d5f170e35c4a4f3b385bd9e48690356085f38a06e7ec45d4ac6fc7183bb36"
+  },
+  "formatVersion": 1,
+  "notice": "licenses/yoyo-SOURCE.md",
+  "schemas": [
+    "yoyo-yx",
+    "yoyo-yx-hm"
+  ],
+  "source": "https://github.com/Rayalizing/yoyo/tree/2f9dcc86f04558282c185b7c712630a311b8513b"
+}

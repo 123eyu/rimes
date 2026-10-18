@@ -1,0 +1,59 @@
+{
+  "purpose": "public-codex-settings",
+  "schemaVersion": 1,
+  "sources": {
+    "Sources/RimeBuffer/SettingsWindow.swift": "f35caf505c825a1fa0ce237685febf9cf6fb5a132ee15df9a36dd2ccfd728830"
+  },
+  "states": [
+    {
+      "button": "登录 Codex",
+      "copyLink": false,
+      "credential": false,
+      "detail": "未找到具备所需 app-server 能力的 Codex CLI",
+      "feedback": "",
+      "ready": false,
+      "running": false,
+      "state": "missing"
+    },
+    {
+      "button": "登录 Codex",
+      "copyLink": false,
+      "credential": false,
+      "detail": "Codex 尚未完成 XSIME 专用的 ChatGPT 登录",
+      "feedback": "",
+      "ready": false,
+      "running": false,
+      "state": "signed-out"
+    },
+    {
+      "button": "重新授权 Codex",
+      "copyLink": false,
+      "credential": true,
+      "detail": "使用 XSIME 专用的 ChatGPT 登录；不会读取 ~/.codex 中的 MCP、工具、Hook 或技能。",
+      "feedback": "",
+      "ready": true,
+      "running": false,
+      "state": "ready"
+    },
+    {
+      "button": "取消登录",
+      "copyLink": true,
+      "credential": false,
+      "detail": "Codex 尚未完成 XSIME 专用的 ChatGPT 登录",
+      "feedback": "等待浏览器完成 ChatGPT 授权…",
+      "ready": false,
+      "running": true,
+      "state": "waiting"
+    },
+    {
+      "button": "登录 Codex",
+      "copyLink": false,
+      "credential": false,
+      "detail": "Codex 尚未完成 XSIME 专用的 ChatGPT 登录",
+      "feedback": "等待 Codex 登录超时，请重新发起授权。",
+      "ready": false,
+      "running": false,
+      "state": "failed"
+    }
+  ]
+}

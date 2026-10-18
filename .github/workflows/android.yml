@@ -7,6 +7,11 @@ on:
   push:
     branches: [main]
     paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'scripts/input-schemes/repair-rime-table.py', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
+  workflow_call:
+    inputs:
+      signed_release:
+        type: boolean
+        default: false
   workflow_dispatch:
 
 permissions:
@@ -123,6 +128,9 @@ jobs:
           adb -s emulator-5554 shell am instrument -w -r -e mode scheme-import -e archive /data/user/0/org.scholay.rimes.android.debug/cache/wanxiang-original.zip org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/scheme-import-emulator.log
           grep -Fq 'PASS real JNI import' .native/scheme-import-emulator.log
           grep -Fq 'INSTRUMENTATION_CODE: -1' .native/scheme-import-emulator.log
+          adb -s emulator-5554 shell am instrument -w -r -e mode app-update org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/app-update.log
+          grep -Fq 'PASS application update' .native/app-update.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/app-update.log
           adb -s emulator-5554 shell am instrument -w -r -e mode wubi org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/wubi-emulator.log
           grep -Fq 'PASS Wubi packaged JNI' .native/wubi-emulator.log
           grep -Fq 'INSTRUMENTATION_CODE: -1' .native/wubi-emulator.log
@@ -141,6 +149,7 @@ jobs:
             platforms/android/.native/engine-contract.log
             platforms/android/.native/emulator.log
             platforms/android/.native/scheme-import-emulator.log
+            platforms/android/.native/app-update.log
             platforms/android/.native/wubi-emulator.log
             platforms/android/.native/instrumentation-crash.log
             platforms/android/.native/instrumentation-logcat.log
@@ -158,3 +167,43 @@ jobs:
             platforms/android/app/build/outputs/bundle/release/*.aab
             platforms/android/app/build/reports/lint-results-release.*
           retention-days: 14
+
+  sign-release:
+    if: inputs.signed_release && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    environment: android-release
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Require the formal mainline version
+        run: |
+          git fetch --depth=1 origin main
+          test "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA"
+          test "$GITHUB_REF_NAME" = "v$(cat VERSION)"
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: RIMES-Android-UNSIGNED-release-check-${{ github.sha }}
+          path: ${{ runner.temp }}/android-unsigned
+      - uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Install signing tools
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "build-tools;36.0.0"'
+      - name: Sign the tested package with the existing production identity
+        env:
+          RIMES_ANDROID_KEYSTORE_BASE64: ${{ secrets.RIMES_ANDROID_KEYSTORE_BASE64 }}
+          RIMES_ANDROID_STORE_PASSWORD: ${{ secrets.RIMES_ANDROID_STORE_PASSWORD }}
+          RIMES_ANDROID_KEY_PASSWORD: ${{ secrets.RIMES_ANDROID_KEY_PASSWORD }}
+          RIMES_ANDROID_KEY_ALIAS: ${{ secrets.RIMES_ANDROID_KEY_ALIAS }}
+        run: python3 scripts/release/sign-android-ci.py
+      - name: Retain signed application packages
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: RIMES-Android-release-${{ github.sha }}
+          path: ${{ runner.temp }}/android-signed/*
+          if-no-files-found: error
+          retention-days: 30
