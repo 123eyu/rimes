@@ -42,15 +42,17 @@ namespace protocol = rimes::windows::core;
 // session instead of permanently giving up after one scheduler hiccup.
 constexpr ULONGLONG kConnectBudgetMillis = 2000;
 constexpr ULONGLONG kLaunchConnectBudgetMillis = 15000;
-// Daily-use first key after a cold Broker page-in, plus hosted CI VMs, can
-// exceed a 20 ms budget even when the engine is healthy. Keep this short
-// enough that a hung Broker still fail-opens.
-constexpr ULONGLONG kKeyBudgetMillis = 80;
+// Cold engine pages and the first user-dictionary commit can exceed 80 ms on
+// 32-bit hosts. That deadline disconnected a healthy Broker and lost candidate
+// selection. This is a response ceiling, not a delay for ordinary keys: return
+// immediately on a reply, and still retire the connection without replay when
+// an unresponsive Broker exceeds the bounded allowance.
+constexpr ULONGLONG kKeyBudgetMillis = 200;
 // Closing an input session is acknowledged by the Broker worker. A 10 ms
 // deadline is shorter than a normal Windows scheduling quantum and spuriously
-// disconnects during host composition termination. Keep the same bounded
-// allowance as an ordinary key request; never replay a timed-out key.
-constexpr ULONGLONG kCloseBudgetMillis = kKeyBudgetMillis;
+// disconnects during host composition termination. Keep session retirement
+// bounded independently of engine processing; never replay a timed-out key.
+constexpr ULONGLONG kCloseBudgetMillis = 80;
 constexpr DWORD kConnectRetryMillis = 50;
 constexpr DWORD kBusyPipeWaitMillis = 200;
 
