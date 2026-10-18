@@ -1,6 +1,7 @@
 import Cocoa
 import Darwin
 import Security
+import CryptoKit
 
 // MARK: - GitHub Release models
 
@@ -257,6 +258,13 @@ final class UpdateManager {
     private let githubOwner = "scholay"
     private let githubRepo = "xsime"
 
+    static let changed = Notification.Name("XSIMEApplicationUpdateChanged")
+    private(set) var progress: Double = 0
+    private(set) var completionMessage: String?
+    private(set) var installationRequested = false
+    private var downloadObservation: NSKeyValueObservation?
+    private var expectedDigest: String?
+    private var expectedSize: Int64?
     private(set) var status: UpdateStatus = .idle
     /// Invoked on the main thread whenever `status` changes, so the status-bar
     /// menu can rebuild and reflect an available update.
@@ -288,9 +296,7 @@ final class UpdateManager {
                           delegateQueue: nil)
     }()
 
-    var currentVersion: String {
-        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
-    }
+    let currentVersion = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "0.0.0"
 
     /// The version the user can install right now, if any.
     var pendingVersion: String? {
@@ -316,6 +322,12 @@ final class UpdateManager {
     }
 
     private init() {
+        if let target = UserDefaults.standard.string(forKey: "applicationUpdateTarget"),
+           UpdateNetworkRules.stableVersionComponents(currentVersion) != nil,
+           currentVersion.compare(target, options: .numeric) != .orderedAscending {
+            completionMessage = "更新完成，当前版本 \(currentVersion)"
+            UserDefaults.standard.removeObject(forKey: "applicationUpdateTarget")
+        }
         if UserDefaults.standard.object(forKey: Self.autoCheckKey) == nil {
             autoCheckEnabled = true                 // opt-out, not opt-in
         } else {
@@ -388,79 +400,52 @@ final class UpdateManager {
 
     // MARK: - Networking (completion-based; results delivered on the main thread)
 
+    func checkFromSettings() {
+        guard !isBusy else { return }
+        checkForUpdates(completion: {})
+    }
+
+    func downloadFromSettings() {
+        guard case let .available(version, url, _) = status else { return }
+        downloadPackage(from: url, version: version, completion: { _ in })
+    }
+
     private func checkForUpdates(completion: @escaping () -> Void) {
         setStatus(.checking)
-        let urlString = UpdateNetworkRules.releaseAPI
-        guard let url = URL(string: urlString),
-              UpdateNetworkRules.isExactReleaseAPIURL(url,
-                                                       owner: githubOwner,
-                                                       repository: githubRepo) else {
-            setStatus(.error("无效的更新地址")); completion(); return
+        struct Manifest: Decodable {
+            struct Asset: Decodable { let url: String; let sha256: String; let size: Int64 }
+            let schemaVersion: Int
+            let version: String
+            let platforms: [String: Asset]
         }
-        var request = URLRequest(url: url)
-        request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-        request.setValue("RIMES/\(currentVersion)", forHTTPHeaderField: "User-Agent")
+        var request = URLRequest(url: URL(string: "https://github.com/scholay/xsime/releases/latest/download/update-manifest.json")!)
         request.timeoutInterval = 30
-
+        request.setValue("XSIME-updater/1", forHTTPHeaderField: "User-Agent")
         session.dataTask(with: request) { [weak self] data, response, error in
             self?.onMain {
                 guard let self else { return }
                 defer { completion() }
-                if let error {
-                    self.setStatus(.error("检查更新失败: \(error.localizedDescription)")); return
-                }
-                guard let http = response as? HTTPURLResponse,
-                      let finalURL = http.url,
-                      UpdateNetworkRules.isExactReleaseAPIURL(finalURL,
-                                                               owner: self.githubOwner,
-                                                               repository: self.githubRepo),
-                      let data else {
-                    self.setStatus(.error("网络响应错误")); return
-                }
-                if http.statusCode == 404 {
-                    // No published release yet — treat as up-to-date, don't nag.
-                    self.lastCheckDate = Date()
-                    self.setStatus(.noUpdate); return
-                }
-                guard (200..<300).contains(http.statusCode) else {
-                    self.setStatus(.error("服务器错误: \(http.statusCode)")); return
-                }
+                if let error { self.setStatus(.error("检查更新失败：\(error.localizedDescription)")); return }
                 do {
-                    let release = try JSONDecoder().decode(GitHubRelease.self, from: data)
+                    guard let http = response as? HTTPURLResponse, http.statusCode == 200,
+                          let final = http.url, UpdateNetworkRules.isSafeHTTPSURL(final),
+                          let data, data.count <= 1024 * 1024 else { throw URLError(.badServerResponse) }
+                    let manifest = try JSONDecoder().decode(Manifest.self, from: data)
+                    guard manifest.schemaVersion == 1,
+                          UpdateNetworkRules.stableVersionComponents(manifest.version) != nil,
+                          let asset = manifest.platforms["macos"], let url = URL(string: asset.url),
+                          UpdateNetworkRules.isExactReleaseAssetURL(url, owner: self.githubOwner, repository: self.githubRepo, version: manifest.version),
+                          asset.sha256.range(of: "^[a-f0-9]{64}$", options: .regularExpression) != nil,
+                          asset.size > 0, asset.size <= Self.maximumPackageBytes else { throw URLError(.cannotParseResponse) }
                     self.lastCheckDate = Date()
-                    guard let latest = UpdateNetworkRules.stableVersion(fromTag: release.tagName) else {
-                        self.setStatus(.error("最新 Release 标签必须严格为 vX.Y.Z，已拒绝自动更新。"))
-                        return
-                    }
                     guard UpdateNetworkRules.stableVersionComponents(self.currentVersion) != nil else {
-                        self.setStatus(.error("当前构建的版本号不是稳定的 X.Y.Z 格式，无法安全比较更新。请从官方 Releases 页安装签名版本。"))
-                        return
+                        self.setStatus(.error("当前是开发构建，请从官方 Releases 安装正式版。")); return
                     }
-                    guard self.isNewerVersion(latest, than: self.currentVersion) else {
-                        self.setStatus(.noUpdate); return
-                    }
-                    guard let expectedAssetName = UpdateNetworkRules.expectedPackageName(version: latest) else {
-                        self.setStatus(.error("最新 Release 版本号无效，已拒绝自动更新。"))
-                        return
-                    }
-                    let matchingAssets = release.assets.filter { $0.name == expectedAssetName }
-                    guard matchingAssets.count == 1,
-                          let asset = matchingAssets.first,
-                          let assetURL = URL(string: asset.browserDownloadUrl),
-                          UpdateNetworkRules.isExactReleaseAssetURL(assetURL,
-                                                                    owner: self.githubOwner,
-                                                                    repository: self.githubRepo,
-                                                                    version: latest) else {
-                        self.setStatus(.error("最新 Release 必须唯一提供精确资产 \(expectedAssetName)，且下载地址必须来自官方 GitHub Release。"))
-                        return
-                    }
-                    IMELog.write("update: \(self.currentVersion) -> \(latest) available")
-                    self.setStatus(.available(version: latest,
-                                              downloadUrl: assetURL.absoluteString,
-                                              notes: release.body ?? ""))
-                } catch {
-                    self.setStatus(.error("解析 Release 失败: \(error.localizedDescription)"))
-                }
+                    guard self.isNewerVersion(manifest.version, than: self.currentVersion) else { self.setStatus(.noUpdate); return }
+                    self.expectedDigest = asset.sha256; self.expectedSize = asset.size
+                    self.installationRequested = false
+                    self.setStatus(.available(version: manifest.version, downloadUrl: asset.url, notes: ""))
+                } catch { self.setStatus(.error("无法读取完整发布的更新信息，请稍后重试：\(error.localizedDescription)")) }
             }
         }.resume()
     }
@@ -521,7 +506,7 @@ final class UpdateManager {
                                         expectedPackageName: String,
                                         version: String,
                                         completion: @escaping (Bool) -> Void) {
-        session.downloadTask(with: request) { [weak self] tempURL, response, error in
+        let task = session.downloadTask(with: request) { [weak self] tempURL, response, error in
             // IMPORTANT: URLSession deletes `tempURL` as soon as this handler
             // returns, so move it synchronously here (on the background thread)
             // BEFORE hopping to main for the status update.
@@ -565,6 +550,13 @@ final class UpdateManager {
             }
 
             DispatchQueue.global(qos: .userInitiated).async {
+                guard let expectedDigest = self.expectedDigest, let expectedSize = self.expectedSize,
+                      let data = try? Data(contentsOf: destination, options: .mappedIfSafe), Int64(data.count) == expectedSize,
+                      SHA256.hash(data: data).map({ String(format: "%02x", $0) }).joined() == expectedDigest else {
+                    try? FileManager.default.removeItem(at: stagingDirectory)
+                    self.onMain { self.setStatus(.error("下载包的大小或 SHA-256 不匹配，请重新下载。")); completion(false) }
+                    return
+                }
                 if let failure = self.packageVerificationFailure(at: destination,
                                                                  version: version) {
                     try? FileManager.default.removeItem(at: stagingDirectory)
@@ -582,7 +574,15 @@ final class UpdateManager {
                     completion(true)
                 }
             }
-        }.resume()
+        }
+        progress = 0
+        downloadObservation = task.progress.observe(\.fractionCompleted, options: [.new]) { [weak self] value, _ in
+            self?.onMain {
+                self?.progress = value.fractionCompleted
+                NotificationCenter.default.post(name: Self.changed, object: self)
+            }
+        }
+        task.resume()
     }
 
     // MARK: - Install (delegated to macOS Installer)
@@ -619,12 +619,14 @@ final class UpdateManager {
             }
 
             self.onMain {
+                UserDefaults.standard.set(version, forKey: "applicationUpdateTarget")
                 guard NSWorkspace.shared.open(package) else {
                     let message = "macOS 无法打开已验证的安装包。请从官方 Releases 页重新下载最新签名版本。"
                     self.setStatus(.error(message))
                     self.showUpdateFailure(title: "无法打开系统安装器", message: message)
                     return
                 }
+                self.installationRequested = true
                 IMELog.write("update: handed verified package v\(version) to macOS Installer")
                 // NSWorkspace reports only that Installer was opened, not
                 // whether its wizard eventually completed. Keep the verified
@@ -647,6 +649,7 @@ final class UpdateManager {
         guard new != status else { return }
         status = new
         onChange?()
+        NotificationCenter.default.post(name: Self.changed, object: self)
     }
 
     private func onMain(_ block: @escaping () -> Void) {

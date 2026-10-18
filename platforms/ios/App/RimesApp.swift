@@ -61,6 +61,7 @@ struct HomeView: View {
                 }
                 Section {
                     NavigationLink { DataManagementView() } label: { Label(L("数据管理", "Data management"), systemImage: "externaldrive") }
+                    NavigationLink { StoreUpdateView() } label: { Label(L("检查更新", "Software update"), systemImage: "arrow.down.circle") }
                     NavigationLink(L("隐私与第三方许可", "Privacy & licenses")) { PrivacyView() }
                     Text("\(ProductBrand.name) " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0")).font(.caption).foregroundStyle(.secondary)
                 } footer: {
@@ -374,5 +375,81 @@ struct PrivacyView: View {
             }
             Section(L("第三方声明", "Third-party notices")) { Text(Bundle.main.url(forResource:"THIRD_PARTY",withExtension:"txt").flatMap { try? String(contentsOf:$0,encoding:.utf8) } ?? L("许可文件缺失", "License file missing")).font(.caption).textSelection(.enabled) }
         }.navigationTitle(L("隐私与许可", "Privacy & licenses"))
+    }
+}
+
+/// App Store is the only installer for the production iOS application.
+private struct StoreUpdateView: View {
+    @Environment(\.openURL) private var openURL
+    @State private var checking = false
+    @State private var available: String?
+    @State private var message = ""
+    private var current: String { Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.0.0" }
+    private var testFlight: Bool { Bundle.main.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" }
+    var body: some View {
+        Form {
+            Section {
+                LabeledContent(L("当前版本", "Current version"), value: current)
+                if !message.isEmpty { Text(message).foregroundStyle(.secondary).accessibilityIdentifier("update.status") }
+                if checking { ProgressView() }
+                Button(L("检查更新", "Check for updates")) { Task { await check() } }.disabled(checking)
+                    .accessibilityIdentifier("update.check")
+                if let available {
+                    Button(L("前往 App Store 更新至 \(available)", "Update to \(available) in App Store")) {
+                        UserDefaults.standard.set(available, forKey: "storeUpdateTarget")
+                        openURL(URL(string: "https://apps.apple.com/app/id6814620242")!) { accepted in
+                            message = accepted ? L("请在 App Store 完成下载与安装，然后重新打开应用。", "Download and install in App Store, then reopen the app.") : L("无法打开 App Store，请重试。", "Could not open App Store. Try again.")
+                        }
+                    }.accessibilityIdentifier("update.install")
+                }
+                if testFlight {
+                    Button(L("打开 TestFlight", "Open TestFlight")) { openURL(URL(string: "https://testflight.apple.com/join/Kdj9RB4q")!) }
+                    Text(L("这是测试渠道，测试版本更新由 TestFlight 管理。", "TestFlight manages updates for this testing channel."))
+                }
+            } footer: {
+                Text(L("iOS 更新由 Apple 商店下载和安装，保留现有设置、方案及学习记录。", "Apple downloads and installs iOS updates, preserving settings, schemes and learned words."))
+            }
+        }.navigationTitle(L("应用更新", "Software update"))
+            .onAppear {
+                if let target = UserDefaults.standard.string(forKey: "storeUpdateTarget"),
+                   current.compare(target, options: .numeric) != .orderedAscending {
+                    message = L("更新完成，当前版本 \(current)", "Update complete. Version \(current)")
+                    UserDefaults.standard.removeObject(forKey: "storeUpdateTarget")
+                }
+            }
+    }
+    @MainActor private func check() async {
+        checking = true; available = nil
+        defer { checking = false }
+        do {
+            var url = URLComponents(string: "https://itunes.apple.com/lookup")!
+            url.queryItems = [URLQueryItem(name: "id", value: "6814620242"),
+                             URLQueryItem(name: "country", value: Locale.current.region?.identifier ?? "US")]
+            var request = URLRequest(url: url.url!, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 25)
+            request.setValue("application/json", forHTTPHeaderField: "Accept")
+            let (data, response) = try await URLSession.shared.data(for: request)
+            guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.count <= 1024 * 1024 else { throw URLError(.badServerResponse) }
+            struct Lookup: Decodable {
+                struct App: Decodable { let trackId: Int; let bundleId: String; let version: String; let minimumOsVersion: String }
+                let results: [App]
+            }
+            let result = try JSONDecoder().decode(Lookup.self, from: data)
+            guard let app = result.results.first(where: { $0.trackId == 6814620242 && $0.bundleId == "org.scholay.rimes.ios" }) else {
+                message = L("当前地区暂未查到商店版本，请在 App Store 查看。", "No listing was found for this region. Check App Store.")
+                return
+            }
+            guard app.version.range(of: #"^\d+\.\d+\.\d+$"#, options: .regularExpression) != nil else { throw URLError(.cannotParseResponse) }
+            guard UIDevice.current.systemVersion.compare(app.minimumOsVersion, options: .numeric) != .orderedAscending else {
+                message = L("新版本需要 iOS \(app.minimumOsVersion) 或更新系统。", "The update requires iOS \(app.minimumOsVersion) or later."); return
+            }
+            if app.version.compare(current, options: .numeric) == .orderedDescending {
+                available = app.version
+                message = L("发现商店新版本 \(app.version)", "App Store version \(app.version) is available")
+            } else {
+                message = L("当前已是最新商店版本（商店 \(app.version)）。", "Up to date with App Store (\(app.version)).")
+            }
+        } catch {
+            message = L("检查失败，可重试：", "Check failed. Try again: ") + error.localizedDescription
+        }
     }
 }

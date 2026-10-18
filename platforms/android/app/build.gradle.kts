@@ -12,6 +12,7 @@ require(releaseCredentials.values.all { it.isNullOrBlank() } || hasReleaseSignin
     "Supply all four RIMES_ANDROID signing environment variables, or none for an unsigned build"
 }
 android {
+    buildFeatures { buildConfig = true }
     testBuildType = providers.gradleProperty("rimesTestBuildType").getOrElse("debug")
     namespace = "org.scholay.rimes.android"
     compileSdk { version = release(37) { minorApiLevel = 2 } }

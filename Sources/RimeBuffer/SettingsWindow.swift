@@ -4743,6 +4743,9 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             ])
         }
         return contentColumn([
+            sectionLabel("应用更新"),
+            ApplicationUpdateSettingsView(),
+            spacer(12),
             sectionLabel("运行状态"),
             runtimeButtons,
             spacer(12),

@@ -243,6 +243,7 @@ public final class SetupActivity extends Activity {
         row(more,KeyboardIcon.STACK_LAYERS,t("数据管理","Data management"),null,null,"settings.home.data",() -> navigate("data"));
         row(more,KeyboardIcon.BOOK,t("隐私与第三方许可","Privacy & third-party licenses"),null,null,"settings.home.privacy",() -> navigate("privacy"));
         row(more,KeyboardIcon.SETTINGS,t("Android 功能进度","Android feature status"),null,null,"settings.home.differences",() -> navigate("differences"));
+        row(more,KeyboardIcon.SETTINGS,t("检查更新","Software update"),null,null,"settings.home.update",() -> startActivity(new Intent(this, AppUpdateActivity.class)));
         String version;
         try { version=getPackageManager().getPackageInfo(getPackageName(),0).versionName; }
         catch(android.content.pm.PackageManager.NameNotFoundException error) { version=t("开发版","Development"); }

@@ -77,9 +77,9 @@
 | 密码 | `builtin.capsule.passwords` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 资源 | `builtin.capsule.resources` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 临时 | `builtin.capsule.temporary` | 1.1.0 | 随 XSIME 预装 | 启用 |
-| Claude | `builtin.claude-code-cli` | 1.1.0 | 设置中按需下载 | 禁用 |
-| ChatGPT | `builtin.codex-cli` | 1.1.1 | 设置中按需下载 | 禁用 |
-| 并击 | `builtin.fly-chord-learning` | 2.0.0 | 随 XSIME 预装 | 禁用 |
+| Claude | `builtin.claude-code-cli` | 1.2.0 | 设置中按需下载 | 禁用 |
+| ChatGPT | `builtin.codex-cli` | 1.2.0 | 设置中按需下载 | 禁用 |
+| 并击 | `builtin.fly-chord-learning` | 2.1.0 | 随 XSIME 预装 | 禁用 |
 | LaTeX | `builtin.latex` | 1.1.0 | 设置中按需下载 | 禁用 |
 | 对话 | `builtin.mailbox.chat` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 收件 | `builtin.mailbox.inbox` | 1.1.0 | 随 XSIME 预装 | 启用 |
@@ -89,9 +89,9 @@
 | AI API | `builtin.openai-compatible` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Polisher | `builtin.polisher` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Reference | `builtin.scholay` | 0.1.0 | 设置中按需下载 | 禁用 |
-| 统计 | `builtin.statistics` | 2.0.1 | 随 XSIME 预装 | 启用 |
+| 统计 | `builtin.statistics` | 2.1.0 | 随 XSIME 预装 | 启用 |
 | 意识流输入 | `builtin.stream-input` | 1.4.0 | 随 XSIME 预装 | 启用 |
-| 打字测速 | `builtin.typing-speed` | 2.0.1 | 随 XSIME 预装 | 启用 |
+| 打字测速 | `builtin.typing-speed` | 2.1.0 | 随 XSIME 预装 | 启用 |
 
 预装插件在全新安装后按默认状态启用；选装插件下载后需手动启用。升级时保留已有插件状态。
 <!-- END PRESET BUFFER PLUGINS -->

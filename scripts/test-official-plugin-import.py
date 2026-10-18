@@ -18,6 +18,7 @@ class PluginImportTests(unittest.TestCase):
         self.source = self.root / "OfficialPlugins"
         self.source.mkdir()
         for name, contents in {"native/macos/Test.swift": "initial source\n", "VERSION": "1.1.0\n", "LICENSE": "license",
+                               "LICENSES/Swift-Apache-2.0.txt": "swift license", "LICENSES/Swift-Runtime-Library-Exception.txt": "runtime exception",
                                "NOTICE": "notice", "LICENSES/MIT-legacy.txt": "legacy",
                                "THIRD_PARTY_NOTICES.md": "provenance"}.items():
             path = self.source / name
