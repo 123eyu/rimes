@@ -220,7 +220,11 @@ void RunCaptureSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, 
     capture_timer=instance.eventLoop().addTimeEvent(CLOCK_MONOTONIC,fcitx::now(CLOCK_MONOTONIC)+20000,20000,
         [&,frontend,uuid,ic,dump_path,state,deadline](fcitx::EventSourceTime* timer,uint64_t) {
             try {
-                if(std::chrono::steady_clock::now()>deadline) Die("capture timeout phase "+std::to_string(state->phase));
+                if(std::chrono::steady_clock::now()>deadline) {
+                    const auto last = nlohmann::json::parse(ReadDump(dump_path));
+                    Die("capture timeout phase " + std::to_string(state->phase) +
+                        " loading=" + last.at("loading").dump() + " hint=" + last.at("hint").get<std::string>());
+                }
                 char buffer[65536];while(recv(state->fd,buffer,sizeof(buffer),MSG_DONTWAIT)>0) {}
                 auto send=[&](nlohmann::json command) {
                     command["v"]=1;std::string frame;EncodeFrame(command.dump(),&frame);
@@ -248,6 +252,9 @@ void RunCaptureSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend, 
                     CaptureStore archive(CaptureStore::DefaultRoot());state->image=*archive.Get(state->image.id);
                     ContentStore library(ContentStore::DefaultRoot());Record saved;std::string error;
                     if(library.Get(state->image.id,&saved,&error)!=StoreStatus::Ok || saved.content!=archive.File(state->image)) Die("capture favorite missing permanent entry");
+                    // Reproduce a queued file-watcher refresh between the displayed
+                    // favorite and the user's remove click. CAS still owns the action.
+                    send({{"op","manage"}});
                     send({{"op","remove"},{"id",state->image.id},{"revision",state->image.revision}});state->phase=6;break;
                 }
                 case 6:

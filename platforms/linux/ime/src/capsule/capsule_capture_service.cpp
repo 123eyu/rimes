@@ -5,8 +5,11 @@ namespace fcitx {
 bool CapsuleService::CaptureAction(const std::string& action) {
     using namespace rimes::capsule;
     if (!AllowsModule() || !model_.visible() || model_.module() != Module::Capture ||
-        model_.loading() || !model_.Selected())
+        !model_.Selected())
         return false;
+    // A queued storage refresh may begin after the user clicked the displayed
+    // card. Its identity/revision still belongs to that intent; the store CAS
+    // rejects stale records. Loading must not silently discard the action.
     const auto card = *model_.Selected();
     Publish();
     if (history_action_cancel_)
