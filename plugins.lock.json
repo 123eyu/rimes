@@ -5,7 +5,7 @@
     "LICENSES/Swift-Apache-2.0.txt": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
     "NOTICE": "65716b456fd7bc8d3c1ef7d692451c86561f38ef07b0c9f231f91911b7ef8e6c",
     "THIRD_PARTY_NOTICES.md": "0c0366f3790ff932345169605a2e0405810316eec86ccccdc3be78ecb928cc58",
-    "VERSION": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8",
+    "VERSION": "2f66e2158a2645e2455e374272c8deb113173dca586f9159f813519a50436c32",
     "native/android-core/ChordData.java": "af151f0d00e62e61ee8ea45fc994d4ad40a3bc29ddd33631ad6e3d3dea1cdd1c",
     "native/android-core/ChordGesture.java": "05b3c674a96feb58859c00b396593928d46267d873bbae2ab14669ef0d9dd875",
     "native/android-core/ChordLayout.java": "b919fcba68087a3dff166865e60abb2ee680d1ea4f53dbbe3c4e7ec8897c3372",
@@ -116,6 +116,6 @@
     "source-map.json": "17ce4cc62bd0d2aeb0fcb58d954630de7f3c346577ffbc8d29cc85297928fc58"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "b943b944530d0938af19f42ffd2bd6ecfa87a21f",
+  "revision": "275b57dd9b25965c6a3d2bfb929c0307dcad406f",
   "schemaVersion": 1
 }
