@@ -10,7 +10,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
-import android.widget.TextView;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -35,14 +34,6 @@ final class AppUpdateContract {
         }
     }
 
-    private static boolean text(View view, String expected) {
-        if (view instanceof TextView && ((TextView) view).getText().toString().contains(expected)) return true;
-        if (view instanceof ViewGroup) {
-            ViewGroup group = (ViewGroup) view;
-            for (int i = 0; i < group.getChildCount(); i++) if (text(group.getChildAt(i), expected)) return true;
-        }
-        return false;
-    }
     private static boolean controlsDisabled(View view) {
         if (view instanceof Button) {
             String label = ((Button) view).getText().toString();
@@ -56,10 +47,15 @@ final class AppUpdateContract {
     }
     private static void awaitText(Instrumentation instrumentation, Activity activity, String expected) throws Exception {
         long deadline = SystemClock.uptimeMillis() + 15000;
-        AtomicBoolean found = new AtomicBoolean();
         while (SystemClock.uptimeMillis() < deadline) {
-            instrumentation.runOnMainSync(() -> found.set(text(activity.getWindow().getDecorView(), expected)));
-            if (found.get()) return;
+            // Installation crosses an app boundary. Assert what the user can
+            // actually see, not a retained Activity's potentially hidden view.
+            AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
+            if (root != null && activity.getPackageName().contentEquals(root.getPackageName() == null ? "" : root.getPackageName())) {
+                for (AccessibilityNodeInfo node : root.findAccessibilityNodeInfosByText(expected)) {
+                    if (node.isVisibleToUser() && node.getText() != null && node.getText().toString().contains(expected)) return;
+                }
+            }
             SystemClock.sleep(100);
         }
         throw new AssertionError("Missing updater state: " + expected + "; activity destroyed=" + activity.isDestroyed()
