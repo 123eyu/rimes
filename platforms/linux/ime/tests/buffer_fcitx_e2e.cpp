@@ -1,4 +1,5 @@
 #include <chrono>
+#include <cerrno>
 #include <cstdlib>
 #include <cstring>
 #include <exception>
@@ -11,6 +12,7 @@
 #include <string>
 #include <sys/socket.h>
 #include <sys/un.h>
+#include <thread>
 #include <unistd.h>
 #include <vector>
 
@@ -202,30 +204,51 @@ void AfterUs(SuiteCtx ctx, int delay_us, std::function<void(SuiteCtx)> fn) {
 }
 
 void SendBufferOp(const char* op, std::string_view text = {}) {
+    // Match the production UI: retain the connection and consume snapshots.
+    // Closing immediately after send races the host's initial Publish(), which
+    // may observe EPIPE and retire this peer before its request is dispatched.
+    struct ProbeSocket {
+        int fd = -1;
+        std::thread drain;
+        ~ProbeSocket() {
+            if (fd < 0) return;
+            shutdown(fd, SHUT_RDWR);
+            if (drain.joinable()) drain.join();
+            close(fd);
+        }
+    };
+    static ProbeSocket peer;
     const char* path = std::getenv("RIMES_BUFFER_SOCKET");
     if (path == nullptr || path[0] == '\0') {
         Die("RIMES_BUFFER_SOCKET is missing");
     }
-    const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    if (fd < 0) {
-        Die("could not open the Buffer socket");
-    }
-    sockaddr_un address{};
-    address.sun_family = AF_UNIX;
-    std::strncpy(address.sun_path, path, sizeof(address.sun_path) - 1);
-    if (connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
-        close(fd);
-        Die("could not connect to the Buffer socket");
+    if (peer.fd < 0) {
+        const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+        if (fd < 0) Die("could not open the Buffer socket");
+        sockaddr_un address{};
+        address.sun_family = AF_UNIX;
+        std::strncpy(address.sun_path, path, sizeof(address.sun_path) - 1);
+        if (connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) != 0) {
+            close(fd);
+            Die("could not connect to the Buffer socket");
+        }
+        peer.fd = fd;
+        peer.drain = std::thread([fd] {
+            char buffer[8192];
+            for (;;) {
+                const auto count = recv(fd, buffer, sizeof(buffer), 0);
+                if (count > 0 || (count < 0 && errno == EINTR)) continue;
+                break;
+            }
+        });
     }
     const std::string json = std::string("{\"v\":1,\"op\":\"") + op + "\"" +
         (text.empty() ? "" : (std::string(op) == "select_plugin" ? ",\"id\":" : ",\"text\":") + rimes::buffer::JsonEscape(text)) + "}";
     std::string frame;
     if (!rimes::buffer::EncodeFrame(json, &frame) ||
-        send(fd, frame.data(), frame.size(), MSG_NOSIGNAL) != static_cast<ssize_t>(frame.size())) {
-        close(fd);
+        send(peer.fd, frame.data(), frame.size(), MSG_NOSIGNAL) != static_cast<ssize_t>(frame.size())) {
         Die(std::string("could not send Buffer op ") + op);
     }
-    close(fd);
 }
 
 void DrainStaged(fcitx::AddonInstance* frontend, const fcitx::ICUUID& uuid,
