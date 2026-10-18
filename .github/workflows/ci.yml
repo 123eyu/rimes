@@ -605,12 +605,14 @@ jobs:
       - name: Build (debug)
         run: swift build
 
-      - name: Export native gateway settings for Linux contract review
+      - name: Export native settings for Linux contract review
         run: |
           BIN="$(swift build --show-bin-path)/RimeBuffer"
-          "$BIN" gateway-settings-render "$RUNNER_TEMP/native-gateway-settings"
+          "$BIN" gateway-settings-render "$RUNNER_TEMP/native-gateway-settings/gateway"
+          "$BIN" codex-settings-render "$RUNNER_TEMP/native-gateway-settings/codex"
+          "$BIN" claude-settings-render "$RUNNER_TEMP/native-gateway-settings/claude"
 
-      - name: Save native gateway settings contract and renderings
+      - name: Save native settings contracts and renderings
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
           name: native-gateway-settings-${{ github.sha }}
