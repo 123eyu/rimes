@@ -9,6 +9,7 @@
 #include "claude_channel.hpp"
 #include "chord_editor.hpp"
 #include "chord_core.hpp"
+#include "statistics_pane.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -31,8 +32,11 @@ struct Settings {
                         BundledPackages(), CompiledAdapters(),
                         RIMES_PRODUCT_VERSION};
   Json saved = config.Load();
-  Json routes = [] { auto value = Visuals().at("routes"); value.push_back(rimes::chord::Contract().at("route")); return value; }();
+  Json routes = [] { auto value = Visuals().at("routes"); value.push_back(rimes::chord::Contract().at("route"));
+    value.push_back({{"id", "extension.statistics"}, {"title", "统计"}, {"icon", "chart.bar.xaxis"}, {"group", "extensions"},
+                    {"subpages", Json::array({{"daily", "每日"}, {"history", "历史"}})}}); return value; }();
   std::unique_ptr<ChordPane> chord_pane;
+  std::unique_ptr<StatisticsPane> statistics_pane;
   GtkWidget *window = nullptr, *root = nullptr, *content = nullptr,
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
@@ -72,6 +76,7 @@ struct Settings {
   ~Settings() {
     alive->store(false);
     chord_pane.reset();
+    statistics_pane.reset();
     codex_worker.Shutdown();
     claude_worker.Shutdown();
 #ifdef RIMES_GATEWAY_CLIPBOARD
@@ -144,6 +149,7 @@ struct Settings {
                        auto *self = static_cast<Settings *>(p);
                        self->alive->store(false);
                        self->chord_pane.reset();
+                       self->statistics_pane.reset();
                        self->window = nullptr;
                        if (!self->rendering && !self->application_window)
                          gtk_main_quit();
@@ -227,6 +233,7 @@ struct Settings {
   void Select(std::string next, const std::string &page = "") {
     if (chord_pane && !chord_pane->CanLeave()) return;
     chord_pane.reset();
+    statistics_pane.reset();
     StopShortcutRecording();
 #ifdef RIMES_GATEWAY_CLIPBOARD
     if (gateway_clipboard) gateway_clipboard->CancelWrites();
@@ -290,6 +297,10 @@ struct Settings {
       chord_pane = std::make_unique<ChordPane>(GTK_WINDOW(window), subpage, rendering,
           [this] { saved = config.Load(); });
       Add(body, chord_pane->Widget());
+    } else if (route == "extension.statistics") {
+      statistics_pane = std::make_unique<StatisticsPane>(GTK_WINDOW(window), subpage, saved.at("theme"), rendering,
+          Json::object(), [this] { saved = config.Load(); });
+      Add(body, statistics_pane->Widget());
     } else if (route == "core.plugins")
       Plugins(body);
     else if (route == "core.connectors" && subpage == "ai-model")
@@ -1495,6 +1506,13 @@ int SettingsSmoke() {
       if (!value)
         throw std::runtime_error("UI state mismatch");
     };
+    phase = "statistics navigation";
+    app.Select("extension.statistics");
+    check(app.subpage == "daily" && app.statistics_pane != nullptr);
+    control("记录键频");
+    app.Select("extension.statistics", "history");
+    check(app.subpage == "history" && app.statistics_pane != nullptr);
+    control("记录日常输入");
     phase = "buffer";
     app.Select("core.buffer");
     gtk_switch_set_active(GTK_SWITCH(control("最后一块上屏后关闭工作台")),

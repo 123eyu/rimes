@@ -1,0 +1,439 @@
+{
+  "activity" : {
+    "days" : {
+      "2026-10-04" : {
+        "activeSeconds" : 74.349999904632568,
+        "chordCount" : 14,
+        "committedCharacterCount" : 100,
+        "keyCount" : 100,
+        "sessionCount" : 1
+      },
+      "2026-10-05" : {
+        "activeSeconds" : 51.25,
+        "chordCount" : 11,
+        "committedCharacterCount" : 60,
+        "keyCount" : 83,
+        "sessionCount" : 1
+      },
+      "2026-10-06" : {
+        "activeSeconds" : 32.5,
+        "chordCount" : 9,
+        "committedCharacterCount" : 32,
+        "keyCount" : 66,
+        "sessionCount" : 1
+      },
+      "2026-10-07" : {
+        "activeSeconds" : 42.150000095367432,
+        "chordCount" : 7,
+        "committedCharacterCount" : 48,
+        "keyCount" : 49,
+        "sessionCount" : 1
+      },
+      "2026-10-08" : {
+        "activeSeconds" : 69.75,
+        "chordCount" : 13,
+        "committedCharacterCount" : 69,
+        "keyCount" : 94,
+        "sessionCount" : 1
+      },
+      "2026-10-09" : {
+        "activeSeconds" : 47.650000095367432,
+        "chordCount" : 11,
+        "committedCharacterCount" : 38,
+        "keyCount" : 77,
+        "sessionCount" : 1
+      },
+      "2026-10-10" : {
+        "activeSeconds" : 29.599999904632568,
+        "chordCount" : 8,
+        "committedCharacterCount" : 60,
+        "keyCount" : 60,
+        "sessionCount" : 1
+      },
+      "2026-10-11" : {
+        "activeSeconds" : 91.150000095367432,
+        "chordCount" : 15,
+        "committedCharacterCount" : 78,
+        "keyCount" : 105,
+        "sessionCount" : 1
+      },
+      "2026-10-12" : {
+        "activeSeconds" : 65.349999904632568,
+        "chordCount" : 12,
+        "committedCharacterCount" : 44,
+        "keyCount" : 88,
+        "sessionCount" : 1
+      },
+      "2026-10-13" : {
+        "activeSeconds" : 43.75,
+        "chordCount" : 10,
+        "committedCharacterCount" : 68,
+        "keyCount" : 71,
+        "sessionCount" : 1
+      },
+      "2026-10-15" : {
+        "activeSeconds" : 85.75,
+        "chordCount" : 14,
+        "committedCharacterCount" : 48,
+        "keyCount" : 99,
+        "sessionCount" : 1
+      },
+      "2026-10-16" : {
+        "activeSeconds" : 0,
+        "chordCount" : 0,
+        "committedCharacterCount" : 0,
+        "keyCount" : 1,
+        "sessionCount" : 1
+      },
+      "2026-10-17" : {
+        "activeSeconds" : 40,
+        "chordCount" : 9,
+        "committedCharacterCount" : 48,
+        "keyCount" : 65,
+        "sessionCount" : 1
+      },
+      "2026-10-18" : {
+        "activeSeconds" : 23.599999904632568,
+        "chordCount" : 6,
+        "committedCharacterCount" : 24,
+        "keyCount" : 48,
+        "sessionCount" : 1
+      }
+    },
+    "sessions" : [
+      {
+        "activeSeconds" : 74.349999904632568,
+        "chordCount" : 14,
+        "committedCharacterCount" : 100,
+        "dayKey" : "2026-10-04",
+        "endedAt" : 1791043274.3499999,
+        "keyCount" : 100,
+        "startedAt" : 1791043200
+      },
+      {
+        "activeSeconds" : 51.25,
+        "chordCount" : 11,
+        "committedCharacterCount" : 60,
+        "dayKey" : "2026-10-05",
+        "endedAt" : 1791129651.25,
+        "keyCount" : 83,
+        "startedAt" : 1791129600
+      },
+      {
+        "activeSeconds" : 32.5,
+        "chordCount" : 9,
+        "committedCharacterCount" : 32,
+        "dayKey" : "2026-10-06",
+        "endedAt" : 1791216032.5,
+        "keyCount" : 66,
+        "startedAt" : 1791216000
+      },
+      {
+        "activeSeconds" : 42.150000095367432,
+        "chordCount" : 7,
+        "committedCharacterCount" : 48,
+        "dayKey" : "2026-10-07",
+        "endedAt" : 1791302442.1500001,
+        "keyCount" : 49,
+        "startedAt" : 1791302400
+      },
+      {
+        "activeSeconds" : 69.75,
+        "chordCount" : 13,
+        "committedCharacterCount" : 69,
+        "dayKey" : "2026-10-08",
+        "endedAt" : 1791388869.75,
+        "keyCount" : 94,
+        "startedAt" : 1791388800
+      },
+      {
+        "activeSeconds" : 47.650000095367432,
+        "chordCount" : 11,
+        "committedCharacterCount" : 38,
+        "dayKey" : "2026-10-09",
+        "endedAt" : 1791475247.6500001,
+        "keyCount" : 77,
+        "startedAt" : 1791475200
+      },
+      {
+        "activeSeconds" : 29.599999904632568,
+        "chordCount" : 8,
+        "committedCharacterCount" : 60,
+        "dayKey" : "2026-10-10",
+        "endedAt" : 1791561629.5999999,
+        "keyCount" : 60,
+        "startedAt" : 1791561600
+      },
+      {
+        "activeSeconds" : 91.150000095367432,
+        "chordCount" : 15,
+        "committedCharacterCount" : 78,
+        "dayKey" : "2026-10-11",
+        "endedAt" : 1791648091.1500001,
+        "keyCount" : 105,
+        "startedAt" : 1791648000
+      },
+      {
+        "activeSeconds" : 65.349999904632568,
+        "chordCount" : 12,
+        "committedCharacterCount" : 44,
+        "dayKey" : "2026-10-12",
+        "endedAt" : 1791734465.3499999,
+        "keyCount" : 88,
+        "startedAt" : 1791734400
+      },
+      {
+        "activeSeconds" : 43.75,
+        "chordCount" : 10,
+        "committedCharacterCount" : 68,
+        "dayKey" : "2026-10-13",
+        "endedAt" : 1791820843.75,
+        "keyCount" : 71,
+        "startedAt" : 1791820800
+      },
+      {
+        "activeSeconds" : 85.75,
+        "chordCount" : 14,
+        "committedCharacterCount" : 48,
+        "dayKey" : "2026-10-15",
+        "endedAt" : 1791993685.75,
+        "keyCount" : 99,
+        "startedAt" : 1791993600
+      },
+      {
+        "activeSeconds" : 0,
+        "chordCount" : 0,
+        "committedCharacterCount" : 0,
+        "dayKey" : "2026-10-16",
+        "endedAt" : 1792080000,
+        "keyCount" : 1,
+        "startedAt" : 1792080000
+      },
+      {
+        "activeSeconds" : 40,
+        "chordCount" : 9,
+        "committedCharacterCount" : 48,
+        "dayKey" : "2026-10-17",
+        "endedAt" : 1792166440,
+        "keyCount" : 65,
+        "startedAt" : 1792166400
+      },
+      {
+        "activeSeconds" : 23.599999904632568,
+        "chordCount" : 6,
+        "committedCharacterCount" : 24,
+        "dayKey" : "2026-10-18",
+        "endedAt" : 1792252823.5999999,
+        "keyCount" : 48,
+        "startedAt" : 1792252800
+      }
+    ],
+    "updatedAt" : 1792300216.5787101,
+    "version" : 1
+  },
+  "day" : "2026-10-18",
+  "keys" : {
+    "days" : {
+      "2026-10-04" : {
+        "keys" : {
+          "Backspace" : 11,
+          "KeyA" : 11,
+          "KeyD" : 11,
+          "KeyF" : 11,
+          "KeyJ" : 11,
+          "KeyK" : 12,
+          "KeyL" : 11,
+          "KeyS" : 11,
+          "Space" : 11
+        }
+      },
+      "2026-10-05" : {
+        "keys" : {
+          "Backspace" : 9,
+          "KeyA" : 9,
+          "KeyD" : 10,
+          "KeyF" : 9,
+          "KeyJ" : 10,
+          "KeyK" : 9,
+          "KeyL" : 9,
+          "KeyS" : 9,
+          "Space" : 9
+        }
+      },
+      "2026-10-06" : {
+        "keys" : {
+          "Backspace" : 8,
+          "KeyA" : 7,
+          "KeyD" : 7,
+          "KeyF" : 8,
+          "KeyJ" : 7,
+          "KeyK" : 7,
+          "KeyL" : 7,
+          "KeyS" : 8,
+          "Space" : 7
+        }
+      },
+      "2026-10-07" : {
+        "keys" : {
+          "Backspace" : 5,
+          "KeyA" : 6,
+          "KeyD" : 6,
+          "KeyF" : 5,
+          "KeyJ" : 5,
+          "KeyK" : 6,
+          "KeyL" : 5,
+          "KeyS" : 5,
+          "Space" : 6
+        }
+      },
+      "2026-10-08" : {
+        "keys" : {
+          "Backspace" : 11,
+          "KeyA" : 10,
+          "KeyD" : 10,
+          "KeyF" : 10,
+          "KeyJ" : 11,
+          "KeyK" : 10,
+          "KeyL" : 11,
+          "KeyS" : 11,
+          "Space" : 10
+        }
+      },
+      "2026-10-09" : {
+        "keys" : {
+          "Backspace" : 8,
+          "KeyA" : 9,
+          "KeyD" : 8,
+          "KeyF" : 9,
+          "KeyJ" : 8,
+          "KeyK" : 9,
+          "KeyL" : 8,
+          "KeyS" : 9,
+          "Space" : 9
+        }
+      },
+      "2026-10-10" : {
+        "keys" : {
+          "Backspace" : 7,
+          "KeyA" : 7,
+          "KeyD" : 7,
+          "KeyF" : 6,
+          "KeyJ" : 7,
+          "KeyK" : 6,
+          "KeyL" : 7,
+          "KeyS" : 6,
+          "Space" : 7
+        }
+      },
+      "2026-10-11" : {
+        "keys" : {
+          "Backspace" : 12,
+          "KeyA" : 11,
+          "KeyD" : 11,
+          "KeyF" : 12,
+          "KeyJ" : 11,
+          "KeyK" : 12,
+          "KeyL" : 12,
+          "KeyS" : 12,
+          "Space" : 12
+        }
+      },
+      "2026-10-12" : {
+        "keys" : {
+          "Backspace" : 9,
+          "KeyA" : 10,
+          "KeyD" : 10,
+          "KeyF" : 10,
+          "KeyJ" : 10,
+          "KeyK" : 10,
+          "KeyL" : 10,
+          "KeyS" : 9,
+          "Space" : 10
+        }
+      },
+      "2026-10-13" : {
+        "keys" : {
+          "Backspace" : 8,
+          "KeyA" : 8,
+          "KeyD" : 8,
+          "KeyF" : 8,
+          "KeyJ" : 8,
+          "KeyK" : 8,
+          "KeyL" : 8,
+          "KeyS" : 8,
+          "Space" : 7
+        }
+      },
+      "2026-10-14" : {
+        "keys" : {
+          "Backspace" : 6,
+          "KeyA" : 6,
+          "KeyD" : 6,
+          "KeyF" : 6,
+          "KeyJ" : 6,
+          "KeyK" : 6,
+          "KeyL" : 6,
+          "KeyS" : 6,
+          "Space" : 6
+        }
+      },
+      "2026-10-15" : {
+        "keys" : {
+          "Backspace" : 11,
+          "KeyA" : 11,
+          "KeyD" : 11,
+          "KeyF" : 11,
+          "KeyJ" : 11,
+          "KeyK" : 11,
+          "KeyL" : 11,
+          "KeyS" : 11,
+          "Space" : 11
+        }
+      },
+      "2026-10-16" : {
+        "keys" : {
+          "Backspace" : 9,
+          "KeyA" : 9,
+          "KeyD" : 10,
+          "KeyF" : 9,
+          "KeyJ" : 9,
+          "KeyK" : 9,
+          "KeyL" : 9,
+          "KeyS" : 9,
+          "Space" : 9
+        }
+      },
+      "2026-10-17" : {
+        "keys" : {
+          "Backspace" : 8,
+          "KeyA" : 7,
+          "KeyD" : 7,
+          "KeyF" : 7,
+          "KeyJ" : 7,
+          "KeyK" : 7,
+          "KeyL" : 7,
+          "KeyS" : 8,
+          "Space" : 7
+        }
+      },
+      "2026-10-18" : {
+        "keys" : {
+          "Backspace" : 5,
+          "KeyA" : 6,
+          "KeyD" : 5,
+          "KeyF" : 5,
+          "KeyJ" : 5,
+          "KeyK" : 6,
+          "KeyL" : 5,
+          "KeyS" : 5,
+          "Space" : 6
+        }
+      }
+    },
+    "updatedAt" : 1792300216.5787029,
+    "version" : 1
+  },
+  "purpose" : "public-statistics-dashboard",
+  "timezone" : "Asia\/Tokyo",
+  "today" : 1792252800
+}

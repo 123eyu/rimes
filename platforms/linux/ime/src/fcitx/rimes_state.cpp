@@ -1,6 +1,7 @@
 #include "session/protected_input.hpp"
 #include "rimes_state.hpp"
 #include "chord/chord_service.hpp"
+#include "statistics/metrics_service.hpp"
 
 #include <cstdint>
 #include <string>
@@ -158,6 +159,8 @@ void RimesState::retireSession() {
 }
 
 void RimesState::cancelChord(bool fallback) {
+    metrics_chord_start_ = 0;
+    metrics_native_keys_ = metrics_native_releases_ = 0;
     ++chord_epoch_;
     chord_.Cancel();
     chord_down_.clear();
@@ -212,6 +215,16 @@ void RimesState::PublishChord(const rimes::linuxime::EngineSnapshot& snapshot) {
     KeyEvent update(ic_, Key(), false);
     ime_->buffer().AfterRime(ic_, update, true, composing(), snapshot.preedit, snapshot.raw_input);
 }
+void RimesState::ObserveNativeRelease(bool handled, bool last) {
+    if (handled) ++metrics_native_releases_;
+    if (!last) return;
+    if (metrics_chord_start_ && metrics_native_keys_ > 0 &&
+        metrics_native_releases_ == metrics_native_keys_ && ime_->metrics())
+        ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
+                               metrics_native_releases_);
+    metrics_chord_start_ = 0;
+    metrics_native_keys_ = metrics_native_releases_ = 0;
+}
 void RimesState::FlushChord() {
     if (chord_timer_)
         chord_timer_->setEnabled(false);
@@ -222,9 +235,13 @@ void RimesState::FlushChord() {
     const auto result = chord_.Flush(
         ime_->engine(), session_, ime_->chord()->Profile(),
         [this, lease, epoch, revision] { return ChordAuthority(epoch, revision, lease); });
-    if (result && ChordAuthority(epoch, revision, lease))
+    if (result && ChordAuthority(epoch, revision, lease)) {
+        if (chord_.LastBatchCount() && metrics_chord_start_ && ime_->metrics())
+            ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
+                                   static_cast<int>(chord_.LastBatchCount()));
+        metrics_chord_start_ = 0;
         PublishChord(*result);
-    else
+    } else
         cancelChord(false);
 }
 bool RimesState::prepareChord(KeyEvent& event) {
@@ -269,8 +286,10 @@ bool RimesState::prepareChord(KeyEvent& event) {
         if (chord_lease_ && ChordAuthority(batch_epoch_, chord_revision_, *chord_lease_)) {
             rimes::linuxime::EngineSnapshot result;
             if (ime_->engine().ProcessKey(session_, release_key, rimes::linuxime::kReleaseMask,
-                                          &result))
+                                          &result)) {
+                ObserveNativeRelease(result.handled, native_chord_down_.empty());
                 PublishChord(result);
+            } else ObserveNativeRelease(false, native_chord_down_.empty());
         } else
             cancelChord(false);
         event.filterAndAccept();
@@ -287,15 +306,21 @@ bool RimesState::prepareChord(KeyEvent& event) {
         if (!native_chord_down_.empty()) {
             auto held = std::move(native_chord_down_);
             native_chord_down_.clear();
+            std::size_t remaining = held.size();
             for (const auto& [code, release_key] : held) {
                 (void)code;
+                --remaining;
                 if (!chord_lease_ || !ChordAuthority(batch_epoch_, chord_revision_, *chord_lease_))
                     break;
                 rimes::linuxime::EngineSnapshot result;
                 if (ime_->engine().ProcessKey(session_, release_key, rimes::linuxime::kReleaseMask,
-                                              &result))
+                                              &result)) {
+                    ObserveNativeRelease(result.handled, remaining == 0);
                     PublishChord(result);
+                } else ObserveNativeRelease(false, remaining == 0);
             }
+            metrics_chord_start_ = 0;
+            metrics_native_keys_ = metrics_native_releases_ = 0;
         }
         return false;
     }
@@ -304,6 +329,10 @@ bool RimesState::prepareChord(KeyEvent& event) {
     batch_epoch_ = chord_epoch_;
     if (native) {
         if (native_chord_down_.emplace(physical, key).second) {
+            if (native_chord_down_.size() == 1) {
+                metrics_chord_start_ = now(CLOCK_MONOTONIC);
+                metrics_native_keys_ = metrics_native_releases_ = 0;
+            }
             rimes::linuxime::EngineSnapshot result;
             if (!ime_->engine().ProcessKey(session_, key, 0, &result)) {
                 native_chord_down_.erase(physical);
@@ -315,11 +344,13 @@ bool RimesState::prepareChord(KeyEvent& event) {
                 native_chord_down_.erase(physical);
                 return false;
             }
+            ++metrics_native_keys_;
         }
         event.filterAndAccept();
         return true;
     }
     if (chord_down_.emplace(physical, key).second && chord_.Stage(key, profile, snapshot_)) {
+        if (!metrics_chord_start_) metrics_chord_start_ = now(CLOCK_MONOTONIC);
         const auto deadline = now(CLOCK_MONOTONIC) + service->DurationMicros();
         if (!chord_timer_)
             chord_timer_ = ime_->instance()->eventLoop().addTimeEvent(

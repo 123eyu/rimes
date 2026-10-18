@@ -1,0 +1,1182 @@
+{
+  "cases" : [
+    {
+      "activity" : {
+        "days" : {
+          "2026-07-18" : {
+            "activeSeconds" : 11,
+            "chordCount" : 1,
+            "committedCharacterCount" : 6,
+            "keyCount" : 4,
+            "sessionCount" : 4
+          },
+          "2026-07-19" : {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 3,
+            "keyCount" : 0,
+            "sessionCount" : 1
+          }
+        },
+        "sessions" : [
+          {
+            "activeSeconds" : 10,
+            "chordCount" : 1,
+            "committedCharacterCount" : 4,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386690,
+            "keyCount" : 1,
+            "startedAt" : 1784386680
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 0,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386701,
+            "keyCount" : 1,
+            "startedAt" : 1784386701
+          },
+          {
+            "activeSeconds" : 1,
+            "chordCount" : 0,
+            "committedCharacterCount" : 2,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386701,
+            "keyCount" : 1,
+            "startedAt" : 1784386700
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 0,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386799,
+            "keyCount" : 1,
+            "startedAt" : 1784386799
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 3,
+            "dayKey" : "2026-07-19",
+            "endedAt" : 1784386802,
+            "keyCount" : 0,
+            "startedAt" : 1784386802
+          }
+        ],
+        "version" : 1
+      },
+      "events" : [
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386680
+        },
+        {
+          "characters" : 4,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386685
+        },
+        {
+          "chordDuration" : 0.080000000000000002,
+          "day" : "2026-07-18",
+          "handledReleases" : 3,
+          "kind" : "chord",
+          "timestamp" : 1784386690
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : true,
+          "shortcut" : false,
+          "timestamp" : 1784386691
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyC",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : true,
+          "timestamp" : 1784386692
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "ArrowLeft",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386693
+        },
+        {
+          "characters" : -1,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386694
+        },
+        {
+          "chordDuration" : -1,
+          "day" : "2026-07-18",
+          "handledReleases" : 3,
+          "kind" : "chord",
+          "timestamp" : 1784386695
+        },
+        {
+          "chordDuration" : 0.080000000000000002,
+          "day" : "2026-07-18",
+          "handledReleases" : -1,
+          "kind" : "chord",
+          "timestamp" : 1784386696
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyB",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386701
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyC",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386700
+        },
+        {
+          "characters" : 2,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386701
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyD",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386799
+        },
+        {
+          "characters" : 3,
+          "day" : "2026-07-19",
+          "kind" : "commit",
+          "timestamp" : 1784386802
+        }
+      ],
+      "id" : "timing-and-admission",
+      "keys" : {
+        "days" : {
+          "2026-07-18" : {
+            "keys" : {
+              "ArrowLeft" : 1,
+              "KeyA" : 2,
+              "KeyB" : 1,
+              "KeyC" : 2,
+              "KeyD" : 1
+            }
+          }
+        },
+        "version" : 1
+      },
+      "snapshots" : [
+        {
+          "counts" : {
+            "ArrowLeft" : 1,
+            "KeyA" : 2,
+            "KeyB" : 1,
+            "KeyC" : 2,
+            "KeyD" : 1
+          },
+          "dayKey" : "2026-07-18",
+          "maxCount" : 2,
+          "topKeyId" : "KeyA",
+          "total" : 7
+        }
+      ]
+    },
+    {
+      "activity" : {
+        "days" : {
+          "2026-07-18" : {
+            "activeSeconds" : 3,
+            "chordCount" : 0,
+            "committedCharacterCount" : 8,
+            "keyCount" : 3,
+            "sessionCount" : 5
+          }
+        },
+        "sessions" : [
+          {
+            "activeSeconds" : 2,
+            "chordCount" : 0,
+            "committedCharacterCount" : 2,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386682,
+            "keyCount" : 1,
+            "startedAt" : 1784386680
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 3,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386684,
+            "keyCount" : 0,
+            "startedAt" : 1784386684
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 1,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386686,
+            "keyCount" : 0,
+            "startedAt" : 1784386686
+          },
+          {
+            "activeSeconds" : 0,
+            "chordCount" : 0,
+            "committedCharacterCount" : 0,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386687,
+            "keyCount" : 1,
+            "startedAt" : 1784386687
+          },
+          {
+            "activeSeconds" : 1,
+            "chordCount" : 0,
+            "committedCharacterCount" : 2,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386692,
+            "keyCount" : 1,
+            "startedAt" : 1784386691
+          }
+        ],
+        "version" : 1
+      },
+      "events" : [
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386680
+        },
+        {
+          "characters" : 2,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386682
+        },
+        {
+          "kind" : "boundary"
+        },
+        {
+          "characters" : 3,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386684
+        },
+        {
+          "kind" : "restart"
+        },
+        {
+          "characters" : 1,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386686
+        },
+        {
+          "activity" : true,
+          "keys" : false,
+          "kind" : "preferences"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyB",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386687
+        },
+        {
+          "activity" : false,
+          "keys" : true,
+          "kind" : "preferences"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyC",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386688
+        },
+        {
+          "characters" : 5,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386689
+        },
+        {
+          "activity" : false,
+          "keys" : false,
+          "kind" : "preferences"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyD",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386690
+        },
+        {
+          "activity" : true,
+          "keys" : true,
+          "kind" : "preferences"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyE",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386691
+        },
+        {
+          "characters" : 2,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386692
+        }
+      ],
+      "id" : "boundaries-restart-and-consent",
+      "keys" : {
+        "days" : {
+          "2026-07-18" : {
+            "keys" : {
+              "KeyA" : 1,
+              "KeyC" : 1,
+              "KeyE" : 1
+            }
+          }
+        },
+        "version" : 1
+      },
+      "snapshots" : [
+        {
+          "counts" : {
+            "KeyA" : 1,
+            "KeyC" : 1,
+            "KeyE" : 1
+          },
+          "dayKey" : "2026-07-18",
+          "maxCount" : 1,
+          "topKeyId" : "KeyA",
+          "total" : 3
+        }
+      ]
+    },
+    {
+      "activity" : {
+        "days" : {
+          "2026-07-18" : {
+            "activeSeconds" : 1,
+            "chordCount" : 0,
+            "committedCharacterCount" : 3,
+            "keyCount" : 1,
+            "sessionCount" : 1
+          }
+        },
+        "sessions" : [
+          {
+            "activeSeconds" : 1,
+            "chordCount" : 0,
+            "committedCharacterCount" : 3,
+            "dayKey" : "2026-07-18",
+            "endedAt" : 1784386687,
+            "keyCount" : 1,
+            "startedAt" : 1784386686
+          }
+        ],
+        "version" : 1
+      },
+      "events" : [
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyZ",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386680
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386681
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386682
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyZ",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386683
+        },
+        {
+          "day" : "2026-07-18",
+          "kind" : "clear-day"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyZ",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386684
+        },
+        {
+          "characters" : 2,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386685
+        },
+        {
+          "kind" : "clear-activity"
+        },
+        {
+          "day" : "2026-07-18",
+          "key" : "KeyA",
+          "kind" : "key",
+          "repeat" : false,
+          "shortcut" : false,
+          "timestamp" : 1784386686
+        },
+        {
+          "characters" : 3,
+          "day" : "2026-07-18",
+          "kind" : "commit",
+          "timestamp" : 1784386687
+        }
+      ],
+      "id" : "clearing-and-ties",
+      "keys" : {
+        "days" : {
+          "2026-07-18" : {
+            "keys" : {
+              "KeyA" : 1,
+              "KeyZ" : 1
+            }
+          }
+        },
+        "version" : 1
+      },
+      "snapshots" : [
+        {
+          "counts" : {
+            "KeyA" : 1,
+            "KeyZ" : 1
+          },
+          "dayKey" : "2026-07-18",
+          "maxCount" : 1,
+          "topKeyId" : "KeyA",
+          "total" : 2
+        }
+      ]
+    }
+  ],
+  "keyboard" : [
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Escape",
+      "label" : "Esc",
+      "width" : 1.1499999999999999,
+      "x" : 0,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F1",
+      "label" : "F1",
+      "width" : 1,
+      "x" : 1.6000000000000001,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F2",
+      "label" : "F2",
+      "width" : 1,
+      "x" : 2.7000000000000002,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F3",
+      "label" : "F3",
+      "width" : 1,
+      "x" : 3.7999999999999998,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F4",
+      "label" : "F4",
+      "width" : 1,
+      "x" : 4.9000000000000004,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F5",
+      "label" : "F5",
+      "width" : 1,
+      "x" : 6.25,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F6",
+      "label" : "F6",
+      "width" : 1,
+      "x" : 7.3499999999999996,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F7",
+      "label" : "F7",
+      "width" : 1,
+      "x" : 8.4499999999999993,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F8",
+      "label" : "F8",
+      "width" : 1,
+      "x" : 9.5500000000000007,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F9",
+      "label" : "F9",
+      "width" : 1,
+      "x" : 10.9,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F10",
+      "label" : "F10",
+      "width" : 1,
+      "x" : 12,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F11",
+      "label" : "F11",
+      "width" : 1,
+      "x" : 13.1,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "F12",
+      "label" : "F12",
+      "width" : 1,
+      "x" : 14.199999999999999,
+      "y" : 0
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Backquote",
+      "label" : "`",
+      "width" : 1,
+      "x" : 0,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit1",
+      "label" : "1",
+      "width" : 1,
+      "x" : 1.05,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit2",
+      "label" : "2",
+      "width" : 1,
+      "x" : 2.1000000000000001,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit3",
+      "label" : "3",
+      "width" : 1,
+      "x" : 3.1499999999999999,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit4",
+      "label" : "4",
+      "width" : 1,
+      "x" : 4.2000000000000002,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit5",
+      "label" : "5",
+      "width" : 1,
+      "x" : 5.25,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit6",
+      "label" : "6",
+      "width" : 1,
+      "x" : 6.2999999999999998,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit7",
+      "label" : "7",
+      "width" : 1,
+      "x" : 7.3499999999999996,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit8",
+      "label" : "8",
+      "width" : 1,
+      "x" : 8.4000000000000004,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit9",
+      "label" : "9",
+      "width" : 1,
+      "x" : 9.4499999999999993,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Digit0",
+      "label" : "0",
+      "width" : 1,
+      "x" : 10.5,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Minus",
+      "label" : "-",
+      "width" : 1,
+      "x" : 11.550000000000001,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Equal",
+      "label" : "=",
+      "width" : 1,
+      "x" : 12.6,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Backspace",
+      "label" : "Delete",
+      "width" : 1.6499999999999999,
+      "x" : 13.65,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Tab",
+      "label" : "Tab",
+      "width" : 1.45,
+      "x" : 0,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyQ",
+      "label" : "Q",
+      "width" : 1,
+      "x" : 1.5,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyW",
+      "label" : "W",
+      "width" : 1,
+      "x" : 2.5499999999999998,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyE",
+      "label" : "E",
+      "width" : 1,
+      "x" : 3.6000000000000001,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyR",
+      "label" : "R",
+      "width" : 1,
+      "x" : 4.6500000000000004,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyT",
+      "label" : "T",
+      "width" : 1,
+      "x" : 5.7000000000000002,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyY",
+      "label" : "Y",
+      "width" : 1,
+      "x" : 6.75,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyU",
+      "label" : "U",
+      "width" : 1,
+      "x" : 7.7999999999999998,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyI",
+      "label" : "I",
+      "width" : 1,
+      "x" : 8.8499999999999996,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyO",
+      "label" : "O",
+      "width" : 1,
+      "x" : 9.9000000000000004,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyP",
+      "label" : "P",
+      "width" : 1,
+      "x" : 10.949999999999999,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "BracketLeft",
+      "label" : "[",
+      "width" : 1,
+      "x" : 12,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "BracketRight",
+      "label" : "]",
+      "width" : 1,
+      "x" : 13.050000000000001,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Backslash",
+      "label" : "\\",
+      "width" : 1.2,
+      "x" : 14.1,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "CapsLock",
+      "label" : "Caps",
+      "width" : 1.7,
+      "x" : 0,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyA",
+      "label" : "A",
+      "width" : 1,
+      "x" : 1.75,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyS",
+      "label" : "S",
+      "width" : 1,
+      "x" : 2.7999999999999998,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyD",
+      "label" : "D",
+      "width" : 1,
+      "x" : 3.8500000000000001,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyF",
+      "label" : "F",
+      "width" : 1,
+      "x" : 4.9000000000000004,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyG",
+      "label" : "G",
+      "width" : 1,
+      "x" : 5.9500000000000002,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyH",
+      "label" : "H",
+      "width" : 1,
+      "x" : 7,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyJ",
+      "label" : "J",
+      "width" : 1,
+      "x" : 8.0500000000000007,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyK",
+      "label" : "K",
+      "width" : 1,
+      "x" : 9.0999999999999996,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyL",
+      "label" : "L",
+      "width" : 1,
+      "x" : 10.15,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Semicolon",
+      "label" : ";",
+      "width" : 1,
+      "x" : 11.199999999999999,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Quote",
+      "label" : "'",
+      "width" : 1,
+      "x" : 12.25,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Enter",
+      "label" : "Return",
+      "width" : 2,
+      "x" : 13.300000000000001,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "LeftShift",
+      "label" : "Shift",
+      "width" : 2.25,
+      "x" : 0,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyZ",
+      "label" : "Z",
+      "width" : 1,
+      "x" : 2.2999999999999998,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyX",
+      "label" : "X",
+      "width" : 1,
+      "x" : 3.3500000000000001,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyC",
+      "label" : "C",
+      "width" : 1,
+      "x" : 4.4000000000000004,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyV",
+      "label" : "V",
+      "width" : 1,
+      "x" : 5.4500000000000002,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyB",
+      "label" : "B",
+      "width" : 1,
+      "x" : 6.5,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyN",
+      "label" : "N",
+      "width" : 1,
+      "x" : 7.5499999999999998,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "KeyM",
+      "label" : "M",
+      "width" : 1,
+      "x" : 8.5999999999999996,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Comma",
+      "label" : ",",
+      "width" : 1,
+      "x" : 9.6500000000000004,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Period",
+      "label" : ".",
+      "width" : 1,
+      "x" : 10.699999999999999,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Slash",
+      "label" : "\/",
+      "width" : 1,
+      "x" : 11.75,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "RightShift",
+      "label" : "Shift",
+      "width" : 2.5,
+      "x" : 12.800000000000001,
+      "y" : 4.5
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Function",
+      "label" : "fn",
+      "width" : 0.84999999999999998,
+      "x" : 0,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "LeftControl",
+      "label" : "Control",
+      "width" : 1.25,
+      "x" : 0.90000000000000002,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "LeftOption",
+      "label" : "Option",
+      "width" : 1.25,
+      "x" : 2.2000000000000002,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "LeftCommand",
+      "label" : "Command",
+      "width" : 1.45,
+      "x" : 3.5,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Space",
+      "label" : "Space",
+      "width" : 4.7999999999999998,
+      "x" : 5,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "RightCommand",
+      "label" : "Command",
+      "width" : 1.45,
+      "x" : 9.8499999999999996,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "RightOption",
+      "label" : "Option",
+      "width" : 1.25,
+      "x" : 11.35,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.65000000000000002,
+      "id" : "ArrowLeft",
+      "label" : "←",
+      "width" : 0.90000000000000002,
+      "x" : 12.85,
+      "y" : 5.7999999999999998
+    },
+    {
+      "height" : 0.65000000000000002,
+      "id" : "ArrowUp",
+      "label" : "↑",
+      "width" : 0.90000000000000002,
+      "x" : 13.800000000000001,
+      "y" : 5.5499999999999998
+    },
+    {
+      "height" : 0.65000000000000002,
+      "id" : "ArrowDown",
+      "label" : "↓",
+      "width" : 0.90000000000000002,
+      "x" : 13.800000000000001,
+      "y" : 6.25
+    },
+    {
+      "height" : 0.65000000000000002,
+      "id" : "ArrowRight",
+      "label" : "→",
+      "width" : 0.90000000000000002,
+      "x" : 14.75,
+      "y" : 5.7999999999999998
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "Home",
+      "label" : "Home",
+      "width" : 1,
+      "x" : 15.949999999999999,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "PageUp",
+      "label" : "PgUp",
+      "width" : 1,
+      "x" : 17,
+      "y" : 1.3500000000000001
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "ForwardDelete",
+      "label" : "Del",
+      "width" : 1,
+      "x" : 15.949999999999999,
+      "y" : 2.3999999999999999
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "End",
+      "label" : "End",
+      "width" : 1,
+      "x" : 15.949999999999999,
+      "y" : 3.4500000000000002
+    },
+    {
+      "height" : 0.84999999999999998,
+      "id" : "PageDown",
+      "label" : "PgDn",
+      "width" : 1,
+      "x" : 17,
+      "y" : 3.4500000000000002
+    }
+  ],
+  "purpose" : "public-statistics-contract",
+  "schemaVersion" : 1,
+  "sources" : {
+    "OfficialPlugins\/native\/macos\/DailyInputMetrics.swift" : "55892e268679a2b9a824f11a97b01126954b7fe88adb283594d11f2643a39ba7",
+    "OfficialPlugins\/native\/macos\/KeyFrequencyStore.swift" : "7c78593d70230699954cdab3df55f93cbbff0601bc2289ea610d0072c7b0c724",
+    "OfficialPlugins\/native\/macos\/StatisticsSettingsViewController.swift" : "82d94d3af18f62f54907cedc795161da8cb1e503388e6261e2e65c579c1330af",
+    "OfficialPlugins\/native\/macos\/TypingSpeedStore.swift" : "df84c25cfbb82c9e0fcd58ebcafa78939dc69913e073ab3de70d668a1679359b",
+    "Sources\/RimeBuffer\/InputTelemetry.swift" : "f93895cb8d0db3337309758ee3ebf4f50b5d02614ecec729b5c8125e80a028d6",
+    "Sources\/RimeBuffer\/KeyboardHeatmapView.swift" : "2184969c9436ce04ef97b9672fe404ce5f1a5cd810adce14b98e94c44f8b4b87",
+    "Sources\/RimeBuffer\/MetricsChartViews.swift" : "9128efde9f8e933335fd9b63d586636e2da9a80344f13f78a773190036f9c1e1",
+    "Sources\/RimeBuffer\/StatisticsDashboardSmoke.swift" : "e8f5c22333407ac1d3668aee802e13a6071333e8c7680497a2b623b1148f0617",
+    "Sources\/RimeBuffer\/StatisticsLinuxFixtures.swift" : "ca5d43a135019b81408e0c186c3a73e409513ad1ecbfa339ff9568572b41539a",
+    "Sources\/RimeBuffer\/TypingPracticeTelemetry.swift" : "b16035d4505d3f19a7f54bef8b986785f3f08ef1bc944ca944517ed3555d095e",
+    "Sources\/RimeBuffer\/YearHistoryHeatmapView.swift" : "516de52a2376cec08dc532f7834b6c72de9411b049ff2107038ebb816558a1f0"
+  },
+  "timezone" : "Asia\/Tokyo"
+}

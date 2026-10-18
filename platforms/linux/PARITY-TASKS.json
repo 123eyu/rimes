@@ -554,9 +554,12 @@
         "按开关采集脱敏计数，保护字段和测速练习排除；仅保存本地聚合而不保存输入正文。",
         "验证采集启停、时间口径、重启、并击批次及数据导出/删除。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 177,
-      "url": "https://github.com/scholay/xsime/issues/177"
+      "url": "https://github.com/scholay/xsime/issues/177",
+      "visual_status": "requires_review",
+      "implementation_status": "implemented",
+      "validation": "statistics/VALIDATION.md"
     },
     {
       "order": 28,

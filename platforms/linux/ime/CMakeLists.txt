@@ -215,6 +215,8 @@ if(RIMES_BUILD_FCITX5)
         src/fcitx/rimes_ime.cpp
         src/fcitx/rimes_state.cpp
         src/chord/chord_service.cpp
+        src/statistics/metrics_service.cpp
+        src/statistics/metrics_keys.cpp
         src/session/session_monitor.cpp
         src/desktop/workspace_launcher.cpp
         src/desktop/desktop_shortcuts.cpp
@@ -225,7 +227,7 @@ if(RIMES_BUILD_FCITX5)
         src/capsule/capsule_history_service.cpp
         src/capsule/capsule_capture_service.cpp
     )
-    target_link_libraries(rimes PRIVATE RimesChordEngine yaml-cpp::yaml-cpp Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
+    target_link_libraries(rimes PRIVATE RimesStatisticsCore RimesChordEngine yaml-cpp::yaml-cpp Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(RimesXCB REQUIRED IMPORTED_TARGET xcb)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
@@ -810,6 +812,12 @@ if(RIMES_BUILD_TESTS)
         target_link_libraries(rimes-chord-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesChordCore RimesDesktopUI)
         target_compile_definitions(rimes-chord-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         rimes_harden(rimes-chord-fcitx-e2e)
+
+        add_executable(rimes-metrics-fcitx-e2e tests/metrics_fcitx_e2e.cpp src/statistics/metrics_keys.cpp)
+        target_include_directories(rimes-metrics-fcitx-e2e PRIVATE src)
+        target_link_libraries(rimes-metrics-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesStatisticsCore RimesChordCore RimesDesktopUI)
+        target_compile_definitions(rimes-metrics-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-metrics-fcitx-e2e)
 
         add_executable(rimes-gateway-fcitx-e2e tests/gateway_fcitx_e2e.cpp)
         target_include_directories(rimes-gateway-fcitx-e2e PRIVATE "${RIMES_MAILBOX_ROOT}/tests")

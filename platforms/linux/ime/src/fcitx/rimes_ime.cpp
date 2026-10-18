@@ -1,5 +1,7 @@
 #include "session/protected_input.hpp"
 #include "chord/chord_service.hpp"
+#include "statistics/metrics_service.hpp"
+#include "capsule_text.hpp"
 #include "rimes_ime.hpp"
 #include <glib.h>
 
@@ -82,6 +84,11 @@ RimesIme::RimesIme(Instance* instance)
             }
         });
     };
+    try {
+        metrics_ = std::make_unique<MetricsService>(*this);
+    } catch (const std::exception&) {
+        FCITX_LOGC(rimes_log, Error) << "Statistics unavailable; ordinary input remains enabled";
+    }
     gateway_ = std::make_unique<rimes::mailbox::GatewayServer>();
     buffer_ = std::make_unique<BufferService>(instance_, post);
     capsule_ = std::make_unique<CapsuleService>(instance_, post);
@@ -136,6 +143,9 @@ RimesIme::RimesIme(Instance* instance)
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.fly-chord-learning"),
         {[this] { if (chord_) chord_->Enable(true); },
          [this] { if (chord_) chord_->Enable(false); }});
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.statistics"),
+        {[this] { if (metrics_) metrics_->Enable(true); },
+         [this] { if (metrics_) metrics_->Enable(false); }});
     WatchPluginPackages();
     WatchConfiguration();
     if (chord_ && engine_.IsHealthy() && !engine_.IsDeploying()) chord_->EngineReady();
@@ -256,6 +266,7 @@ RimesIme::RimesIme(Instance* instance)
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
         [this](Event& event) {
             auto& ic_event = static_cast<InputContextEvent&>(event);
+            if (metrics_) metrics_->Forget(ic_event.inputContext());
             if (buffer_) {
                 buffer_->OnInputContextDestroyed(ic_event.inputContext());
             }
@@ -272,6 +283,7 @@ RimesIme::RimesIme(Instance* instance)
                 if (auto* state = cap.inputContext()->propertyFor(&factory_)) state->reset();
             }
             if (!cap.inputContext()->hasFocus()) return;
+            if (password && metrics_) metrics_->EndSession();
             gateway_->SetInputProtected(password);
             if (password && launcher_) launcher_->Revoke();
             if (buffer_) {
@@ -286,6 +298,7 @@ RimesIme::RimesIme(Instance* instance)
     focus_watch_ = instance_->watchEvent(EventType::InputContextFocusIn, EventWatcherPhase::Default,
         [this](Event& event) {
             auto* ic = static_cast<InputContextEvent&>(event).inputContext();
+            if (metrics_) metrics_->Focus(ic);
             if (auto* state = ic->propertyFor(&factory_)) state->cancelChord(false);
             const bool protected_field = ProtectedInput(ic->capabilityFlags());
             gateway_->SetInputProtected(protected_field);
@@ -293,6 +306,7 @@ RimesIme::RimesIme(Instance* instance)
             capsule_->OnPasswordField(ic, protected_field);
         });
     session_monitor_ = std::make_unique<SessionMonitor>(instance_->eventLoop(), [this](bool protected_session) {
+        if (protected_session && metrics_) metrics_->EndSession();
         if (protected_session && launcher_) launcher_->Revoke();
         gateway_->SetSessionProtected(protected_session);
         buffer_->OnSessionProtection(protected_session);
@@ -337,6 +351,7 @@ RimesIme::~RimesIme() {
     plugin_binding_.reset();
     chord_.reset();
     plugins_.Shutdown();
+    metrics_.reset();
     gateway_.reset();
     if (alive_) {
         alive_->store(false);
@@ -450,6 +465,7 @@ void RimesIme::ApplyConfiguration() {
         if (gateway_) gateway_->Configure(config);
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
         if (chord_) chord_->Configure(config);
+        if (metrics_) metrics_->Configure(config);
         buffer_->ConfigurePluginOptions(config);
         buffer_->ConfigureImageSkill(rimes::runtime::ConfigurationStore::NormalizePlugin("builtin.codex-cli",
             config.at("plugins").value("builtin.codex-cli", rimes::runtime::Json::object())).at("skill") == "imagegen");
@@ -465,6 +481,7 @@ void RimesIme::ApplyConfiguration() {
         if (desktop_shortcuts_) desktop_shortcuts_->Configure(config.at("shortcuts"), config.at("globalShortcuts"));
     } catch (const std::exception&) {
         configuration_revision_.clear();
+        if (metrics_) metrics_->Suspend();
         if (gateway_) {
             auto disabled = rimes::runtime::ConfigurationStore::Defaults();
             disabled["gatewayEnabled"] = false;
@@ -581,6 +598,10 @@ void RimesIme::activate(const InputMethodEntry& entry, InputContextEvent& event)
 
 void RimesIme::deactivate(const InputMethodEntry& entry, InputContextEvent& event) {
     FCITX_UNUSED(entry);
+    if (metrics_) {
+        metrics_->Forget(event.inputContext());
+        if (event.type() == EventType::InputContextSwitchInputMethod) metrics_->EndSession();
+    }
     // Drop capture and wipe client preedit before RimesState::reset paints
     // the input panel, so focus-out cannot commit a leftover guard.
     if (buffer_) {
@@ -623,10 +644,13 @@ void RimesIme::commitText(InputContext* ic, std::string_view text) {
         (session_monitor_ && session_monitor_->protectedSession())) {
         return;
     }
-    if (buffer_ && buffer_->OnCommit(ic, text)) {
-        return;
+    if (!(buffer_ && buffer_->OnCommit(ic, text))) ic->commitString(std::string(text));
+    // Observe authored Rime output once, including Buffer capture. Sending a
+    // stored block or an AI/translation result never re-enters this path.
+    if (metrics_ && metrics_->EnabledFor(ic)) {
+        try { metrics_->Commit(ic, rimes::capsule::CharacterCount(std::string(text))); }
+        catch (const std::exception&) { /* Metrics cannot interrupt delivery. */ }
     }
-    ic->commitString(std::string(text));
 }
 
 void RimesIme::applySnapshot(InputContext* ic,

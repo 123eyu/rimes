@@ -38,6 +38,9 @@ std::string URLPart(CURLU *url, CURLUPart part) {
 } // namespace
 
 std::vector<Field> PluginFields(std::string_view id) {
+  if (id == "builtin.statistics")
+    return {{"recordsKeyFrequency", "记录键频", "只在本机保存按键次数。", FieldKind::Toggle, true, {}},
+            {"recordsTypingActivity", "记录日常输入", "只保存字数、按键、并击次数和活跃时间。", FieldKind::Toggle, true, {}}};
   if (id == "builtin.fly-chord-learning")
     return {{"durationMilliseconds", "组键间隔", "单位为毫秒；调整同一批按键的结算间隔。", FieldKind::Number, 100, {}, 20, 500}};
   if (id == "builtin.capsule.temporary")

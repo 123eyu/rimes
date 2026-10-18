@@ -59,6 +59,16 @@ func runStatisticsDashboardSmokeTest(outputURL: URL? = nil) -> Bool {
               activity.historySnapshot().days.count == 14 else { return fail("seeded isolated stores") }
         let keyBytes = try Data(contentsOf: root.appendingPathComponent("stats/key_frequency.json"))
         let activityBytes = try Data(contentsOf: root.appendingPathComponent("stats/typing_speed.json"))
+        if let outputURL {
+            let publicFixture: [String: Any] = [
+                "purpose": "public-statistics-dashboard", "today": today.timeIntervalSince1970,
+                "day": keys.dayKey(for: today), "timezone": TimeZone.current.identifier,
+                "keys": try JSONSerialization.jsonObject(with: keyBytes),
+                "activity": try JSONSerialization.jsonObject(with: activityBytes),
+            ]
+            try JSONSerialization.data(withJSONObject: publicFixture, options: [.prettyPrinted, .sortedKeys])
+                .write(to: outputURL.appendingPathExtension("fixture.json"), options: .atomic)
+        }
         func descendants(_ view: NSView) -> [NSView] { [view] + view.subviews.flatMap(descendants) }
         func selectDate(_ date: Date, in view: NSView) -> Bool {
             guard let picker = descendants(view).compactMap({ $0 as? NSDatePicker }).first else { return false }
@@ -218,7 +228,10 @@ func runStatisticsDashboardSmokeTest(outputURL: URL? = nil) -> Bool {
             pane.cacheDisplay(in: pane.bounds, to: bitmap)
             guard let png = bitmap.representation(using: .png, properties: [:]), !png.isEmpty else { return fail("PNG output") }
             if let destination {
-                do { try png.write(to: destination, options: .atomic) }
+                do {
+                    try png.write(to: destination, options: .atomic)
+                    try ChordLinuxRenderGeometry.save(pane, beside: destination)
+                }
                 catch { return fail(error.localizedDescription) }
                 print("statistics-dashboard-smoke: rendered \(destination.path)")
             }

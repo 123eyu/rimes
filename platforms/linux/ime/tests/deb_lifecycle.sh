@@ -50,6 +50,10 @@ printf '%s\n' 'keep saved keymap draft' > "$DATA/chord-keymaps/00000000-0000-400
 printf '%s\n' 'keep separately applied keymap' > "$DATA/chord-keymaps/active-profile.json"
 printf '%s\n' 'keep ordinary input scheme selection' > "$DATA/chord-keymaps/state.json"
 printf '%s\n' 'keep chord learning counts and mastery' > "$DATA/learning/my_combo_progress.json"
+mkdir -p "$DATA/stats"
+printf '%s\n' 'keep independent physical key history' > "$DATA/stats/key_frequency.json"
+printf '%s\n' 'keep daily character totals, active seconds and sessions' > "$DATA/stats/typing_speed.json"
+printf '%s\n' 'keep explicit corrupt statistics backup' > "$DATA/stats/corrupt-statistics-backup.json"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
 sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
@@ -75,6 +79,7 @@ import json, sys, hashlib
 from pathlib import Path
 pages = json.load(open(sys.argv[1]))
 assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.fly-chord-learning'} == {'settings', 'keymap', 'lessons', 'practice', 'progress'}
+assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.statistics'} == {'daily', 'history'}
 data = Path('/usr/share/rimes/data')
 lock = json.loads((data / 'linux-native-chord-manifest.json').read_text())
 assert lock['schemas'] == ['yoyo-yx', 'yoyo-yx-hm'] and len(lock['files']) == 12

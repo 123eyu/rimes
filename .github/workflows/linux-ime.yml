@@ -153,6 +153,14 @@ jobs:
             xvfb-run -a -s "-screen 0 2560x2000x24" platforms/linux/ime/build/runtime/rimes-chord-ui-tests \
             "$RUNNER_TEMP/settings-render/chord"
 
+      - name: Native statistics aggregates, consent and dashboard
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/rimes-metrics-fcitx-e2e platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-criticals TZ=Asia/Tokyo dbus-run-session -- \
+            xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-metrics-ui-tests \
+            "$RUNNER_TEMP/settings-render/statistics"
+
       - name: Codex CLI text and persistent Mailbox images through real Fcitx
         run: |
           RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" \

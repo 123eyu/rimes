@@ -161,6 +161,40 @@ void PrivateDirectory::Remove(std::string_view name) const {
     if (unlinkat(fd_, filename.c_str(), 0) || fsync(fd_)) throw std::runtime_error("Cannot remove private file");
 }
 
+std::string PrivateDirectory::Preserve(std::string_view name) const {
+    Verify();
+    const auto filename = Name(name);
+    struct stat original{};
+    if (fstatat(fd_, filename.c_str(), &original, AT_SYMLINK_NOFOLLOW)) {
+        if (errno == ENOENT) return {};
+        throw std::runtime_error("Cannot inspect recovery source");
+    }
+    if (original.st_uid != geteuid() || original.st_nlink != 1 ||
+        (!S_ISREG(original.st_mode) && !S_ISLNK(original.st_mode)))
+        throw std::runtime_error("Unsafe recovery source; original preserved");
+    const auto backup = Name("corrupt-" + RandomID() + "-" + filename);
+    // linkat with flags=0 preserves a symlink itself. It also fails if the
+    // destination exists, unlike an unchecked rename that could overwrite it.
+    if (linkat(fd_, filename.c_str(), fd_, backup.c_str(), 0))
+        throw std::runtime_error("Cannot preserve recovery source");
+    struct stat current{}, copied{};
+    if (fstatat(fd_, filename.c_str(), &current, AT_SYMLINK_NOFOLLOW) ||
+        fstatat(fd_, backup.c_str(), &copied, AT_SYMLINK_NOFOLLOW) ||
+        current.st_ino != original.st_ino || current.st_dev != original.st_dev ||
+        copied.st_ino != original.st_ino || copied.st_dev != original.st_dev) {
+        unlinkat(fd_, backup.c_str(), 0);
+        throw std::runtime_error("Recovery source changed; original preserved");
+    }
+    if (unlinkat(fd_, filename.c_str(), 0) || fsync(fd_))
+        throw std::runtime_error("Cannot complete recovery; backup preserved");
+    if (S_ISREG(original.st_mode)) {
+        FD file(openat(fd_, backup.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC));
+        if (file.value < 0 || fchmod(file.value, 0600))
+            throw std::runtime_error("Cannot protect recovery backup");
+    }
+    return backup;
+}
+
 FileLock PrivateDirectory::Lock(bool wait) const {
     Verify();
     FD file(openat(fd_, ".lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600));

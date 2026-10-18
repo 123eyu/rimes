@@ -36,6 +36,12 @@ The [ordinary chord extension](../chord/README.md) provides FlyYao timed batches
 exact-context cross-batch pairing, custom keymaps, local practice and the two
 native Yoyo presets. Saved drafts and applied snapshots are independent;
 deployment verifies real Rime output and rolls back failed changes.
+The [statistics extension](../statistics/README.md) adds local daily aggregates,
+7/30-day trends, keyboard heatmaps and history drill-down. Key distribution and
+typing activity have independent switches; opening the page never enables the
+extension. Export and confirmed clearing affect aggregates only. Corrupt stores
+remain read-only until explicit backup and repair. Source and deb removal keep
+statistics files, alongside user dictionaries and learning records.
 
 ## What works
 

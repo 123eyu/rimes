@@ -1,0 +1,642 @@
+[
+  {
+    "page": "daily-day",
+    "pageSize": {
+      "height": 738,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 58
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 413
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 188
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "daily-night",
+    "pageSize": {
+      "height": 738,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 58
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 413
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 188
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "daily-quiet",
+    "pageSize": {
+      "height": 738,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 58
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 413
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 188
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "daily-rasta",
+    "pageSize": {
+      "height": 738,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 58
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 58
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 413
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 188
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "history-day",
+    "pageSize": {
+      "height": 1162,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "calendar",
+        "matches_native": true,
+        "linux": {
+          "height": 164,
+          "width": 650,
+          "x": 0,
+          "y": 293
+        }
+      },
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 515
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 637
+        }
+      },
+      {
+        "name": "sessions",
+        "matches_native": true,
+        "linux": {
+          "height": 165,
+          "width": 650,
+          "x": 0,
+          "y": 932
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 34
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "history-night",
+    "pageSize": {
+      "height": 1162,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "calendar",
+        "matches_native": true,
+        "linux": {
+          "height": 164,
+          "width": 650,
+          "x": 0,
+          "y": 293
+        }
+      },
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 515
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 637
+        }
+      },
+      {
+        "name": "sessions",
+        "matches_native": true,
+        "linux": {
+          "height": 165,
+          "width": 650,
+          "x": 0,
+          "y": 932
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 34
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "history-quiet",
+    "pageSize": {
+      "height": 1162,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "calendar",
+        "matches_native": true,
+        "linux": {
+          "height": 164,
+          "width": 650,
+          "x": 0,
+          "y": 293
+        }
+      },
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 515
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 637
+        }
+      },
+      {
+        "name": "sessions",
+        "matches_native": true,
+        "linux": {
+          "height": 165,
+          "width": 650,
+          "x": 0,
+          "y": 932
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 34
+        }
+      }
+    ],
+    "bounds_match": true
+  },
+  {
+    "page": "history-rasta",
+    "pageSize": {
+      "height": 1162,
+      "width": 698
+    },
+    "regions": [
+      {
+        "name": "calendar",
+        "matches_native": true,
+        "linux": {
+          "height": 164,
+          "width": 650,
+          "x": 0,
+          "y": 293
+        }
+      },
+      {
+        "name": "card-0",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 0,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-1",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 165,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-2",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 330,
+          "y": 515
+        }
+      },
+      {
+        "name": "card-3",
+        "matches_native": true,
+        "linux": {
+          "height": 92,
+          "width": 155,
+          "x": 495,
+          "y": 515
+        }
+      },
+      {
+        "name": "keyboard",
+        "matches_native": true,
+        "linux": {
+          "height": 260,
+          "width": 650,
+          "x": 0,
+          "y": 637
+        }
+      },
+      {
+        "name": "sessions",
+        "matches_native": true,
+        "linux": {
+          "height": 165,
+          "width": 650,
+          "x": 0,
+          "y": 932
+        }
+      },
+      {
+        "name": "trend",
+        "matches_native": true,
+        "linux": {
+          "height": 190,
+          "width": 650,
+          "x": 0,
+          "y": 34
+        }
+      }
+    ],
+    "bounds_match": true
+  }
+]

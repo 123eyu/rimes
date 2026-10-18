@@ -99,7 +99,7 @@ void PackageStore::Seed(bool wait) {
         if (files_.Read(id + ".state.json", 8192)) continue;
         const bool bundled = Available(id) && entry.at("platforms").at("linux").at("distribution") == "bundled";
         if (bundled) (void)Verified(id, bundled_.at(id));
-        WriteState(id, {{"installed", bundled}, {"enabled", bundled && id != "builtin.fly-chord-learning"},
+        WriteState(id, {{"installed", bundled}, {"enabled", bundled && id != "builtin.fly-chord-learning" && id != "builtin.statistics"},
                        {"bundled", bundled}, {"sha256", entry.at("sha256")}});
     }
 }

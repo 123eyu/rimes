@@ -120,3 +120,7 @@ platforms/linux/ime/.engine/
 /platforms/linux/ai/
 /platforms/linux/chord/core/chord_core.cpp
 /platforms/linux/chord/core/chord_core.hpp
+
+# Pinned official statistics rules
+/platforms/linux/statistics/core/metrics_core.hpp
+/platforms/linux/statistics/core/metrics_core.cpp

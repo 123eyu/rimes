@@ -43,6 +43,7 @@ private:
     void UpdateUI(const rimes::linuxime::EngineSnapshot& snapshot);
     void FlushChord();
     void PublishChord(const rimes::linuxime::EngineSnapshot& snapshot);
+    void ObserveNativeRelease(bool handled, bool last);
     bool ChordAuthority(std::uint64_t epoch, std::uint64_t revision,
                         const rimes::plugins::Lease& lease);
 
@@ -51,6 +52,8 @@ private:
     std::map<std::uint32_t, std::int32_t> native_chord_down_, chord_down_;
     std::optional<rimes::plugins::Lease> chord_lease_;
     std::uint64_t chord_epoch_ = 0, chord_revision_ = 0, batch_epoch_ = 0;
+    std::uint64_t metrics_chord_start_ = 0;
+    int metrics_native_keys_ = 0, metrics_native_releases_ = 0;
 
     CandidateNavigation navigation_;
     std::unique_ptr<CandidateMatrixWindow> matrix_;

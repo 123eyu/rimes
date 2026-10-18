@@ -42,6 +42,9 @@ public:
     std::optional<std::string> Read(std::string_view name, std::size_t limit) const;
     void Write(std::string_view name, std::string_view bytes) const;
     void Remove(std::string_view name) const;
+    // Explicit recovery: preserve an owned file or symlink without following
+    // it. The original bytes/path entry remain in this private directory.
+    std::string Preserve(std::string_view name) const;
     FileLock Lock(bool wait = true) const;
     const std::filesystem::path& Path() const { return path_; }
 

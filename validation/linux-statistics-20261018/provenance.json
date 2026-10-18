@@ -1,0 +1,179 @@
+{
+  "formatVersion": 1,
+  "task": "LINUX-PARITY-27",
+  "issue": "https://github.com/scholay/xsime/issues/177",
+  "sourceSnapshot": {
+    "parentCommit": "f5b4c47be4270bada5f262115a4c40e7b74a93fa",
+    "officialPluginsCommit": "01ab4c175f4d827b0e00155514478d58ad44de56",
+    "note": "Task 27 source snapshot before its implementation commit. Digests identify the tested implementation; documentation was added after the build.",
+    "files": {
+      ".github/workflows/linux-ime.yml": "b65700efbb1d8d5a11fd413d0ccf29d5bd1d8a88f9850e5e24cecb3c302e4822",
+      ".gitignore": "552ae8bfdda38a45fc8faba5ae67440720a26bb389c370156a766bee22ff6dc7",
+      "Sources/RimeBuffer/StatisticsDashboardSmoke.swift": "e8f5c22333407ac1d3668aee802e13a6071333e8c7680497a2b623b1148f0617",
+      "Sources/RimeBuffer/StatisticsLinuxFixtures.swift": "ca5d43a135019b81408e0c186c3a73e409513ad1ecbfa339ff9568572b41539a",
+      "Sources/RimeBuffer/main.swift": "8812f031b2582cb900c6daa0c39408a7db31b05c26db872f9e2761bf1c908682",
+      "platforms/linux/PARITY-TASKS.json": "6187586b851e47db8def3385f2e5b75fad6fbd5ebc7d6f0283eba393902e21df",
+      "platforms/linux/PARITY.md": "35a9e53a1c52e6dfc7f942fa4a04044d4e282b644e6545e9dd1ada384425b36f",
+      "platforms/linux/ime/CMakeLists.txt": "77547878fff6ef0da0b4340c158b8da9bb691b3269f336ccabad249822bf98c2",
+      "platforms/linux/ime/README.md": "90df55f4a244cd9b318d7220a1e97e6bd663481f60cebb6c2979537172b4f49d",
+      "platforms/linux/ime/scripts/package-deb.sh": "2bd7b3a70616b8d8c3edb547a1ed209f805a2e720247b72d64333e93de7990e6",
+      "platforms/linux/ime/src/fcitx/rimes_ime.cpp": "775e869e398445c459a7b08c08bfeb50fc12a6b34510a3099e774a1f39db83a7",
+      "platforms/linux/ime/src/fcitx/rimes_ime.hpp": "b049324dc0ecbffbc709b4782e0900d213c9b7b39a059ec2268a9da600cd358e",
+      "platforms/linux/ime/src/fcitx/rimes_state.cpp": "5a89742121abdbe9b592bad8def47680ba5d3845e50ef4f2812713c6ad00aa5f",
+      "platforms/linux/ime/src/fcitx/rimes_state.hpp": "d2a5bf9b1562ef3d2c34d39eff7f2892cd2615647e6afce5112b6cedb00d66a9",
+      "platforms/linux/ime/src/statistics/metrics_keys.cpp": "3c59973b79e66368e71ca53c2785eba15663982a35f68c8b05478514a9ea6857",
+      "platforms/linux/ime/src/statistics/metrics_service.cpp": "5e1d4011c198222c119932c713a634a84c3c81c925d11dddef6c41a36d10b86c",
+      "platforms/linux/ime/src/statistics/metrics_service.hpp": "dd9085db3136c6c1949c18ad8e998fc11889120af05a9799fadd7683fdb5c7d7",
+      "platforms/linux/ime/tests/deb_lifecycle.sh": "9e403f6243ec818fa89ebfdddc8f30cbd2edf733bea7cac4cb0a3130a22fff7b",
+      "platforms/linux/ime/tests/metrics_fcitx_e2e.cpp": "e9a2df2dbb8fb1f8beb88f317f1d74ae25c098fae40955f0aa0f23944f55a23c",
+      "platforms/linux/runtime/CMakeLists.txt": "8ed505b12eb7cd2a12ce00f301a1f065ce41c31289cbd78636639ca4ae44a313",
+      "platforms/linux/runtime/core/configuration.cpp": "7512a5b4648c1180c905fb2591d36dc1216c11600ff7e8fb7c69784b71690163",
+      "platforms/linux/runtime/core/official_catalog.cpp": "03e8431f6262fd97f78fd04af3c86120f892199e103b82a2e927f4d467d5ebc5",
+      "platforms/linux/runtime/core/plugin_store.cpp": "0c0e10684e820250a33cb90c1f2edab0d18045b8f1e489de066653a1f0bb67f6",
+      "platforms/linux/runtime/core/private_files.cpp": "98dbc7ede54ec256e04660ffe8e79ae07100ac943c817346c939b3df9544970d",
+      "platforms/linux/runtime/core/private_files.hpp": "29018bb06f7c5890423282e6c9bd3a0605aa4b5075907360c75003a2411ca6b0",
+      "platforms/linux/runtime/ui/desktop.cpp": "cb8f9490dab0f480aa030707e9f12c87f29b5cfaad88d09e2e91262e7af94773",
+      "platforms/linux/runtime/ui/settings.cpp": "16c739a0fa7231cd319e4a98e7c4fda4a591f44b3ed44431202e1aee4f521196",
+      "platforms/linux/statistics/README.md": "89bbf38f8e1d1ba90b70ef55507983c69ffecf3c2bcd4012bf4b311cb4b454bb",
+      "platforms/linux/statistics/VALIDATION.md": "10872ef1048e880b0413a703525ffd5ed4e27ce211321f6462352513dccaa5b2",
+      "platforms/linux/statistics/core/metrics_protocol.hpp": "4e8358346c704684d3d141b5b606a1c4c37ebb3db0dc565ccbafaaab516a4f97",
+      "platforms/linux/statistics/core/metrics_store.cpp": "c2a130ed49db78cbef259d16786713c05a95bded89eb20729fe14a489c592d78",
+      "platforms/linux/statistics/core/metrics_store.hpp": "7b526d754397265add66bee382f260059f9931c9a5a19f0ea1d6029131a0fdb6",
+      "platforms/linux/statistics/core/metrics_worker.cpp": "eafda21427813043a23a91faf3f353d336240f8af7652a57b17a540b691b0e14",
+      "platforms/linux/statistics/core/metrics_worker.hpp": "d280bd8a2e72698282f418e202d59d83e756e4148167dae8db0d6798455b0071",
+      "platforms/linux/statistics/resources/native-dashboard.json": "5e809f40bff5b2eded83f582c4c070b616717c7d2447265d7e0f52f95a411656",
+      "platforms/linux/statistics/resources/native-statistics.json": "0b2d1e957f7504852c754cf06688a8d7f58c3443fd8713d61a891368f56594d8",
+      "platforms/linux/statistics/tests/metrics_core_tests.cpp": "dc99ba42d2353faf111fc4ae0d785d234b83b6a13dcd66c2ed5531a727c1a4ab",
+      "platforms/linux/statistics/tests/metrics_storage_tests.cpp": "49fe191ae06d0912ca480f6e4bc2897c4f6d19ea0fde374ad66ef681f8d94878",
+      "platforms/linux/statistics/tests/metrics_ui_tests.cpp": "87c5da27445615b9e31bf18e23665a7f1349eaaff4fce9e458bf0cbe7de09eba",
+      "platforms/linux/statistics/ui/metrics_views.cpp": "33f7798660470d5495e0dd7f4edb745f1b5985e82d16c0c244f55828ec457688",
+      "platforms/linux/statistics/ui/metrics_views.hpp": "47c797edcde77e59e61e55c769c09a7773c87d2afe4a2d0aeeee7404a2a5e78b",
+      "platforms/linux/statistics/ui/statistics_pane.cpp": "4251c877cf24dce283940b9e556bf6363490d000a081ee27716cdbe56e9c688e",
+      "platforms/linux/statistics/ui/statistics_pane.hpp": "9a4844cc3a7ef38e92fee81724aa69141fbf22086f9decff82e035c1388f325d",
+      "platforms/linux/statistics/verify_contract.py": "168dfc3422cc88a6816d6a810bc3f4f2e14056ff6b3babf3e20b3212ff437a38",
+      "plugins.lock.json": "a97681d914ef286188abbf0ccd4c7159311dbb05f40d99c2375bd7e82a108f03"
+    }
+  },
+  "environment": {
+    "linux": "Ubuntu 24.04 arm64 disposable container",
+    "compiler": "GNU 13.3.0",
+    "gtk": "3.24.41",
+    "fcitx": "5.1.7",
+    "rime": "Pinned private Rime/Lua from platforms/ios/dependencies.lock.json",
+    "macos": "Actual AppKit controls; Xcode Swift debug build",
+    "timezone": "Asia/Tokyo"
+  },
+  "verification": {
+    "releaseCTest": {
+      "passed": 87,
+      "failed": 0,
+      "seconds": 108.03
+    },
+    "nativeAggregateCases": 3,
+    "nativeAggregateObservations": 32,
+    "nativeSourceGuards": 11,
+    "actualFcitxFrontend": "passed",
+    "gtkControls": "passed with fatal critical diagnostics",
+    "settingsNavigation": "passed with fatal warnings",
+    "nativeSmokeCommands": 7,
+    "debLifecycle": {
+      "install": "passed",
+      "reinstall": "passed",
+      "remove": "passed",
+      "preservedXSIMEFiles": 29,
+      "preservedClaudeFiles": 2,
+      "installedStatisticsRoutes": 2
+    },
+    "earlierFailures": [
+      {
+        "check": "lifecycle disposable-runner guard",
+        "cause": "Missing explicit disposable-runner environment flag",
+        "resolution": "Run in existing disposable container with its required flag",
+        "log": "logs/lifecycle-preflight.log"
+      },
+      {
+        "check": "installed settings route",
+        "cause": "Two-element subpage initializer inferred a JSON object instead of an array",
+        "resolution": "Explicit array; regression opens daily/history through the real settings shell; final clean package lifecycle passed",
+        "log": "logs/installed-settings-before-fix.log"
+      }
+    ]
+  },
+  "artifact": {
+    "file": "fcitx5-rimes_1.1.5_arm64.deb",
+    "version": "1.1.5",
+    "sha256": "af2b44f87d43a405db08e4a8dcd84a777108c1b8d132d88e535ac768bbea5705",
+    "publicRelease": false
+  },
+  "visual": {
+    "status": "requires_review",
+    "actualAppKitGtkPairs": 8,
+    "dailyLogicalBounds": [
+      698,
+      738
+    ],
+    "historyLogicalBounds": [
+      698,
+      1162
+    ],
+    "scale": 2,
+    "pageCardChartGeometry": "matched all 8 pairs",
+    "remaining": [
+      "font metrics and weights",
+      "icons and datepicker/controls",
+      "hover/selection/calendar/scrollbar states",
+      "full interactive state matrix"
+    ]
+  },
+  "desktopAcceptance": "GNOME/KDE and X11/Wayland physical desktop acceptance remains in issue 179",
+  "macosInstalledApp": "Not updated: build_install.sh rejects existing system-wide /Library/Input Methods/RIMES.app; no privileged removal attempted",
+  "images": {
+    "macos/daily-day.png": "de3d2fb18c2d1b15f651e1f52935e4fa88803bf2ab79e7677a92dd620a70b8bb",
+    "macos/daily-day.png.geometry.json": "f409158a1015c2a53e8a4c4f8b3478dcd03545d1198e75fbdcc28e603d61b4f4",
+    "macos/daily-night.png": "ae25cf7b543e291823a417c94e1415a974b7c66cf10e7277e27151e9a0a70815",
+    "macos/daily-night.png.geometry.json": "f409158a1015c2a53e8a4c4f8b3478dcd03545d1198e75fbdcc28e603d61b4f4",
+    "macos/daily-quiet.png": "dd36b3668d2a05c31d4d57cfd8d8d9771c34b5f67d1fa0a673bb7bd5e9ee1b04",
+    "macos/daily-quiet.png.geometry.json": "f409158a1015c2a53e8a4c4f8b3478dcd03545d1198e75fbdcc28e603d61b4f4",
+    "macos/daily-rasta.png": "9ac7c59fcb6e1ee1e5bd40936f45cdf633429aa9e65ddcae6d7c2c8718409bbf",
+    "macos/daily-rasta.png.geometry.json": "f409158a1015c2a53e8a4c4f8b3478dcd03545d1198e75fbdcc28e603d61b4f4",
+    "macos/history-day.png": "9a7213d8ae4ba20572cced68706dbc70fd3bb8397daa6944a2821a859656ba34",
+    "macos/history-day.png.geometry.json": "7377bc1ab68a672cb4889d778abf15f29e5d9e89bf1007f01b32c29c5199c67a",
+    "macos/history-night.png": "a5f75d02e8962ed18028e160eff92b977d1768f7aa932fb5c5654c3467eb99d0",
+    "macos/history-night.png.geometry.json": "7377bc1ab68a672cb4889d778abf15f29e5d9e89bf1007f01b32c29c5199c67a",
+    "macos/history-quiet.png": "da4e8d2b9d3222c539fa302d3437906dfc2060d93eca0323a0bd8dbe3e300ad1",
+    "macos/history-quiet.png.geometry.json": "7377bc1ab68a672cb4889d778abf15f29e5d9e89bf1007f01b32c29c5199c67a",
+    "macos/history-rasta.png": "42b4e54a798683f89c4422bade662beb545ca8c2a7d019d56742463315a17c64",
+    "macos/history-rasta.png.geometry.json": "7377bc1ab68a672cb4889d778abf15f29e5d9e89bf1007f01b32c29c5199c67a",
+    "linux/daily-day.png": "e01fc642f0d106d2bdc30c0cef7bdea7452fe2099b05796d00934d3789cf8899",
+    "linux/daily-day.png.geometry.json": "f5c5c5428fd7e061a879327bf9dbccda5f7b76f62a4369b12ccf9268e3bc53b3",
+    "linux/daily-night.png": "8654ce57a76f31668d036127340a3cafc5b82759fa7ccbeec2b8cf5df85e917a",
+    "linux/daily-night.png.geometry.json": "f5c5c5428fd7e061a879327bf9dbccda5f7b76f62a4369b12ccf9268e3bc53b3",
+    "linux/daily-quiet.png": "56128b66bccc6b487c64e017721f4f0b1ecdd1db691347c5f8b979bfd025f574",
+    "linux/daily-quiet.png.geometry.json": "f5c5c5428fd7e061a879327bf9dbccda5f7b76f62a4369b12ccf9268e3bc53b3",
+    "linux/daily-rasta.png": "0f8df9917b365490e3c6f235864e756c35ec21a4ef2e8fe7e908384356f92124",
+    "linux/daily-rasta.png.geometry.json": "f5c5c5428fd7e061a879327bf9dbccda5f7b76f62a4369b12ccf9268e3bc53b3",
+    "linux/history-day.png": "11c6d80e41ee4264a47f430c1e1890e0432087a3cff84e25ff8b512df3e09ea7",
+    "linux/history-day.png.geometry.json": "8ecf42fbc96214f302667abe1ed399f43175ece05e6b8231d28b450665b54010",
+    "linux/history-night.png": "b074e9cfa9c76bd134cdf7f8a37ecc95e84b3d7caacd0aa3f4f8353794d3378b",
+    "linux/history-night.png.geometry.json": "8ecf42fbc96214f302667abe1ed399f43175ece05e6b8231d28b450665b54010",
+    "linux/history-quiet.png": "44f5e5016684ddc80849ecd4362c0dbc5c94e52a94d6bc1193b4e6980ccf3508",
+    "linux/history-quiet.png.geometry.json": "8ecf42fbc96214f302667abe1ed399f43175ece05e6b8231d28b450665b54010",
+    "linux/history-rasta.png": "4660d4be672b7650c295ca4816a1fb0ce31e00d0fd83d9252643aeeee6d50562",
+    "linux/history-rasta.png.geometry.json": "8ecf42fbc96214f302667abe1ed399f43175ece05e6b8231d28b450665b54010"
+  },
+  "logs": {
+    "logs/core-tests.log": "b3875e04da36625150935591a848dd6871f2770a8b6123d7593e0db413655269",
+    "logs/deb-lifecycle.log": "5c88c4644ab366a95ed13db867724581fc78361fa83ab836df04f53d5f3e1fdc",
+    "logs/fcitx.log": "4fa489cb0db7977eea14f80e073b4059cb372851cde7bc839e5cd16fe7a97283",
+    "logs/gtk-ui.log": "dcd67db1a450e3a97bb2b334d8344ba88eb5606bf75d3e234e69c025e74c4ee4",
+    "logs/installed-settings-before-fix.log": "8874065949439101dfbd91a9c6f6509fb9026ac226359ffefe3fb9de401ea978",
+    "logs/lifecycle-preflight.log": "bc82ca7dd23c7e48a770a132f0081382575f68f942499aae53f689599dbffeae",
+    "logs/native-build.log": "d7acf4975562fc836fc6d2414645cbbd418e8172f0036afb74a409a711ad3300",
+    "logs/native-fixtures.log": "d546a7e593cabdf6c5a4e03ae097b3ccb66c0828fd89444bc8f3bb8764cace7b",
+    "logs/native-smokes.log": "7c0c625ec5d1b88bd8efa7b5bc62be74f439029353176ea01166f003aa5b9b43",
+    "logs/native-ui.log": "2670acd3d46abbf87184057ef4e09b943c69f74b302bb2b177d5637e779e1d56",
+    "logs/release-package.log": "f0d678db7061f0dc3fbd6fae26a7acce08932e25c45f961982b19a096c8de1dd",
+    "logs/settings-navigation.log": "8539680d11f2ea558c13db92915d5d64bd6ada4aeb691f8b3392ce25bcd46fd0"
+  },
+  "logFormatting": "Terminal carriage returns normalized to newlines and trailing whitespace stripped; messages retained."
+}

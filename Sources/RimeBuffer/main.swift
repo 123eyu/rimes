@@ -645,6 +645,14 @@ if let index = CommandLine.arguments.firstIndex(of: "mailbox-chat-linux-contract
     } catch { fputs("Mailbox conversation export failed\n", stderr); exit(1) }
 }
 
+if let index = CommandLine.arguments.firstIndex(of: "statistics-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        try StatisticsLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        print("statistics-linux-fixtures: PASS actual native aggregates and keyboard layout")
+        exit(0)
+    } catch { print("statistics-linux-fixtures: FAIL \(error.localizedDescription)"); exit(1) }
+}
+
 if let index = CommandLine.arguments.firstIndex(of: "chord-linux-ui-smoke"), index + 1 < CommandLine.arguments.count {
     exit(runChordLinuxUISmoke(output: URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
 }

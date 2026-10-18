@@ -57,6 +57,8 @@ ctest --test-dir "$BUILD_DIR" --output-on-failure
 "$BUILD_DIR/rimes-chord-engine-tests" "$STAGE"
 RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
     "$BUILD_DIR/rimes-chord-fcitx-e2e" "$BUILD_DIR" . test-data
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/rimes-metrics-fcitx-e2e" "$BUILD_DIR" . test-data
 
 ROOT="$WORKDIR/root"
 RIMES_IME_STAGE_DIR="$STAGE" DESTDIR="$ROOT" \

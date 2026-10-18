@@ -77,6 +77,8 @@
     "native/shared/openai/chat_codec.cpp": "f10cb221b9c194834a361c42913c8bfde784582414d9923960229fc0d150388c",
     "native/shared/openai/chat_codec.hpp": "17c9a09980c920a4e5b77416e040d3311eca603c2a0e4b80fe6e05ef545b7a52",
     "native/shared/openai/chat_codec_tests.cpp": "7d0970676a1bcb5112b8b3fa05aa557d2697e0075e9ba7cd4c2089ef54c6a1b4",
+    "native/shared/statistics/metrics_core.cpp": "7bbd13728140f2f8f460eec3d013004332ee576c9e5e3ae59a1b23da6a2b5b95",
+    "native/shared/statistics/metrics_core.hpp": "cbf3111f7ec501e4d98fa3964b4ed7c0a5a55e4f9466c546c6413ef9a6276c0a",
     "native/windows/my_combo.schema.yaml": "d2937f55ac93fe746bf2e854aa523d8488d426392e0e6d8b63f96966c8ec6bc9",
     "native/windows/official_features.hpp": "560de4a57d0b2ab0e6f3724c7cf58884bf8ddb492d4dfd1d39b8ad06dbacc10e",
     "plugins/apple-translation/plugin.json": "220435a67821ddcf739579dddc1a359f5f565ecae266f80c81b4818a1d2f62d7",
@@ -100,12 +102,12 @@
     "plugins/poem/plugin.json": "8c5537a5647b2b788eaadafb2c6353fd5c733eae7d666301788448d5471a66d1",
     "plugins/polisher/plugin.json": "32df6ff2457db98a595bdd3ba301edbba242fd70ac825cc3d75f7dfbdc199c4d",
     "plugins/scholay/plugin.json": "03aedfa799807e845f22d4cabfac38f7f0c1a957c24e9e90e937b35be4ceb38a",
-    "plugins/statistics/plugin.json": "199d67d2df5aec4fb240595345efeb568d5a8913b0f3a86f63ce63fdc4600361",
+    "plugins/statistics/plugin.json": "9735efe480ba589e2429db4f453d840712f6100249cafbd530d70b4db58b98d3",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "eb2f031f4488628e3aa90900d0eadcea4ddd8d7faa0f782b01b8655e051a5f44",
-    "source-map.json": "18402344bf6584ecb3efb8998ca125a6619eb3cd8a2e692576a40f194c1d3d58"
+    "source-map.json": "17115910f6c9af156cfa60eab811c5cd8da23d5f3354a63f2a461024d251cba8"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "5de220697deeae2c87eba7cc05eb7398affa6370",
+  "revision": "01ab4c175f4d827b0e00155514478d58ad44de56",
   "schemaVersion": 1
 }
