@@ -3,8 +3,9 @@
 `rimes-plugins --list` returns the pinned official catalog with `available`,
 `installed`, `enabled`, `bundled`, `grant` and a user-facing error for each entry.
 Only an explicit Linux platform declaration **and** a compiled adapter make an
-entry available. The current pin has no Linux declarations; existing legacy
-Capsule notes remain controlled by Fcitx configuration until their module port.
+entry available. The local translation adapter is bundled and enabled on first
+installation; model downloads remain explicit. Existing legacy Capsule notes
+remain controlled by Fcitx configuration until their module port.
 
 `rimes-plugins --request` reads one JSON object from standard input and returns
 one JSON result. This companion keeps downloads outside the input-method event loop. Requests contain `op`, `id`, and the `grant`
@@ -116,8 +117,19 @@ Windows. No pip dependency resolution runs on the user's machine.
 Private resources live in `$RIMES_USER_DIR/translation`, or the default XDG
 user directory. Source uninstall and `apt remove` remove the installed helper,
 not downloaded models, dictionaries or learning data. The resource backend is
-implemented independently of the Buffer adapter; check the parity tracker for
-its current runtime and visual acceptance status.
+connected to the Buffer adapter. Select **实时翻译** to translate continuous
+input, or disable **连续翻译** and generate explicitly. The source stays intact
+until a separately validated delivery. Check the parity tracker for remaining
+delivery and visual acceptance work.
+
+Translation owns byte-exact sentence slices across Buffer block boundaries.
+It uses the macOS refresh policy (300 ms debounce / 900 ms maximum wait), keeps
+ready prefixes while the tail changes and rejects responses for edited slices,
+cancelled requests, stale configuration or lost authorization. Failed sentences
+can be retried without regenerating successful ones. The bounded tokenizer
+preserves punctuation, paragraph whitespace and Unicode; language-specific
+sentence-boundary differences from macOS NaturalLanguage remain part of parity
+acceptance. Local input and results never enter a remote provider.
 
 The opt-in integration test downloads and runs the real model in a disposable
 profile, checks both directions, refuses damaged resources and repairs them
@@ -126,3 +138,74 @@ from verified archives with network proxies disabled:
 ```bash
 python3 platforms/linux/runtime/tests/translation_engine_smoke.py /path/to/rimes-translation
 ```
+
+
+## ChatGPT / Codex CLI
+
+Install the official Codex CLI separately, then open **设置 → 连接器 → AI 模型 →
+ChatGPT**. This page checks the actual app-server protocol and login state. Use
+**登录 ChatGPT** for explicit browser authorization, **复制授权链接** if needed,
+and **取消** to stop a pending login. Missing or incompatible CLIs stay visibly
+unavailable. The probe does not submit a prompt or start a model turn.
+
+Enable the official **ChatGPT** Buffer plugin and select it in Buffer. Its toolbar
+provides the same model, reasoning effort and Skill choices as macOS. Type a
+complete request and click generate; typing alone does not contact ChatGPT.
+Streaming previews cannot be delivered until the response completes. Normal
+text delivery still uses Fcitx `commitString`, with the source consumed only after
+confirmed delivery. Closing/editing the Buffer, changing its target or disabling
+the plugin invalidates inline work and ignores late output.
+
+For images select **图片 · imagegen** in the Skill menu and enable **Mailbox →
+收件箱**. Only that explicit channel mounts the bundled imagegen Skill. Images
+are independent Mailbox jobs: the request is saved before generation, closing
+Buffer leaves the job running, and ordinary typing continues. The output row
+shows progress and opens the exact completed Mailbox thread. Image files are
+copied into Mailbox-owned storage; provider paths are never inserted into an
+input field. A passive completion receipt opens the same thread when clicked.
+Stopping the job or disabling its plugin cancels its process tree; host shutdown
+also stops it, and an interrupted generation remains visible as failed.
+
+The connector uses a dedicated private `ai/codex-home` under the XSIME user root
+(`$RIMES_USER_DIR`, otherwise `$XDG_DATA_HOME/rimes` or `~/.local/share/rimes`).
+It does not import the developer's `~/.codex` configuration, instructions, MCP
+servers or API keys. The official CLI manages its credentials there. Login data,
+generated files and Mailbox history survive upgrades, source uninstall and deb
+removal. Keep this directory private when making backups.
+
+[Codex validation and remaining desktop checks](CODEX-VALIDATION.md) distinguish
+protocol tests, the actual official Linux CLI probe, native UI screenshots and
+live authenticated generation.
+
+
+## Claude Code CLI
+
+Install the official Claude Code CLI separately. In **设置 → 连接器 → AI 模型 →
+Claude**, XSIME checks its required flags and login status without submitting a
+prompt. Use **授权 Claude** / **登录 Claude** to open the CLI's browser login;
+**取消登录** stops a pending operation. A successful account can be reauthorized
+with **重新授权 Claude**. Incompatible or missing CLIs remain unavailable.
+
+Install and enable the optional **Claude** Buffer plugin. Select its model and
+reasoning effort, enter the complete request, then click generate. Typing alone
+does not send a request. Public progress and semantic previews appear while it
+runs; final text is delivered only after validation and a successful CLI exit.
+Editing the source, switching input fields, closing Buffer or disabling the
+plugin cancels its text request and rejects late replies. Normal delivery uses
+Fcitx `commitString`.
+
+The text channel uses the same fixed print/stream flags as macOS: tools, slash
+commands, Chrome integration, extra MCP configuration and session persistence
+are disabled. XSIME does not copy API keys or OAuth tokens into this channel.
+Claude manages its own credentials in the user's normal HOME. A private request
+workspace is removed when the operation finishes; uninstalling XSIME preserves
+both CLI authentication and all XSIME user data.
+
+Discovery checks common user/system installations and absolute PATH entries,
+skipping incompatible candidates. To pin one installation, set
+`RIMES_CLAUDE_PATH=/absolute/path/to/claude` in the Fcitx desktop environment; a
+missing or incompatible pin fails without choosing another installation.
+
+[Claude validation and remaining desktop checks](CLAUDE-VALIDATION.md) separate
+protocol tests, the official prompt-free CLI check, actual native widget renders
+and still-pending authenticated generation.

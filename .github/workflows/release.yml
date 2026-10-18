@@ -35,10 +35,8 @@ on:
       - 'scripts/release/**'
       - '.github/workflows/release.yml'
       - '.github/workflows/linux-deb.yml'
-      - 'platforms/linux/ime/**'
+      - 'platforms/linux/**'
       - 'scripts/input-schemes/repair-rime-table.py'
-      - 'platforms/linux/buffer/**'
-      - 'platforms/linux/capsule/**'
       - 'scripts/platform-preview/**'
       - 'VERSION'
   schedule:

@@ -5,12 +5,18 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <stdexcept>
 
 namespace rimes::runtime {
 
 std::string RandomID();
 std::string Sha256(std::string_view bytes);
 std::filesystem::path UserRoot();
+
+class StorageBusy : public std::runtime_error {
+public:
+    StorageBusy() : std::runtime_error("Cannot lock private storage") {}
+};
 
 class FileLock {
 public:
@@ -36,7 +42,11 @@ public:
     std::optional<std::string> Read(std::string_view name, std::size_t limit) const;
     void Write(std::string_view name, std::string_view bytes) const;
     void Remove(std::string_view name) const;
-    FileLock Lock() const;
+    // Explicit recovery: preserve an owned file or symlink without following
+    // it. The original bytes/path entry remain in this private directory.
+    std::string Preserve(std::string_view name) const;
+    std::string Identity(std::string_view name) const;
+    FileLock Lock(bool wait = true, std::string_view name = ".lock") const;
     const std::filesystem::path& Path() const { return path_; }
 
 private:

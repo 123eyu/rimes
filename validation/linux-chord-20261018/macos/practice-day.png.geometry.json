@@ -1,0 +1,181 @@
+[
+  {
+    "height" : 236,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4524FlyChordPracticePageView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 236,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 20,
+    "type" : "NSStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 0
+  },
+  {
+    "fontSize" : 13,
+    "height" : 25,
+    "text" : "双键基础（127）",
+    "type" : "RimeBuffer.RimeFixedAccentPopUpButton",
+    "width" : 132,
+    "x" : 21,
+    "y" : -1
+  },
+  {
+    "fontSize" : 13,
+    "height" : 32,
+    "text" : "开始练习",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 86,
+    "x" : 150,
+    "y" : -5
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 86,
+    "x" : 150,
+    "y" : -5
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "开始练习",
+    "type" : "NSButtonTextField",
+    "width" : 64,
+    "x" : 161,
+    "y" : 1
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 64,
+    "x" : 161,
+    "y" : 1
+  },
+  {
+    "fontSize" : 13,
+    "height" : 32,
+    "text" : "换一题",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 73,
+    "x" : 230,
+    "y" : -5
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 73,
+    "x" : 230,
+    "y" : -5
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "换一题",
+    "type" : "NSButtonTextField",
+    "width" : 51,
+    "x" : 241,
+    "y" : 1
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 51,
+    "x" : 241,
+    "y" : 1
+  },
+  {
+    "height" : 20,
+    "type" : "NSView",
+    "width" : 295.5,
+    "x" : 304,
+    "y" : 0
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "1\/30 · 连对 0",
+    "type" : "NSTextField",
+    "width" : 70.5,
+    "x" : 605.5,
+    "y" : 3
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 70.5,
+    "x" : 605.5,
+    "y" : 3
+  },
+  {
+    "height" : 186,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 28
+  },
+  {
+    "fontSize" : 34,
+    "height" : 40,
+    "text" : "a",
+    "type" : "NSTextField",
+    "width" : 624,
+    "x" : 40,
+    "y" : 38
+  },
+  {
+    "height" : 40,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 624,
+    "x" : 40,
+    "y" : 38
+  },
+  {
+    "fontSize" : 14,
+    "height" : 17,
+    "text" : "按下对应并击",
+    "type" : "NSTextField",
+    "width" : 87.5,
+    "x" : 576.5,
+    "y" : 84
+  },
+  {
+    "height" : 17,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 87.5,
+    "x" : 576.5,
+    "y" : 84
+  },
+  {
+    "height" : 76,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4527FlyChordPracticeCaptureView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 107
+  },
+  {
+    "fontSize" : 12,
+    "height" : 15,
+    "text" : "等待输入",
+    "type" : "NSTextField",
+    "width" : 52,
+    "x" : 612,
+    "y" : 189
+  },
+  {
+    "height" : 15,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 52,
+    "x" : 612,
+    "y" : 189
+  }
+]

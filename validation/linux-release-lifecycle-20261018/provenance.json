@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "sourceBase": "a3a0cf60a00367cde474ede9f93bb08f41e45c07",
+  "sourceFiles": {
+    ".github/workflows/linux-deb.yml": "0b7bd335fbdfa3e5c3542bc9ec3ce057e60e8d827e0318a4d421a164209c15bf",
+    ".github/workflows/release.yml": "4efb0ce35bd954da7373abb407b22371848e05ab04829c1c904390ad7e6f92d3",
+    "RELEASE.md": "cf676a3c739c4181cdfdc0ccb0d52133f600940bdaf7a05b788459ad0e64dbcf",
+    "platforms/linux/README.md": "d602064ed5e6e56e6cf5f2e56df7a67e29286ba7df4edc95dd6e9c6bf1fcb008",
+    "platforms/linux/ime/README.md": "c4ce8e1d73c491f9926bc10de74e03cb9200587348d59b9aea69ce7654781c09",
+    "platforms/linux/ime/tests/deb_lifecycle.sh": "f32aed3def27f45b25767a03a3c73461017b1b976c04ef787384df08359d72c9",
+    "platforms/linux/ime/scripts/fetch-previous-deb.py": "61db2cf23f9624b4e57301e69a359f2ca81f81eadf8ed57d2f6d5185a16d123b",
+    "platforms/linux/ime/tests/test_previous_deb.py": "11dae3af481517d24f64db1f4553dffe7eeff6e534913cf967e6824372cb0284",
+    "platforms/linux/ime/src/buffer/buffer_service.cpp": "0651929d5a7cfce9e8958e579f3b139d8e1036e00280cae05a75833a5e1aaec5",
+    "platforms/linux/ime/src/capsule/capsule_service.cpp": "d3e5eea5a6fbf70815cc84cb1c70cc1f70274e5e8122e7196ce6dfe633739162",
+    "platforms/linux/ime/src/fcitx/rimes_ime.cpp": "e1836b7d3503ff62632086df50634e994382527a5396ecb900a676d46d49b876",
+    "plugins.lock.json": "cc8ef9df1829f5652b9e41a4a9cceeb8b684e6d39493decdb7351f05b47a4b7b"
+  },
+  "package": {
+    "file": "fcitx5-rimes_1.1.5_arm64.deb",
+    "version": "1.1.5",
+    "architecture": "arm64",
+    "sha256": "e04ce6b4ba33f1ad315618a75d2308daffd3f783dd2440e18ac6ff225bfcefaa",
+    "installedSizeKiB": 117624,
+    "published": false
+  },
+  "environment": "Ubuntu 24.04 arm64 disposable Docker container; root package runner with unprivileged-owned preservation fixtures",
+  "tests": {
+    "ctest": 90,
+    "sourceLifecycleAndPriorReleaseSelection": 22,
+    "releaseChannels": 5,
+    "productVersions": 23,
+    "packageLifecycle": [
+      "fresh install",
+      "fresh removal",
+      "old-version fixture install",
+      "version upgrade with retired-file removal",
+      "reinstall",
+      "final removal"
+    ],
+    "preservedFilesAtEveryPhase": 32,
+    "preservation": [
+      "bytes",
+      "directory layout",
+      "ownership",
+      "permissions"
+    ],
+    "runtimeChecks": [
+      "installed binaries and libraries after fresh install and upgrade",
+      "settings pages and pinned Yoyo data",
+      "Mailbox PTY render and real process/deep-link/receipt interaction"
+    ]
+  },
+  "upgrade": {
+    "localOldVersion": "1.1.5~lifecycle.1",
+    "coverage": "controlled older-version payload fixture; no historical application migration claim",
+    "publishedAmd64Candidate": "v1.1.4",
+    "publishedCandidateChecksumAndMetadata": "verified; actual amd64 1.1.4 -> 1.1.5 lifecycle passed in CI 39111233064"
+  },
+  "desktopAndVisualGate": "open under #179; package checks do not grant desktop or pixel acceptance",
+  "ci": {
+    "run": "https://github.com/scholay/xsime/actions/runs/39111233064",
+    "commit": "fff17a358e28441c3fee40308f79917408462538",
+    "conclusion": "success",
+    "package": {
+      "file": "fcitx5-rimes_1.1.5_amd64.deb",
+      "sha256": "169581c73e4071313ae87763b1269574e540452b2dc606d7eb2d45e9cc4001e0",
+      "downloadReadback": "matches tested package and uploaded checksum",
+      "architecture": "amd64",
+      "published": false
+    },
+    "oldPackage": {
+      "version": "1.1.4",
+      "sha256": "15adfbb237ec5330a358d74d0ef87b62c96bd9ba4a35f2f5072327a369e2ad1e"
+    },
+    "preservedFilesAtEveryPhase": 32,
+    "newUiCalibrationIncluded": false
+  }
+}

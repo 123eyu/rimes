@@ -1,0 +1,1 @@
+mailbox-workspace-smoke: PASS (routing, migration, archive, atomic PNG receipt, native layouts, draft, real PTY lifetime)

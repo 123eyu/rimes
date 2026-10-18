@@ -1,0 +1,37 @@
+[
+  {
+    "file" : "claude-missing.png",
+    "height" : 680,
+    "state" : "missing",
+    "theme" : "day",
+    "width" : 980
+  },
+  {
+    "file" : "claude-signed-out.png",
+    "height" : 680,
+    "state" : "signed-out",
+    "theme" : "day",
+    "width" : 980
+  },
+  {
+    "file" : "claude-ready.png",
+    "height" : 680,
+    "state" : "ready",
+    "theme" : "day",
+    "width" : 980
+  },
+  {
+    "file" : "claude-waiting.png",
+    "height" : 680,
+    "state" : "waiting",
+    "theme" : "day",
+    "width" : 980
+  },
+  {
+    "file" : "claude-failed.png",
+    "height" : 680,
+    "state" : "failed",
+    "theme" : "day",
+    "width" : 980
+  }
+]

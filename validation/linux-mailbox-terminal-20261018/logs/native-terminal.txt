@@ -1,0 +1,1 @@
+Actual AppKit/SwiftTerm terminal fixtures: 20 renders; preview, atomic receipt, UUID association and exit status verified

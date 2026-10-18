@@ -1,0 +1,67 @@
+[
+  {
+    "page": "codex-failed",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1960,
+      1360
+    ],
+    "changed_pixel_fraction": 0.0492890906362545,
+    "mean_absolute_channel_error": 1.9781346288515405,
+    "pair": "codex-failed-pair.png",
+    "difference_4x": "codex-failed-diff.png"
+  },
+  {
+    "page": "codex-missing",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1960,
+      1360
+    ],
+    "changed_pixel_fraction": 0.046105567226890756,
+    "mean_absolute_channel_error": 1.7884288715486194,
+    "pair": "codex-missing-pair.png",
+    "difference_4x": "codex-missing-diff.png"
+  },
+  {
+    "page": "codex-ready",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1960,
+      1360
+    ],
+    "changed_pixel_fraction": 0.046945903361344535,
+    "mean_absolute_channel_error": 1.8904638105242098,
+    "pair": "codex-ready-pair.png",
+    "difference_4x": "codex-ready-diff.png"
+  },
+  {
+    "page": "codex-signed-out",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1960,
+      1360
+    ],
+    "changed_pixel_fraction": 0.046105567226890756,
+    "mean_absolute_channel_error": 1.7884288715486194,
+    "pair": "codex-signed-out-pair.png",
+    "difference_4x": "codex-signed-out-diff.png"
+  },
+  {
+    "page": "codex-waiting",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1960,
+      1360
+    ],
+    "changed_pixel_fraction": 0.051879876950780314,
+    "mean_absolute_channel_error": 2.3309876450580234,
+    "pair": "codex-waiting-pair.png",
+    "difference_4x": "codex-waiting-diff.png"
+  }
+]

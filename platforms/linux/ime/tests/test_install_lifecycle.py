@@ -36,12 +36,19 @@ project(InstallFixture NONE)
 install(PROGRAMS program DESTINATION bin RENAME rimes-schemes)
 install(PROGRAMS program DESTINATION bin RENAME rimes-settings)
 install(PROGRAMS program DESTINATION bin RENAME rimes-translation)
+install(PROGRAMS program DESTINATION bin RENAME rimes-launch)
+install(PROGRAMS program DESTINATION bin RENAME rimes-mailbox)
+install(FILES program DESTINATION share/rimes/skills/imagegen RENAME SKILL.md)
+install(PROGRAMS program DESTINATION bin RENAME rimes-gateway)
 install(FILES program DESTINATION libexec/rimes/translation RENAME runtime.py)
 install(FILES program DESTINATION libexec/rimes/translation RENAME translation_core.py)
 install(FILES program DESTINATION libexec/rimes/translation RENAME resources.lock.json)
 install(FILES program DESTINATION libexec/rimes/translation RENAME NOTICE.md)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-buffer)
 install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-deploy)
+install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-capsule-preview)
+install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-capsule-capture)
+install(PROGRAMS program DESTINATION libexec/rimes RENAME rimes-mailbox-file)
 install(PROGRAMS program DESTINATION lib/x86_64-linux-gnu/fcitx5 RENAME rimes.so)
 install(FILES program DESTINATION share/fcitx5/addon RENAME rimes.conf)
 install(FILES program DESTINATION share/fcitx5/inputmethod RENAME rimes.conf)
@@ -49,6 +56,9 @@ install(FILES program DESTINATION share/icons/hicolor/48x48/apps RENAME rimes.pn
 install(FILES program DESTINATION share/licenses/rimes RENAME LICENSE.txt)
 install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.schemes.desktop)
 install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.settings.desktop)
+install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.buffer.desktop)
+install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.capsule.desktop)
+install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.mailbox.desktop)
 ''')
         self.env = {k: v for k, v in os.environ.items()
                     if k not in {"DESTDIR", "RIMES_IME_PREFIX", "RIMES_IME_BUILD_DIR"}}
@@ -85,19 +95,52 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.se
         personal = [self.sentinel(p) for p in (
             "share/rimes/rime_ice.userdb/000001.log", "share/rimes/user.yaml",
             "share/rimes/schemes/learning/wanxiang.userdb/CURRENT",
+            "share/rimes/chord-keymaps/00000000-0000-4000-8000-000000000001.json",
+            "share/rimes/chord-keymaps/active-profile.json", "share/rimes/chord-keymaps/state.json",
+            "share/rimes/learning/my_combo_progress.json",
+            "share/rimes/stats/typing_tests.json", "share/rimes/stats/key_frequency.json",
+            "share/rimes/stats/typing_speed.json", "share/rimes/stats/corrupt-practice-backup.json",
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
+            "share/rimes/capsule/clipboard/history-v1.sqlite3",
+            "share/rimes/capsule/master-key", "share/rimes/capsule/reveal-credential-v1",
+            "share/rimes/capsule/passwords/fixture.md",
+            "share/rimes/configuration/preferences.json", "share/rimes/configuration/credentials/provider.fixture",
+            "share/rimes/gateway/token", "share/rimes/gateway/status.json",
+            "share/rimes/ai/codex-home/auth.json", "share/rimes/ai/codex-home/generated_images/fixture.png",
+            "share/rimes/mailbox/generations/fixture/.lock",
+            "share/rimes/mailbox/mailbox.json", "share/rimes/mailbox/images/fixture.png", "share/rimes/mailbox/window.json",
+            "share/rimes/capsule/captures/example/record.json", "share/rimes/capsule/captures/example/original.webm",
+            "share/rimes/capsule/assets/reference.asset", "share/rimes/capsule/reference-style-v1",
             "share/rimes/data/personal.yaml", "share/fcitx5/addon/another.conf",
             "bin/another-program", ".engine/install/lib/librime.so",
             "share/rimes/translation/current.json", "share/rimes/translation/cache/model.argosmodel",
         )]
+        cli_home = self.root / "home"
+        (cli_home / ".claude").mkdir(parents=True)
+        for name in (".claude/.credentials.json", ".claude.json"):
+            path = cli_home / name
+            path.write_bytes(b"CLI-owned public fixture - preserve exactly\n")
+            personal.append(path)
+        self.env["HOME"] = str(cli_home)
         before = {p: p.read_bytes() for p in personal}
         self.install()
         installed = list(self.receipt()["files"])
         self.assertIn("share/rimes/data/default.yaml", installed)
+        self.assertIn("share/rimes/skills/imagegen/SKILL.md", installed)
         self.assertIn("lib/x86_64-linux-gnu/fcitx5/rimes.so", installed)
         self.assertIn("libexec/rimes/rimes-deploy", installed)
+        self.assertIn("libexec/rimes/rimes-capsule-preview", installed)
+        self.assertIn("libexec/rimes/rimes-capsule-capture", installed)
+        self.assertIn("libexec/rimes/rimes-mailbox-file", installed)
+        self.assertTrue(os.access(self.target / "libexec/rimes/rimes-mailbox-file", os.X_OK))
         self.assertIn("libexec/rimes/translation/runtime.py", installed)
         self.assertTrue(os.access(self.target / "bin/rimes-translation", os.X_OK))
+        self.assertTrue(os.access(self.target / "bin/rimes-launch", os.X_OK))
+        self.assertTrue(os.access(self.target / "bin/rimes-mailbox", os.X_OK))
+        self.assertTrue(os.access(self.target / "bin/rimes-gateway", os.X_OK))
+        self.assertIn("share/applications/org.scholay.rimes.mailbox.desktop", installed)
+        self.assertIn("share/applications/org.scholay.rimes.buffer.desktop", installed)
+        self.assertIn("share/applications/org.scholay.rimes.capsule.desktop", installed)
         self.assertTrue(os.access(self.target / "libexec/rimes/rimes-deploy", os.X_OK))
         self.assertTrue(os.access(self.target / "bin/rimes-schemes", os.X_OK))
         shutil.rmtree(self.build)

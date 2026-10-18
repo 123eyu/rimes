@@ -1,0 +1,223 @@
+[
+  {
+    "height" : 197,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4523FlyChordLessonsPageView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 197,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 0
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 10
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "双键基础",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 10
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 10
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 536.5,
+    "x" : 88,
+    "y" : 10
+  },
+  {
+    "fontSize" : 9,
+    "height" : 11,
+    "text" : "127 项",
+    "type" : "NSTextField",
+    "width" : 33.5,
+    "x" : 630.5,
+    "y" : 11.5
+  },
+  {
+    "height" : 11,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 33.5,
+    "x" : 630.5,
+    "y" : 11.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "已练 0\/127 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type" : "NSTextField",
+    "width" : 202,
+    "x" : 462,
+    "y" : 30
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 202,
+    "x" : 462,
+    "y" : 30
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 61
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 71
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "三键进阶",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 71
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 71
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 536.5,
+    "x" : 88,
+    "y" : 71
+  },
+  {
+    "fontSize" : 9,
+    "height" : 11,
+    "text" : "204 项",
+    "type" : "NSTextField",
+    "width" : 33.5,
+    "x" : 630.5,
+    "y" : 72.5
+  },
+  {
+    "height" : 11,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 33.5,
+    "x" : 630.5,
+    "y" : 72.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "已练 0\/204 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type" : "NSTextField",
+    "width" : 204.5,
+    "x" : 459.5,
+    "y" : 91
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 204.5,
+    "x" : 459.5,
+    "y" : 91
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 122
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 132
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "四键强化",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 132
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 132
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 542,
+    "x" : 88,
+    "y" : 132
+  },
+  {
+    "fontSize" : 9,
+    "height" : 11,
+    "text" : "96 项",
+    "type" : "NSTextField",
+    "width" : 28,
+    "x" : 636,
+    "y" : 133.5
+  },
+  {
+    "height" : 11,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 28,
+    "x" : 636,
+    "y" : 133.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "已练 0\/96 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type" : "NSTextField",
+    "width" : 198.5,
+    "x" : 465.5,
+    "y" : 152
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 198.5,
+    "x" : 465.5,
+    "y" : 152
+  }
+]

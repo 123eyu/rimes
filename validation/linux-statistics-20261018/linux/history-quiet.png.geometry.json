@@ -1,0 +1,54 @@
+{
+  "calendar": {
+    "height": 164,
+    "width": 650,
+    "x": 0,
+    "y": 293
+  },
+  "card-0": {
+    "height": 92,
+    "width": 155,
+    "x": 0,
+    "y": 515
+  },
+  "card-1": {
+    "height": 92,
+    "width": 155,
+    "x": 165,
+    "y": 515
+  },
+  "card-2": {
+    "height": 92,
+    "width": 155,
+    "x": 330,
+    "y": 515
+  },
+  "card-3": {
+    "height": 92,
+    "width": 155,
+    "x": 495,
+    "y": 515
+  },
+  "keyboard": {
+    "height": 260,
+    "width": 650,
+    "x": 0,
+    "y": 637
+  },
+  "page": {
+    "height": 1162,
+    "width": 698
+  },
+  "sessions": {
+    "height": 165,
+    "width": 650,
+    "x": 0,
+    "y": 932
+  },
+  "trend": {
+    "height": 190,
+    "width": 650,
+    "x": 0,
+    "y": 34
+  }
+}

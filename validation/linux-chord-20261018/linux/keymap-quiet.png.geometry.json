@@ -1,0 +1,1453 @@
+[
+  {
+    "classes": [
+      "background",
+      "chord-surface"
+    ],
+    "height": 876,
+    "type": "GtkOffscreenWindow",
+    "width": 698,
+    "x": 0,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-page",
+      "chord-editor"
+    ],
+    "height": 852,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 136,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 20,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "chord-profiles"
+    ],
+    "height": 20,
+    "type": "GtkComboBoxText",
+    "width": 200,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 244,
+    "y": 10
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "复制方案",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 252,
+    "y": 10
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 38,
+    "x": 312,
+    "y": 10
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "新建",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 320,
+    "y": 10
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 48,
+    "x": 358,
+    "y": 10
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "导入…",
+    "type": "GtkLabel",
+    "width": 32,
+    "x": 366,
+    "y": 10
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 48,
+    "x": 414,
+    "y": 10
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "导出…",
+    "type": "GtkLabel",
+    "width": 32,
+    "x": 422,
+    "y": 10
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "自定义方案 · 427 条映射",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 38
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 19,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 59
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "名称",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 36,
+    "y": 59
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 518,
+    "x": 66,
+    "y": 59
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 19,
+    "type": "GtkButton",
+    "width": 70,
+    "x": 592,
+    "y": 59
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "text": "删除方案…",
+    "type": "GtkLabel",
+    "width": 54,
+    "x": 600,
+    "y": 59
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 86
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 16,
+    "text": "音节边界",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 36,
+    "y": 86
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "type": "GtkComboBoxText",
+    "width": 187,
+    "x": 88,
+    "y": 86
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 110
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 16,
+    "text": "输出编码",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 36,
+    "y": 110
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "type": "GtkComboBoxText",
+    "width": 89,
+    "x": 88,
+    "y": 110
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 187,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 146
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "键区与和弦",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 156
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 19,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 178
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "左区",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 36,
+    "y": 178
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 279,
+    "x": 66,
+    "y": 178
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "右区",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 353,
+    "y": 178
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 279,
+    "x": 383,
+    "y": 178
+  },
+  {
+    "classes": [
+      "horizontal",
+      "chord-mode"
+    ],
+    "height": 18,
+    "type": "GtkBox",
+    "width": 216,
+    "x": 36,
+    "y": 205
+  },
+  {
+    "classes": [
+      "text-button",
+      "selected",
+      "segment"
+    ],
+    "height": 18,
+    "type": "GtkButton",
+    "width": 54,
+    "x": 36,
+    "y": 205
+  },
+  {
+    "classes": [],
+    "height": 18,
+    "text": "选择和弦",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 41,
+    "y": 205
+  },
+  {
+    "classes": [
+      "text-button",
+      "segment"
+    ],
+    "height": 18,
+    "type": "GtkButton",
+    "width": 54,
+    "x": 90,
+    "y": 205
+  },
+  {
+    "classes": [],
+    "height": 18,
+    "text": "设为左区",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 95,
+    "y": 205
+  },
+  {
+    "classes": [
+      "text-button",
+      "segment"
+    ],
+    "height": 18,
+    "type": "GtkButton",
+    "width": 54,
+    "x": 144,
+    "y": 205
+  },
+  {
+    "classes": [],
+    "height": 18,
+    "text": "设为右区",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 149,
+    "y": 205
+  },
+  {
+    "classes": [
+      "text-button",
+      "segment"
+    ],
+    "height": 18,
+    "type": "GtkButton",
+    "width": 54,
+    "x": 198,
+    "y": 205
+  },
+  {
+    "classes": [],
+    "height": 18,
+    "text": "移出键区",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 203,
+    "y": 205
+  },
+  {
+    "classes": [
+      "vertical"
+    ],
+    "height": 92,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 231
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 28,
+    "type": "GtkBox",
+    "width": 622,
+    "x": 40,
+    "y": 231
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 40,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "Q L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 40,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 87,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "W L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 87,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 134,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "E L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 134,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 181,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "R L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 181,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 228,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "T L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 228,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 275,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "Y R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 275,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 322,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "U R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 322,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 369,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "I R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 369,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 416,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "O R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 416,
+    "y": 235
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 463,
+    "y": 235
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "P R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 463,
+    "y": 235
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 28,
+    "type": "GtkBox",
+    "width": 610,
+    "x": 52,
+    "y": 263
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 52,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "A L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 52,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 99,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "S L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 99,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "selected",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 146,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "D L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 146,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 193,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "F L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 193,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 240,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "G L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 240,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 287,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "H R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 287,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 334,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "J R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 334,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "selected",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 381,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "K R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 381,
+    "y": 267
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 428,
+    "y": 267
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "L R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 428,
+    "y": 267
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 28,
+    "type": "GtkBox",
+    "width": 598,
+    "x": 64,
+    "y": 295
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 64,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "Z L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 64,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 111,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "X L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 111,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 158,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "C L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 158,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "selected",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 205,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "V L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 205,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 252,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "B L",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 252,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 299,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "N R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 299,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "selected",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 346,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "M R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 346,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 393,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": ", R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 393,
+    "y": 299
+  },
+  {
+    "classes": [
+      "text-button",
+      "chord-key"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 43,
+    "x": 440,
+    "y": 299
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": ". R",
+    "type": "GtkLabel",
+    "width": 43,
+    "x": 440,
+    "y": 299
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 319,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 343
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 19,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 353
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "映射表",
+    "type": "GtkLabel",
+    "width": 288,
+    "x": 36,
+    "y": 353
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 330,
+    "x": 332,
+    "y": 353
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 616,
+    "x": 41,
+    "y": 382
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "和弦键",
+    "type": "GtkLabel",
+    "width": 160,
+    "x": 41,
+    "y": 382
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "输出拼音",
+    "type": "GtkLabel",
+    "width": 255,
+    "x": 204,
+    "y": 382
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "类型",
+    "type": "GtkLabel",
+    "width": 140,
+    "x": 462,
+    "y": 382
+  },
+  {
+    "classes": [
+      "chord-mappings"
+    ],
+    "height": 195,
+    "type": "GtkScrolledWindow",
+    "width": 626,
+    "x": 36,
+    "y": 406
+  },
+  {
+    "classes": [
+      "view"
+    ],
+    "height": 195,
+    "type": "GtkTreeView",
+    "width": 626,
+    "x": 36,
+    "y": 406
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 19,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 609
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "和弦",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 36,
+    "y": 609
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 130,
+    "x": 66,
+    "y": 609
+  },
+  {
+    "classes": [
+      "chord-label"
+    ],
+    "height": 19,
+    "text": "输出",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 204,
+    "y": 609
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkEntry",
+    "width": 160,
+    "x": 234,
+    "y": 609
+  },
+  {
+    "classes": [],
+    "height": 19,
+    "type": "GtkComboBoxText",
+    "width": 78,
+    "x": 402,
+    "y": 609
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 636
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 36,
+    "y": 636
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "更新映射",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 44,
+    "y": 636
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 104,
+    "y": 636
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "清空编辑",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 112,
+    "y": 636
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 172,
+    "y": 636
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "删除映射",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 180,
+    "y": 636
+  },
+  {
+    "classes": [
+      "vertical"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 354,
+    "x": 240,
+    "y": 636
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 602,
+    "y": 636
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "试译和弦",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 610,
+    "y": 636
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 113,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 672
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 682
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 16,
+    "text": "本地试打",
+    "type": "GtkLabel",
+    "width": 512,
+    "x": 36,
+    "y": 682
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 556,
+    "y": 682
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "开始试打",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 564,
+    "y": 682
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 38,
+    "x": 624,
+    "y": 682
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "停止",
+    "type": "GtkLabel",
+    "width": 22,
+    "x": 632,
+    "y": 682
+  },
+  {
+    "classes": [
+      "chord-capture"
+    ],
+    "height": 48,
+    "type": "GtkEventBox",
+    "width": 626,
+    "x": 36,
+    "y": 706
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 48,
+    "text": "点击“开始试打”后在这里接收按键",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 706
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label",
+      "chord-preview"
+    ],
+    "height": 13,
+    "text": "DVKM → nong · 完整音节",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 762
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 57,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 795
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 16,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 805
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 36,
+    "y": 805
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "保存草稿",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 44,
+    "y": 805
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 16,
+    "type": "GtkButton",
+    "width": 82,
+    "x": 104,
+    "y": 805
+  },
+  {
+    "classes": [],
+    "height": 16,
+    "text": "应用键位方案",
+    "type": "GtkLabel",
+    "width": 66,
+    "x": 112,
+    "y": 805
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 829
+  }
+]

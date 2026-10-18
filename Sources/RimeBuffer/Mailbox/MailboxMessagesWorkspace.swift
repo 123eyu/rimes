@@ -7,6 +7,9 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     let module: MailboxModuleID
     private let store: MailboxStore
     private let bridge = MailboxInteractionBridge.shared
+    // Hydrate inbound review routing before this view installs notification observers.
+    // Its first initialization may synchronously publish recovered associations.
+    private let reviewAdapter = MailboxBufferReviewAdapter.shared
     private var snapshot: MailboxStoreSnapshot
     private var observation: MailboxStoreObservation?
     private var associationObserver: NSObjectProtocol?
@@ -26,6 +29,7 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     private let feedback = MailboxFeedbackLabel()
     private let modelPicker = NSPopUpButton()
     private var modelOptions: [MailboxNewConversationModelOption] = []
+    private let modelOptionsProvider: () -> [MailboxNewConversationModelOption]
     private lazy var send = MailboxActionButton("发送", symbol: "arrow.up") { [weak self] in self?.submit() }
     private var transcriptScroll: NSScrollView!
     private var liveBody: MailboxMessageTextView?
@@ -34,7 +38,9 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     private lazy var toggleList = MailboxActionButton("", symbol: "sidebar.left") { [weak self] in self?.split.toggleSidebar() }
     var returnToTerminal: ((UUID) -> Bool)?
 
-    init(module: MailboxModuleID, store: MailboxStore) {
+    init(module: MailboxModuleID, store: MailboxStore,
+         modelOptionsProvider: @escaping () -> [MailboxNewConversationModelOption] = MailboxNewConversationModelCatalog.liveOptions) {
+        self.modelOptionsProvider = modelOptionsProvider
         self.module = module; self.store = store; snapshot = store.snapshot
         super.init(nibName: nil, bundle: nil)
     }
@@ -105,7 +111,7 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
         input.wantsLayer = true; input.layer?.cornerRadius = 12
         let footer = MailboxUI.padded(MailboxUI.stack([input, feedback], spacing: 7), inset: MailboxUI.contentInset)
         let main = MailboxUI.stack([topPanel, MailboxUI.line(), transcriptScroll, footer], spacing: 0)
-        split = MailboxAdaptiveSplitView(sidebar: sidebar, main: main, sidebarWidth: module == .chat ? 216 : 232)
+        split = MailboxAdaptiveSplitView(sidebar: sidebar, main: main, sidebarWidth: module == .chat ? MailboxUI.chatListWidth : MailboxUI.inboxListWidth)
         split.visibilityChanged = { [weak self] visible, _ in
             self?.toggleList.contentTintColor = visible ? MailboxUI.accent : .secondaryLabelColor
         }
@@ -249,20 +255,20 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
         let timestamp = MailboxUI.label(streaming ? "生成中" : MailboxUI.time(message.createdAt), size: 10, secondary: true)
         let row = MailboxUI.stack([identity, MailboxUI.spacer(), timestamp], vertical: false)
         let body = MailboxUI.body(message)
-        let block = MailboxUI.stack([row, body], spacing: 12)
+        let block = MailboxUI.stack([row, body], spacing: MailboxUI.messageSpacing)
         if let data = store.imageData(for: message), let image = NSImage(data: data) {
             let imageView = NSImageView()
             imageView.image = image; imageView.imageScaling = .scaleProportionallyUpOrDown
             imageView.translatesAutoresizingMaskIntoConstraints = false
             imageView.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
             imageView.setContentCompressionResistancePriority(.defaultLow, for: .vertical)
-            imageView.heightAnchor.constraint(lessThanOrEqualToConstant: module == .inbox ? 300 : 240).isActive = true
+            imageView.heightAnchor.constraint(lessThanOrEqualToConstant: module == .inbox ? MailboxUI.inboxImageHeight : MailboxUI.chatImageHeight).isActive = true
             let aspect = imageView.heightAnchor.constraint(equalTo: imageView.widthAnchor, multiplier: image.size.height / max(1, image.size.width))
             aspect.priority = .defaultHigh; aspect.isActive = true
             block.addArrangedSubview(imageView)
         }
         if !streaming && message.role == .inbound && message.kind == .content {
-            let actions = MailboxUI.stack([], vertical: false, spacing: 8)
+            let actions = MailboxUI.stack([], vertical: false, spacing: MailboxUI.actionSpacing)
             if message.imageFileName != nil {
                 actions.addArrangedSubview(MailboxActionButton("保存图片", symbol: "square.and.arrow.down") { [weak self] in self?.saveImage(message) })
             } else {
@@ -321,7 +327,7 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     }
 
     private func loadModelOptions() {
-        modelOptions = MailboxNewConversationModelCatalog.liveOptions()
+        modelOptions = modelOptionsProvider()
         modelPicker.removeAllItems()
         modelPicker.addItems(withTitles: modelOptions.map(\.title))
         modelPicker.autoenablesItems = false

@@ -21,8 +21,20 @@
 #include "plugin_registry.hpp"
 #include "package_binding.hpp"
 #include "configuration.hpp"
+#include "local_translation.hpp"
+#include "ai_api.hpp"
+#include "codex_channel.hpp"
+#include "codex_image_jobs.hpp"
+#include "claude_channel.hpp"
+#include "gateway_server.hpp"
+#include "session/session_monitor.hpp"
+#include "desktop/workspace_launcher.hpp"
+#include "desktop/desktop_shortcuts.hpp"
 
 namespace fcitx {
+class ChordService;
+class MetricsService;
+class PracticeService;
 
 FCITX_CONFIGURATION(RimesConfiguration,
     Option<bool> verticalCandidates{this, "VerticalCandidates", "竖向排列候选", true};
@@ -55,6 +67,10 @@ public:
     CapsuleService& capsule() { return *capsule_; }
     rimes::plugins::Registry& plugins() { return plugins_; }
     bool acceptsPluginResult(const rimes::plugins::Lease& lease);
+    ChordService* chord() { return chord_.get(); }
+    MetricsService* metrics() { return metrics_.get(); }
+    PracticeService* practice() { return practice_.get(); }
+    bool observationProtected() const { return session_monitor_ && session_monitor_->protectedSession(); }
 
     // Single commit path. Buffer intercepts here the way macOS intercepts
     // before Delivery.insert (see rime_hooks.hpp).
@@ -68,6 +84,7 @@ private:
     void WatchPluginPackages();
     void WatchConfiguration();
     void ApplyConfiguration();
+    void ImageChanged();
 
     RimesConfiguration config_;
     std::string imported_schema_;
@@ -78,8 +95,16 @@ private:
     std::shared_ptr<std::atomic<bool>> alive_;
     std::unique_ptr<BufferService> buffer_;
     std::unique_ptr<CapsuleService> capsule_;
+    std::unique_ptr<ChordService> chord_;
+    std::unique_ptr<MetricsService> metrics_;
+    std::unique_ptr<PracticeService> practice_;
+    std::unique_ptr<rimes::mailbox::GatewayServer> gateway_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> destroy_watch_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;
+    std::unique_ptr<HandlerTableEntry<EventHandler>> focus_watch_;
+    std::unique_ptr<SessionMonitor> session_monitor_;
+    std::unique_ptr<WorkspaceLauncher> launcher_;
+    std::unique_ptr<DesktopShortcuts> desktop_shortcuts_;
     bool deploy_announced_ = false;
     rimes::plugins::Registry plugins_;
     std::unique_ptr<rimes::plugins::PackageStore> plugin_store_;
@@ -90,6 +115,13 @@ private:
     std::unique_ptr<EventSourceIO> configuration_watch_;
     int configuration_watch_fd_ = -1;
     std::string configuration_revision_;
+    rimes::runtime::LocalTranslationWorker translation_worker_;
+    rimes::runtime::AIWorker ai_worker_;
+    rimes::runtime::CodexWorker codex_worker_;
+    rimes::runtime::ClaudeWorker claude_worker_;
+    rimes::mailbox::CodexImageJobs codex_images_;
+    std::unique_ptr<EventSourceTime> image_progress_timer_;
+    std::string notified_image_;
 };
 
 class RimesImeFactory : public AddonFactory {

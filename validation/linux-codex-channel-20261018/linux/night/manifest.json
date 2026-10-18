@@ -1,0 +1,37 @@
+[
+  {
+    "file": "codex-missing.png",
+    "height": 680,
+    "state": "missing",
+    "theme": "night",
+    "width": 980
+  },
+  {
+    "file": "codex-signed-out.png",
+    "height": 680,
+    "state": "signed-out",
+    "theme": "night",
+    "width": 980
+  },
+  {
+    "file": "codex-ready.png",
+    "height": 680,
+    "state": "ready",
+    "theme": "night",
+    "width": 980
+  },
+  {
+    "file": "codex-waiting.png",
+    "height": 680,
+    "state": "waiting",
+    "theme": "night",
+    "width": 980
+  },
+  {
+    "file": "codex-failed.png",
+    "height": 680,
+    "state": "failed",
+    "theme": "night",
+    "width": 980
+  }
+]

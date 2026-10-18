@@ -68,7 +68,7 @@ def prepare(root, source, update_lock=False):
     if source_map.get("schemaVersion") != 1:
         raise ValueError("Unsupported plugin source map")
     imports = {}
-    input_names = {"VERSION", "source-map.json", "LICENSE", "NOTICE", "LICENSES/MIT-legacy.txt", "THIRD_PARTY_NOTICES.md"}
+    input_names = {"VERSION", "source-map.json", "LICENSE", "NOTICE", "LICENSES/MIT-legacy.txt", "LICENSES/Swift-Apache-2.0.txt", "THIRD_PARTY_NOTICES.md"}
     for entry in source_map["files"]:
         origin, destination = entry["source"], entry["destination"]
         if not origin.startswith("native/") or not destination.startswith(("Sources/", "Shared/Sources/", "platforms/")):

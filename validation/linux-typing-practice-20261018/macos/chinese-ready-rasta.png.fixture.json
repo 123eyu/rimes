@@ -1,0 +1,182 @@
+{
+  "articleID" : "rimes.morning-street",
+  "clock" : 10,
+  "context" : {
+    "chordCountingAvailable" : false,
+    "inputSourceID" : "public.source",
+    "mode" : "practice",
+    "schemaID" : "rime_ice"
+  },
+  "editor" : "",
+  "height" : 831,
+  "history" : [
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780001500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "D7362B6D-3222-4E50-88B2-F0E43E169285",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 90,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 301.33333333333331,
+            "elapsedSeconds" : 90
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780001000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "8E984BA0-477C-4E48-9F0B-F39A739E149B",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 100,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 271.19999999999999,
+            "elapsedSeconds" : 100
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+        "focusLost"
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780000500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "7A0EAA58-4628-4555-8172-724682BF6FDC",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 110,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 246.54545454545453,
+            "elapsedSeconds" : 110
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.morning-street",
+      "articleVersion" : 1,
+      "completedAt" : 1780000000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "723EE9EE-C77C-41F5-BAF4-7BD7C09A6931",
+      "isComplete" : true,
+      "language" : "chinese",
+      "metrics" : {
+        "attemptedCharacterCount" : 452,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 452,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 452,
+        "correctCharacterCount" : 452,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 120,
+        "expectedCharacterCount" : 452,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 226,
+            "elapsedSeconds" : 120
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    }
+  ],
+  "phase" : "ready",
+  "purpose" : "public-typing-practice-dashboard",
+  "theme" : "rasta",
+  "width" : 698
+}

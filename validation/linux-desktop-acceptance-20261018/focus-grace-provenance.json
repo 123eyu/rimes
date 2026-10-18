@@ -1,0 +1,16 @@
+{
+  "schemaVersion": 1,
+  "sourceCommit": "b154969b9e0e2c42e26b3566baa23522b91e8e4b",
+  "sourceFiles": {
+    "platforms/linux/ime/src/buffer/buffer_service.cpp": "0651929d5a7cfce9e8958e579f3b139d8e1036e00280cae05a75833a5e1aaec5",
+    "platforms/linux/ime/src/capsule/capsule_service.cpp": "d3e5eea5a6fbf70815cc84cb1c70cc1f70274e5e8122e7196ce6dfe633739162",
+    "platforms/linux/ime/tests/buffer_fcitx_e2e.cpp": "8c859cd6c13e352960eae3d103b79a774206c08de24a36556e0e9888823ab842"
+  },
+  "rawLogSHA256": "d2faace51c417cb1e0ccedd32b375326713557cf42f377b7943f2bbc6b161d86",
+  "checks": "full engine/Fcitx/Buffer/auto-send/protection/launcher/respawn/Capsule/gateway/respawn passed; display paths intentionally skipped, prior actual desktop report retained",
+  "priorCI": "https://github.com/scholay/xsime/actions/runs/39108628489",
+  "corrections": [
+    "Explicit 1ms Buffer/Capsule grace accuracy; existing 200ms grace/400ms assertion retained",
+    "Persistent IPC test peer drains snapshots like the production UI; existing toolbar persistence assertions retained"
+  ]
+}

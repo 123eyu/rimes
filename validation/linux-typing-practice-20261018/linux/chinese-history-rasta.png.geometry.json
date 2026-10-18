@@ -1,0 +1,42 @@
+{
+  "card-0": {
+    "height": 92,
+    "width": 154,
+    "x": 26,
+    "y": 120
+  },
+  "card-1": {
+    "height": 92,
+    "width": 154,
+    "x": 190,
+    "y": 120
+  },
+  "card-2": {
+    "height": 92,
+    "width": 154,
+    "x": 354,
+    "y": 120
+  },
+  "card-3": {
+    "height": 92,
+    "width": 154,
+    "x": 518,
+    "y": 120
+  },
+  "history-rows": {
+    "height": 158,
+    "width": 646,
+    "x": 26,
+    "y": 434
+  },
+  "page": {
+    "height": 620,
+    "width": 698
+  },
+  "trend": {
+    "height": 165,
+    "width": 646,
+    "x": 26,
+    "y": 255
+  }
+}

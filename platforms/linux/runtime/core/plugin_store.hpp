@@ -2,6 +2,7 @@
 #include "plugin_registry.hpp"
 #include "private_files.hpp"
 #include <nlohmann/json.hpp>
+#include <functional>
 
 namespace rimes::plugins {
 using Json = nlohmann::json;
@@ -19,10 +20,16 @@ public:
     PackageStore(std::filesystem::path root, Json catalog,
                  std::map<std::string, std::string> bundled,
                  std::map<std::string, Descriptor> adapters,
-                 std::string host_version);
+                 std::string host_version, bool wait_for_seed = true);
     std::vector<PackageView> Entries() const;
     PackageView Inspect(const std::string& id) const;
     Json Package(const std::string& id) const;
+    // Linearize a local host operation with enable/disable/update. The action
+    // must not call back into this store or acquire the package lock again.
+    void WithEnabledGrant(const std::string& id, const std::string& grant,
+                          const std::function<void()>& action, bool wait = true) const;
+    void WithEnabledGrants(const std::vector<std::pair<std::string, std::string>>& grants,
+                           const std::function<void()>& action, bool wait = true) const;
     void Install(const std::string& id, std::string_view bytes, const std::string& expected_grant);
     void RestoreBundled(const std::string& id, const std::string& expected_grant);
     void Enable(const std::string& id, bool enabled, const std::string& expected_grant);
@@ -38,7 +45,7 @@ private:
     Json CheckedState(const std::string& id, const std::string& expected_grant) const;
     void WriteState(const std::string& id, Json state) const;
     bool Available(const std::string& id) const;
-    void Seed();
+    void Seed(bool wait);
 
     runtime::PrivateDirectory files_;
     Json catalog_;

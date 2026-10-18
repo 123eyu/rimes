@@ -52,7 +52,7 @@ def _matches(op: str, snapshot: dict, baseline_generation: int) -> bool:
     if op in ("hello", "status"):
         return True
     if op == "show":
-        return bool(snapshot.get("armed"))
+        return bool(snapshot.get("armed")) and not snapshot.get("loading")
     if op == "close":
         return not snapshot.get("visible")
     if op == "activate":
@@ -74,7 +74,7 @@ def ctl(op: str, timeout: float = 3.0) -> dict:
             sock.sendall(struct.pack(">I", len(payload)) + payload)
             baseline = int(connect_snapshot.get("generation") or 0)
             if op in ("hello", "status") or (
-                op == "show" and connect_snapshot.get("armed")
+                op == "show" and connect_snapshot.get("armed") and not connect_snapshot.get("loading")
             ) or (op == "close" and not connect_snapshot.get("visible")):
                 sock.close()
                 return connect_snapshot
@@ -113,6 +113,9 @@ def main() -> int:
 
     _path, ic = probe.create_ic()
     snapshot = ctl("show")
+    if snapshot.get("module") != "notes":
+        print(f"FAIL: default Capsule page is {snapshot.get('module')!r}, expected notes", file=sys.stderr)
+        return 1
     if not snapshot.get("armed"):
         print("FAIL: show did not arm Capsule", file=sys.stderr)
         print(snapshot, file=sys.stderr)
@@ -120,6 +123,7 @@ def main() -> int:
     titles = [card.get("title") for card in snapshot.get("cards", [])]
     if "RIMES 默认词条" not in titles:
         print(f"FAIL: seed note missing, cards={titles!r}", file=sys.stderr)
+        print(snapshot, file=sys.stderr)
         return 1
     print("ok: dbus capsule showed the seed note")
 

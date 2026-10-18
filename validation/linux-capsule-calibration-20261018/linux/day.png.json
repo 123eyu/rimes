@@ -1,0 +1,70 @@
+{
+  "appearance": "light",
+  "controls": {
+    "body": {
+      "height": 302,
+      "width": 500,
+      "x": 410,
+      "y": 249
+    },
+    "editor": {
+      "height": 575,
+      "width": 532,
+      "x": 394,
+      "y": 56
+    },
+    "format": {
+      "height": 20,
+      "width": 500,
+      "x": 410,
+      "y": 203
+    },
+    "list": {
+      "height": 541,
+      "width": 225,
+      "x": 142,
+      "y": 90
+    },
+    "new": {
+      "height": 20,
+      "width": 57,
+      "x": 310,
+      "y": 57
+    },
+    "remove": {
+      "height": 18,
+      "width": 32,
+      "x": 762,
+      "y": 600
+    },
+    "save": {
+      "height": 20,
+      "width": 40,
+      "x": 802,
+      "y": 599
+    },
+    "search": {
+      "height": 22,
+      "width": 160,
+      "x": 142,
+      "y": 56
+    },
+    "summary": {
+      "height": 20,
+      "width": 500,
+      "x": 410,
+      "y": 157
+    },
+    "title": {
+      "height": 20,
+      "width": 500,
+      "x": 410,
+      "y": 111
+    }
+  },
+  "height": 660,
+  "keyWindow": false,
+  "scale": 2,
+  "selectedRow": 0,
+  "width": 940
+}

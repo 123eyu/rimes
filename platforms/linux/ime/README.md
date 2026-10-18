@@ -26,10 +26,22 @@ installation, status, cancellation and repair; see the
 [resource instructions](../runtime/README.md#local-translation-resources).
 Its Python 3.12 runtime is included in deb dependencies. Downloaded resources
 remain in the user directory when either source or deb installation is removed.
-Mailbox is still later. Buffer and Capsule behavior are specified in
+The [ChatGPT/Codex connector](../runtime/README.md#chatgpt--codex-cli) adds explicit text generation, browser login and persistent Mailbox image tasks.
+The optional [Claude Code connector](../runtime/README.md#claude-code-cli) provides explicit streaming text requests with native login, model and effort controls.
+The [Mailbox host](../mailbox/README.md) now provides independent navigation, persistent threads, local notes, reviewed Buffer/Capsule transfers and a loopback HTTP/MCP gateway. It also supports persistent AI conversations, real PTY Shell/Codex/Claude sessions and explicit UUID-associated file collection. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in
 `src/engine/rime_hooks.hpp`.
+The [ordinary chord extension](../chord/README.md) provides FlyYao timed batches,
+exact-context cross-batch pairing, custom keymaps, local practice and the two
+native Yoyo presets. Saved drafts and applied snapshots are independent;
+deployment verifies real Rime output and rolls back failed changes.
+The [statistics extension](../statistics/README.md) adds local daily aggregates,
+7/30-day trends, keyboard heatmaps and history drill-down. Key distribution and
+typing activity have independent switches; opening the page never enables the
+extension. Export and confirmed clearing affect aggregates only. Corrupt stores
+remain read-only until explicit backup and repair. Source and deb removal keep
+statistics files, alongside user dictionaries and learning records.
 
 ## What works
 
@@ -47,19 +59,72 @@ Mailbox is still later. Buffer and Capsule behavior are specified in
   A replacement reports a locked-directory error until the owner finishes
   exiting. The lock file remains on disk; the OS releases ownership on exit.
 - Isolated user directory: `$XDG_DATA_HOME/rimes` (not `…/fcitx5/rime`)
-- Shared data: `$prefix/share/rimes/data` (policy-staged 57-file closure)
-- Default Buffer workbench (`Ctrl+Shift+B` / `Super+Shift+B`): Rime commits
+- Shared data: `$prefix/share/rimes/data` (the 57-file core closure plus 12
+  hash-verified native chord files and their Linux manifest)
+- Default Buffer workbench (configurable, default `Ctrl+Shift+B`): Rime commits
   stage as blocks, Return tap/hold and the paper plane send through the same
   `commitText` → `commitString` path
-- Capsule rail (`Ctrl+Shift+V` / `Super+Shift+V`): local Markdown notes,
-  seed card `RIMES 默认词条`, Return inserts the selected note through
-  `commitString` after an armed-IC recheck
+- Capsule rail (configurable, default `Ctrl+Shift+V`): structured/Bullet/rich
+  notes, grouped detail rows and opt-in clipboard history. Text uses native
+  `commitString` after an armed-IC recheck; rich clipboard items restore original
+  MIME formats for explicit paste. The GTK manager exposes read-only history
+  previews, copy, favorite and delete. Resources add reference metadata, file/PDF
+  previews and explicit attachment copies. Capture adds PNG screenshots and silent
+  VP8 WebM recording through X11 or desktop portals, with a private archive.
+  See [Capsule usage](../capsule/README.md).
 
 macOS-only behaviour that is **not** reproduced here: custom candidate chrome,
-Mailbox, Capsule clipboard history / iCloud / password vault / media kinds,
-Buffer plugins (AI / translation / stream / music), cross-batch chord pairing,
+Capsule iCloud, advanced capture editing and audio,
+Buffer stream/music plugins,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
+Local Chinese/English translation, incremental units and OpenAI-compatible
+streaming requests are implemented; their desktop and visual acceptance is
+tracked separately in the parity plan.
+
+### Article practice
+
+The bundled typing-speed extension provides **打字测速 → 文章练习 / 成绩历史** and a **统计 → 跟打成绩** entry. Eight native Chinese/English articles use committed text for scoring; preedit, physical keys, correction, composition backspaces and accepted chord batches are handled separately. Practice stays separate from daily statistics. Aggregate scores in `stats/typing_tests.json` survive both deb and source removal. See [practice usage](../typing-practice/README.md) and [validation boundaries](../typing-practice/VALIDATION.md).
+
+
+## Desktop launch and global shortcuts
+
+Use **XSIME Buffer**, **XSIME Capsule**, **XSIME Mailbox** or **XSIME Settings** from the application
+menu, even when another input method is selected. `rimes-launch buffer`,
+`rimes-launch capsule`, `rimes-launch mailbox` and `rimes-launch settings` provide the same entry points
+for system custom shortcuts. They start Fcitx5 if necessary; add XSIME to its
+input-method group first. A Buffer or Capsule launch selects XSIME for the focused
+input context, waits for activation and then captures it. Changing focus or
+switching input methods in that interval cancels capture. Closing the workspace
+keeps the selected input method. With no focused input context, the workspace
+opens without a delivery target.
+
+In **Settings → Buffer → 快捷键**, click a recorder and press a combination.
+Escape cancels; unmodified Delete restores that action's default. Duplicate
+bindings and Ctrl/Super+A/V are rejected. The defaults and action titles are
+imported from macOS `ShortcutPreferences.swift`, mapping Command to Ctrl:
+Buffer `Ctrl+Shift+B`, Capsule `Ctrl+Shift+V`, settings `Ctrl+Shift+S`.
+Mailbox uses `Ctrl+Shift+M`; it opens its independent workspace without changing
+the current input method. Super can be selected explicitly in the recorder.
+Global grabs pause during recording and resume on completion, cancellation,
+settings-process exit or a two-minute timeout.
+
+On X11, checked key grabs report conflicts; choose another combination or
+release the conflicting application's shortcut and click **重新绑定全局快捷键**.
+Caps Lock and Num Lock do not change a binding. On Wayland, the desktop's
+**GlobalShortcuts portal** asks for permission and controls the actual binding.
+The recorder displays that binding after authorization. Unsupported or declined
+portals remain visibly unavailable; use the desktop entries or bind the
+`rimes-launch` commands in the desktop's own custom-shortcut settings.
+There is no XWayland grab fallback. Turning off **在其他输入法中使用全局快捷键**
+retains shortcuts while XSIME itself is selected. Preferences survive restart
+and removal of the application.
+
+`rimes-launch --status` reports bindings and the most recent launch result;
+`rimes-launch --retry` retries registration. The launcher accepts fixed action
+names only. Source uninstall and deb removal include the new launcher and menu
+entries while preserving user preferences, dictionaries and learning data.
+See [shortcut validation and desktop limits](../runtime/SHORTCUTS-VALIDATION.md).
 
 ## Importing source schemes
 
@@ -155,15 +220,20 @@ fcitx5 -r
 ```
 
 Remove XSIME from the Fcitx5 input-method list as well. User dictionaries,
-learning records, imported schemes and Capsule notes remain in
+learning records, imported schemes, Capsule notes, original-format clipboard
+history/favorites, resources, captures, encrypted passwords, Mailbox sessions and
+attachments, plugin configuration/credentials, daily statistics and practice results remain in
 `${XDG_DATA_HOME:-$HOME/.local/share}/rimes`. Do not delete this directory
 when removing the application. If a source installation already exists,
 uninstall it with the instructions below before switching to the deb.
+Deleting the source or build directory does not uninstall files already copied
+by `install.sh`; use its manifest-based `uninstall.sh` for those files. Keep
+CLI-owned Codex/Claude login data when removing XSIME.
 
 ## Build and install from source (development)
 
 All commands below run from the repository root. Source installation needs
-Python 3 in addition to the build dependencies.
+Python 3 and GTK VTE 0.76 or later (`libvte-2.91-dev` on Ubuntu 24.04) in addition to the build dependencies.
 
 ```bash
 platforms/linux/ime/scripts/build.sh
@@ -206,9 +276,12 @@ whose SHA-256 still matches, and then empty directories. If a managed file
 was edited or replaced by a symlink, it stops before deleting anything;
 move or restore that file and retry. Unrecorded files are preserved, including
 user dictionaries (`*.userdb`), `schemes/learning`, imported schemes, notes,
+`capsule/clipboard/history-v1.sqlite3` (history and favorites),
 runtime configuration and logs. It never recursively removes `share/rimes`
 or `~/.local`, and it does not remove the private engine or restart Fcitx5.
 `DESTDIR` is supported for staged installs and uninstalls.
+The same preservation applies to `chord-keymaps` (drafts, applied snapshot and
+scheme selection) and `learning/*_progress.json` (chord practice records).
 
 For installations made before the persistent manifest was added, keep the
 original build directory and corresponding source checkout, and run:
@@ -235,6 +308,22 @@ Environment overrides used by tests and unusual layouts:
 | `RIMES_USER_DIR` | Isolated user dir (must not be the stock fcitx5-rime path) |
 | `RIMES_LOG_DIR` | librime log directory |
 
+## Desktop windows
+
+Buffer's empty toolbar folds/unfolds its content; drag it to move the panel.
+The function menu restores its position or moves it to a selected display.
+The number button cycles automatic delivery and the adjacent switch controls
+closing after the last delivered block. Both share the settings configuration.
+Repeated settings launches activate the existing settings window.
+
+X11 and Wayland layer-shell panels keep a fixed logical width and preserve
+their bottom edge when the second rail opens. Positions live in the private
+user-data `windows/` directory and survive upgrades and uninstall. A compositor
+without layer-shell uses XWayland when available. Without either placement
+backend, the compositor controls the window; return to the input field and
+reopen Buffer to capture it. See [window validation](../runtime/WINDOWS-VALIDATION.md)
+for tested environments and outstanding desktop/pixel comparisons.
+
 ## Packaging
 
 ```bash
@@ -242,11 +331,18 @@ python3 platforms/linux/ime/scripts/build-engine.py
 platforms/linux/ime/scripts/package-deb.sh /tmp/rimes-deb
 ```
 
-writes `fcitx5-rimes_<version>_<arch>.deb` and its `.sha256` (addon + `rimes-buffer` +
-`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + `rimes-schemes` + private Rime/Lua + reviewed data).
-The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.3_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
-The package `Recommends: libgtk-layer-shell0, wl-clipboard` so a wlroots
-session can keep the rail overlay and copy notes without a GTK serial.
+writes `fcitx5-rimes_<version>_<arch>.deb` and its `.sha256`: the Fcitx addon,
+Buffer/Capsule and control clients, settings/plugin/resource managers, Mailbox,
+gateway and native helpers, ordinary chord data, statistics/practice resources,
+pinned official plugins, private Rime/Lua and reviewed dictionaries. The deferred
+stream-input feature is not part of this Linux delivery.
+The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.5_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
+The package recommends `libgtk-layer-shell0`, `wl-clipboard` and the Inter/Noto
+fonts (including emoji). GStreamer base/good/PipeWire plugins and
+`xdg-desktop-portal` are runtime dependencies for capture. Install the portal
+backend appropriate to the desktop; GTK alone does not provide screen recording.
+A wlroots session can use `xdg-desktop-portal-wlr`. See
+[capture validation](../capsule/CAPTURE-VALIDATION.md) for tested paths and limits.
 Flatpak notes are in
 `packaging/flatpak/README.md`. The data preview tarball is a separate artifact
 and stays data-only.
@@ -261,8 +357,16 @@ orders it before `X.Y.Z`. `RIMES_RELEASE_VERSION` supplies this tag version
 in CI; a formal package version must match root `VERSION`.
 
 The reusable `linux-deb.yml` workflow builds on Ubuntu 24.04 amd64, runs source
-install/uninstall tests, then installs, reinstalls and removes the exact deb
-on a disposable runner while checking user-data preservation. Publication
+install/uninstall tests, then installs, upgrades, reinstalls and removes the exact deb
+on a disposable runner. Every phase checks user/CLI data bytes, ownership,
+permissions and directory layout. Installed binary/runtime checks run after
+fresh installation and upgrade. The workflow downloads the highest strictly
+older matching-architecture deb from a published project `v*` Release and verifies
+its checksum and package identity before upgrading it. If no older deb exists,
+it explicitly uses an older-version fixture built from the current payload,
+including an obsolete managed file that must disappear on upgrade. This first-release
+fixture proves dpkg replacement and preservation, not historical application
+data migration; API/checksum failures never silently fall back to the fixture. Publication
 waits for this job; only an existing, successfully published `v*` Release
 receives the deb and checksum. PR/manual/nightly rehearsals retain CI
 artifacts without publishing. Source changes, installed-host typing, CI
@@ -283,6 +387,11 @@ platforms/linux/ime/scripts/run-tests.sh
 The Python lifecycle tests use real CMake file installation in temporary
 prefixes and do not install an input method on the host. The deb lifecycle
 test is only for disposable Linux runners (`RIMES_DEB_TEST_DISPOSABLE=1`).
+For a manual upgrade check, pass the new deb and optionally an older deb as the
+first and second arguments to `tests/deb_lifecycle.sh`; both need adjacent
+`.sha256` files. Without the second argument, the report clearly identifies
+the controlled old-version fixture. The script refuses an already installed
+`fcitx5-rimes` and must not be run on a personal desktop.
 
 1. CTest unit tests (keysyms, UTF-8 snapshot, path isolation)
 2. Live `librime` smoke: `nihao` + Space, number selection, paging, Escape
@@ -292,6 +401,9 @@ test is only for disposable Linux runners (`RIMES_DEB_TEST_DISPOSABLE=1`).
    manager, so toolkit IM modules may not commit even when DBus does)
 6. Weston headless is probed when installed; injecting keys into a
    seat-less compositor is a documented limitation
+7. A separate strict Xvfb/Xfwm4 suite reads actual GTK/Qt commits, xterm PTY
+   input and optional Firefox DOM values, including Buffer and password-field
+   checks; see [desktop acceptance](../validation/desktop-acceptance.md).
 
 GitHub Actions workflow `.github/workflows/linux-ime.yml` runs the same
 sequence on `ubuntu-latest`. It is **not** a macOS merge/release gate.
@@ -309,7 +421,9 @@ Not started in this tree.
 Buffer and Capsule are implemented: `BufferService` / `CapsuleService` live
 in the addon. GTK companions are `rimes-buffer` and `rimes-capsule`, on
 `$XDG_RUNTIME_DIR/rimes-buffer.sock` and
-`$XDG_RUNTIME_DIR/rimes-capsule.sock`. Mailbox is not started.
+`$XDG_RUNTIME_DIR/rimes-capsule.sock`. `rimes-mailbox` uses one GTK application
+per canonical user directory, a process lock and native D-Bus forwarding.
+See [Mailbox usage, data preservation and parity](../mailbox/README.md).
 
 See `src/engine/rime_hooks.hpp`. Ordinary Rime commits still go through
 `RimesIme::commitText` → `InputContext::commitString` (or into Buffer when

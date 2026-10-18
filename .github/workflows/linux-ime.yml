@@ -17,8 +17,19 @@ on:
       - "Sources/RimeBuffer/RimeUI.swift"
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
+      - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Typing*.swift"
+      - "Sources/RimeBuffer/Metrics*.swift"
+      - "Sources/RimeBuffer/Statistics*.swift"
+      - "Sources/RimeBuffer/Chord*.swift"
+      - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
+      - "Sources/RimeBuffer/Capsule*.swift"
+      - "Sources/RimeBuffer/Clipboard*.swift"
+      - "Sources/RimeBuffer/Mailbox/**"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
@@ -44,8 +55,19 @@ on:
       - "Sources/RimeBuffer/RimeUI.swift"
       - "Sources/RimeBuffer/SettingsWindow.swift"
       - "Sources/RimeBuffer/SettingsRouting.swift"
+      - "Sources/RimeBuffer/ShortcutPreferences.swift"
+      - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
+      - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Typing*.swift"
+      - "Sources/RimeBuffer/Metrics*.swift"
+      - "Sources/RimeBuffer/Statistics*.swift"
+      - "Sources/RimeBuffer/Chord*.swift"
+      - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
+      - "Sources/RimeBuffer/Capsule*.swift"
+      - "Sources/RimeBuffer/Clipboard*.swift"
+      - "Sources/RimeBuffer/Mailbox/**"
       - "Sources/RimeBuffer/Resources/PluginIcons/**"
       - "scripts/prepare-official-plugins.py"
       - "scripts/input-schemes/fetch_fixture.py"
@@ -93,10 +115,11 @@ jobs:
             fcitx5-frontend-gtk3 fcitx5-frontend-qt5 \
             librime-dev librime-plugin-lua librime-bin \
             libopencc-dev libopencc-data libyaml-cpp-dev libleveldb-dev libmarisa-dev libgoogle-glog-dev libboost-regex-dev \
-            xvfb xdotool dbus-x11 \
-            python3-gi gir1.2-gtk-3.0 libgtk-3-dev \
-            libgtk-layer-shell-dev libssl-dev libcurl4-openssl-dev \
-            qtbase5-dev fonts-inter fonts-noto-cjk weston wtype sway patchelf dpkg-dev
+            xvfb xdotool x11-utils dbus-x11 xfwm4 xterm \
+            python3-gi gir1.2-gtk-3.0 libgtk-3-dev libvte-2.91-dev libicu-dev libsqlite3-dev libpoppler-glib-dev libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev libportal-dev \
+            gstreamer1.0-tools gstreamer1.0-plugins-base gstreamer1.0-plugins-good gstreamer1.0-pipewire pipewire wireplumber xdg-desktop-portal \
+            libgtk-layer-shell-dev libxcb1-dev libxcb-xfixes0-dev libwayland-dev libssl-dev libcurl4-openssl-dev \
+            qtbase5-dev fonts-inter fonts-noto-cjk fonts-noto-color-emoji weston wtype sway wl-clipboard xdg-desktop-portal-wlr xdg-desktop-portal-gtk grim slurp patchelf dpkg-dev
 
       - name: Build pinned Rime and Lua runtime
         run: |
@@ -113,16 +136,104 @@ jobs:
       - name: Unit tests
         run: ctest --test-dir platforms/linux/ime/build --output-on-failure
 
+      - name: Real Wayland capture portal and PipeWire
+        run: dbus-run-session -- /usr/bin/python3 platforms/linux/capsule/tests/capture_wayland_test.py platforms/linux/ime/build/rimes-capsule-capture --allow-headless-no-dmabuf
+
       - name: Real pinned offline translation engine
-        run: python3 platforms/linux/runtime/tests/translation_engine_smoke.py platforms/linux/ime/build/runtime/rimes-translation
+        run: |
+          python3 platforms/linux/ime/scripts/stage-data.py --repo-root "$PWD" --output-dir "$RUNNER_TEMP/translation-shared"
+          python3 platforms/linux/runtime/tests/translation_engine_smoke.py platforms/linux/ime/build/runtime/rimes-translation \
+            --fcitx-build platforms/linux/ime/build --shared-data "$RUNNER_TEMP/translation-shared"
 
       - name: Render native settings with an isolated profile
         run: |
           RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
             platforms/linux/ime/build/runtime/rimes-settings --render "$RUNNER_TEMP/settings-render"
 
+      - name: Ordinary chord input, deployment rollback and native page fixtures
+        run: |
+          platforms/linux/ime/build/rimes-chord-engine-tests "$RUNNER_TEMP/translation-shared"
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/rimes-chord-fcitx-e2e platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings GDK_SCALE=2 \
+            xvfb-run -a -s "-screen 0 2560x2000x24" platforms/linux/ime/build/runtime/rimes-chord-ui-tests \
+            "$RUNNER_TEMP/settings-render/chord"
+
+      - name: Native statistics aggregates, consent and dashboard
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/rimes-metrics-fcitx-e2e platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-criticals TZ=Asia/Tokyo dbus-run-session -- \
+            xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-metrics-ui-tests \
+            "$RUNNER_TEMP/settings-render/statistics"
+
+      - name: Native article practice, private history and focused Fcitx lease
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/practice-probe/rimes-settings platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings dbus-run-session -- \
+            xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-practice-ui-tests \
+            "$RUNNER_TEMP/settings-render/typing-practice"
+          dbus-run-session --config-file=platforms/linux/ime/tests/portal_fixture_bus.conf -- xvfb-run -a python3 platforms/linux/typing-practice/tests/practice_desktop_test.py \
+            platforms/linux/ime/build "$RUNNER_TEMP/translation-shared"
+
+      - name: Codex CLI text and persistent Mailbox images through real Fcitx
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" \
+            platforms/linux/ime/build/rimes-codex-fcitx-e2e platforms/linux/ime/build . test-data \
+            "$GITHUB_WORKSPACE/platforms/linux/runtime/tests/codex_fixture.py"
+
+      - name: Claude CLI text through real Fcitx
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" \
+            platforms/linux/ime/build/rimes-claude-fcitx-e2e platforms/linux/ime/build . test-data \
+            "$GITHUB_WORKSPACE/platforms/linux/runtime/tests/claude_fixture.py"
+          RIMES_USER_DIR="$RUNNER_TEMP/claude-settings-profile" GDK_SCALE=2 \
+            xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/runtime/rimes-settings \
+            --render-claude "$RUNNER_TEMP/settings-render/claude"
+
+      - name: Real AI API transport and Fcitx derived delivery
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" python3 platforms/linux/runtime/tests/ai_http_fixture.py \
+            --fcitx platforms/linux/ime/build
+
       - name: Render Buffer states for macOS comparison
         run: xvfb-run -a platforms/linux/ime/build/rimes-buffer --render "$RUNNER_TEMP/buffer-render"
+
+      - name: Render Capsule manager themes for macOS comparison
+        run: |
+          mkdir -p "$RUNNER_TEMP/capsule-render"
+          python3 platforms/linux/validation/render_capsule_manager.py \
+            --binary platforms/linux/ime/build/rimes-capsule --output "$RUNNER_TEMP/capsule-render"
+          for theme in night day quiet rasta; do
+            GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/rimes-capsule \
+              --clipboard-preview --theme "$theme" --render "$RUNNER_TEMP/capsule-render/clipboard-$theme.png"
+            GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/rimes-capsule \
+              --resources-preview --theme "$theme" --render "$RUNNER_TEMP/capsule-render/resources-$theme.png"
+            GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/rimes-capsule \
+              --password-preview --theme "$theme" --render "$RUNNER_TEMP/capsule-render/password-$theme.png"
+          done
+
+      - name: Render Mailbox modules at native dimensions
+        run: |
+          TZ=Asia/Tokyo xvfb-run -a platforms/linux/ime/build/rimes-mailbox \
+            --render-fixture platforms/linux/mailbox/tests/fixtures/native-mailbox.json \
+            --render-dir "$RUNNER_TEMP/mailbox-render"
+
+      - name: Desktop focus, first click, window movement and scale
+        run: |
+          xvfb-run -a dbus-run-session -- python3 platforms/linux/runtime/tests/desktop_windows_test.py platforms/linux/ime/build
+          GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" dbus-run-session -- \
+            python3 platforms/linux/runtime/tests/desktop_windows_test.py platforms/linux/ime/build
+          dbus-run-session -- python3 platforms/linux/runtime/tests/panel_wayland_test.py platforms/linux/ime/build
+          dbus-run-session -- python3 platforms/linux/capsule/tests/clipboard_wayland_test.py platforms/linux/ime/build
+          xvfb-run -a -s "-screen 0 1920x1080x24" dbus-run-session -- python3 platforms/linux/runtime/tests/panel_fallback_test.py platforms/linux/ime/build
+
+      - name: Upload Capsule manager renders
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: capsule-manager-linux
+          path: ${{ runner.temp }}/capsule-render
 
       - name: Upload settings for macOS comparison
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -131,6 +242,7 @@ jobs:
           path: |
             ${{ runner.temp }}/settings-render
             ${{ runner.temp }}/buffer-render
+            ${{ runner.temp }}/mailbox-render
           retention-days: 14
 
       - name: Original source import and native typing
@@ -143,6 +255,20 @@ jobs:
 
       - name: Headless typing E2E
         run: platforms/linux/ime/tests/e2e/e2e.sh --build-dir platforms/linux/ime/build
+
+      - name: Actual GTK, Qt and XIM terminal hosts
+        run: |
+          dbus-run-session --config-file=platforms/linux/ime/tests/portal_fixture_bus.conf -- xvfb-run -a python3 platforms/linux/ime/tests/e2e/desktop_hosts.py \
+            platforms/linux/ime/build "$RUNNER_TEMP/translation-shared" "$RUNNER_TEMP/desktop-hosts"
+
+      - name: Upload desktop host observations
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: linux-desktop-hosts-${{ github.sha }}
+          path: ${{ runner.temp }}/desktop-hosts
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Existing Linux data-package smoke still passes
         run: platforms/linux/tests/smoke.sh
@@ -159,6 +285,7 @@ jobs:
             platforms/linux/ime/build/rimes-buffer-ctl
             platforms/linux/ime/build/rimes-capsule
             platforms/linux/ime/build/rimes-capsule-ctl
+            platforms/linux/ime/build/rimes-mailbox
             platforms/linux/ime/build/rimes-schemes
             platforms/linux/ime/build/rimes-deploy
             platforms/linux/ime/.engine/install/lib/librime.so*

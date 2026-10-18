@@ -1,5 +1,6 @@
 #include "desktop.hpp"
 #include "native_visual_tokens.hpp"
+#include "native_buffer_metrics.hpp"
 #include <cmath>
 #include <memory>
 
@@ -12,20 +13,30 @@ GtkWidget *Class(GtkWidget *widget, const char *name) {
   gtk_style_context_add_class(gtk_widget_get_style_context(widget), name);
   return widget;
 }
-void Theme(const std::string &name) {
+void Theme(const std::string &name, GdkScreen *screen) {
+  if (!screen) screen = gdk_screen_get_default();
   const auto theme = name == "liquidGlass" ? "day" : name;
   const auto &colors = Visuals().at("palettes").at(theme);
   auto c = [&](const char *key) { return colors.at(key).get<std::string>(); };
-  g_object_set(gtk_settings_get_default(), "gtk-application-prefer-dark-theme",
+  g_object_set(gtk_settings_get_for_screen(screen), "gtk-application-prefer-dark-theme",
                theme != "day", nullptr);
   static GtkCssProvider *provider = nullptr;
   if (!provider) {
     provider = gtk_css_provider_new();
-    gtk_style_context_add_provider_for_screen(
-        gdk_screen_get_default(), GTK_STYLE_PROVIDER(provider),
-        GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   }
+  // A passive panel may explicitly use XWayland on a Wayland session. Its
+  // screen is not necessarily the process default screen.
+  gtk_style_context_remove_provider_for_screen(screen, GTK_STYLE_PROVIDER(provider));
+  gtk_style_context_add_provider_for_screen(screen, GTK_STYLE_PROVIDER(provider),
+                                           GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   std::string css =
+      "@define-color xsime_switch_on " + c("accentGreen") + ";"
+      "@define-color xsime_choice_surface " + c("surfaceTertiary") + ";"
+      "@define-color xsime_choice_border " + c("borderStrong") + ";"
+      "@define-color xsime_switch_off " + c("surfaceTertiary") + ";"
+      "@define-color xsime_switch_border " + c("border") + ";"
+      "@define-color xsime_switch_accent " + c("accentText") + ";"
+      "button.compact-switch, button.compact-switch:hover, button.compact-switch:active, button.compact-switch:checked, button.compact-switch:disabled { background: transparent; border: 0; padding: 0; min-width: 0; min-height: 0; box-shadow: none; outline: 0; opacity: 1; }"
       "* { font-family: 'SF Pro Text', Inter, 'Noto Sans CJK SC', sans-serif; "
       "font-size: 11px; -gtk-icon-shadow: none; text-shadow: none; }"
       "window, .settings { background: " +
@@ -89,12 +100,57 @@ void Theme(const std::string &name) {
       ".sidebar-heading { font-size: 10px; font-weight: 600; color: " +
       c("textMuted") +
       "; }"
+      ".gateway-config { font-family: monospace; font-size: 10px; padding: 2px; border: 0.5px solid " + c("border") + "; background: " + (theme == "day" ? "#FFFFFF" : "#34373D") + "; }"
+      ".gateway-detail { font-size: 11px; } .gateway-tabs button { font-size: 13px; } .gateway-copy { font-size: 12px; }"
+      ".gateway-icon-tile { border-radius: 8px; border: 0.5px solid " + c("border") + "; background: " + c("surfaceTertiary") + "; }"
       ".caption { font-size: 10px; color: " +
       c("textMuted") + "; } .tiny { font-size: 9px; color: " + c("textMuted") +
       "; }"
       ".name { font-size: 11px; font-weight: 600; } .card { background: " +
       c("surfaceSecondary") + "; border: 0.5px solid " + c("border") +
       "; border-radius: 8px; }"
+      ".shortcut-row { background: " + c("surfaceSecondary") + "; border: 0.5px solid " + c("border") +
+      "; border-radius: " + std::to_string(Visuals().at("metrics").at(name == "liquidGlass" ? "settingsGlassCardRadius" : "settingsCardRadius").get<int>()) +
+      "px; } .shortcut-title { font-size: " + std::to_string(Visuals().at("metrics").at("shortcutTitleFont").get<int>()) +
+      "px; font-weight: 600; } .shortcut-recorder { font-family: monospace; font-size: " +
+      std::to_string(Visuals().at("metrics").at("shortcutRecorderFont").get<int>()) + "px; font-weight: 500; }"
+      ".chord-card { background: " + c("surfaceSecondary") + "; border: 0; box-shadow: inset 0 0 0 0.5px " + c("border") + "; border-radius: 8px; padding: 10px 12px; }"
+      ".chord-capture { background: " + c("surfaceTertiary") + "; border: 1px solid " + c("border") + "; border-radius: 6px; }"
+      ".chord-capture:focus { border-color: " + c("accentGreen") + "; }"
+      ".chord-key { padding: 0; font-size: 10px; } .chord-key.selected { background: " + c("accentGreen") + "; }"
+      ".chord-mappings treeview { background: " + c("surfaceTertiary") + "; color: " + c("textPrimary") + "; }"
+      ".chord-target { font-size: 34px; font-weight: 600; } .chord-hint { font-family: monospace; font-size: 14px; font-weight: 500; color: " + c("textSecondary") + "; }"
+      ".chord-feedback { font-size: 12px; font-weight: 500; }"
+      ".chord-surface { background: " + c("surface") + "; }"
+      ".statistics-surface { background: " + c("surface") + "; }"
+      ".practice-surface, .practice { background: " + c("surface") + "; }"
+      ".practice .practice-muted { color: " + c("textSecondary") + "; }"
+      ".practice .practice-correct { color: " + c("accentText") + "; }"
+      ".practice button { min-height: 16px; padding: 2px 7px; background: " + (theme == "day" || theme == "liquidGlass" ? "#FFFFFF; color: #000000;" : "#55565A; color: #FFFFFF;") + " }"
+      ".practice button label { font-size: 13px; font-weight: 600; }"
+      ".practice combobox button { padding: 0 7px; min-height: 20px; border: 0; box-shadow: none; }"
+      ".practice combobox box { padding: 0; margin: 0; }"
+      ".practice .practice-panel { border: 0; box-shadow: inset 0 0 0 1px " + c("border") + "; border-radius: 10px; background: " + c("surface") + "; }"
+      ".practice textview, .practice textview text { background: " + c("surface") + "; color: " + c("textPrimary") + "; font-size: 18px; }"
+      ".practice progressbar { min-height: 12px; } .practice progressbar trough { min-height: 3px; border: 0; border-radius: 2px; background: " + c("border") + "; }"
+      ".practice progressbar progress { min-height: 3px; border: 0; border-radius: 2px; background: #77787b; }"
+      ".practice .practice-history-row { background: " + c("surface") + "; border: 1px solid " + c("border") + "; border-radius: 10px; padding: 2px 11px; min-height: 26px; }"
+      ".practice .practice-history-row label { color: " + c("textPrimary") + "; }"
+      ".statistics .metrics-segment { background: " + c("surfaceTertiary") + "; color: " + c("textPrimary") + "; border: 1px solid " + c("border") + "; }"
+      ".statistics .metrics-segment.selected { background: #626366; color: white; }"
+      ".statistics check:checked { background: #626366; border-color: #77787b; color: white; }"
+      "@define-color xsime_chord_row_even " + std::string(theme == "day" ? "#FFFFFF" : "#2B2E35") + ";"
+      "@define-color xsime_chord_row_odd " + std::string(theme == "day" ? "#F5F5F5" : "#1F1F1F") + ";"
+      ".chord-page entry { min-height: 14px; padding: 0 2px; border-radius: 0; color: " + c("textPrimary") + "; background: " + (theme == "day" ? "#FFFFFF" : "#34373D") + "; border-color: " + c("border") + "; }"
+      ".chord-page combobox { min-height: 16px; } .chord-page combobox button { min-height: 16px; padding: 0 7px; border: 0; background: #5B5E62; color: white; }"
+      ".chord-page button { min-height: 16px; padding: 0 8px; } .chord-page button label { font-size: 11px; }"
+      ".chord-page .chord-profiles button { min-height: 20px; } .chord-page .chord-profiles label { font-size: 13px; }"
+      ".chord-page .chord-key { min-height: 20px; padding: 0; } .chord-page .chord-key label { font-size: 13px; }"
+      ".chord-page .chord-key.selected { background: #96979B; color: #101010; }"
+      ".chord-page .chord-mode button { padding: 0 5px; }"
+      ".chord-page .caption { color: " + c("textSecondary") + "; }"
+      ".chord-editor label.chord-label { color: " + c("textSecondary") + "; } .chord-editor label.chord-preview { color: " + c("textPrimary") + "; }"
+      ".chord-page spinbutton { min-height: 20px; padding: 0; border: 0; } .chord-page spinbutton entry { min-height: 18px; }"
       ".panel { background: " +
       c("surfaceSecondary") + "; border: 1px solid " + c("border") +
       "; border-radius: 10px; padding: 11px; }"
@@ -105,6 +161,7 @@ void Theme(const std::string &name) {
       c("surfaceSecondary") + ", " + c("accentGreen") +
       ", 0.10); border-color: " + c("accentGreen") +
       "; }"
+      ".connector-ready { color: " + c("accentGreen") + "; font-size: 9px; font-weight: 600; } .connector-unavailable { color: " + c("textMuted") + "; font-size: 9px; font-weight: 600; } .connector-action, .connector-action label { font-size: 13px; font-weight: 600; } .connector-action { min-height: 20px; padding: 0 10px; } .connector-feedback { color: " + c("textSecondary") + "; font-size: 10px; font-weight: 500; } .connector-feedback.error { color: #e86565; }"
       ".icon-button { padding: 0; min-width: 24px; min-height: 24px; "
       "background: transparent; }"
       ".icon-button:hover { background: alpha(" +
@@ -159,6 +216,50 @@ GtkWidget *Button(const std::string &title, std::function<void()> clicked,
 }
 GtkWidget *Column(int spacing) {
   return gtk_box_new(GTK_ORIENTATION_VERTICAL, spacing);
+}
+GtkWidget *CompactSwitch(const std::string &label, std::function<void()> clicked) {
+  auto *button = Class(gtk_toggle_button_new(), "compact-switch");
+  gtk_widget_set_can_focus(button, FALSE);
+  gtk_widget_set_valign(button, GTK_ALIGN_CENTER);
+  gtk_widget_set_tooltip_text(button, label.c_str());
+  atk_object_set_name(gtk_widget_get_accessible(button), label.c_str());
+  auto *drawing = gtk_drawing_area_new();
+  gtk_widget_set_size_request(drawing,
+      native::compactSwitchTrackWidth + native::switchControlInset,
+      native::compactSwitchTrackHeight + native::switchControlInset);
+  gtk_container_add(GTK_CONTAINER(button), drawing);
+  g_signal_connect(drawing, "draw", G_CALLBACK((+[](GtkWidget *widget, cairo_t *cr, gpointer data) -> gboolean {
+    auto *control = GTK_WIDGET(data);
+    const bool on = gtk_toggle_button_get_active(GTK_TOGGLE_BUTTON(control));
+    const bool enabled = gtk_widget_is_sensitive(control);
+    const bool pressed = gtk_widget_get_state_flags(control) & GTK_STATE_FLAG_ACTIVE;
+    auto color = [&](const char *name, double alpha) {
+      GdkRGBA rgba{};
+      gtk_style_context_lookup_color(gtk_widget_get_style_context(control), name, &rgba);
+      rgba.alpha = alpha; gdk_cairo_set_source_rgba(cr, &rgba);
+    };
+    const double width = native::compactSwitchTrackWidth, height = native::compactSwitchTrackHeight;
+    const double x = (gtk_widget_get_allocated_width(widget) - width) / 2.0;
+    const double y = (gtk_widget_get_allocated_height(widget) - height) / 2.0;
+    const double radius = height / 2;
+    cairo_arc(cr, x + width - radius, y + radius, radius, -M_PI / 2, M_PI / 2);
+    cairo_arc(cr, x + radius, y + radius, radius, M_PI / 2, 3 * M_PI / 2);
+    cairo_close_path(cr);
+    color(on ? "xsime_switch_on" : "xsime_switch_off", enabled ? (pressed ? 0.78 : 1) : 0.48);
+    cairo_fill_preserve(cr);
+    color(on ? "xsime_switch_accent" : "xsime_switch_border", enabled ? 0.78 : 0.30);
+    cairo_set_line_width(cr, 1); cairo_stroke(cr);
+    const double inset = native::switchKnobInset, knob = height - inset * 2;
+    const double knob_x = on ? x + width - inset - knob : x + inset;
+    cairo_arc(cr, knob_x + knob / 2, y + inset + knob / 2, knob / 2, 0, 2 * M_PI);
+    cairo_set_source_rgba(cr, 1, 1, 1, enabled ? 1 : 0.70); cairo_fill(cr);
+    return FALSE;
+  })), button);
+  auto *action = new std::function<void()>(std::move(clicked));
+  g_signal_connect_data(button, "clicked", G_CALLBACK(+[](GtkButton *, gpointer data) {
+    (*static_cast<std::function<void()> *>(data))();
+  }), action, +[](gpointer data, GClosure *) { delete static_cast<std::function<void()> *>(data); }, GConnectFlags(0));
+  return button;
 }
 GtkWidget *Row(int spacing) {
   return gtk_box_new(GTK_ORIENTATION_HORIZONTAL, spacing);
@@ -257,11 +358,60 @@ GtkWidget *Icon(const std::string &name, int size) {
           cairo_arc(cr, 12, 12, 9, 0, 2 * M_PI);
           line(12, 11, 12, 17);
           line(12, 7, 12, 7.2);
+        } else if (icon == "arrow.up") {
+          line(12, 21, 12, 3);
+          line(5, 10, 12, 3);
+          cairo_line_to(cr, 19, 10);
         } else if (icon == "arrow.down.circle") {
           cairo_arc(cr, 12, 12, 9, 0, 2 * M_PI);
           line(12, 6, 12, 17);
           line(7, 12, 12, 17);
           cairo_line_to(cr, 17, 12);
+        } else if (icon == "terminal") {
+          cairo_rectangle(cr, 3, 4, 18, 15);
+          line(6, 8, 9, 11); cairo_line_to(cr, 6, 14); line(12, 14, 17, 14);
+        } else if (icon == "bubble.left") {
+          line(4, 3, 20, 3); cairo_line_to(cr, 21, 4); cairo_line_to(cr, 21, 16);
+          cairo_line_to(cr, 10, 16); cairo_line_to(cr, 5, 21); cairo_line_to(cr, 5, 16);
+          cairo_line_to(cr, 3, 16); cairo_line_to(cr, 3, 4); cairo_close_path(cr);
+        } else if (icon == "sidebar.left" || icon == "sidebar.right") {
+          const auto x = icon == "sidebar.left" ? 9 : 15;
+          cairo_rectangle(cr, 3, 5, 18, 14); line(x, 5, x, 19);
+          const auto a = icon == "sidebar.left" ? 5 : 17;
+          line(a, 8, a + 2, 8); line(a, 11, a + 2, 11);
+        } else if (icon == "stop") {
+          cairo_rectangle(cr, 5, 5, 14, 14);
+        } else if (icon == "plus") {
+          line(12, 4, 12, 20); line(4, 12, 20, 12);
+        } else if (icon == "doc") {
+          line(5, 3, 14, 3); cairo_line_to(cr, 20, 9); cairo_line_to(cr, 20, 21);
+          cairo_line_to(cr, 5, 21); cairo_close_path(cr);
+          line(14, 3, 14, 9); cairo_line_to(cr, 20, 9);
+        } else if (icon == "folder") {
+          line(3, 5, 10, 5); cairo_line_to(cr, 12, 8); cairo_line_to(cr, 21, 8);
+          cairo_line_to(cr, 21, 20); cairo_line_to(cr, 3, 20); cairo_close_path(cr);
+        } else if (icon == "arrow.clockwise") {
+          cairo_arc(cr, 12, 12, 8, -M_PI * 0.4, M_PI * 1.4);
+          line(18, 3, 19, 9); cairo_line_to(cr, 13, 8);
+        } else if (icon == "tray.and.arrow.down") {
+          line(4, 12, 2, 19); cairo_line_to(cr, 22, 19); cairo_line_to(cr, 20, 12);
+          line(12, 2, 12, 14); line(8, 10, 12, 14); cairo_line_to(cr, 16, 10);
+        } else if (icon == "pencil" || icon == "square.and.pencil") {
+          line(5, 17, 17, 5); cairo_line_to(cr, 20, 8); cairo_line_to(cr, 8, 20);
+          cairo_line_to(cr, 4, 21); cairo_close_path(cr); line(14, 8, 17, 11);
+          if (icon == "square.and.pencil") { line(12, 4, 3, 4); cairo_line_to(cr, 3, 21); cairo_line_to(cr, 20, 21); cairo_line_to(cr, 20, 13); }
+        } else if (icon == "slider.horizontal.3") {
+          for (int y : {6, 12, 18}) { line(3, y, 21, y); }
+          for (auto pair : {std::pair<int,int>{8,6}, {16,12}, {10,18}}) { cairo_move_to(cr, pair.first + 2, pair.second); cairo_arc(cr, pair.first, pair.second, 2, 0, 2 * M_PI); }
+        } else if (icon == "square.and.arrow.down") {
+          line(5, 11, 3, 11); cairo_line_to(cr, 3, 21); cairo_line_to(cr, 21, 21); cairo_line_to(cr, 21, 11); cairo_line_to(cr, 19, 11);
+          line(12, 2, 12, 16); line(7, 11, 12, 16); cairo_line_to(cr, 17, 11);
+        } else if (icon == "text.badge.plus") {
+          line(3, 5, 20, 5); line(3, 10, 20, 10); line(3, 15, 10, 15); line(3, 20, 10, 20);
+          line(18, 14, 18, 22); line(14, 18, 22, 18);
+        } else if (icon == "trash") {
+          line(3, 6, 21, 6); line(8, 6, 8, 3); cairo_line_to(cr, 16, 3); cairo_line_to(cr, 16, 6);
+          line(6, 6, 7, 21); cairo_line_to(cr, 17, 21); cairo_line_to(cr, 18, 6); line(10, 9, 10, 18); line(14, 9, 14, 18);
         } else if (icon == "archivebox") {
           cairo_rectangle(cr, 3, 4, 18, 4);
           cairo_rectangle(cr, 5, 8, 14, 13);
@@ -299,6 +449,15 @@ GtkWidget *Icon(const std::string &name, int size) {
                  12 + 10 * sin(a));
           }
           cairo_arc(cr, 12, 12, 7, 0, 2 * M_PI);
+        } else if (icon == "ellipsis") {
+          for (int x : {5, 12, 19}) {
+            cairo_new_sub_path(cr);
+            cairo_arc(cr, x, 12, 1.35, 0, 2 * M_PI);
+            cairo_fill(cr);
+          }
+        } else if (icon == "magnifyingglass") {
+          cairo_arc(cr, 10, 10, 6.5, 0, 2 * M_PI);
+          line(15, 15, 21, 21);
         } else if (icon == "xmark") {
           line(6, 6, 18, 18);
           line(18, 6, 6, 18);
@@ -312,6 +471,9 @@ GtkWidget *Icon(const std::string &name, int size) {
           cairo_line_to(cr, 9, 14);
           line(3, 9, 15, 9);
           cairo_curve_to(cr, 24, 9, 24, 21, 15, 21);
+        } else if (icon == "checkmark") {
+          line(5, 12, 10, 18);
+          cairo_line_to(cr, 20, 5);
         } else if (icon == "doc.on.doc") {
           cairo_rectangle(cr, 3, 3, 12, 14);
           cairo_rectangle(cr, 8, 8, 13, 14);
@@ -346,8 +508,26 @@ GtkWidget *Icon(const std::string &name, int size) {
             const double h = (i == 2 ? 19 : i % 2 ? 11 : 6);
             line(4 + i * 4, 12 - h / 2, 4 + i * 4, 12 + h / 2);
           }
-        } else if (icon == "character.book.closed" || icon == "note.text" ||
-                   icon == "books.vertical") {
+        } else if (icon == "clock.arrow.circlepath") {
+          cairo_arc(cr, 12, 12, 9, -2.5, 2.7);
+          line(3, 6, 2, 12); cairo_line_to(cr, 7, 10);
+          line(12, 6, 12, 12); cairo_line_to(cr, 16, 16);
+        } else if (icon == "camera.viewfinder") {
+          for (int x : {3, 21}) for (int y : {3, 21}) {
+            line(x, y + (y == 3 ? 5 : -5), x, y); cairo_line_to(cr, x + (x == 3 ? 5 : -5), y);
+          }
+          cairo_new_sub_path(cr); cairo_arc(cr, 12, 12, 4, 0, 2 * M_PI);
+        } else if (icon == "lock") {
+          cairo_rectangle(cr, 5, 10, 14, 12);
+          cairo_move_to(cr, 8, 10); cairo_line_to(cr, 8, 6);
+          cairo_arc(cr, 12, 6, 4, M_PI, 2 * M_PI); cairo_line_to(cr, 16, 10);
+        } else if (icon == "note.text") {
+          cairo_rectangle(cr, 3, 4, 18, 16);
+          line(6, 8, 18, 8); line(6, 12, 18, 12); line(6, 16, 13, 16);
+        } else if (icon == "books.vertical") {
+          cairo_rectangle(cr, 2, 5, 4, 16); cairo_rectangle(cr, 8, 2, 4, 19);
+          line(14, 4, 18, 3); cairo_line_to(cr, 22, 20); cairo_line_to(cr, 18, 21); cairo_close_path(cr);
+        } else if (icon == "character.book.closed") {
           cairo_rectangle(cr, 5, 3, 15, 18);
           line(8, 3, 8, 21);
           line(11, 7, 16, 7);

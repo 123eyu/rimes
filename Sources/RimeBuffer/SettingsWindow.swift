@@ -1,4 +1,5 @@
 import Cocoa
+import CryptoKit
 import CRimeBridge
 import UniformTypeIdentifiers
 
@@ -824,6 +825,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     )
     private let codexLoginSpinner = NSProgressIndicator()
     private let codexLoginStatusLabel = NSTextField(wrappingLabelWithString: "")
+    private var codexPreview: (availability: AITextProviderAvailability, credential: Bool, running: Bool)?
     private var codexLoginOperation: AITextCodexLoginOperation?
     private var codexLoginSessionID: UUID?
     private var codexLoginCancelling = false
@@ -837,6 +839,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     )
     private let claudeLoginSpinner = NSProgressIndicator()
     private let claudeLoginStatusLabel = NSTextField(wrappingLabelWithString: "")
+    private var claudePreview: (availability: AITextProviderAvailability, authenticated: Bool?, running: Bool)?
     private var claudeLoginOperation: AITextClaudeLoginOperation?
     private var claudeLoginSessionID: UUID?
     private var claudeLoginCancelling = false
@@ -1026,6 +1029,137 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             allRendered = false
         }
         return allRendered
+    }
+
+    /// Public-only paired Linux fixtures. Volatile defaults never touch the user's
+    /// preferences, tokens, gateway listener, or live Rime data directory.
+    func renderGatewayForPreview(to directory: String) -> Bool {
+        let defaults = UserDefaults.standard
+        let old = defaults.volatileDomain(forName: UserDefaults.argumentDomain)
+        defer { defaults.setVolatileDomain(old, forName: UserDefaults.argumentDomain) }
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        do { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
+        catch { return false }
+        var manifest: [[String: Any]] = []
+        var clients: [[String: Any]] = []
+        var success = true
+        let identifiers = ["cursor", "codex", "claudeCode", "genericMCP"]
+        for enabled in [true, false] {
+            var preview = old
+            preview["gatewayEnabled"] = enabled
+            preview["gatewayPort"] = 47700
+            defaults.setVolatileDomain(preview, forName: UserDefaults.argumentDomain)
+            if window == nil { build() }
+            rebuildRouteCatalog()
+            reload()
+            for client in GatewayClientConfiguration.allCases {
+                selectedGatewayClient = client
+                selectPreviewTarget(routeID: SettingsCoreRoute.connectors.id,
+                                    subpageID: SettingsSubpageID(rawValue: "local-gateway"))
+                let id = identifiers[client.rawValue]
+                let name = "gateway-\(id)-\(enabled ? "enabled" : "disabled").png"
+                success = renderCurrentView(to: root.appendingPathComponent(name).path) && success
+                manifest.append(["file": name, "client": id, "enabled": enabled,
+                                 "theme": RimeUI.appearance.rawValue, "width": 980, "height": 680])
+                if enabled {
+                    clients.append(["id": id, "title": client.title, "detail": client.detail,
+                        "configuration": gatewayConfiguration(for: client, token: GatewayClientConfiguration.redactedToken),
+                        "supplementary": gatewaySupplementaryConfiguration(for: client, token: GatewayClientConfiguration.redactedToken) ?? ""])
+                }
+            }
+        }
+        do {
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-gateway-settings", "clients": clients,
+                "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
+        } catch { return false }
+        return success
+    }
+
+    /// Render actual connector widgets with public readiness/login states only.
+    func renderCodexForPreview(to directory: String) -> Bool {
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        let previous = codexPreview
+        defer { codexPreview = previous; codexAuthorizationURL = nil; codexLoginFeedback = nil }
+        do { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
+        catch { return false }
+        let states: [(String, AITextProviderAvailability, Bool, Bool, String?)] = [
+            ("missing", .unavailable(AITextCodexPresentation.missing), false, false, nil),
+            ("signed-out", .unavailable(AITextCodexPresentation.loginRequired), false, false, nil),
+            ("ready", .ready, true, false, nil),
+            ("waiting", .unavailable(AITextCodexPresentation.loginRequired), false, true, "等待浏览器完成 ChatGPT 授权…"),
+            ("failed", .unavailable(AITextCodexPresentation.loginRequired), false, false, codexLoginErrorMessage(.timedOut)),
+        ]
+        var manifest: [[String: Any]] = []
+        var contract: [[String: Any]] = []
+        var success = true
+        for (name, availability, credential, running, feedback) in states {
+            codexPreview = (availability, credential, running)
+            if window == nil { build() }
+            reload()
+            codexLoginFeedback = feedback
+            codexLoginFeedbackIsError = name == "failed"
+            codexAuthorizationURL = running ? URL(string: "https://auth.openai.com/public-fixture") : nil
+            selectPreviewTarget(routeID: SettingsCoreRoute.connectors.id, subpageID: SettingsSubpageID(rawValue: "ai-model"))
+            let file = "codex-" + name + ".png"
+            success = renderCurrentView(to: root.appendingPathComponent(file).path) && success
+            manifest.append(["file": file, "state": name, "theme": RimeUI.appearance.rawValue, "width": 980, "height": 680])
+            let detail: String
+            switch availability { case .ready: detail = AITextCodexPresentation.ready; case .unavailable(let message): detail = message }
+            contract.append(["state": name, "ready": availability == .ready, "credential": credential,
+                "running": running, "copyLink": !codexCopyLoginLinkButton.isHidden,
+                "detail": detail, "button": codexLoginButton.title,
+                "feedback": codexLoginStatusLabel.isHidden ? "" : codexLoginStatusLabel.stringValue])
+        }
+        do {
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-codex-settings", "states": contract,
+                "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
+        } catch { return false }
+        return success
+    }
+
+    /// Actual native Claude controls with public states; never starts login.
+    func renderClaudeForPreview(to directory: String) -> Bool {
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        defer { claudePreview = nil; claudeLoginFeedback = nil }
+        do { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
+        catch { return false }
+        let states: [(String, AITextProviderAvailability, Bool?, Bool, String?)] = [
+            ("missing", .unavailable("未找到具备所需流式生成能力的 Claude Code CLI"), nil, false, nil),
+            ("signed-out", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, false, nil),
+            ("ready", .ready, true, false, nil),
+            ("waiting", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, true, AITextClaudeLoginStatus.waitingForBrowser.displayText),
+            ("failed", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, false, claudeLoginErrorMessage(.timedOut)),
+        ]
+        var manifest: [[String: Any]] = [], contract: [[String: Any]] = []
+        var success = true
+        for (name, availability, authenticated, running, feedback) in states {
+            claudePreview = (availability, authenticated, running)
+            if window == nil { build() }
+            reload()
+            claudeLoginFeedback = feedback
+            claudeLoginFeedbackIsError = name == "failed"
+            selectPreviewTarget(routeID: SettingsCoreRoute.connectors.id, subpageID: SettingsSubpageID(rawValue: "ai-model"))
+            let file = "claude-" + name + ".png"
+            success = renderCurrentView(to: root.appendingPathComponent(file).path) && success
+            manifest.append(["file": file, "state": name, "theme": RimeUI.appearance.rawValue, "width": 980, "height": 680])
+            contract.append(["state": name, "ready": availability == .ready, "authenticated": authenticated.map { $0 as Any } ?? NSNull(),
+                "running": running, "button": claudeLoginButton.title,
+                "feedback": claudeLoginStatusLabel.isHidden ? "" : claudeLoginStatusLabel.stringValue])
+        }
+        do {
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-claude-settings", "states": contract,
+                "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
+        } catch { return false }
+        return success
     }
 
     private func previewTargets() -> [(SettingsRouteID, SettingsSubpageID, String)] {
@@ -3475,22 +3609,22 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
 
     private func aiModelConnectionsPage() -> NSView {
         let connectors = AITextConnectorRegistry.shared
-        let selected = AITextConnectorSelectionStore.shared.selectedKind
+        let selected = codexPreview != nil ? AITextProviderKind.codexCLI : claudePreview != nil ? .claudeCodeCLI : AITextConnectorSelectionStore.shared.selectedKind
         let detailPanel: NSView
 
         switch selected {
         case .codexCLI:
-            let availability = connectors.availability(for: .codexCLI)
+            let availability = codexPreview?.availability ?? connectors.availability(for: .codexCLI)
             let ready = availability == .ready
             let detail: String
             switch availability {
             case .ready:
-                detail = "使用 \(ProductIdentity.displayName) 专用的 ChatGPT 登录；不会读取 ~/.codex 中的 MCP、工具、Hook 或技能。"
+                detail = AITextCodexPresentation.ready
             case let .unavailable(message):
                 detail = message
             }
             refreshCodexLoginControls(
-                hasCredential: connectors.codexHasStoredChatGPTCredential
+                hasCredential: codexPreview?.credential ?? connectors.codexHasStoredChatGPTCredential
             )
             codexLoginButton.removeFromSuperview()
             codexCopyLoginLinkButton.removeFromSuperview()
@@ -3520,7 +3654,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             ])
 
         case .claudeCodeCLI:
-            let availability = connectors.availability(for: .claudeCodeCLI)
+            let availability = claudePreview?.availability ?? connectors.availability(for: .claudeCodeCLI)
             let ready = availability == .ready
             let detail: String
             switch availability {
@@ -3530,7 +3664,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 detail = message
             }
             refreshClaudeLoginControls(
-                authenticationStatus: connectors.claudeAuthenticationStatus
+                authenticationStatus: claudePreview != nil ? claudePreview!.authenticated : connectors.claudeAuthenticationStatus
             )
             claudeLoginButton.removeFromSuperview()
             claudeLoginSpinner.removeFromSuperview()
@@ -4888,7 +5022,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshAIConnectorSelection() {
-        let selected = AITextConnectorSelectionStore.shared.selectedKind
+        let selected = codexPreview != nil ? AITextProviderKind.codexCLI : claudePreview != nil ? .claudeCodeCLI : AITextConnectorSelectionStore.shared.selectedKind
         for kind in AITextProviderKind.allCases {
             aiConnectorRadios[kind]?.state = kind == selected ? .on : .off
         }
@@ -4897,7 +5031,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private func refreshCodexLoginControls(hasCredential: Bool? = nil) {
         let authenticated = hasCredential
             ?? AITextConnectorRegistry.shared.codexHasStoredChatGPTCredential
-        let isRunning = codexLoginOperation != nil
+        let isRunning = codexPreview?.running ?? (codexLoginOperation != nil)
         codexLoginButton.title = AITextCodexLoginPresentation.buttonTitle(
             isRunning: isRunning,
             hasCredential: authenticated
@@ -4939,9 +5073,9 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshClaudeLoginControls(authenticationStatus: Bool? = nil) {
-        let status = authenticationStatus
+        let status = claudePreview != nil ? claudePreview!.authenticated : authenticationStatus
             ?? AITextConnectorRegistry.shared.claudeAuthenticationStatus
-        let isRunning = claudeLoginOperation != nil
+        let isRunning = claudePreview?.running ?? (claudeLoginOperation != nil)
         claudeLoginButton.title = AITextClaudeLoginPresentation.buttonTitle(
             isRunning: isRunning,
             authenticationStatus: status

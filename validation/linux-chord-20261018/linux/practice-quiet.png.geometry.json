@@ -1,0 +1,173 @@
+[
+  {
+    "classes": [
+      "background",
+      "chord-surface"
+    ],
+    "height": 236,
+    "type": "GtkOffscreenWindow",
+    "width": 698,
+    "x": 0,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-page"
+    ],
+    "height": 214,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 20,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "type": "GtkComboBoxText",
+    "width": 121,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 60,
+    "x": 153,
+    "y": 0
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "开始练习",
+    "type": "GtkLabel",
+    "width": 44,
+    "x": 161,
+    "y": 0
+  },
+  {
+    "classes": [
+      "text-button"
+    ],
+    "height": 20,
+    "type": "GtkButton",
+    "width": 49,
+    "x": 221,
+    "y": 0
+  },
+  {
+    "classes": [],
+    "height": 20,
+    "text": "换一题",
+    "type": "GtkLabel",
+    "width": 33,
+    "x": 229,
+    "y": 0
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 20,
+    "text": "1/30 · 连对 0",
+    "type": "GtkLabel",
+    "width": 396,
+    "x": 278,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 186,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 28
+  },
+  {
+    "classes": [
+      "chord-target",
+      "chord-label"
+    ],
+    "height": 40,
+    "text": "a",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 38
+  },
+  {
+    "classes": [
+      "chord-hint",
+      "chord-label"
+    ],
+    "height": 17,
+    "text": "按下对应并击",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 84
+  },
+  {
+    "classes": [
+      "chord-capture"
+    ],
+    "height": 76,
+    "type": "GtkEventBox",
+    "width": 626,
+    "x": 36,
+    "y": 107
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 76,
+    "text": "点击开始后，在此处按下并松开一组键",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 107
+  },
+  {
+    "classes": [
+      "chord-feedback",
+      "chord-label"
+    ],
+    "height": 15,
+    "text": "等待输入",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 189
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 1,
+    "text": "",
+    "type": "GtkLabel",
+    "width": 1,
+    "x": 0,
+    "y": 0
+  }
+]

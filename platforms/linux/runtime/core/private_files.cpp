@@ -161,12 +161,70 @@ void PrivateDirectory::Remove(std::string_view name) const {
     if (unlinkat(fd_, filename.c_str(), 0) || fsync(fd_)) throw std::runtime_error("Cannot remove private file");
 }
 
-FileLock PrivateDirectory::Lock() const {
+std::string PrivateDirectory::Identity(std::string_view name) const {
     Verify();
-    FD file(openat(fd_, ".lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600));
+    const auto filename = Name(name);
+    struct stat entry{};
+    if (fstatat(fd_, filename.c_str(), &entry, AT_SYMLINK_NOFOLLOW)) {
+        if (errno == ENOENT) return "missing";
+        throw std::runtime_error("Cannot inspect private file identity");
+    }
+#ifdef __APPLE__
+    const auto modified = entry.st_mtimespec, changed = entry.st_ctimespec;
+#else
+    const auto modified = entry.st_mtim, changed = entry.st_ctim;
+#endif
+    return std::to_string(entry.st_dev) + ":" + std::to_string(entry.st_ino) + ":" +
+        std::to_string(entry.st_mode) + ":" + std::to_string(entry.st_size) + ":" +
+        std::to_string(modified.tv_sec) + ":" + std::to_string(modified.tv_nsec) + ":" +
+        std::to_string(changed.tv_sec) + ":" + std::to_string(changed.tv_nsec);
+}
+
+std::string PrivateDirectory::Preserve(std::string_view name) const {
+    Verify();
+    const auto filename = Name(name);
+    struct stat original{};
+    if (fstatat(fd_, filename.c_str(), &original, AT_SYMLINK_NOFOLLOW)) {
+        if (errno == ENOENT) return {};
+        throw std::runtime_error("Cannot inspect recovery source");
+    }
+    if (original.st_uid != geteuid() || original.st_nlink != 1 ||
+        (!S_ISREG(original.st_mode) && !S_ISLNK(original.st_mode)))
+        throw std::runtime_error("Unsafe recovery source; original preserved");
+    const auto backup = Name("corrupt-" + RandomID() + "-" + filename);
+    // linkat with flags=0 preserves a symlink itself. It also fails if the
+    // destination exists, unlike an unchecked rename that could overwrite it.
+    if (linkat(fd_, filename.c_str(), fd_, backup.c_str(), 0))
+        throw std::runtime_error("Cannot preserve recovery source");
+    struct stat current{}, copied{};
+    if (fstatat(fd_, filename.c_str(), &current, AT_SYMLINK_NOFOLLOW) ||
+        fstatat(fd_, backup.c_str(), &copied, AT_SYMLINK_NOFOLLOW) ||
+        current.st_ino != original.st_ino || current.st_dev != original.st_dev ||
+        copied.st_ino != original.st_ino || copied.st_dev != original.st_dev) {
+        unlinkat(fd_, backup.c_str(), 0);
+        throw std::runtime_error("Recovery source changed; original preserved");
+    }
+    if (unlinkat(fd_, filename.c_str(), 0) || fsync(fd_))
+        throw std::runtime_error("Cannot complete recovery; backup preserved");
+    if (S_ISREG(original.st_mode)) {
+        FD file(openat(fd_, backup.c_str(), O_RDONLY | O_NOFOLLOW | O_CLOEXEC));
+        if (file.value < 0 || fchmod(file.value, 0600))
+            throw std::runtime_error("Cannot protect recovery backup");
+    }
+    return backup;
+}
+
+FileLock PrivateDirectory::Lock(bool wait, std::string_view name) const {
+    Verify();
+    const auto filename = Name(name);
+    FD file(openat(fd_, filename.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600));
     if (file.value < 0) throw std::runtime_error("Cannot open private lock");
     SafeFile(file.value);
-    while (flock(file.value, LOCK_EX)) { if (errno != EINTR) throw std::runtime_error("Cannot lock private storage"); }
+    while (flock(file.value, LOCK_EX | (wait ? 0 : LOCK_NB))) {
+        if (errno == EINTR) continue;
+        if (!wait && (errno == EWOULDBLOCK || errno == EAGAIN)) throw StorageBusy();
+        throw std::runtime_error("Cannot lock private storage");
+    }
     const auto fd = file.value; file.value = -1;
     return FileLock(fd);
 }

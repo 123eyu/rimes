@@ -1,3 +1,4 @@
+import CryptoKit
 import Cocoa
 import InputMethodKit
 import Carbon
@@ -76,6 +77,10 @@ private enum StandaloneRimeCommandRules {
     private static let engineHostingCommands: Set<String> = [
         "settings-preview",
         "settings-render",
+        "gateway-settings-render",
+        "codex-settings-render",
+        "claude-settings-render",
+        "codex-buffer-render",
     ]
 
     static func requiresIsolatedUserDir(arguments: [String]) -> Bool {
@@ -613,6 +618,178 @@ if CommandLine.arguments.contains("buffer-smoke") {
 }
 if CommandLine.arguments.contains("buffer-window-smoke") {
     exit(runBufferWindowSmokeTest() ? 0 : 1)
+}
+if let index = CommandLine.arguments.firstIndex(where: { $0 == "capsule-password-linux-fixtures" || $0 == "capsule-password-linux-verify" }),
+   CommandLine.arguments.indices.contains(index + 1) {
+    do {
+        try MainActor.assumeIsolated {
+            let target = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+            if CommandLine.arguments[index] == "capsule-password-linux-fixtures" { try CapsulePasswordLinuxFixtures.export(to: target) }
+            else { try CapsulePasswordLinuxFixtures.verifyLinux(at: target) }
+        }
+        exit(0)
+    } catch { fputs("Public password fixture operation failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "mailbox-chat-linux-contract"), index + 1 < CommandLine.arguments.count {
+    do {
+        var fixture = try MailboxChatLinuxFixtures.value()
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let sources = ["AITextGenerationOptions.swift", "AITextPlugins.swift", "Mailbox/AITextMailboxGenerationCoordinator.swift", "Mailbox/MailboxChatLinuxFixtures.swift"]
+        fixture["sources"] = try Dictionary(uniqueKeysWithValues: sources.map { name in
+            ("Sources/RimeBuffer/" + name, SHA256.hash(data: try Data(contentsOf: root.appendingPathComponent(name))).map { String(format: "%02x", $0) }.joined())
+        })
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Mailbox conversation export failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "typing-practice-linux-fixtures") {
+    guard CommandLine.arguments.indices.contains(index + 1) else {
+        print("Usage: RimeBuffer typing-practice-linux-fixtures OUTPUT.json")
+        exit(2)
+    }
+    exit(runTypingPracticeLinuxFixtures(URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
+if let index = CommandLine.arguments.firstIndex(of: "typing-practice-linux-ui"), index + 1 < CommandLine.arguments.count {
+    exit(runTypingPracticeLinuxUISmoke(URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
+if let index = CommandLine.arguments.firstIndex(of: "statistics-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        try StatisticsLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        print("statistics-linux-fixtures: PASS actual native aggregates and keyboard layout")
+        exit(0)
+    } catch { print("statistics-linux-fixtures: FAIL \(error.localizedDescription)"); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "chord-linux-ui-smoke"), index + 1 < CommandLine.arguments.count {
+    exit(runChordLinuxUISmoke(output: URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "chord-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        let fixture = try ChordLinuxFixtures.value()
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Chord fixture export failed: \(error.localizedDescription)\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "claude-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        var fixture = try AITextClaudeLinuxContract.value()
+        let sourceRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let sources = ["AITextPlugins.swift", "AITextClaudeLogin.swift", "AITextClaudeLinuxFixtures.swift"]
+        fixture["sources"] = try Dictionary(uniqueKeysWithValues: sources.map { name in
+            ("Sources/RimeBuffer/" + name, SHA256.hash(data: try Data(contentsOf: sourceRoot.appendingPathComponent(name))).map { String(format: "%02x", $0) }.joined())
+        })
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Claude fixture export failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "codex-linux-fixtures"),
+   index + 1 < CommandLine.arguments.count {
+    do {
+        var fixture = AITextCodexLinuxContract.value
+        let sources = ["AITextPlugins.swift", "AITextCodexAppServer.swift", "AITextCodexLogin.swift", "AITextSkills.swift"]
+        let sourceRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        fixture["sources"] = try Dictionary(uniqueKeysWithValues: sources.map { name in
+            ("Sources/RimeBuffer/" + name, SHA256.hash(data: try Data(contentsOf: sourceRoot.appendingPathComponent(name))).map { String(format: "%02x", $0) }.joined())
+        })
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Codex fixture export failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "gateway-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    do {
+        let output = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+        let root = URL(fileURLWithPath: FileManager.default.currentDirectoryPath)
+        var contract = LocalGateway.linuxContract()
+        var hashes: [String: String] = [:]
+        for path in ["Sources/RimeBuffer/Inbound/LocalGateway.swift",
+                     "Sources/RimeBuffer/Inbound/InboundBus.swift",
+                     "Sources/RimeBuffer/Inbound/GatewayToken.swift"] {
+            let data = try Data(contentsOf: root.appendingPathComponent(path))
+            hashes[path] = SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined()
+        }
+        contract["sources"] = hashes
+        let data = try JSONSerialization.data(withJSONObject: contract, options: [.prettyPrinted, .sortedKeys])
+        try FileManager.default.createDirectory(at: output.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try data.write(to: output, options: .atomic)
+        exit(0)
+    } catch { fputs("gateway contract export failed: \(error)\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "mailbox-terminal-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        do {
+            try MailboxTerminalLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+            return 0
+        } catch { fputs("Public terminal fixture operation failed: \(error)\n", stderr); return 1 }
+    })
+}
+
+if let index = CommandLine.arguments.firstIndex(where: { $0 == "mailbox-linux-fixtures" || $0 == "mailbox-linux-verify" }),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        do {
+            let path = URL(fileURLWithPath: CommandLine.arguments[index + 1])
+            if CommandLine.arguments[index] == "mailbox-linux-fixtures" { try MailboxLinuxFixtures.export(to: path) }
+            else { try MailboxLinuxFixtures.verifyLinux(at: path) }
+            return 0
+        } catch { fputs("Public Mailbox fixture operation failed\n", stderr); return 1 }
+    })
+}
+if let index = CommandLine.arguments.firstIndex(of: "capsule-password-visual-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        do { try CapsulePasswordVisualFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1])); return 0 }
+        catch { fputs("Password visual fixture export failed\n", stderr); return 1 }
+    })
+}
+if let index = CommandLine.arguments.firstIndex(of: "capture-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    do {
+        try MainActor.assumeIsolated {
+            try CaptureLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+        }
+        exit(0)
+    } catch { fputs("Capture fixture export failed: \(error)\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "capsule-resources-preview"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        CapsuleReferenceLinuxFixtures.renderManager(to: CommandLine.arguments[index + 1])
+    } ? 0 : 1)
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "capsule-reference-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    do {
+        try CapsuleReferenceLinuxFixtures.export(to: CommandLine.arguments[index + 1])
+        exit(0)
+    } catch { fputs("Capsule reference fixture export failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "clipboard-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        ClipboardHistorySmoke.exportLinuxParityFixtures(to: CommandLine.arguments[index + 1])
+    } ? 0 : 1)
 }
 if CommandLine.arguments.contains("clipboard-history-smoke") {
     _ = NSApplication.shared
@@ -1242,6 +1419,36 @@ if CommandLine.arguments.contains("settings-preview") {
     SettingsWindowController.shared.show()
     app.activate(ignoringOtherApps: true)
     app.run()
+}
+if let i = CommandLine.arguments.firstIndex(of: "codex-buffer-render"), i + 1 < CommandLine.arguments.count {
+    isolatePreviewUserDir()
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.finishLaunching()
+    let controller = BufferWindowController.shared
+    guard controller.renderForPreview(to: CommandLine.arguments[i + 1], scale: 2, panelWidth: 760) else { exit(1) }
+    exit(controller.imageResultMailboxButtonForSmoke(outputPath: CommandLine.arguments[i + 1]) ? 0 : 1)
+}
+if let i = CommandLine.arguments.firstIndex(of: "claude-settings-render"), i + 1 < CommandLine.arguments.count {
+    isolatePreviewUserDir()
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.finishLaunching()
+    exit(SettingsWindowController.shared.renderClaudeForPreview(to: CommandLine.arguments[i + 1]) ? 0 : 1)
+}
+if let i = CommandLine.arguments.firstIndex(of: "codex-settings-render"), i + 1 < CommandLine.arguments.count {
+    isolatePreviewUserDir()
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.finishLaunching()
+    exit(SettingsWindowController.shared.renderCodexForPreview(to: CommandLine.arguments[i + 1]) ? 0 : 1)
+}
+if let i = CommandLine.arguments.firstIndex(of: "gateway-settings-render"), i + 1 < CommandLine.arguments.count {
+    isolatePreviewUserDir()
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.finishLaunching()
+    exit(SettingsWindowController.shared.renderGatewayForPreview(to: CommandLine.arguments[i + 1]) ? 0 : 1)
 }
 // Dev-only: render every stable route/subpage plus manifest.json.
 if let i = CommandLine.arguments.firstIndex(of: "settings-render"),

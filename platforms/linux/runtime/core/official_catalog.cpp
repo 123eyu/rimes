@@ -5,8 +5,23 @@ namespace rimes::plugins {
 std::map<std::string, Descriptor> CompiledAdapters() {
     // An entry is added only with its native implementation and acceptance
     // tests. Platform declarations are a separate required gate in PackageStore.
-    return {{"builtin.capsule.notes", {"builtin.capsule.notes", "笔记", "1.1.0",
-        Kind::Capsule, {"capsule.navigate"}}}};
+    return {{"builtin.typing-speed", {"builtin.typing-speed", "打字测速", "2.1.0", Kind::Extension, {"metrics.aggregate"}}},
+        {"builtin.statistics", {"builtin.statistics", "统计", "2.1.0", Kind::Extension, {"metrics.aggregate"}}},
+        {"builtin.fly-chord-learning", {"builtin.fly-chord-learning", "并击", "2.1.0", Kind::Extension, {"input.chord"}}},
+        {"builtin.claude-code-cli", {"builtin.claude-code-cli", "Claude", "1.2.0", Kind::Buffer, {"buffer.read", "ai.generate"}}},
+        {"builtin.codex-cli", {"builtin.codex-cli", "ChatGPT", "1.2.0", Kind::Buffer, {"buffer.read", "ai.generate"}}},
+        {"builtin.mailbox.inbox", {"builtin.mailbox.inbox", "收件", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},
+        {"builtin.mailbox.chat", {"builtin.mailbox.chat", "对话", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},
+        {"builtin.mailbox.terminal", {"builtin.mailbox.terminal", "终端", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},
+        {"builtin.capsule.notes", {"builtin.capsule.notes", "笔记", "1.1.0", Kind::Capsule, {"capsule.navigate"}}},
+        {"builtin.capsule.temporary", {"builtin.capsule.temporary", "临时", "1.1.0", Kind::Capsule, {"capsule.navigate"}}},
+        {"builtin.capsule.capture", {"builtin.capsule.capture", "捕获", "1.1.0", Kind::Capsule, {"capsule.navigate"}}},
+        {"builtin.capsule.resources", {"builtin.capsule.resources", "资源", "1.1.0", Kind::Capsule, {"capsule.navigate"}}},
+        {"builtin.capsule.passwords", {"builtin.capsule.passwords", "密码", "1.1.0", Kind::Capsule, {"capsule.navigate"}}},
+        {"builtin.apple-translation", {"builtin.apple-translation", "实时翻译", "2.3.0",
+        Kind::Buffer, {"buffer.read", "translation.generate"}}},
+        {"builtin.openai-compatible", {"builtin.openai-compatible", "AI API", "1.1.0",
+        Kind::Buffer, {"buffer.read", "ai.generate"}}}};
 }
 Json OfficialCatalog() { return Json::parse(linuxruntime::official::kCatalogJSON); }
 std::map<std::string, std::string> BundledPackages() {

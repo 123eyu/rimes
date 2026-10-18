@@ -1,0 +1,45 @@
+{
+  "task": 24,
+  "issue": "https://github.com/scholay/xsime/issues/174",
+  "parentCommit": "fadafb5d57704d4ce7f06a42e05dbae742ada085",
+  "pluginCommit": "873ebe997b4102b3b0933968ae4a54fb4fe8af9d",
+  "sourceSha256": {
+    "Sources/RimeBuffer/CodexSession/CodexProcessEnvironment.swift": "817ef334ee18e396b207c4698e67d94d5a47abfc78c2cea90b0d313de7129347",
+    "Sources/RimeBuffer/Mailbox/MailboxAdaptiveSplitView.swift": "8e3eeb75fe185faaac1ce19f410c1a3e4cdc0b428c79e1c4c92e632fee571f45",
+    "Sources/RimeBuffer/Mailbox/MailboxTerminalLinuxFixtures.swift": "7d784b8f7754fe47a6a67d73b128b3342963c929792cbd1c29798e37f671f973",
+    "Sources/RimeBuffer/Mailbox/MailboxTerminalWorkspace.swift": "5c84507a57784addb5d300f1b86c12eb97cbf2e51779196e08323b937102d6ab",
+    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceUI.swift": "9ee7f32da00695c4a0bcdb23cee36f709810982e21ed937e961cd8a520764558",
+    "platforms/linux/mailbox/core/terminal_files.hpp": "7c6c80b8288da982522e7f115648522fba851b51817fbe2c9b972c314d129449",
+    "platforms/linux/mailbox/core/terminal_files.cpp": "8e5909deda40e4510754054ca10d82f04fd030a801904788c55c0a67ccf84ff4",
+    "platforms/linux/mailbox/ui/terminal_fixtures.cpp": "449f2b7b99829e0809d717070df32043730367f9aae5196758106c0187661f74",
+    "platforms/linux/mailbox/ui/terminal_session.hpp": "253649b2618f89e790199ccb6b7310cda2a693ec80a04bb9e6c4e0c6d3f088e1",
+    "platforms/linux/mailbox/ui/terminal_workspace.cpp": "1a1a9970b9f3093b587ba913e675706875eae1000260b7ea75ebac70d11841fb",
+    "platforms/linux/mailbox/ui/terminal_session.cpp": "74bb637e19c6bef06470b7e362cb1a1db91b977abc0219faf02043a37f26e203",
+    "platforms/linux/mailbox/ui/terminal_fixtures.hpp": "16eb87993e36c50dbe17a4473fa118a1da9b907b53f6961398a141499a2c15bc",
+    "platforms/linux/mailbox/ui/terminal_workspace.hpp": "4a0e7dff402f66a5496885dcd9047268d5dac20236a71d35bf7e6ac964a4dcc9",
+    "platforms/linux/mailbox/ui/terminal_file_main.cpp": "43c0453151dcb392b4efe2d6581b207c76fbfd9ef3fef979c502a18fa07f4da1",
+    "platforms/linux/mailbox/core/mailbox_store.cpp": "22231504543f47a46a9d721fb2fe440b623138bee77849e45134f7b6b5a01e70",
+    "platforms/linux/mailbox/ui/mailbox_workspace.cpp": "1bc2409d3f5114a7eba1cafe6da5544ac8f88be0ccdcfec1478578aea136a33d",
+    "platforms/linux/mailbox/tests/terminal_tests.cpp": "be2295bd3a368f45abe9712a82248c0692ee14f978b95fe3e85e4c30734d48e9",
+    "platforms/linux/mailbox/tests/terminal_fixture.py": "b41d707bfb84621ef41ebebe46e0acb4ef5f64fa9540770e2476517e0f563cac",
+    "platforms/linux/ime/scripts/install_state.py": "74c9dd3d13c5ed5aae068ab75ab3fb578f35d8ab16a8936f3c2142922f4235c0",
+    "platforms/linux/runtime/ui/desktop.cpp": "131a12f2936f05ca2547f04d93e490373925f29f0e533d6dbaceb0fde850d32c"
+  },
+  "environment": {
+    "linux": "Ubuntu 24.04 arm64 container",
+    "gtk": "3.24.41",
+    "vte": "0.76.0",
+    "fcitx": "5.1.7",
+    "render": "Actual AppKit/SwiftTerm and GTK/VTE, same public command and file, night/day, 1000x700 and 680x500, scale 2, Asia/Tokyo"
+  },
+  "verification": {
+    "sourceLifecycle": "13 passed",
+    "native": "Swift debug build, workspace smoke, 20 actual terminal captures, UTF-8 receipt and exit 7, native readback of 2 Linux receipts passed",
+    "ctest": "81/81, clean Release/deb, 106.52 seconds",
+    "debLifecycle": "installed PTY render/collection/exit, install/reinstall/remove passed; 22 XSIME and 2 Claude files retained",
+    "packageSha256": "a69a4f0c01878a9b0e7f464f9466f7d0fe0ed87ecbb588f2148089b5a02f28b0"
+  },
+  "visualStatus": "requires_review",
+  "liveAccountTerminal": "not tested",
+  "release": "not published"
+}
