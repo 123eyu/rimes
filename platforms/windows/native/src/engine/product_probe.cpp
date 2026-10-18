@@ -1,3 +1,4 @@
+#include <atomic>
 #include <filesystem>
 #include <iostream>
 #include <vector>
@@ -13,13 +14,14 @@ namespace {
 class RuntimePreferences {
  public:
   explicit RuntimePreferences(const std::filesystem::path& log_dir) {
+    static std::atomic<unsigned long long> serial{0};
     wchar_t previous[32768]{};
     const auto length = GetEnvironmentVariableW(L"LOCALAPPDATA", previous, 32768);
     if (length >= 32768) return;
     if (length) previous_ = previous;
     const auto root = log_dir / (L"workbench-shift-probe-" +
         std::to_wstring(GetCurrentProcessId()) + L"-" +
-        std::to_wstring(GetTickCount64()));
+        std::to_wstring(GetTickCount64()) + L"-" + std::to_wstring(++serial));
     if (!std::filesystem::create_directory(root)) return;
     active_ = SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str()) != 0;
   }
@@ -124,17 +126,20 @@ bool TestNativeIsaac2026(RimeEngine& engine, const std::filesystem::path& log_di
 bool TestPausedBufferShift(RimeEngine& engine,
                           const std::filesystem::path& log_dir) {
   using namespace rimes::windows;
-  RuntimePreferences preferences(log_dir);
-  if (!preferences.active()) {
-    std::cerr << "Could not isolate Buffer probe preferences";
-    return false;
-  }
   constexpr auto down = static_cast<std::uint32_t>(core::KeyEventFlags::kKeyDown);
   constexpr auto repeat = static_cast<std::uint32_t>(core::KeyEventFlags::kRepeat);
   constexpr auto tap = static_cast<std::uint32_t>(core::KeyEventFlags::kShiftTap);
   constexpr auto shift = static_cast<std::uint32_t>(core::KeyModifiers::kShift);
   for (const auto capabilities : {0ULL, core::kModifierSnapshotsCapability}) {
     for (const bool pending_result : {false, true}) {
+      // Plugin selection is intentionally remembered across Runtime instances.
+      // Each scenario needs its own preferences, otherwise the translated-result
+      // case changes the following plain-input case into translation mode.
+      RuntimePreferences preferences(log_dir);
+      if (!preferences.active()) {
+        std::cerr << "Could not isolate Buffer probe preferences";
+        return false;
+      }
       workbench::Runtime runtime([](const workbench::Settings&, const workbench::Generation&,
           const std::function<bool(const std::string&)>& chunk,
           const std::function<bool()>&, std::string*) {
