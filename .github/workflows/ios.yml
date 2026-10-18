@@ -5,7 +5,6 @@ on:
     paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'Shared/**', 'platforms/ios/**', 'Sources/RimeBuffer/ChordOutputEncoding.swift', 'chord-keymaps/**', 'rime-data/**', '.github/workflows/ios*.yml']
   push:
     branches: [main]
-    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', "Shared/**", "platforms/ios/**", "Sources/RimeBuffer/ChordOutputEncoding.swift", "chord-keymaps/**", "rime-data/**", ".github/workflows/ios*.yml"]
   workflow_dispatch:
 permissions:
   contents: read

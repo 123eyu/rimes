@@ -56,7 +56,8 @@ flowchart LR
 | Linux 原生 | 同项目 `vX.Y.Z` / `vX.Y.Z-preview.N` | [Linux 安装与打包](platforms/linux/ime/README.md) | 同一 Release 的 `fcitx5-rimes_<version>_amd64.deb` 与 `.sha256` | Ubuntu 24.04 amd64 设置内下载并授权安装 |
 | Windows / Linux 数据预览（维护通道） | `platform-preview-vX.Y.Z` | `./scripts/release.sh platform minor` | 数据与脚本包，Pre-release | 手动安装，见 [CROSS-PLATFORM-PREVIEW.md](CROSS-PLATFORM-PREVIEW.md) |
 
-> GitHub required checks 不变。iOS、Windows IME、Linux IME 按相关路径分别运行 PR / main 检查；
+> GitHub required checks 不变。各端 PR 检查按相关路径触发；每次 main 推送运行五端检查，
+> 让正式版门禁始终能校验将要打标签的确切 main 提交，避免只改某一端后缺少其他端的检查记录。
 > 旧数据预览与 Windows Foundation 保留每周/手动检查。`v*` 的发布工作流另外要求本次 Linux deb
 > 构建与安装／升级／重装／卸载测试成功后才公开 Release。真实桌面验收须单独记录。
 

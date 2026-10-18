@@ -6,7 +6,6 @@ on:
     paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'scripts/input-schemes/repair-rime-table.py', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
   push:
     branches: [main]
-    paths: ['OfficialPlugins', 'plugins.lock.json', 'scripts/prepare-official-plugins.py', 'LICENSE', 'Shared/Tests/RimesCoreTests/Fixtures/punctuation-layout.tsv', 'platforms/android/**', 'scripts/input-schemes/repair-rime-table.py', 'platforms/ios/dependencies.lock.json', 'platforms/ios/Resources/EngineData/**', 'platforms/ios/Licenses/**', '.github/workflows/android.yml']
   workflow_call:
     inputs:
       signed_release:
@@ -70,7 +69,7 @@ jobs:
         run: python3 resources/dictionary/verify-dictionary.py --check --apk app/build/outputs/apk/debug/app-debug.apk
       - name: Verify APK 16 KB alignment
         run: "$ANDROID_HOME/build-tools/36.0.0/zipalign -c -P 16 -v 4 app/build/outputs/apk/debug/app-debug.apk"
-      - name: Verify original scheme import on Android emulator
+      - name: Verify Android rendering, original scheme import and updates
         timeout-minutes: 18
         run: |
           set -euo pipefail
@@ -116,6 +115,12 @@ jobs:
           test "$(adb -s emulator-5554 shell getprop sys.boot_completed | tr -d '\r')" = 1
           adb -s emulator-5554 install -t app/build/outputs/apk/debug/app-debug.apk
           adb -s emulator-5554 install -t app/build/outputs/apk/androidTest/debug/app-debug-androidTest.apk
+          # Exercise Android's ICU regex implementation, not just OpenJDK.
+          # The scheme-import/update/Wubi modes return before ChordSurface.
+          adb -s emulator-5554 shell am instrument -w -r -e mode rendering org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/rendering-emulator.log
+          grep -Fq 'PASS native keycaps, chord and Buffer rail rendering' .native/rendering-emulator.log
+          grep -Fq 'CHORD_SURFACE checks=' .native/rendering-emulator.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/rendering-emulator.log
           python3 ../../scripts/input-schemes/fetch_fixture.py .native/wanxiang-original.zip
           adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug mkdir -p cache
           # Stream the unchanged archive as the debuggable app's own UID;
@@ -148,6 +153,7 @@ jobs:
             platforms/android/app/build/generated/rime/assets/rime/manifest.json
             platforms/android/.native/engine-contract.log
             platforms/android/.native/emulator.log
+            platforms/android/.native/rendering-emulator.log
             platforms/android/.native/scheme-import-emulator.log
             platforms/android/.native/app-update.log
             platforms/android/.native/wubi-emulator.log
