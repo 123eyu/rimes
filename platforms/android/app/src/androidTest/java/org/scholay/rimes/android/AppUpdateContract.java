@@ -62,7 +62,9 @@ final class AppUpdateContract {
             if (found.get()) return;
             SystemClock.sleep(100);
         }
-        throw new AssertionError("Missing updater state: " + expected);
+        throw new AssertionError("Missing updater state: " + expected + "; activity destroyed=" + activity.isDestroyed()
+                + "; pendingSession=" + activity.getSharedPreferences("application-update", Context.MODE_PRIVATE).getInt("pendingSession", -1)
+                + "; failureCode=" + activity.getSharedPreferences("application-update", Context.MODE_PRIVATE).getInt("failureCode", -1));
     }
     private static void systemConfirmation(Instrumentation instrumentation) throws Exception {
         Context context = instrumentation.getTargetContext();
@@ -92,6 +94,7 @@ final class AppUpdateContract {
             params.setAppPackageName(context.getPackageName());
             if (android.os.Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED);
             sessionId = installer.createSession(params);
+            context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit().putInt("pendingSession", sessionId).commit();
             try (PackageInstaller.Session session = installer.openSession(sessionId);
                  InputStream input = new FileInputStream(context.getApplicationInfo().sourceDir)) {
                 try (OutputStream output = session.openWrite("base.apk", 0, -1)) {
@@ -115,12 +118,16 @@ final class AppUpdateContract {
             }
             if (!cancelled) throw new AssertionError("Android's install confirmation did not appear");
             awaitText(instrumentation, activity, "Installation did not finish");
+            instrumentation.runOnMainSync(activity::finish);
+            instrumentation.waitForIdleSync();
+            Activity retryPage = instrumentation.startActivitySync(new Intent(context, AppUpdateActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            try { awaitText(instrumentation, retryPage, "Installation did not finish"); }
+            finally { instrumentation.runOnMainSync(retryPage::finish); }
+            instrumentation.waitForIdleSync();
             // Completion is based on the running build, independently of a
             // successful callback or a browser/installer having been opened.
             context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit()
                     .putLong("pendingCode", BuildConfig.VERSION_CODE).commit();
-            instrumentation.runOnMainSync(activity::finish);
-            instrumentation.waitForIdleSync();
             Activity reopened = instrumentation.startActivitySync(new Intent(context, AppUpdateActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
             try { awaitText(instrumentation, reopened, "Updated to " + BuildConfig.VERSION_NAME); }
             finally { instrumentation.runOnMainSync(reopened::finish); }

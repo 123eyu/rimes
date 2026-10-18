@@ -11,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.content.pm.Signature;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.provider.Settings;
 import android.widget.Button;
 import android.widget.LinearLayout;
@@ -44,6 +46,15 @@ public final class AppUpdateActivity extends Activity {
     private Button check, download, install;
     private JSONObject candidate;
     private boolean busy;
+    private final PackageInstaller.SessionCallback sessionEvents = new PackageInstaller.SessionCallback() {
+        @Override public void onCreated(int id) { }
+        @Override public void onBadgingChanged(int id) { }
+        @Override public void onActiveChanged(int id, boolean active) { }
+        @Override public void onProgressChanged(int id, float value) { }
+        @Override public void onFinished(int id, boolean success) {
+            finishInstallation(id, success, PackageInstaller.STATUS_FAILURE);
+        }
+    };
 
     @Override public void onCreate(Bundle state) {
         super.onCreate(state);
@@ -67,6 +78,7 @@ public final class AppUpdateActivity extends Activity {
             return insets;
         });
         setContentView(scroll);
+        getPackageManager().getPackageInstaller().registerSessionCallback(sessionEvents, new Handler(Looper.getMainLooper()));
         show("当前版本 / Current: " + BuildConfig.VERSION_NAME);
         restore(); handleResult(getIntent());
     }
@@ -101,27 +113,54 @@ public final class AppUpdateActivity extends Activity {
                 // Only this private staged APK is removed; user settings and schemes are untouched.
                 if (packageFile().exists()) packageFile().delete();
                 show("更新完成 / Updated to " + BuildConfig.VERSION_NAME);
+            } else if (getSharedPreferences(PREFS, MODE_PRIVATE).contains("failureCode")) {
+                showInstallationFailure(getSharedPreferences(PREFS, MODE_PRIVATE).getInt("failureCode", PackageInstaller.STATUS_FAILURE));
             } else if (candidate != null) {
                 show("可更新至 / Available: " + candidate.getString("version") +
                         (pending > 0 ? "\n等待系统安装完成；取消后可重试 / Waiting for installation; retry if cancelled." : ""));
             }
         } catch (Exception error) { candidate = null; show("请重新检查更新 / Check for updates again."); }
     }
-    // A completed APK replacement starts a new process and is verified in
-    // onCreate. Restoring on every resume would overwrite a cancellation
-    // result with the older persisted "waiting for installation" message.
+    @Override protected void onResume() {
+        super.onResume();
+        // If the page/process was recreated after the session ended, recover
+        // its terminal state without overwriting an active download or check.
+        int id = getSharedPreferences(PREFS, MODE_PRIVATE).getInt("pendingSession", -1);
+        if (!busy && id >= 0 && getPackageManager().getPackageInstaller().getSessionInfo(id) == null) {
+            finishInstallation(id, false, PackageInstaller.STATUS_FAILURE);
+        }
+    }
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); handleResult(intent); }
-    @Override protected void onDestroy() { worker.shutdownNow(); super.onDestroy(); }
+    @Override protected void onDestroy() {
+        getPackageManager().getPackageInstaller().unregisterSessionCallback(sessionEvents);
+        worker.shutdownNow(); super.onDestroy();
+    }
+    private void showInstallationFailure(int code) {
+        show("安装未完成，可重试 / Installation did not finish (" + code + ").");
+    }
+    private void finishInstallation(int id, boolean success, int code) {
+        android.content.SharedPreferences preferences = getSharedPreferences(PREFS, MODE_PRIVATE);
+        if (id < 0 || preferences.getInt("pendingSession", -1) != id) return;
+        android.content.SharedPreferences.Editor result = preferences.edit().remove("pendingSession");
+        if (!success) result.remove("pendingCode").putInt("failureCode", code);
+        result.apply();
+        busy = false;
+        // Session callbacks do not need permission to bring an Activity to the
+        // foreground. Cancellation must survive even if Android suppresses a
+        // final PendingIntent while its installer still covers our page.
+        if (success) restore(); // Only the running version can confirm completion.
+        else showInstallationFailure(code);
+    }
     private void handleResult(Intent intent) {
         if (!RESULT.equals(intent.getAction())) return;
+        int id = intent.getIntExtra("updaterSession", -1);
+        if (getSharedPreferences(PREFS, MODE_PRIVATE).getInt("pendingSession", -1) != id || id < 0) return;
         int code = intent.getIntExtra(PackageInstaller.EXTRA_STATUS, PackageInstaller.STATUS_FAILURE);
         if (code == PackageInstaller.STATUS_PENDING_USER_ACTION) {
             Intent confirmation = android.os.Build.VERSION.SDK_INT >= 33 ? intent.getParcelableExtra(Intent.EXTRA_INTENT, Intent.class) : intent.getParcelableExtra(Intent.EXTRA_INTENT);
             if (confirmation != null) startActivity(confirmation);
-        } else if (code == PackageInstaller.STATUS_SUCCESS) {
-            restore(); // A result alone is insufficient: the running build must match.
         } else {
-            busy = false; show("安装未完成，可重试 / Installation did not finish (" + code + ").");
+            finishInstallation(id, code == PackageInstaller.STATUS_SUCCESS, code);
         }
         intent.setAction(null);
     }
@@ -139,7 +178,8 @@ public final class AppUpdateActivity extends Activity {
             if (asset.getInt("minimumOS") > android.os.Build.VERSION.SDK_INT) throw new Exception("This update requires a newer Android version");
             ui(() -> {
                 busy = false; candidate = newer ? asset : null;
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("candidate", newer ? asset.toString() : "").apply();
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putString("candidate", newer ? asset.toString() : "")
+                        .remove("failureCode").apply();
                 show(newer ? "可更新至 / Available: " + version : "已是最新版本 / Up to date: " + BuildConfig.VERSION_NAME);
             });
         });
@@ -202,7 +242,9 @@ public final class AppUpdateActivity extends Activity {
         return android.os.Build.VERSION.SDK_INT >= 28 ? (info.signingInfo == null ? null : info.signingInfo.getApkContentsSigners()) : info.signatures;
     }
     static PendingIntent installationCallback(Context context, int sessionId) {
-        Intent result = new Intent(context, AppUpdateActivity.class).setAction(RESULT).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        Intent result = new Intent(context, AppUpdateActivity.class).setAction(RESULT)
+                .putExtra("updaterSession", sessionId)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
         ActivityOptions options = ActivityOptions.makeBasic();
         if (android.os.Build.VERSION.SDK_INT >= 35) {
             // Delegate only to Android's installer, and on newer systems only
@@ -231,10 +273,16 @@ public final class AppUpdateActivity extends Activity {
                 try (OutputStream output = session.openWrite("base.apk", 0, packageFile().length())) {
                     byte[] buffer = new byte[65536]; int n; while ((n = input.read(buffer)) != -1) output.write(buffer, 0, n); session.fsync(output);
                 }
-                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("pendingCode", asset.getLong("build")).commit();
+                getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("pendingCode", asset.getLong("build"))
+                        .putInt("pendingSession", id).remove("failureCode").commit();
                 session.commit(installationCallback(this, id).getIntentSender());
             } catch (Exception error) { installer.abandonSession(id); throw error; }
-            ui(() -> { busy = false; show("请在系统安装器确认。更新完成后重新打开应用 / Confirm in Android, then reopen the app."); });
+            ui(() -> {
+                busy = false;
+                // Do not replace a faster terminal callback with a stale prompt.
+                if (getSharedPreferences(PREFS, MODE_PRIVATE).getInt("pendingSession", -1) == id)
+                    show("请在系统安装器确认。更新完成后重新打开应用 / Confirm in Android, then reopen the app.");
+            });
         });
     }
     private static String hex(byte[] bytes) { StringBuilder text = new StringBuilder(); for (byte b : bytes) text.append(String.format(java.util.Locale.ROOT, "%02x", b & 255)); return text.toString(); }
