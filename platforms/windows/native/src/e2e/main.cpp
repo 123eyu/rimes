@@ -329,8 +329,15 @@ void CheckCandidateGuardAfterKeyRelease() {
                           {"revision", shown.revision}, {"index", 0}}),
          "current mouse candidate accepted after unhandled KeyUp");
   BrokerInputState selected, released;
-  Expect(client->HandleKey({BrokerKeyPhase::kKeyDown, '1', 1}, &selected) ==
-             BrokerKeyResult::kConsumed,
+  const auto selection_started = GetTickCount64();
+  const auto selection_result =
+      client->HandleKey({BrokerKeyPhase::kKeyDown, '1', 1}, &selected);
+  if (selection_result != BrokerKeyResult::kConsumed)
+    std::cerr << "candidate selection result=" << static_cast<int>(selection_result)
+              << " elapsed_ms=" << GetTickCount64() - selection_started
+              << " connected=" << client->IsConnected()
+              << " has_snapshot=" << selected.has_snapshot << '\n';
+  Expect(selection_result == BrokerKeyResult::kConsumed,
          "guarded candidate selection consumed");
   if (!shown.candidates.empty())
     Expect(selected.commit_text == shown.candidates[0].text,
