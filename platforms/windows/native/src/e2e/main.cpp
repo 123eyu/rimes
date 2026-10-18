@@ -223,8 +223,15 @@ void CheckUnavailablePassThroughAndNoReplay(bool legacy_broker) {
   Expect(WaitForContext(client.get(), 1001), "connected context bound");
 
   BrokerInputState live;
-  Expect(client->HandleKey({BrokerKeyPhase::kKeyDown, 'N', 1}, &live) ==
-             BrokerKeyResult::kConsumed,
+  const auto first_key_started = GetTickCount64();
+  const auto first_key_result =
+      client->HandleKey({BrokerKeyPhase::kKeyDown, 'N', 1}, &live);
+  if (first_key_result != BrokerKeyResult::kConsumed)
+    std::cerr << "first connected key result=" << static_cast<int>(first_key_result)
+              << " elapsed_ms=" << GetTickCount64() - first_key_started
+              << " connected=" << client->IsConnected()
+              << " has_snapshot=" << live.has_snapshot << '\n';
+  Expect(first_key_result == BrokerKeyResult::kConsumed,
          "connected KeyDown is processed");
   Expect(live.has_snapshot && live.composing,
          "connected KeyDown yields a live snapshot");
