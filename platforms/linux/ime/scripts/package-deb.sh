@@ -61,7 +61,7 @@ RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
     "$BUILD_DIR/rimes-metrics-fcitx-e2e" "$BUILD_DIR" . test-data
 RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
     "$BUILD_DIR/practice-probe/rimes-settings" "$BUILD_DIR" . test-data
-dbus-run-session -- xvfb-run -a python3 \
+dbus-run-session --config-file="$IME_ROOT/tests/portal_fixture_bus.conf" -- xvfb-run -a python3 \
     "$REPO_ROOT/platforms/linux/typing-practice/tests/practice_desktop_test.py" "$BUILD_DIR" "$STAGE"
 
 ROOT="$WORKDIR/root"

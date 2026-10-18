@@ -24,3 +24,9 @@ RIMES_SHARED_DIR=/tmp/rimes-shared dbus-run-session -- \
 NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings dbus-run-session -- xvfb-run -a \
   platforms/linux/ime/build/runtime/rimes-practice-ui-tests /tmp/linux-practice
 ```
+
+## CI 隔离目录修复（2026-10-18）
+
+[首次 amd64 CI](https://github.com/scholay/xsime/actions/runs/39107396318) 的 90 项回归、实际练习输入和 Sway PNG 已通过，两个 job 随后都因文档 portal 的 FUSE 挂载无法清理临时目录而失败。练习输入测试改用不自动启动 portal 的隔离总线；真正 Wayland 捕获仍启动真实 portal，其清理根据 `/proc/self/mountinfo` 检查挂载，避免断开的 FUSE 根目录让 `Path.is_mount()` 返回假阴性。未忽略清理错误或把未验证录屏改成通过。
+
+修复后本地 Ubuntu 24.04 非 root 用户的实际 GTK/Fcitx 练习及真实 Sway PNG 回归通过；具有 FUSE 的 GitHub runner 结果继续单独记录。

@@ -114,8 +114,16 @@ def main():
                 try: process.wait(timeout=3)
                 except subprocess.TimeoutExpired: process.kill(); process.wait()
             document_mount = root / 'doc'
-            if document_mount.is_mount():
+            # After the document portal exits, stat() on its FUSE root can
+            # return ENOTCONN. Path.is_mount() then says False although the
+            # mount still exists. Consult the kernel table without traversing
+            # that root, and unmount only this test's exact private path.
+            def document_is_mounted():
+                return any(line.split()[4] == str(document_mount)
+                           for line in Path('/proc/self/mountinfo').read_text().splitlines())
+            if document_is_mounted():
                 subprocess.run(['fusermount3', '-u', str(document_mount)], check=True, timeout=5)
+                assert not document_is_mounted(), 'private document portal mount survived cleanup'
             for log in logs: log.close()
 
 if __name__ == '__main__':

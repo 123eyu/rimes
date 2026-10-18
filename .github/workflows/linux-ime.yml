@@ -174,7 +174,7 @@ jobs:
           NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings dbus-run-session -- \
             xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-practice-ui-tests \
             "$RUNNER_TEMP/settings-render/typing-practice"
-          dbus-run-session -- xvfb-run -a python3 platforms/linux/typing-practice/tests/practice_desktop_test.py \
+          dbus-run-session --config-file=platforms/linux/ime/tests/portal_fixture_bus.conf -- xvfb-run -a python3 platforms/linux/typing-practice/tests/practice_desktop_test.py \
             platforms/linux/ime/build "$RUNNER_TEMP/translation-shared"
 
       - name: Codex CLI text and persistent Mailbox images through real Fcitx
