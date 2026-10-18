@@ -107,7 +107,9 @@ public final class AppUpdateActivity extends Activity {
             }
         } catch (Exception error) { candidate = null; show("请重新检查更新 / Check for updates again."); }
     }
-    @Override protected void onResume() { super.onResume(); if (status != null && !busy) restore(); }
+    // A completed APK replacement starts a new process and is verified in
+    // onCreate. Restoring on every resume would overwrite a cancellation
+    // result with the older persisted "waiting for installation" message.
     @Override protected void onNewIntent(Intent intent) { super.onNewIntent(intent); setIntent(intent); handleResult(intent); }
     @Override protected void onDestroy() { worker.shutdownNow(); super.onDestroy(); }
     private void handleResult(Intent intent) {

@@ -77,6 +77,10 @@ final class AppUpdateContract {
             AtomicBoolean disabled = new AtomicBoolean();
             instrumentation.runOnMainSync(() -> disabled.set(controlsDisabled(activity.getWindow().getDecorView())));
             if (!disabled.get()) throw new AssertionError("Unverified packages must not be downloadable/installable");
+            JSONObject pending = new JSONObject().put("version", "99.0.0");
+            context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit()
+                    .putString("candidate", pending.toString())
+                    .putLong("pendingCode", (long) BuildConfig.VERSION_CODE + 1).commit();
             // Only this disposable CI app receives the install app-op. Exercise
             // Android's real confirmation callback, then cancel before replacement.
             try (android.os.ParcelFileDescriptor command = instrumentation.getUiAutomation().executeShellCommand(
