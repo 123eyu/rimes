@@ -73,7 +73,9 @@ for program in /usr/bin/rimes-gateway /usr/bin/rimes-mailbox /usr/bin/rimes-sche
 done
 # Exercise the installed ELF and its resolved shared libraries, not only a build-tree binary.
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
-G_DEBUG=fatal-warnings TZ=Asia/Tokyo xvfb-run -a /usr/bin/rimes-mailbox \
+# The headless renderer has no accessibility bus; real desktop accessibility is
+# covered separately. Retain fatal GTK/VTE warnings for the installed-binary check.
+NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings TZ=Asia/Tokyo xvfb-run -a /usr/bin/rimes-mailbox \
     --render-terminal "$WORK/terminal-render"
 python3 - "$WORK/terminal-render/renders.json" <<'PY'
 import json, sys
