@@ -1,4 +1,5 @@
 """RIMES's bounded stdin/stdout local translator. Never opens a network connection."""
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
@@ -10,23 +11,32 @@ LANGUAGES = {"english": "en", "en": "en", "英语": "en", "英文": "en",
              "chinese": "zh", "zh": "zh", "zh-cn": "zh", "简体中文": "zh", "中文": "zh"}
 
 
-def translate(request, root):
+@lru_cache(maxsize=2)
+def models(root, source, target):
     import ctranslate2
     import sentencepiece
+    package = root / "models" / f"translate-{source}_{target}-1_9"
+    tokenizer = sentencepiece.SentencePieceProcessor(model_file=str(package / "sentencepiece.model"))
+    engine = ctranslate2.Translator(str(package / "model"), device="cpu", compute_type="int8",
+                                  inter_threads=1, intra_threads=min(4, os.cpu_count() or 1))
+    return tokenizer, engine
 
+
+def translate(request, root):
     text = request["text"]
     if not isinstance(text, str) or not text or len(text.encode("utf-8")) > LIMIT or "\0" in text:
         raise ValueError("Invalid source text")
     target = LANGUAGES.get(request["target"].strip().lower())
     if not target:
         raise ValueError("Local translation supports English and Chinese. Select AI for other languages.")
-    source = "zh" if re.search(r"[\u3400-\u9fff\U00020000-\U0002fa1f]", text) else "en"
+    # The toolbar freezes an explicit pair. Mixed text must not silently flip
+    # the requested direction based on one Han character.
+    source = LANGUAGES.get(request.get("source", "Chinese" if target == "en" else "English").strip().lower())
+    if not source:
+        raise ValueError("Local translation supports English and Chinese. Select AI for other languages.")
     if source == target:
-        return text
-    package = root / "models" / f"translate-{source}_{target}-1_9"
-    tokenizer = sentencepiece.SentencePieceProcessor(model_file=str(package / "sentencepiece.model"))
-    engine = ctranslate2.Translator(str(package / "model"), device="cpu", compute_type="int8",
-                                  inter_threads=1, intra_threads=min(4, os.cpu_count() or 1))
+        raise ValueError("Source and target languages must differ.")
+    tokenizer, engine = models(root, source, target)
     # Preserve paragraph boundaries; never let CT2 silently truncate long input.
     output = []
     for paragraph in re.split(r"(\r?\n)", text):
@@ -58,14 +68,34 @@ def translate(request, root):
     return result
 
 
-if __name__ == "__main__":
+def respond(raw, root):
     try:
-        raw = sys.stdin.buffer.read(LIMIT * 6 + 1025)
         if len(raw) > LIMIT * 6 + 1024:
             raise ValueError("Request too large")
-        response = {"text": translate(json.loads(raw.decode("utf-8")), Path(sys.argv[1]).resolve())}
+        return {"text": translate(json.loads(raw.decode("utf-8")), root)}
     except ValueError as error:
-        response = {"error": str(error)}
+        return {"error": str(error)}
     except Exception:
-        response = {"error": "Local translation resources are unavailable or incompatible."}
-    sys.stdout.buffer.write(json.dumps(response, ensure_ascii=False).encode("utf-8"))
+        return {"error": "Local translation resources are unavailable or incompatible."}
+
+
+def main():
+    root = Path(sys.argv[1]).resolve()
+    worker = len(sys.argv) == 3 and sys.argv[2] == "--worker"
+    while True:
+        raw = (sys.stdin.buffer.readline(LIMIT * 6 + 1025) if worker
+               else sys.stdin.buffer.read(LIMIT * 6 + 1025))
+        if not raw:
+            return
+        if worker and not raw.endswith(b"\n"):
+            return  # Truncated/oversized request must not desynchronize the stream.
+        response = respond(raw, root)
+        sys.stdout.buffer.write(json.dumps(response, ensure_ascii=False).encode("utf-8") + (b"\n" if worker else b""))
+        sys.stdout.buffer.flush()
+        raw = response = None  # Keep model weights, never a source/result history.
+        if not worker:
+            return
+
+
+if __name__ == "__main__":
+    main()

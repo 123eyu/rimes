@@ -88,6 +88,7 @@ public:
   struct Output {
     bool handled = false, replace = false;
     std::string text, raw;
+    bool settled = false;
   };
   void Reset() {
     held_.clear();
@@ -168,7 +169,7 @@ private:
                     : keys;
     if (raw_.size() > 512)
       RevokePair();
-    return {true, replace, replace ? fallback : text, raw_};
+    return {true, replace, replace ? fallback : text, raw_, true};
   }
 };
 } // namespace rimes::windows::workbench

@@ -1,0 +1,18 @@
+[
+  {
+    "path": "platforms/windows/native/src/ui/buffer_layout.hpp",
+    "sha256": "f89e595d9e641839ee4567349d5bea4682c9f38be1bbb90a61ef58d4c3b9de8b"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/buffer_paint.hpp",
+    "sha256": "9e70152a231c478dfb9336635495f62118e8bea1c4295b274f363051ddccfde0"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/surface_tests.cpp",
+    "sha256": "3dc70f7abd4ecdcca2703066bbf2b81f8c86d657000b6f74bed389661eb25ebf"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/window.cpp",
+    "sha256": "40ab9e499c135bc7e9ec01fbb2cf43f61b14a0ad78b54679ea9ca5971e4e1b67"
+  }
+]

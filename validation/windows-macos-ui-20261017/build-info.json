@@ -1,0 +1,369 @@
+{
+  "gitBase": "823c910b600c14f674e41ac906435eea0757972f",
+  "sourceHasLocalChanges": true,
+  "installed": false,
+  "macOSReference": "current local source; no fresh macOS render or live installation claimed",
+  "macOSSourceHashes": {
+    "Sources/RimeBuffer/ClipboardRailView.swift": "b3b12d19a4956ac0e088839897ff351510001e547c6747cac02ba8c0b352e10c",
+    "Sources/RimeBuffer/CapsuleWindowController.swift": "94b881d9a962ed3a8ba46153102ebfab9ba4a9893b84c3a0ed698919ed99c20a",
+    "Sources/RimeBuffer/CapsuleRailFilterColumn.swift": "3923b0088088700668db4a8e3fc228f8dc182593cc0808c0a0447b935ba151f2",
+    "Sources/RimeBuffer/CapsuleRailDetailView.swift": "b07fe9dc58e80bec3ec189eb0e148a074d5b47a7cc81bfc322a060363938e1b7",
+    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceUI.swift": "41c3c82f9e0531f32c2a882d3812a985af8b5f9eb204988978987750f40f9730",
+    "Sources/RimeBuffer/Mailbox/MailboxMessagesWorkspace.swift": "cd14b7b54836f1e883fcf0892d39d21ec560e9f1064d85f9b606d89f7825510b",
+    "Sources/RimeBuffer/Mailbox/MailboxAdaptiveSplitView.swift": "5a328af3b4f3362011a857259c63c45b2294ebd7851b8c568fe59417eb17be16",
+    "Sources/RimeBuffer/BufferWindowController.swift": "bf85cb43c2f8c005fa876ff438073f8dde63f058adb8149c1ac7c412cf28f746",
+    "Sources/RimeBuffer/BufferInlineView.swift": "e7f31ccb90c56fb6309df71c68e1cf8ff8c9b94899e2f4d85497c97e97dac658"
+  },
+  "windowsSourceHashes": {
+    "src/peripherals/window.cpp": "92e7c9b21804e367cb1e97ef7c45c4e0156858a1f284b99a4b11e5246b0ed621",
+    "src/peripherals/appearance.hpp": "dfab9e5941600c6234d795929a82c4eefa046a331b56c49ee3c39f5d6c137ec4",
+    "src/peripherals/tests.cpp": "94bfc374329e1891e48bcf581e454d2d6e2af22ade29011dd11218a8ac1c4d9e",
+    "src/ui/buffer_layout.hpp": "c2312f283ff0f016c422408970c3bb4d016cc984e5f5ee86a7046e8127c915f8",
+    "src/workbench/provider.hpp": "756fc0fe17b160fc9ab88196d8e9878b2eb9bfeeab0150753e5dbf51fc8b4e04",
+    "src/workbench/provider.cpp": "c72d960e05610bcfc725ede2aeb8ecd305d9a56aa397b6bc685d20bf1442aca6",
+    "src/workbench/window.cpp": "54c4743ab70555d66a025590df9577af303c39fb8878fe85c52218e1e80dbbdf",
+    "src/workbench/buffer_layout_tests.cpp": "82959727aadcee8ffaa93b816b361d97fa60b05fc03098287935a1f73fa2df6c"
+  },
+  "tests": {
+    "x64": {
+      "ctestGroups": 8,
+      "passed": 8,
+      "uiFrames": 42
+    },
+    "x86": {
+      "ctestGroups": 8,
+      "passed": 8,
+      "uiFrames": 42
+    }
+  },
+  "binaryHashes": {
+    "x64/RimesBroker.exe": "4fe4bc0b93edf45510ade4c14714bed3d340cb58bbf28915016ee889fed46306",
+    "x64/RimesPeripheralTests.exe": "46dbe08dd965f32bd89cca06a757bf298fa5c8a0338046f3ef3eca52c0cbf5b1",
+    "x86/RimesBroker.exe": "72737efe38df4ec30a1ec6a250f8221ccafb830b1a4026d847e43844b87e79e8",
+    "x86/RimesPeripheralTests.exe": "9c2a7c0b127fbe145e0853045b32909234d75ce177e23073ee4247d0b25187b2"
+  },
+  "images": {
+    "buffer-0-144.png": {
+      "sha256": "1395ab6cb61d6460d4e3c62d340a18b23898c0ad9d77e5550bdbd2245da2e747",
+      "pixels": [
+        1140,
+        657
+      ]
+    },
+    "buffer-1-144.png": {
+      "sha256": "b38a63dcc83067f1948dee6bc619429020a1d9f401f19393faf6269fc3e00445",
+      "pixels": [
+        1140,
+        657
+      ]
+    },
+    "day-capsule-detail.png": {
+      "sha256": "3c8dd31b98a16b5655eb1b3808f3e3ef01429d26ad001bbb084fd0acbbf87705",
+      "pixels": [
+        1410,
+        312
+      ]
+    },
+    "day-capsule-editor.png": {
+      "sha256": "bb70430241066834330f85d2a2ccaa85b049cb0e378cdf5b1462d4cbc6b24c90",
+      "pixels": [
+        690,
+        600
+      ]
+    },
+    "day-capsule-rail.png": {
+      "sha256": "fcd471aaf409350df3b6643796d7be196378dd839bd2365e2d7ea8bce49f8a1d",
+      "pixels": [
+        1410,
+        312
+      ]
+    },
+    "day-capture-1000.png": {
+      "sha256": "5b8ab54af931bb6a0786f20969b049a0467b0162847fd36ddbe1607ec3c954b0",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-capture-680.png": {
+      "sha256": "0de583ef7c60acb40ca56718f569d85fafdbba8528ce54795287d4aa5128c99c",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-chat-1000.png": {
+      "sha256": "74dc49aa877ed3fa2cd1bd2861e21dbe1fab6612735fb0e1df65a9177ca52b9f",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-chat-680.png": {
+      "sha256": "244aca77f5d090ddbc657ed8b086051bd44a9d7219f60c11f75c19ae04f81198",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-inbox-1000.png": {
+      "sha256": "dbe552c4318fbffad807c6b9c757d33bf9cc68fb604cf1745e154fcf80e7909d",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-inbox-680.png": {
+      "sha256": "260b3a8a8779e9510a90343b078bfd418d3a83f2db3eed41c74ffaf5cb14826b",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-mailbox-drawer.png": {
+      "sha256": "f78e0b0a3774d9e575434ab6cdb7e731b06284f3be9eddd832987227d0388268",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-notes-1000.png": {
+      "sha256": "daa1d5bbfd80e1e13bfd04ed1af85e6a44fc6ea653bbe848ef64ce6198c80cc8",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-notes-680.png": {
+      "sha256": "6b0039f93482a5d02f055f1a81284ac1c83fddbb230293c24f915b2b4bdb448d",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-passwords-1000.png": {
+      "sha256": "f476b62658c2cc40f03d7f2d84bbbc5fff5ceccaa43897c152b5014414fa74ab",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-passwords-680.png": {
+      "sha256": "52c340842eb35e2c420dce0e009ca88838d287fb8e29250d5db62ae3b98dfc41",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-resources-1000.png": {
+      "sha256": "672f408e6da53b67d674173e95f5df0ec80bc08fb15893899824c60fdefdedf8",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-resources-680.png": {
+      "sha256": "66ec5060e209add8b6b157f3a88084b5166b383c0c9eb524bcc9c780e2d0eb12",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-temporary-1000.png": {
+      "sha256": "c1b45b6c88b17370f115cbc8af5ee12303f20f4dfe1d3660a576d7d3e43bf0b7",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-temporary-680.png": {
+      "sha256": "6f886b2261e8978d5ae4830716a800d189b44741444d4ad57464759eb4dac64f",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-terminal-1000.png": {
+      "sha256": "36337c94183494f954d4d924bb0c516d9fa5cf5869c3287518c6a8cd5ff80ae6",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "day-terminal-680.png": {
+      "sha256": "891e476e84209f9add0aa9a049287b5897889d80071ead9bbba235f69ce246c7",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "day-terminal-inspector.png": {
+      "sha256": "86bbe482bd397c95b9a0bce74f9ef55b5725304fa9cd72cec4815df2fdbad739",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-capsule-detail.png": {
+      "sha256": "2f4db69a423b1ad02c37e1b1e59624d5861fb07bcc791305c4b2956df7bce5ce",
+      "pixels": [
+        1410,
+        312
+      ]
+    },
+    "night-capsule-editor.png": {
+      "sha256": "bd4273a4b0a0f098ff454bde54f86dfe1fd6e182d433ae2e6a7b296341aeb746",
+      "pixels": [
+        690,
+        600
+      ]
+    },
+    "night-capsule-rail.png": {
+      "sha256": "38a884d8b090c29b37caa11493ba386faf92665fe88958bdb57b580404d46da8",
+      "pixels": [
+        1410,
+        312
+      ]
+    },
+    "night-capture-1000.png": {
+      "sha256": "06c381325ecf0e48a4a1c0dae45c9ed4116b3f3d79d525b0a9e8babaa6206f23",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-capture-680.png": {
+      "sha256": "4b12538f47ca6679217912aa80985888da4ce32aadf1b916631a3004bee49877",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-chat-1000.png": {
+      "sha256": "62cb4d523d31a12c209b89db2f4f51026281f9fc7f224fbc8bb6af44b277f495",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-chat-680.png": {
+      "sha256": "41201390e77df21dfdfa49a7770237b749b82b939fc32596aed61e1222c5933d",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-inbox-1000.png": {
+      "sha256": "138ef2844267eda0899ea34ac6f9334c1eadf130f9951d864d74451eb2e53099",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-inbox-680.png": {
+      "sha256": "1f4998378d43c71b7b91c7d6b9f6609579d05c81f87c0bd6898234097f9f4227",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-mailbox-drawer.png": {
+      "sha256": "f37c686310b5855cdf0715ef287b98c2f68942b968b3c1cde3b3e79075d1291c",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-notes-1000.png": {
+      "sha256": "5f16bb8b730fe986272ce5c768f5a0b1abb1799ef3c3142b3efed89d3701ccdc",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-notes-680.png": {
+      "sha256": "fbef38788f8550121672ded7d796b48c3667488be074dcfd251f60e707b68a11",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-passwords-1000.png": {
+      "sha256": "e85c30438eb9a03c481d4bb3a1f555c36d3aec28f0a524d01784f932f28b19a0",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-passwords-680.png": {
+      "sha256": "aeff6fec99242c976b3a6f232eeda9f042c43d74b5af9a70689c9e060ce911fb",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-resources-1000.png": {
+      "sha256": "eb2869174eedd8e35cd6c8be3a5b03abdbdf8d493cdfa0efdd7ba850b587858f",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-resources-680.png": {
+      "sha256": "9daf656fade76be9afdb3aab8cb879f5fb8c4c7d087d0238fb357a36084e1d1c",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-temporary-1000.png": {
+      "sha256": "b8c3b993c4091bb6bf2817ef318762a1f1583fdb85becaed8671fcf4d1300790",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-temporary-680.png": {
+      "sha256": "7e15bd7e64f01d4b0f4d9d6d76903be4eb7d11841d2d1dafd16a65cceda98bf7",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-terminal-1000.png": {
+      "sha256": "a0a9eca3869b2eb76c5932aa14492e62a5769bfab096f2461c277f6c6d7ef352",
+      "pixels": [
+        1500,
+        1050
+      ]
+    },
+    "night-terminal-680.png": {
+      "sha256": "a51d43e888eaeea2e5a0755d1f95219e81ee31517bfcc5bbf3efcccaef754e71",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "night-terminal-inspector.png": {
+      "sha256": "9ff1852f0c259d4c504ae403b837029920f838edacf437f0d04234e8d22458a1",
+      "pixels": [
+        1020,
+        750
+      ]
+    },
+    "translation-0-520-144.png": {
+      "sha256": "1bc31c3ac23a00aca8445c5229fca43e56c495af75cd3e6883ce3d5316e825c4",
+      "pixels": [
+        780,
+        158
+      ]
+    },
+    "translation-1-680-144.png": {
+      "sha256": "c2ad144d90ef95ae11b7f9fa30abc2c68f46d0d8992ae7b59b57b86c60d0710c",
+      "pixels": [
+        1020,
+        158
+      ]
+    }
+  }
+}

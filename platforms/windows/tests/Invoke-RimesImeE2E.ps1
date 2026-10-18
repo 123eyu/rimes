@@ -10,11 +10,15 @@ param(
     [string]$ArtifactDirectory,
     [string]$WorkDirectory,
     [switch]$ProbeDesktop,
-    [switch]$AppContainer
+    [switch]$AppContainer,
+    [switch]$Chord
 )
 
 Set-StrictMode -Version 3.0
 $ErrorActionPreference = 'Stop'
+if ($Chord -and $AppContainer) {
+    throw 'Run -Chord separately from -AppContainer: the sandbox probe uses the sequential typing fixture.'
+}
 
 function Resolve-RimesExistingPath {
     param(
@@ -173,8 +177,9 @@ $previousLocalAppData = $env:LOCALAPPDATA
 $testLocalAppData = Join-Path $workRoot 'appdata'
 New-Item -ItemType Directory -Path (Join-Path $testLocalAppData 'RIMES') -Force | Out-Null
 Write-RimesJson -Path (Join-Path $testLocalAppData 'RIMES/settings.json') -Object ([ordered]@{
-    schema = 'rime_ice'
+    schema = $(if ($Chord) { 'my_combo' } else { 'rime_ice' })
     ascii = $false
+    chord_interval_ms = 300
 })
 
 $broker = $null
@@ -195,7 +200,9 @@ try {
         throw "RimesBroker exited before the typing tests with code $($broker.ExitCode). stderr=$(Get-Content -LiteralPath $brokerStderr -Raw -ErrorAction SilentlyContinue)"
     }
 
-    $e2e = Start-Process -FilePath $e2ePath -Wait -PassThru -NoNewWindow
+    $typingArgs = @{FilePath=$e2ePath; Wait=$true; PassThru=$true; NoNewWindow=$true}
+    if ($Chord) { $typingArgs.ArgumentList = @('--chord') }
+    $e2e = Start-Process @typingArgs
     $e2eExit = [int]$e2e.ExitCode
     if ($e2eExit -ne 0) {
         Write-Host "--- broker stderr ---"
@@ -243,6 +250,7 @@ try {
 Write-RimesJson -Path (Join-Path $workRoot 'e2e-result.json') -Object ([ordered]@{
     Passed = ($e2eExit -eq 0)
     Architecture = $Architecture
+    ChordInput = [bool]$Chord
     RimeDll = $rimeDll
     LibrimeSource = [string]$runtime.Source
     LibrimeTag = [string]$runtime.Tag

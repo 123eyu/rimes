@@ -1,16 +1,25 @@
 // Opt-in real CLI probe. NOT part of CTest: sends only a synthetic prompt and
 // exercises Runtime -> process -> result -> synthetic acknowledgement.
 #include "runtime.hpp"
+#include "codex_cli.hpp"
 #include <filesystem>
 #include <iostream>
 using namespace rimes::windows::workbench;
 int wmain(int argc, wchar_t** argv) {
-  if (argc != 2) return 2;
+  if (argc != 2 && !(argc == 3 && std::wstring(argv[2]) == L"--streaming-handshake")) return 2;
   const auto root = std::filesystem::temp_directory_path() /
       (L"rimes-codex-probe-" + std::to_wstring(GetCurrentProcessId()) + L"-" + std::to_wstring(GetTickCount64()));
   std::filesystem::create_directory(root);
   SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str());
   bool success = false;
+  if (argc == 3) {
+    std::string error; Generation job;
+    success = RunCodexStreamingProcess(argv[1], CodexAppServerArguments(root), root, {}, job,
+        [](const std::string&) { return false; }, [] { return false; }, &error, 10000);
+    std::cout << "Prompt-free app-server initialize / empty MCP: " << (success ? "PASS" : "FAIL") << '\n';
+    std::error_code ignored; std::filesystem::remove_all(root, ignored);
+    return success ? 0 : 1;
+  }
   {
     Runtime runtime;
     auto config = runtime.Configuration(); config.ai_connector = "codex-cli"; config.codex_path = Utf8(argv[1]);

@@ -1,0 +1,108 @@
+{
+  "scope": "只读盘点，未修改产品代码、未重新安装、未启动真实授权/网络查询。",
+  "basis": "当前 Windows 构建的原生隔离夹具截图，与本仓库 macOS 源码逐项对照；macOS 未做实机视觉验证。",
+  "capture": "native/1-3-0-top.png; native/1-3-0-codex.png; native/1-3-1-top.png; native/1-3-1-client-6052.png",
+  "fixtureResult": "Native metric and gallery UI tests: PASS",
+  "requirements": [
+    "保持用户此前要求的即时生效，不照搬 macOS 保存 Provider 按钮。",
+    "尚未实现的 Claude 能力不得显示为可用；如补入口，须明确禁用。"
+  ],
+  "findings": [
+    {
+      "priority": 1,
+      "area": "AI 模型页层级",
+      "mac": "ChatGPT、Claude、AI Provider 三张选择卡，下方仅显示所选详情。",
+      "windows": "只有 API Provider / Codex CLI 下拉框；缺少 Claude 分支。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:3900",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:272"
+      ]
+    },
+    {
+      "priority": 1,
+      "area": "切换的含义",
+      "mac": "点连接器卡即切换当前连接器；浏览 Provider 与设为当前文本模型分开。",
+      "windows": "切换类型只变更编辑对象，仍须点击设为当前文本模型。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:5844",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:533"
+      ]
+    },
+    {
+      "priority": 2,
+      "area": "子页记忆",
+      "mac": "按侧栏页面保留所选子页。",
+      "windows": "每次点击侧栏把 subpage 重置为 0，网关页返回后丢失。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsRouting.swift:358",
+        "platforms/windows/native/src/workbench/settings_ui.cpp:901"
+      ]
+    },
+    {
+      "priority": 2,
+      "area": "首次默认",
+      "mac": "未保存选择时默认 ChatGPT / Codex。",
+      "windows": "默认空的 AI API 配置。仅指全新配置，不代表用户现有设置。",
+      "refs": [
+        "Sources/RimeBuffer/AITextPlugins.swift:265",
+        "platforms/windows/native/src/workbench/provider.hpp:28",
+        "platforms/windows/native/src/workbench/provider.cpp:87"
+      ]
+    },
+    {
+      "priority": 1,
+      "area": "ChatGPT 授权与状态",
+      "mac": "可用性徽标、按授权状态变化的按钮、旋转等待指示、取消中状态、复制授权链接。",
+      "windows": "路径/模型表单与登录、检查按钮；反馈文本有限，缺少上述完整状态展示。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:3476",
+        "Sources/RimeBuffer/SettingsWindow.swift:4896",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:605"
+      ]
+    },
+    {
+      "priority": 1,
+      "area": "Provider 配置完整度",
+      "mac": "文档 URL/打开文档、多个模型路由的适配器/能力/状态、基于密钥与模型可用性的按钮禁用。",
+      "windows": "只有名称、地址、单模型、密钥；缺少路由与文档配置，按钮没有对应条件禁用。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:3571",
+        "platforms/windows/native/src/workbench/provider.hpp:12",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:427"
+      ]
+    },
+    {
+      "priority": 1,
+      "area": "删除 Provider",
+      "mac": "明确确认后删除。",
+      "windows": "直接删除并自动保存；最后一项只能报错。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:4256",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:555",
+        "platforms/windows/native/src/workbench/settings_ui.cpp:995"
+      ]
+    },
+    {
+      "priority": 2,
+      "area": "详情布局",
+      "mac": "选择卡与详情板分离，详情 650pt 宽、12pt 内边距、10pt 间距，行标签右对齐。",
+      "windows": "统一大面板、固定高度，左标签占 210DIP，内容稀疏；选择器也放在同一板内。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:2650",
+        "Sources/RimeBuffer/SettingsWindow.swift:3934",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:417",
+        "platforms/windows/native/src/ui/settings_paint.hpp:392"
+      ]
+    },
+    {
+      "priority": 2,
+      "area": "本地网关",
+      "mac": "开关行在详情板外；客户端分段、按客户端说明、补充配置标题；关闭后详情板淡化。",
+      "windows": "启用/关闭下拉框与所有内容在同一板内；说明缩减为文件名，缺少补充区域标题与整板淡化。分类和脱敏预览已具备。",
+      "refs": [
+        "Sources/RimeBuffer/SettingsWindow.swift:3391",
+        "platforms/windows/native/src/workbench/parity_settings.cpp:451"
+      ]
+    }
+  ]
+}

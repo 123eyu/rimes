@@ -11,6 +11,7 @@
 #include "BrokerClient.h"
 #include "CandidateWindow.h"
 #include "CandidateUIElement.h"
+#include "InputModeIndicator.h"
 #include "TsfInterfaces.h"
 #include "candidate_navigation.hpp"
 
@@ -118,8 +119,16 @@ class TextService final : public ITfTextInputProcessorEx,
   bool capture_active_ = false;
   RECT buffer_caret_{};
   std::uint64_t buffer_opening_ = 0;
+  unsigned buffer_route_ = 0;
+  bool buffer_focus_follow_ = false;
+  std::uint64_t buffer_focus_request_ = 0, buffer_focus_deadline_ = 0;
+  void TryResumeBufferFocus();
+  void CancelBufferFocusRequest();
   void OnBrokerNotification();
   void RefreshBrokerConnection() noexcept;
+  void UpdateInputMode() noexcept;
+  void ToggleInputMode() noexcept;
+  InputModeIndicator* input_mode_ = nullptr;
   static LRESULT CALLBACK NotificationProcedure(HWND, UINT, WPARAM, LPARAM);
   HWND notification_window_ = nullptr;
   std::uint64_t last_delivery_ = 0;

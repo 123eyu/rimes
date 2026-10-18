@@ -1,0 +1,62 @@
+[
+  {
+    "path": "platforms/windows/native/src/broker/ui_command_tests.cpp",
+    "sha256": "e3977c3cb9288a9103613f944c2876ab5c44739ed1d127f1698c5455ff8debf8"
+  },
+  {
+    "path": "platforms/windows/native/src/e2e/fake_tsf.cpp",
+    "sha256": "f01a8555d195ce050e27f91a447ab9a54d6cd802444f036ec07c5607c7ebc445"
+  },
+  {
+    "path": "platforms/windows/native/src/e2e/fake_tsf.hpp",
+    "sha256": "a8e772778261752e1686a1c72f9303fbab15e0fa5ebc0ca17ea9795a64f81775"
+  },
+  {
+    "path": "platforms/windows/native/src/e2e/first_key_tests.cpp",
+    "sha256": "c8f303e6438b80eb6deef5fd297aea9f770c9e03fd463815ab07c8e51eb0bc0c"
+  },
+  {
+    "path": "platforms/windows/native/src/tsf/TextService.cpp",
+    "sha256": "6e6ea4b63c315093ae20c47c76de6cc4e0679647c2ced2c343cc886143595000"
+  },
+  {
+    "path": "platforms/windows/native/src/tsf/TextService.h",
+    "sha256": "a26e73d91680ca605ec3df7ba66599517bd1890e2057c869a75ebe98501f0f39"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/buffer_paint.hpp",
+    "sha256": "b3bd323013a8a6d16f8d2a2462ffed4ba89edca8dd89d79ec46146be0b60c6b1"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/model.cpp",
+    "sha256": "3e92b074c4653aea990db22ad1508d32507f6434e39db17b21264f47dba0f150"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/model_tests.cpp",
+    "sha256": "2906b29e62cbd4a058917b33039fb75a9ff6e606a4f40c8752cf311e32add94d"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/runtime.cpp",
+    "sha256": "f043236220d4af33cb99b040896266887ce7e29c4abbe688445bc0cf87950700"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/runtime.hpp",
+    "sha256": "e5e597dff0739cedd6bf89af830e6c5ae3692af4ec2dac6ab98afba3cd9f2646"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/runtime_tests.cpp",
+    "sha256": "8a75356f065ef329bf96c77e569138bb46db47ac7ff5ff688b2c76757a3a91c1"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/surface_tests.cpp",
+    "sha256": "37fe5549f386f49202910f40eeaf76d033c451bf9ad68beef1d1b2943258064e"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/window.cpp",
+    "sha256": "dabe6aff15104217a551c3b06f32fc0f265d8e1e6d066d16d61322983a835c31"
+  },
+  {
+    "path": "platforms/windows/native/README.md",
+    "sha256": "2f12f5151af9e4c4093e7c7a9ad1b1d75f60ca959bcd57fc23f52051b03cd752"
+  }
+]

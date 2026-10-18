@@ -1,0 +1,29 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "source_language": "Chinese",
+      "target_language": "English",
+      "source": "今天天气很好，我们下午去公园散步。",
+      "result": "It's a nice day. We'll go for a walk in the park this afternoon. "
+    },
+    {
+      "source_language": "English",
+      "target_language": "Chinese",
+      "source": "Please save the document before closing the window.",
+      "result": "请在关闭窗口前保存文档。"
+    },
+    {
+      "source_language": "Chinese",
+      "target_language": "English",
+      "source": "我想回家",
+      "result": "I want to go home. "
+    }
+  ],
+  "invalid_pairs_rejected": 2,
+  "canonical_language_aliases": {
+    "source": "zh-Hans",
+    "target": "en-US",
+    "result": "I want to go home. "
+  }
+}

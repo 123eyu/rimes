@@ -1,0 +1,12 @@
+{
+  "version": "1.1.5-win-home.20261017",
+  "brokerCount": 1,
+  "brokerMatchesActive": true,
+  "brokerMatchesBuilt": true,
+  "tsfUnchanged": {
+    "x86": true,
+    "x64": true
+  },
+  "settingsUnchanged": true,
+  "userDataRetained": true
+}

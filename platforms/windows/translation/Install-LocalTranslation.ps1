@@ -15,6 +15,8 @@ $ready = Join-Path $Root 'ready.txt'
 if ((Test-Path -LiteralPath $ready) -and (Get-Content -LiteralPath $ready -Raw).Trim() -eq $identity) { return }
 $parent = Split-Path -Parent $Root
 New-Item -ItemType Directory -Path $parent -Force | Out-Null
+$downloadCache = Join-Path $parent 'downloads'
+New-Item -ItemType Directory -Path $downloadCache -Force | Out-Null
 $stage = Join-Path $parent ('install-' + [Guid]::NewGuid().ToString('N'))
 New-Item -ItemType Directory -Path $stage | Out-Null
 function Expand-VerifiedZip([string]$archive, [string]$destination) {
@@ -36,14 +38,26 @@ function Expand-VerifiedZip([string]$archive, [string]$destination) {
 }
 try {
     foreach ($item in $manifest.resources) {
-        $archive = Join-Path $stage $item.file
-        if ($Cache) { Copy-Item -LiteralPath (Join-Path $Cache $item.file) -Destination $archive }
-        else {
+        # Keep verified archives across requests, failed installs and restarts.
+        # Buffer edits must never force a fresh 182 MiB download.
+        $archive = Join-Path $downloadCache $item.file
+        $cached = (Test-Path -LiteralPath $archive) -and
+            (Get-Item -LiteralPath $archive).Length -eq $item.bytes -and
+            (File-Sha256 $archive) -eq $item.sha256
+        if (!$cached -and $Cache) { Copy-Item -LiteralPath (Join-Path $Cache $item.file) -Destination $archive -Force }
+        elseif (!$cached) {
+            $partial = $archive + '.partial-' + [Guid]::NewGuid().ToString('N')
             $client = New-Object Net.WebClient
             try {
                 $client.Headers['User-Agent'] = 'RIMES/1.1 offline translator (Mozilla/5.0)'
-                $client.DownloadFile($item.url, $archive)
-            } finally { $client.Dispose() }
+                $client.DownloadFile($item.url, $partial)
+                if ((Get-Item -LiteralPath $partial).Length -ne $item.bytes -or
+                    (File-Sha256 $partial) -ne $item.sha256) { throw 'Translation resource checksum mismatch' }
+                Move-Item -LiteralPath $partial -Destination $archive -Force
+            } finally {
+                $client.Dispose()
+                if (Test-Path -LiteralPath $partial) { Remove-Item -LiteralPath $partial -Force }
+            }
         }
         if ((Get-Item -LiteralPath $archive).Length -ne $item.bytes -or
             (File-Sha256 $archive) -ne $item.sha256) { throw 'Translation resource checksum mismatch' }
@@ -54,13 +68,17 @@ try {
             default { throw 'Unknown resource type' }
         }
         Expand-VerifiedZip $archive $destination
-        Remove-Item -LiteralPath $archive
     }
     # Isolated embedded Python: never import packages or customizations from the host.
     Set-Content -LiteralPath (Join-Path $stage 'python/python312._pth') -Encoding ASCII -Value "python312.zip`n.`nsite-packages"
     & (Join-Path $stage 'python/python.exe') -I -W ignore::UserWarning -c 'import ctranslate2, sentencepiece, numpy'
     if ($LASTEXITCODE -ne 0) { throw 'Local translation runtime self-check failed' }
     Set-Content -LiteralPath (Join-Path $stage 'ready.txt') -Encoding ASCII -Value $identity
+    $parentPrefix = [IO.Path]::GetFullPath($parent).TrimEnd('\') + '\'
+    if (!$Root.StartsWith($parentPrefix, [StringComparison]::OrdinalIgnoreCase) -or
+        ![IO.Path]::GetFullPath($stage).StartsWith($parentPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Translation install path escaped its parent'
+    }
     if (Test-Path -LiteralPath $Root) {
         # Preserve an older/broken install for diagnosis; never erase user data.
         Move-Item -LiteralPath $Root -Destination ($Root + '.previous-' + [Guid]::NewGuid().ToString('N'))

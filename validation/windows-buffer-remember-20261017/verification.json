@@ -1,0 +1,96 @@
+{
+  "version": "1.1.5-win-buffer-remember.20261017",
+  "sourceSnapshot": "22d3b00b1757efb7d913ed8b93d12db57c30344a2a6ffcb75890a37dac00b4e1",
+  "installed": true,
+  "installation": {
+    "installed": true,
+    "version": "1.1.5-win-buffer-remember.20261017",
+    "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-remember.20261017-823c910b600c-f3e4b424bddc",
+    "commit": "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot": "22d3b00b1757efb7d913ed8b93d12db57c30344a2a6ffcb75890a37dac00b4e1",
+    "requiresSignOut": true,
+    "brokerPid": 133364,
+    "brokerPath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-remember.20261017-823c910b600c-f3e4b424bddc\\x64\\RimesBroker.exe",
+    "settingsUnchanged": true,
+    "autostartEnabled": true,
+    "userDataRetained": true,
+    "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-remember-20261017-184352",
+    "schema": "my_combo",
+    "ascii": false
+  },
+  "tests": [
+    {
+      "architecture": "x64",
+      "suites": [
+        "RimesRuntime",
+        "RimesOfficialPlugins",
+        "RimesUiCommand",
+        "RimesSettingsUi"
+      ],
+      "passed": 4,
+      "failed": 0
+    },
+    {
+      "architecture": "x86",
+      "suites": [
+        "RimesRuntime",
+        "RimesOfficialPlugins",
+        "RimesUiCommand",
+        "RimesSettingsUi"
+      ],
+      "passed": 4,
+      "failed": 0
+    }
+  ],
+  "binaries": [
+    {
+      "architecture": "x64",
+      "binary": "RimesBroker.exe",
+      "sha256": "0c319ef796f30a7244bfe76fdeb60c135d63da291d52f10d2070ae02dc309b4b",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x64",
+      "binary": "RimesTsf.dll",
+      "sha256": "a0e54dc08c1be2414a8ee862d54da323b89d8672876a57c6e55623468b6e0cbc",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x86",
+      "binary": "RimesTsf.dll",
+      "sha256": "06069d692bff193f537ab0350607fa999d46ecc556bb0f436e43cd26d2650743",
+      "matchesBuild": true
+    }
+  ],
+  "retainedData": [
+    {
+      "directory": "peripherals-v1",
+      "backedUpFiles": 7,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "directory": "metrics-v1",
+      "backedUpFiles": 1,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "directory": "official-plugins-v1",
+      "backedUpFiles": 1,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "coverage": [
+    "Close/reopen restores last plugin, including copy-and-close cancellation",
+    "Broker restart remembers menu and native shortcut selections, including explicit Input",
+    "Disabled/uninstalled/offline-disabled preferences fall back to Input; enable does not select",
+    "Unavailable or malformed preference falls back to Input; invalid selection cannot change authorization",
+    "No persisted Buffer text, automatic window opening, focus authorization or provider call from preference restoration"
+  ],
+  "manualBoundary": [
+    "Validation used isolated native fixtures, without synthesizing keys in user applications",
+    "Windows installation still reports older loaded TSF DLLs require sign-out/in; this change runs in the restarted Broker"
+  ]
+}

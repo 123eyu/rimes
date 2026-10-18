@@ -48,6 +48,12 @@ void TestFlipsAboveWhenNeeded() {
   const ScreenRect work{0, 0, 1920, 1080};
   const ScreenPoint origin = PlaceCandidateWindow(caret, 320, 180, work);
   Check(origin.y == 814, "window should flip above the caret near the bottom");
+  const auto vertical = PlaceCandidateWindow(caret, 320, 50, work, 6, true);
+  Check(vertical.y == caret.top && vertical.x == caret.right + 6,
+        "vertical first row aligns beside the caret even near the screen bottom");
+  const auto edge = PlaceCandidateWindow({1900, 1070, 1900, 1080}, 320, 34, work, 6, true);
+  Check(edge.y == 1046 && edge.x == 1600,
+        "extreme screen edge only clamps the first row enough to remain visible");
 }
 
 void TestClampsToWorkArea() {
@@ -144,15 +150,15 @@ void TestHorizontalSingleRowAndHits() {
   }
   const auto layout =
       LayoutCandidateStripMeasured(items, metrics, 320.0f);
-  Check(layout.row_count == 1 && layout.height_dip == metrics.strip_height_dip,
-        "horizontal candidates stay on one row on a narrow monitor");
+  Check(layout.row_count > 1 && layout.height_dip == metrics.strip_height_dip * layout.row_count,
+        "narrow monitors wrap whole phrases instead of truncating every word");
   Check(layout.pills.size() == 9, "single row keeps every selectable entry");
   Check(layout.width_dip <= 320.0f + 0.01f, "width clamps to available");
   for (std::size_t i = 0; i < layout.pills.size(); ++i) {
     const auto& pill = layout.pills[i];
-    Check(pill.top == layout.pills[0].top && pill.width() > 0,
-          "all candidates share a baseline with a visible hit target");
-    if (i > 0)
+    Check(pill.width() == 102.f,
+          "every phrase retains its full measured width");
+    if (i > 0 && pill.top == layout.pills[i - 1].top)
       Check(pill.left > layout.pills[i - 1].right,
             "single-row hit targets stay in page order without overlap");
     const float cx = (pill.left + pill.right) * 0.5f;
@@ -177,7 +183,8 @@ void TestLongTextDoesNotDropIndex() {
   const auto layout =
       LayoutCandidateStripMeasured(items, metrics, 460.0f);
   Check(layout.pills.size() == 3, "long text still yields three hit targets");
-  Check(layout.row_count == 1, "oversized candidate is clipped on the same row");
+  Check(layout.row_count == 3, "oversized candidate receives a row without squeezing neighbors");
+  Check(layout.pills[1].width() == 452.f, "only text wider than the monitor is clipped");
   Check(layout.pills[0].width() == 52.f && layout.pills[2].width() == 52.f,
         "long candidate leaves short neighbors at their natural width");
   for (const auto& pill : layout.pills)
@@ -198,8 +205,8 @@ void TestNarrowViewportAndLargeFont() {
     items[2].content_width_dip = 48;
     const auto layout = LayoutCandidateStripMeasured(items, metrics, width);
     Check(layout.width_dip <= width, "small work area bounds the popup");
-    Check(layout.row_count == 1 && layout.height_dip == metrics.strip_height_dip,
-          "large font never adds a horizontal row");
+    Check(layout.row_count > 1 && layout.height_dip == metrics.strip_height_dip * layout.row_count,
+          "large phrases wrap while preserving font size");
     Check(metrics.pill_height_dip >= metrics.candidate_font_dip + 4,
           "large text fits inside the pill");
     for (std::size_t i = 0; i < layout.pills.size(); ++i) {
@@ -227,6 +234,13 @@ void TestNarrowViewportAndLargeFont() {
 }
 
 void TestVerticalCandidatesKeepEveryPageItem() {
+  std::vector<CandidateStripItem> edge_items(9);
+  for (auto& item : edge_items) item.content_width_dip = 90;
+  const auto edge = LayoutCandidateStripMeasured(edge_items, {}, 1920.f, true, 34.f);
+  Check(edge.row_count == 1 && edge.width_dip > 460.f,
+        "bottom-edge columns use monitor space rather than squeezing into one column's width");
+  for (const auto& pill : edge.pills)
+    Check(pill.width() == 102.f, "vertical overflow columns preserve whole phrases when space permits");
   for (const float height : {180.f, 900.f}) {
     const auto metrics = ui::MakeCandidateMetrics(40);
     std::vector<CandidateStripItem> items(9);
@@ -252,14 +266,17 @@ void TestBufferLayoutBounds() {
   layout = LayoutBuffer(state, 2000);
   Check(layout.width_dip == 1100, "buffer width caps at 1100");
   layout = LayoutBuffer(state, 760);
-  Check(layout.height_dip == 73, "ordinary expanded height");
+  Check(layout.height_dip == 89 && layout.show_live_metrics,
+        "Default expanded height includes its live typing metrics");
   state.translate = true;
+  state.mode = rimes::windows::ui::BufferMode::kTranslate;
   state.result_blocks = {{L"b", false}};
   layout = LayoutBuffer(state, 760);
   Check(layout.height_dip == 105, "translation expanded height");
   BufferPaintState empty;
   layout = LayoutBuffer(empty, 760);
-  Check(layout.height_dip == 73, "empty expanded Buffer keeps its source rail");
+  Check(layout.height_dip == 89 && layout.show_live_metrics,
+        "empty Default keeps its source rail and live typing metrics");
   empty.folded = true;
   layout = LayoutBuffer(empty, 760);
   Check(layout.height_dip == 35, "toolbar-only height");

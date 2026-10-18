@@ -242,14 +242,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.statistics",
             nameZH: "统计",
             nameEN: "Statistics",
-            version: "2.0.0",
+            version: "2.0.1",
             summaryZH: "统计官方插件；用户数据由 RIMES 宿主管理。",
             summaryEN: "Statistics official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: true,
-            downloadAssetName: "preset-plugin-builtin.statistics-2.0.0.json",
-            sha256: "acea981dd79f06087b63be5b4f39d2c4196e37322ecc725a987523b19a6be8ee"
+            downloadAssetName: "preset-plugin-builtin.statistics-2.0.1.json",
+            sha256: "1c55f7f3d8e389489da19e97dc12d9c5b904b6910823a381ad2a12a041c387e5"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.stream-input",
@@ -268,14 +268,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.typing-speed",
             nameZH: "打字测速",
             nameEN: "Typing practice",
-            version: "2.0.0",
+            version: "2.0.1",
             summaryZH: "打字测速官方插件；用户数据由 RIMES 宿主管理。",
             summaryEN: "Typing practice official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: true,
-            downloadAssetName: "preset-plugin-builtin.typing-speed-2.0.0.json",
-            sha256: "e4f6a12092263c3f7b8c4d237633f9f0fc68cb62ad9e8d23d63a666e0cf01d22"
+            downloadAssetName: "preset-plugin-builtin.typing-speed-2.0.1.json",
+            sha256: "d6bfae83f3ff48d9cd145b3d3b016411a9174129dd9bf2e7d156445d15e253ca"
         ),
     ]
 

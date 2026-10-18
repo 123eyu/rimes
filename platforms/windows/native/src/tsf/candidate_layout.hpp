@@ -72,7 +72,8 @@ inline ScreenPoint PlaceCandidateWindow(const ScreenRect& caret,
                                         long window_width,
                                         long window_height,
                                         const ScreenRect& work_area,
-                                        long caret_gap_px = 6) noexcept {
+                                        long caret_gap_px = 6,
+                                        bool align_first_row = false) noexcept {
   ScreenPoint origin;
   const bool has_caret = HasVisibleCaret(caret);
   if (window_width <= 0) {
@@ -93,11 +94,15 @@ inline ScreenPoint PlaceCandidateWindow(const ScreenRect& caret,
     }
   }
 
-  origin.x = has_caret ? caret.left : area.left;
+  origin.x = has_caret ? (align_first_row ? caret.right + caret_gap_px : caret.left) : area.left;
   // macOS CandidatePanelGeometry uses a 6pt caret gap.
   const long below = has_caret ? caret.bottom + caret_gap_px : area.top;
   const long above = has_caret ? caret.top - window_height - caret_gap_px : area.top;
-  if (below + window_height <= area.bottom || above < area.top) {
+  if (align_first_row) {
+    // Vertical layout already limits its rows to the space below this anchor.
+    // Never flip the whole column and put its last candidate beside the caret.
+    origin.y = has_caret ? caret.top : area.top;
+  } else if (below + window_height <= area.bottom || above < area.top) {
     origin.y = below;
   } else {
     origin.y = above;

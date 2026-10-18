@@ -15,6 +15,8 @@ class UiCommands {
  private:
   std::mutex mutex_;
   HWND window_ = nullptr;
+  bool pending_settings_ = false;
+  bool retired_ = false;
 };
 void RunWindow(Runtime& runtime, const std::function<void()>& stop,
                const std::function<void()>& deploy,

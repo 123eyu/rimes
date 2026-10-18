@@ -1,5 +1,6 @@
 #include "local_translation.hpp"
 #include "codex_cli.hpp"
+#include "translation_languages.hpp"
 #include <filesystem>
 
 namespace rimes::windows::workbench {
@@ -24,9 +25,7 @@ bool LocalTranslationReady() {
       std::filesystem::is_regular_file(Root() / L"models/translate-en_zh-1_9/model/model.bin"); }
   catch (...) { return false; }
 }
-bool GenerateLocalTranslation(const Settings& settings, const Generation& job,
-    const std::function<bool(const std::string&)>& chunk,
-    const std::function<bool()>& cancelled, std::string* error) {
+bool PrepareLocalTranslation(const std::function<bool()>& cancelled, std::string* error) {
   try {
     const auto root = Root(), resources = Resources();
     if (!LocalTranslationReady()) {
@@ -36,13 +35,30 @@ bool GenerateLocalTranslation(const Settings& settings, const Generation& job,
       if (!RunLocalTextProcess(shell, {L"-NoProfile", L"-NonInteractive", L"-ExecutionPolicy", L"Bypass",
           L"-File", (resources / L"Install-LocalTranslation.ps1").wstring(), L"-Root", root.wstring()},
           resources, {}, [](const auto&) { return true; }, cancelled, error, 600000) || !LocalTranslationReady()) {
-        if (error) *error = "本地翻译资源下载失败。请检查网络后重试，原文已保留。";
+        if (error) *error = "本地翻译资源下载失败，将在后台重试。请检查网络连接。";
         return false;
       }
     }
-    const auto input = core::Json{{"text", job.source}, {"target", settings.target_language}}.dump();
-    return RunLocalTextProcess(root / L"python/python.exe",
-        {L"-I", (resources / L"translate.py").wstring(), root.wstring()}, root, input,
+    return true;
+  } catch (...) {
+    if (error) *error = "本地翻译资源准备失败，将在后台重试。";
+    return false;
+  }
+}
+bool GenerateLocalTranslation(const Settings& settings, const Generation& job,
+    const std::function<bool(const std::string&)>& chunk,
+    const std::function<bool()>& cancelled, std::string* error) {
+  try {
+    const auto root = Root(), resources = Resources();
+    // Never run installers or resource downloads as a text-generation job.
+    if (!LocalTranslationReady()) {
+      if (error) *error = "本地翻译暂不可用。";
+      return false;
+    }
+    const auto input = core::Json{{"text", job.source}, {"source", TranslationLanguageID(settings.source_language)},
+                                 {"target", TranslationLanguageID(settings.target_language)}}.dump();
+    return RunWarmLocalTextProcess(root / L"python/python.exe",
+        {L"-I", (resources / L"translate.py").wstring(), root.wstring(), L"--worker"}, root, input,
         [&](const std::string& output) {
           const auto response = core::Json::parse(output);
           if (response.contains("error")) { if (error) *error = response.at("error").get<std::string>(); return false; }

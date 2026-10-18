@@ -1,5 +1,13 @@
 # Third-party notices
 
+## Microsoft Fluent System Icons (Windows settings)
+
+The unmodified Regular icon font is from [microsoft/fluentui-system-icons](https://github.com/microsoft/fluentui-system-icons/tree/a347af95478f989038cccbf085978865264c048a),
+commit `a347af95478f989038cccbf085978865264c048a`, under the MIT license.
+Copyright (c) 2020 Microsoft Corporation. The full license and source hashes are
+in `platforms/windows/native/resources/fluent-system-icons/`; Windows packages
+include `licenses/Fluent-System-Icons-MIT.txt`.
+
 ## RIMES application license
 
 RIMES-maintained application and packaging code is licensed under Apache-2.0,

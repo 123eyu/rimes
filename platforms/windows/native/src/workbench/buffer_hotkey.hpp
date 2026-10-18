@@ -22,6 +22,14 @@ class BufferHotkeyRegistration {
   }
   bool Registered() const noexcept { return id_ != 0; }
 
+  // Follow already-committed runtime settings for a scoped shortcut. An old
+  // binding must not survive a failed replacement or a revoked input lease.
+  bool Sync(bool enabled, unsigned modifiers, unsigned key) {
+    if (!enabled) { Reset(); return true; }
+    if (Registered() && (modifiers != modifiers_ || key != key_)) Reset();
+    return RegisterInitial(modifiers, key);
+  }
+
   template <typename Save>
   HotkeyUpdate Update(unsigned modifiers, unsigned key, Save save) {
     // A rejected/malformed setting must never reserve an ordinary typing key

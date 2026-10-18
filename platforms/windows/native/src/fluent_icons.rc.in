@@ -1,0 +1,2 @@
+#include <Windows.h>
+301 RCDATA "@CMAKE_CURRENT_SOURCE_DIR@/resources/fluent-system-icons/FluentSystemIcons-Regular.ttf"

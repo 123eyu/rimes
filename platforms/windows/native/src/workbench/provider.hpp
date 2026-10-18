@@ -11,12 +11,14 @@
 namespace rimes::windows::workbench {
 struct ConnectionProfile {
   std::string id, name, kind = "openai-compatible", base_url, model, executable;
+  std::string documentation_url;
 };
 struct Settings {
   std::vector<ConnectionProfile> connections;
   std::string active_connection;
-  unsigned buffer_width = 680, send_hold_ms = 1200;
+  unsigned buffer_width = 760, send_hold_ms = 600;
   bool follow_system_theme = false;
+  bool gateway_enabled = true;
   unsigned candidate_width = 460, candidate_height = 34, candidate_label_size = 10;
   bool chord_enabled = true;
   unsigned chord_interval_ms = 50;
@@ -25,7 +27,10 @@ struct Settings {
   std::uint64_t revision = 1;
   std::string schema = "rime_ice", base_url, model, target_language = "English";
   std::string ai_connector = "openai-compatible", codex_path, codex_model;
+  std::string chatgpt_model = "gpt-6-sol", chatgpt_effort = "medium";
   std::string translation_provider = "local";
+  std::string source_language = "Chinese";
+  bool translation_speech = false;
   unsigned auto_send_seconds = 0;
   bool close_after_send = true;
   // Persisted appearance colorway: night|day|quiet|rasta. Default night.
@@ -36,6 +41,8 @@ struct Settings {
   unsigned font_size = 16, hotkey_modifiers = MOD_ALT | MOD_SHIFT,
            hotkey_key = 'B';
   unsigned send_modifiers = MOD_ALT | MOD_SHIFT, send_key = VK_RETURN;
+  unsigned previous_plugin_modifiers = MOD_ALT | MOD_SHIFT, previous_plugin_key = VK_UP;
+  unsigned next_plugin_modifiers = MOD_ALT | MOD_SHIFT, next_plugin_key = VK_DOWN;
 };
 void MigrateConnections(Settings* settings);
 bool SelectConnection(Settings* settings, const std::string& id);
@@ -46,6 +53,7 @@ std::wstring Wide(const std::string& text);
 std::string Utf8(const std::wstring& text);
 bool LoadSettings(Settings* value, std::string* error);
 bool ValidSettings(const Settings& value);
+bool ValidBufferShortcuts(const Settings& value);
 bool SaveSettings(const Settings& value, std::string* error);
 bool SaveSecret(const std::wstring& key, const std::string& endpoint,
                 std::string* error, const std::string& identity = "");

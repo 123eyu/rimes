@@ -1,4 +1,5 @@
 #include "model.hpp"
+#include "semantic_blocks.hpp"
 
 #include <algorithm>
 #include <string_view>
@@ -47,8 +48,10 @@ void Model::Focus(Target target) {
   if (capture && bound != live) {
     capture = false;
     preedit.clear();
-    status = "Target changed. Rebind to send.";
-    Cancel();
+    if (!busy) status = "输入已暂停，等待目标输入框。";
+    // Focus owns delivery, not the source/plugin generation. Keep streaming
+    // and staged content in this workbench while its input rail is folded.
+    CancelSendAll();
   }
 }
 void Model::Revoke(Target target) {
@@ -96,6 +99,29 @@ bool Model::CompleteResult() const {
   return !result.empty() && !busy && preedit.empty() &&
       (!translate || SourceText() == translated_source_);
 }
+bool Model::NeedsTranslation() const {
+  const auto text = SourceText();
+  return text.size() > translated_source_.size() &&
+      text.substr(translated_source_.size()).find_first_not_of(" \t\r\n") != std::string::npos;
+}
+void Model::BeginTranslation() {
+  if (!translation_results_ && !result.empty()) ResetTranslation();
+  translate = true;
+}
+void Model::ResetTranslation() {
+  if (pending_) return;
+  Cancel();
+  if (translation_results_) {
+    std::erase_if(result, [&](const Block& block) {
+      const auto unit = result_units_.find(block.id);
+      return unit == result_units_.end() || source_links_.contains(unit->second);
+    });
+    std::erase_if(result_units_, [&](const auto& entry) { return source_links_.contains(entry.second); });
+  } else {
+    result.clear(); result_units_.clear();
+  }
+  source_links_.clear(); translated_source_.clear();
+}
 bool Model::Append(std::string text, InputKind kind) {
   if (text.empty()) return true;
   if ((selected ? 0 : SourceText().size()) + text.size() > kLimit ||
@@ -126,11 +152,9 @@ bool Model::Append(std::string text, InputKind kind) {
     const bool extend = insertion == source.size() && !source.empty() && !direct_blocks_.empty() &&
         direct_blocks_.back() == source.back().id &&
         (!pending_ || pending_->block.id != source.back().id) &&
-        !EndsSentence(source.back().text) &&
-        SourceText().size() - source.back().text.size() >= translated_source_.size();
+        !EndsSentence(source.back().text);
     if (extend) {
-      // Keep the tail identity while typing. Never edit a delivery snapshot or
-      // an already translated prefix, even if it has no sentence terminator.
+      // Keep the editable tail; extending it invalidates only its translation.
       auto parts = Sentences(source.back().text + text);
       source.back().text = std::move(parts.front());
       for (std::size_t i = 1; i < parts.size(); ++i) {
@@ -169,7 +193,6 @@ bool Model::Backspace() {
     source.erase(source.begin() + static_cast<std::ptrdiff_t>(--insertion));
   }
   ++revision;
-  Cancel();
   SourceEdited();
   return true;
 }
@@ -193,24 +216,30 @@ bool Model::DeleteForward() {
   if (selected) return Backspace();
   if (pending_ || insertion >= source.size()) return false;
   source.erase(source.begin() + static_cast<std::ptrdiff_t>(insertion));
-  direct_blocks_.clear(); ++revision; Cancel(); SourceEdited();
+  direct_blocks_.clear(); ++revision; SourceEdited();
   return true;
 }
 void Model::ReturnToEdit() {
   if (pending_) return;
+  if (translation_results_) { ResetTranslation(); status = "Buffer"; return; }
   Cancel(); result.clear(); source_links_.clear(); result_units_.clear();
   translated_source_.clear(); status = "Buffer";
 }
 void Model::SourceEdited() {
-  if (!translate) { ReturnToEdit(); return; }
+  if (!translate) { ResetTranslation(); status = "Buffer"; return; }
   // Keep retired output and unchanged complete source units. Editing a tail
   // must not discard accepted output or include retired source in a new job.
   const auto text = SourceText();
-  if (busy && !text.starts_with(translating_prefix_)) Cancel();
+  auto exact_unit = [&](const std::string& prefix, const std::string& unit) {
+    if (!text.starts_with(prefix)) return false;
+    const auto parts = Sentences(text.substr(prefix.size()));
+    return !parts.empty() && parts.front() == unit;
+  };
+  if (busy && !exact_unit(translated_source_, translating_prefix_.substr(translated_source_.size()))) Cancel();
   std::string prefix;
   bool changed = false;
   for (auto it = source_links_.begin(); it != source_links_.end();) {
-    if (!changed && text.starts_with(prefix + it->second)) {
+    if (!changed && exact_unit(prefix, it->second)) {
       prefix += it->second; ++it;
     } else {
       changed = true;
@@ -239,6 +268,7 @@ Generation Model::Generate(std::uint64_t settings_revision, bool translation,
     const auto parts = Sentences(job.source);
     if (!parts.empty()) job.source = parts.front();
     if (complete_sentence_only && !EndsSentence(job.source)) job.source.clear();
+    if (job.source.find_first_not_of(" \t\r\n") == std::string::npos) job.source.clear();
   }
   busy = !job.source.empty() && !pending_ && (translation || result.empty());
   if (busy) {
@@ -255,14 +285,26 @@ bool Model::Accepts(const Generation& job,
     return false;
   if (!job.translation)
     return job.revision == revision && job.source == SourceText();
-  return SourceText().starts_with(job.prefix + job.source);
+  const auto text = SourceText();
+  if (!text.starts_with(job.prefix)) return false;
+  const auto parts = Sentences(text.substr(job.source_offset));
+  return !parts.empty() && parts.front() == job.source;
 }
 bool Model::Stream(const Generation& job, std::uint64_t settings_revision,
                    std::string text) {
-  if (!Accepts(job, settings_revision) ||
-      ResultText().size() + preview.size() + text.size() > kLimit)
-    return false;
-  preview += text;
+  return StreamSnapshot(job, settings_revision, preview + text);
+}
+bool Model::StreamSnapshot(const Generation& job, std::uint64_t settings_revision, std::string text) {
+  if (!Accepts(job, settings_revision) || text.find('\0') != std::string::npos || ResultText().size() + text.size() > kLimit) return false;
+  std::vector<SemanticFragment> parts;
+  try { parts = SemanticBlocks(text); } catch (...) { return false; }
+  preview = std::move(text);
+  streaming.clear();
+  for (const auto& part : parts) {
+    auto [found, inserted] = stream_ids_.try_emplace(part.index, next_id_);
+    if (inserted) ++next_id_;
+    streaming.push_back({found->second, part.text, job.target_language});
+  }
   status = "Receiving...";
   return true;
 }
@@ -271,15 +313,18 @@ bool Model::Finish(const Generation& job, std::uint64_t settings_revision,
   if (!Accepts(job, settings_revision)) return false;
   busy = false;
   if (!success || preview.empty()) {
-    preview.clear();
+    preview.clear(); streaming.clear(); stream_ids_.clear(); reasoning_summary.clear();
     status = "Request failed. Source retained.";
     return false;
   }
-  const auto unit = next_id_;
-  for (auto& text : Sentences(preview)) {
-    result_units_[next_id_] = unit;
-    result.push_back({next_id_++, std::move(text)});
+  if (streaming.empty()) { preview.clear(); return false; }
+  const auto unit = streaming.front().id;
+  translation_results_ = job.translation;
+  for (auto& block : streaming) {
+    result_units_[block.id] = unit;
+    result.push_back(std::move(block));
   }
+  streaming.clear(); reasoning_summary.clear();
   // Translation source retires when its FIRST child is accepted. Generation
   // keeps its source until the last child, for the return-to-edit lifecycle.
   source_links_[job.translation ? unit : result.back().id] = job.source;
@@ -291,7 +336,7 @@ bool Model::Finish(const Generation& job, std::uint64_t settings_revision,
 void Model::Cancel() {
   ++generation_;
   busy = false;
-  preview.clear();
+  preview.clear(); streaming.clear(); stream_ids_.clear(); reasoning_summary.clear();
 }
 void Model::InvalidatePluginResults() {
   Cancel(); translate = false; send_all_ = false;
@@ -300,6 +345,26 @@ void Model::InvalidatePluginResults() {
   if (pending_) return;
   result.clear(); source_links_.clear(); result_units_.clear(); translated_source_.clear();
   status = "Plugin authorization changed. Source retained.";
+}
+Model::Results Model::ParkResults() {
+  Results state{std::move(result), std::move(source_links_), std::move(result_units_),
+      std::move(translated_source_), SourceText(), translation_results_};
+  result.clear(); source_links_.clear(); result_units_.clear(); translated_source_.clear();
+  translating_prefix_.clear(); translation_results_ = false;
+  return state;
+}
+void Model::RestoreResults(Results state) {
+  result = std::move(state.blocks); source_links_ = std::move(state.links);
+  result_units_ = std::move(state.units); translated_source_ = std::move(state.translated_source);
+  translation_results_ = state.translation;
+  if (state.source_snapshot != SourceText()) {
+    // Revalidate mutable units against the shared source. Already-retired
+    // translation children survive, since their original text no longer exists.
+    const bool mode = translate;
+    translate = translation_results_;
+    SourceEdited();
+    translate = mode;
+  }
 }
 std::optional<Delivery> Model::Send(bool all) {
   if (!visible || !capture || !bound || bound != live || pending_ ||

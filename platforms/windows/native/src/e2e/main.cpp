@@ -100,6 +100,11 @@ void TypeVirtualKey(rimes::windows::tsf::TextService* service,
   using rimes::windows::tsf::TextService;
   BOOL eaten = FALSE;
   service->OnTestKeyDown(context, virtual_key, 0, &eaten);
+  if (!eaten) {
+    if (require_eaten)
+      Fail("expected test key down to be consumed: vk=" + std::to_string(virtual_key));
+    return;
+  }
   eaten = FALSE;
   const HRESULT down = service->OnKeyDown(context, virtual_key, 0, &eaten);
   if (FAILED(down)) {
@@ -114,8 +119,7 @@ void TypeVirtualKey(rimes::windows::tsf::TextService* service,
   }
   eaten = FALSE;
   service->OnTestKeyUp(context, virtual_key, 0, &eaten);
-  eaten = FALSE;
-  service->OnKeyUp(context, virtual_key, 0, &eaten);
+  if (eaten) service->OnKeyUp(context, virtual_key, 0, &eaten);
 }
 
 void TypeLatin(rimes::windows::tsf::TextService* service, ITfContext* context,
@@ -338,7 +342,9 @@ void CheckCandidateGuardAfterKeyRelease() {
   client->Disconnect();
 }
 
-int RunTypingScenarios(bool legacy_broker) {
+#include "chord_tests.hpp"
+
+int RunTypingScenarios(bool legacy_broker, bool chord = false) {
   using rimes::windows::e2e::FakeContext;
   using rimes::windows::e2e::FakeDocument;
   using rimes::windows::e2e::FakeThreadMgr;
@@ -386,11 +392,44 @@ int RunTypingScenarios(bool legacy_broker) {
   CheckFocusRestoration();
   LogicalKeyboardState scenario_keyboard;
   scenario_keyboard.Clear();
+  if (chord) {
+    CheckFirstChord(service, context, document);
+    service->Deactivate();
+    service->Release();
+    context->Release();
+    thread_manager->Release();
+    if (SUCCEEDED(com)) CoUninitialize();
+    return g_failures == 0 ? EXIT_SUCCESS : EXIT_FAILURE;
+  }
   std::cerr << "caps_lock=" << ((GetKeyState(VK_CAPITAL) & 1) != 0)
             << " shift=" << ((GetKeyState(VK_SHIFT) & 0x8000) != 0) << '\n';
 
   CheckUnavailablePassThroughAndNoReplay(legacy_broker);
   CheckCandidateGuardAfterKeyRelease();
+
+  // The first probe may run under a host-owned text lock. Do not bypass a
+  // declined probe in the fixture: TSF would deliver that letter to the app.
+  for (int focus = 0; focus < 2; ++focus) {
+    service->OnSetFocus(FALSE);
+    ResetDocument(&document);
+    context->refuse_read_edits = true;
+    BOOL first_eaten = FALSE;
+    service->OnTestKeyDown(context, 'N', 1, &first_eaten);
+    context->refuse_read_edits = false;
+    Expect(first_eaten, "locked first probe retains the first physical letter");
+    if (first_eaten) {
+      service->OnKeyDown(context, 'N', 1, &first_eaten);
+      Expect(first_eaten && document.composing && document.composition == L"n",
+             "real first letter starts marked text before the next key");
+      service->OnTestKeyUp(context, 'N', 1, &first_eaten);
+      if (first_eaten) service->OnKeyUp(context, 'N', 1, &first_eaten);
+    }
+    TypeLatin(service, context, "ihao");
+    TypeVirtualKey(service, context, VK_SPACE, true);
+    Expect(document.text == L"你好" && !document.composing,
+           "real Rime commits the first word after a locked probe and refocus");
+  }
+  ResetDocument(&document);
 
   if (legacy_broker) {
     TypeLatin(service, context, "ni");
@@ -910,6 +949,7 @@ int RunTypingScenarios(bool legacy_broker) {
 
 int wmain(int argc, wchar_t** argv) {
   const bool legacy = argc == 2 && std::wstring_view(argv[1]) == L"--legacy-broker";
-  if (argc != 1 && !legacy) return EXIT_FAILURE;
-  return RunTypingScenarios(legacy);
+  const bool chord = argc == 2 && std::wstring_view(argv[1]) == L"--chord";
+  if (argc != 1 && !legacy && !chord) return EXIT_FAILURE;
+  return RunTypingScenarios(legacy, chord);
 }

@@ -1,4 +1,6 @@
+﻿#include "ai_choices.hpp"
 #include "provider.hpp"
+#include "translation_languages.hpp"
 #include "scheme_import.hpp"
 
 #include <wincred.h>
@@ -110,8 +112,8 @@ bool ValidConnections(const Settings& settings) {
     if (p.id.empty() || p.id.size() > 80 || p.id.find_first_not_of("abcdefghijklmnopqrstuvwxyz0123456789-") != std::string::npos ||
         std::find(ids.begin(), ids.end(), p.id) != ids.end() || p.name.empty() || p.name.size() > 160 ||
         (p.kind != "codex-cli" && p.kind != "openai-compatible") || p.base_url.size() > 2048 ||
-        p.model.size() > 256 || p.executable.size() > 8192) return false;
-    for (const auto* text : {&p.name, &p.base_url, &p.model, &p.executable})
+        p.model.size() > 256 || p.executable.size() > 8192 || p.documentation_url.size() > 2048) return false;
+    for (const auto* text : {&p.name, &p.base_url, &p.model, &p.executable, &p.documentation_url})
       if (text->find('\0') != std::string::npos || text->find('\n') != std::string::npos || text->find('\r') != std::string::npos) return false;
     ids.push_back(p.id); active |= settings.active_connection == p.id;
   }
@@ -133,6 +135,18 @@ bool ValidTheme(const std::string& theme) {
   return theme == "night" || theme == "day" || theme == "quiet" ||
          theme == "rasta";
 }
+bool ValidBufferShortcuts(const Settings& value) {
+  const unsigned keys[] = {value.hotkey_key, value.send_key, value.previous_plugin_key, value.next_plugin_key};
+  const unsigned modifiers[] = {value.hotkey_modifiers, value.send_modifiers,
+      value.previous_plugin_modifiers, value.next_plugin_modifiers};
+  for (int i = 0; i < 4; ++i) {
+    if (!core::ValidShortcut(keys[i], modifiers[i], i == 1)) return false;
+    if (i >= 2 && modifiers[i] == (MOD_ALT | MOD_SHIFT) && (keys[i] == 'S' || keys[i] == 'V' || keys[i] == 'M' || keys[i] == '4')) return false;
+    for (int j = 0; j < i; ++j)
+      if (keys[i] == keys[j] && modifiers[i] == modifiers[j]) return false;
+  }
+  return true;
+}
 bool ValidSettings(const Settings& value) {
   try { if (!value.chord_profile.is_null()) (void)ChordProfile::Parse(value.chord_profile); } catch (...) { return false; }
   const bool schema = rimes::schemes::ValidID(value.schema);
@@ -147,19 +161,20 @@ bool ValidSettings(const Settings& value) {
           value.auto_send_seconds == 3 || value.auto_send_seconds == 5) &&
          (value.translation_provider == "local" || value.translation_provider == "ai") &&
          value.font_size <= 40 &&
-         core::ValidShortcut(value.hotkey_key, value.hotkey_modifiers) &&
-         core::ValidShortcut(value.send_key, value.send_modifiers, true) &&
-         (value.hotkey_key != value.send_key || value.hotkey_modifiers != value.send_modifiers) &&
+         ValidBufferShortcuts(value) &&
          value.base_url.size() <= 2048 && value.model.size() <= 256 &&
-         value.target_language.size() <= 128 &&
+         !value.source_language.empty() && value.source_language.size() <= 128 &&
+         !value.target_language.empty() && value.target_language.size() <= 128 &&
+         TranslationLanguageID(value.source_language) != TranslationLanguageID(value.target_language) &&
          (value.ai_connector == "codex-cli" || value.ai_connector == "openai-compatible") &&
          value.codex_path.size() <= 8192 && value.codex_path.find('\0') == std::string::npos &&
+         ValidAIModel(value.chatgpt_model) && ValidAIEffort(value.chatgpt_model, value.chatgpt_effort) &&
          value.codex_model.size() <= 256 && value.codex_model.find('\0') == std::string::npos;
 }
 bool LoadSettings(Settings* value, std::string* error) {
   try {
     auto path = ConfigPath();
-    if (!std::filesystem::exists(path)) { MigrateConnections(value); return true; }
+    if (!std::filesystem::exists(path)) { value->ai_connector = "codex-cli"; MigrateConnections(value); return true; }
     if (std::filesystem::is_symlink(path) ||
         std::filesystem::file_size(path) > 3 * 1024 * 1024)
       throw std::runtime_error("Invalid settings file");
@@ -178,14 +193,17 @@ bool LoadSettings(Settings* value, std::string* error) {
     candidate.ai_connector = j.value("ai_connector", "openai-compatible");
     candidate.codex_path = j.value("codex_path", "");
     candidate.codex_model = j.value("codex_model", "");
+    candidate.chatgpt_model = j.value("chatgpt_model", candidate.codex_model.empty() ? "gpt-6-sol" : candidate.codex_model);
+    candidate.chatgpt_effort = j.value("chatgpt_effort", "medium");
     candidate.active_connection = j.value("active_connection", "");
+    candidate.gateway_enabled = j.value("gateway_enabled", true);
     if (j.contains("connections")) for (const auto& p : j.at("connections")) {
-      candidate.connections.push_back({p.at("id"), p.at("name"), p.at("kind"), p.value("base_url", ""), p.value("model", ""), p.value("executable", "")});
+      candidate.connections.push_back({p.at("id"), p.at("name"), p.at("kind"), p.value("base_url", ""), p.value("model", ""), p.value("executable", ""), p.value("documentation_url", "")});
     }
     if (candidate.connections.empty()) MigrateConnections(&candidate);
     if (!SelectConnection(&candidate, candidate.active_connection)) throw std::runtime_error("Missing connection");
-    candidate.buffer_width = j.value("buffer_width", 680U);
-    candidate.send_hold_ms = j.value("send_hold_ms", 1200U);
+    candidate.buffer_width = j.value("buffer_width", 760U);
+    candidate.send_hold_ms = j.value("send_hold_ms", 600U);
     candidate.follow_system_theme = j.value("follow_system_theme", false);
     candidate.candidate_width = j.value("candidate_width", 460U);
     candidate.candidate_height = j.value("candidate_height", 34U);
@@ -194,6 +212,8 @@ bool LoadSettings(Settings* value, std::string* error) {
     candidate.chord_interval_ms = j.value("chord_interval_ms", 50U);
     candidate.chord_profile = j.value("chord_profile", Json());
     candidate.target_language = j.value("target_language", "English");
+    candidate.source_language = j.value("source_language", OppositeTranslationLanguage(candidate.target_language));
+    candidate.translation_speech = j.value("translation_speech", false);
     candidate.translation_provider = j.value("translation_provider", "local");
     candidate.auto_send_seconds = j.value("auto_send_seconds", 0U);
     candidate.close_after_send = j.value("close_after_send", true);
@@ -223,6 +243,25 @@ bool LoadSettings(Settings* value, std::string* error) {
         candidate.hotkey_key == candidate.send_key &&
         candidate.hotkey_modifiers == candidate.send_modifiers)
       candidate.send_modifiers = MOD_CONTROL | MOD_SHIFT;
+    candidate.previous_plugin_key = j.value("previous_plugin_key", unsigned(VK_UP));
+    candidate.previous_plugin_modifiers = j.value("previous_plugin_modifiers", unsigned(MOD_ALT | MOD_SHIFT));
+    candidate.next_plugin_key = j.value("next_plugin_key", unsigned(VK_DOWN));
+    candidate.next_plugin_modifiers = j.value("next_plugin_modifiers", unsigned(MOD_ALT | MOD_SHIFT));
+    // Existing explicit bindings win when adding a missing plugin shortcut.
+    for (int i = 0; i < 2; ++i) {
+      auto& key = i ? candidate.next_plugin_key : candidate.previous_plugin_key;
+      auto& mods = i ? candidate.next_plugin_modifiers : candidate.previous_plugin_modifiers;
+      if (j.contains(i ? "next_plugin_key" : "previous_plugin_key") ||
+          j.contains(i ? "next_plugin_modifiers" : "previous_plugin_modifiers")) continue;
+      const auto occupied = [&](unsigned m) {
+        return (key == candidate.hotkey_key && m == candidate.hotkey_modifiers) ||
+            (key == candidate.send_key && m == candidate.send_modifiers) ||
+            (i && key == candidate.previous_plugin_key && m == candidate.previous_plugin_modifiers) ||
+            (!i && key == candidate.next_plugin_key && m == candidate.next_plugin_modifiers);
+      };
+      if (occupied(mods)) for (const auto& choice : kBufferHotkeyChoices)
+        if (!occupied(choice.modifiers)) { mods = choice.modifiers; break; }
+    }
     if (!ValidSettings(candidate))
       throw std::runtime_error("Invalid settings values");
     *value = std::move(candidate);
@@ -237,7 +276,7 @@ bool SaveSettings(const Settings& value, std::string* error) {
     if (!ValidSettings(value)) throw std::runtime_error("invalid settings");
     auto path = ConfigPath();
     std::filesystem::create_directories(path.parent_path());
-    Json j = {{"version", 5},
+    Json j = {{"version", 6},
               {"revision", value.revision},
               {"schema", value.schema},
               {"ascii", value.ascii},
@@ -251,15 +290,21 @@ bool SaveSettings(const Settings& value, std::string* error) {
               {"hotkey_key", value.hotkey_key},
               {"send_modifiers", value.send_modifiers},
               {"send_key", value.send_key},
+              {"previous_plugin_key", value.previous_plugin_key},
+              {"previous_plugin_modifiers", value.previous_plugin_modifiers},
+              {"next_plugin_key", value.next_plugin_key},
+              {"next_plugin_modifiers", value.next_plugin_modifiers},
               {"base_url", value.base_url},
               {"model", value.model},
               {"ai_connector", value.ai_connector},
               {"codex_path", value.codex_path},
               {"codex_model", value.codex_model},
+              {"chatgpt_model", value.chatgpt_model}, {"chatgpt_effort", value.chatgpt_effort},
               {"target_language", value.target_language}};
     j["connections"] = Json::array();
-    for (const auto& p : value.connections) j["connections"].push_back({{"id",p.id},{"name",p.name},{"kind",p.kind},{"base_url",p.base_url},{"model",p.model},{"executable",p.executable}});
+    for (const auto& p : value.connections) j["connections"].push_back({{"id",p.id},{"name",p.name},{"kind",p.kind},{"base_url",p.base_url},{"model",p.model},{"executable",p.executable},{"documentation_url",p.documentation_url}});
     j["active_connection"] = value.active_connection;
+    j["gateway_enabled"] = value.gateway_enabled;
     j["buffer_width"] = value.buffer_width; j["send_hold_ms"] = value.send_hold_ms;
     j["follow_system_theme"] = value.follow_system_theme;
     j["candidate_width"] = value.candidate_width; j["candidate_height"] = value.candidate_height;
@@ -267,6 +312,8 @@ bool SaveSettings(const Settings& value, std::string* error) {
     j["chord_enabled"] = value.chord_enabled; j["chord_interval_ms"] = value.chord_interval_ms;
     j["chord_profile"] = value.chord_profile;
     j["translation_provider"] = value.translation_provider;
+    j["source_language"] = value.source_language;
+    j["translation_speech"] = value.translation_speech;
     j["auto_send_seconds"] = value.auto_send_seconds;
     j["close_after_send"] = value.close_after_send;
     auto temporary = path;
@@ -328,14 +375,25 @@ bool GenerateAPI(const Settings& config, const Generation& job,
 bool GenerateText(const Settings& config, const Generation& job,
                   const std::function<bool(const std::string&)>& chunk,
                   const std::function<bool()>& cancelled, std::string* error) {
-  if (job.translation && config.translation_provider == "local")
-    return GenerateLocalTranslation(config, job, chunk, cancelled, error);
-  if (config.ai_connector == "codex-cli")
-    return GenerateCodex(config, job, chunk, cancelled, error);
-  if (config.ai_connector == "openai-compatible")
-    return GenerateAPI(config, job, chunk, cancelled, error);
-  Fail(error, "Unknown AI connector. Source retained.");
-  return false;
+  std::string translated;
+  auto receive = [&](const std::string& text) {
+    if (!job.translation) return chunk(text);
+    if (cancelled() || translated.size() + text.size() > Model::kLimit) return false;
+    translated += text; return true;
+  };
+  const bool ok = [&] {
+    if (job.translation && config.translation_provider == "local")
+      return GenerateLocalTranslation(config, job, receive, cancelled, error);
+    if (config.ai_connector == "codex-cli")
+      return GenerateCodex(config, job, receive, cancelled, error);
+    if (config.ai_connector == "openai-compatible")
+      return GenerateAPI(config, job, receive, cancelled, error);
+    Fail(error, "Unknown AI connector. Source retained.");
+    return false;
+  }();
+  if (!ok || !job.translation) return ok;
+  const auto text = NormalizeTranslation(translated, job.source, config.target_language);
+  return !cancelled() && !text.empty() && text.size() <= Model::kLimit && chunk(text);
 }
 bool GenerateWithKey(const Settings& config, const Generation& job,
                      std::wstring key,
@@ -426,7 +484,7 @@ bool GenerateWithKey(const Settings& config, const Generation& job,
       Fail(error, "API must return a successful SSE response.");
       return false;
     }
-    SseDecoder decoder(chunk);
+    SseDecoder decoder(chunk, job.progress);
     const auto started = GetTickCount64();
     char buffer[8192];
     while (!cancelled() && GetTickCount64() - started < 120000) {

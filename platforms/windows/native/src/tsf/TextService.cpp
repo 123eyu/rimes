@@ -23,6 +23,7 @@ namespace rimes::windows::tsf {
 namespace {
 
 constexpr UINT kRefreshFocusedContext = WM_APP + 74;
+constexpr UINT_PTR kBufferFocusRetry = 1;
 
 // Called with a granted edit cookie; never inspect or forward protected text.
 bool AllowedContext(ITfContext* context,
@@ -653,6 +654,34 @@ TextService::TextService(std::unique_ptr<BrokerClient> broker_client) noexcept
   candidate_window_.SetSelect([this](std::size_t index) { SelectCandidate(index); });
 }
 
+void TextService::UpdateInputMode() noexcept {
+  if (input_mode_) input_mode_->Update(active_context_ && broker_client_
+      ? broker_client_->AsciiMode() : std::nullopt);
+}
+void TextService::ToggleInputMode() noexcept {
+  if (!active_context_ || !broker_client_) return;
+  auto* context = active_context_;
+  const auto valid = edit_valid_;
+  try {
+    auto* edit = new (std::nothrow) CandidateSelectionEdit(
+        context, static_cast<ITfTextInputProcessorEx*>(this),
+        [this, context, valid](TfEditCookie cookie) {
+          RefreshBrokerConnection();
+          if (!valid || !valid->load() || context != active_context_ ||
+              !IsFocusedContext() || !AllowedContext(context, cookie)) return TF_E_DISCONNECTED;
+          BrokerInputState state;
+          const auto result = broker_client_->HandleKey(
+              {BrokerKeyPhase::kInputModeToggle, VK_SHIFT, 0}, &state);
+          UpdateInputMode();
+          if (result == BrokerKeyResult::kUnavailable) return E_FAIL;
+          return state.has_snapshot ? ApplyDocumentState(context, state, cookie) : S_OK;
+        });
+    if (!edit) return;
+    RequestEdit(context, client_id_, edit);
+    edit->Release();
+  } catch (...) {}
+}
+
 void TextService::SelectCandidate(std::size_t index) noexcept {
   if (!active_context_ || !broker_client_) return;
   const auto selection = candidate_navigation_.AtVisibleIndex(index);
@@ -876,6 +905,14 @@ HRESULT STDMETHODCALLTYPE TextService::ActivateEx(ITfThreadMgr* thread_manager,
   keystroke_manager_ = keystroke_manager;
   client_id_ = client_id;
   activation_flags_ = flags;
+  if ((flags & TF_TMAE_SECUREMODE) == 0) {
+    try {
+      input_mode_ = new InputModeIndicator([this] { ToggleInputMode(); });
+      if (FAILED(input_mode_->Attach(thread_manager_))) {
+        input_mode_->Release(); input_mode_ = nullptr;
+      }
+    } catch (...) { /* Hosts without a language bar still support normal input. */ }
+  }
   thread_manager_->QueryInterface(IID_ITfUIElementMgr,
                                   reinterpret_cast<void**>(&ui_manager_));
   key_event_sink_advised_ = true;
@@ -918,6 +955,10 @@ HRESULT STDMETHODCALLTYPE TextService::ActivateEx(ITfThreadMgr* thread_manager,
 HRESULT STDMETHODCALLTYPE TextService::Deactivate() {
   LogDiagnosticStage(DiagnosticStage::kDeactivateEntered);
   RevokeContext();
+  if (input_mode_) {
+    input_mode_->Detach();
+    std::exchange(input_mode_, nullptr)->Release();
+  }
   if (ui_manager_) std::exchange(ui_manager_, nullptr)->Release();
   if (thread_manager_ && thread_sink_cookie_ != TF_INVALID_COOKIE) {
     ITfSource* source = nullptr;
@@ -1084,6 +1125,19 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
   }
   RefreshBrokerConnection();
   if (!context || !BindContext(context)) return S_OK;
+  if (phase == BrokerKeyPhase::kTestKeyDown || test_up) {
+    // Prediction can run while the host holds its text-store lock. Requiring
+    // a synchronous scope read here would fail open on the first letter and
+    // prevent TSF from ever dispatching its real OnKeyDown. No input is sent
+    // to Rime in a test callback; validate the scope under a granted read lock
+    // in the real callback below before forwarding any physical key.
+    if (!broker_client_->SetContext(context_generation_)) return S_OK;
+    *eaten = HandleCandidateKey(phase, context, virtual_key) ||
+                     broker_client_->HandleKey({phase, virtual_key, key_data},
+                                               nullptr) == BrokerKeyResult::kConsumed
+                 ? TRUE : FALSE;
+    return S_OK;
+  }
   // Read-only locks never enqueue keystrokes or expose sensitive text to IPC.
   auto* scope = new (std::nothrow) ScopeRead(context);
   if (!scope) return S_OK;
@@ -1107,6 +1161,7 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
       phase == BrokerKeyPhase::kKeyDown || phase == BrokerKeyPhase::kKeyUp;
   const BrokerKeyResult result = broker_client_->HandleKey(
       {phase, virtual_key, key_data}, is_real_event ? &state : nullptr);
+  UpdateInputMode();
   if (result == BrokerKeyResult::kConsumed) {
     // The Broker has already advanced the authoritative librime session.  Eat
     // the key even if the host refuses an edit lock; passing it through would
@@ -1127,6 +1182,7 @@ HRESULT TextService::HandleKey(BrokerKeyPhase phase, ITfContext* context,
 
 HRESULT TextService::ApplyDocumentState(
     ITfContext* context, const BrokerInputState& state, TfEditCookie cookie) noexcept {
+  UpdateInputMode();
   if (context == nullptr) {
     return E_INVALIDARG;
   }
@@ -1138,18 +1194,30 @@ HRESULT TextService::ApplyDocumentState(
     UpdateCandidateWindow(context, state, cookie);
     return S_OK;
   }
+  // Native chords stage physical keys outside Rime until the batch settles.
+  // Tell the host that the IME owns this interval from the first key down,
+  // matching macOS's stagedChordGuard. This is host-only marked text, never
+  // engine input or committed content. An existing preedit takes precedence.
+  const bool chord_guard = state.pending_chord && !state.composing;
+  if (chord_guard && composition_ && last_state_.pending_chord &&
+      !last_state_.composing && state.commit_text.empty()) {
+    last_state_ = state;
+    UpdateCandidateWindow(context, state, cookie);
+    return S_OK;
+  }
   // A modifier-only snapshot (for example an idle Shift ASCII toggle) changes
   // engine state, not document text. Requesting a write lock here can fail in
   // a dialog host and revoke the context, resetting the just-toggled session.
   // Existing compositions and actual commits must still use an edit session.
-  if (!composition_ && !state.composing && state.commit_text.empty()) {
+  if (!composition_ && !state.composing && !chord_guard && state.commit_text.empty()) {
     last_state_ = state;
     UpdateCandidateWindow(context, state, cookie);
     return S_OK;
   }
   auto* session = new (std::nothrow) CompositionEditSession(
       context, this, &composition_, CompositionEditSession::Action::kApply,
-      state.composing ? state.composition : std::wstring(), state.caret_utf16,
+      state.composing ? state.composition : chord_guard ? L"\u200B" : std::wstring(),
+      chord_guard ? 1U : state.caret_utf16,
       edit_valid_, state.commit_text);
   if (!session) return E_OUTOFMEMORY;
   const auto result = cookie == TF_INVALID_EDIT_COOKIE
@@ -1489,6 +1557,7 @@ bool TextService::BindContext(ITfContext* context) noexcept {
     return false;
   if (context_identity_ == identity) {
     identity->Release();
+    UpdateInputMode();
     return true;
   }
   RevokeContext();
@@ -1513,10 +1582,12 @@ bool TextService::BindContext(ITfContext* context) noexcept {
     source->Release();
   }
   if (broker_client_) broker_client_->SetContext(context_generation_);
+  UpdateInputMode();
   return true;
 }
 
 void TextService::RevokeContext() noexcept {
+  CancelBufferFocusRequest();
   if (edit_valid_) edit_valid_->store(false);
   capture_active_ = false;
   EndCandidateUI();
@@ -1556,6 +1627,7 @@ void TextService::RevokeContext() noexcept {
     context_identity_ = nullptr;
   }
   if (broker_client_) broker_client_->SetContext(0);
+  UpdateInputMode();
 }
 HRESULT STDMETHODCALLTYPE TextService::OnInitDocumentMgr(ITfDocumentMgr*) {
   return S_OK;
@@ -1572,8 +1644,10 @@ HRESULT STDMETHODCALLTYPE TextService::OnSetFocus(ITfDocumentMgr* focused,
   }
   ITfContext* context = nullptr;
   if (SUCCEEDED(focused->GetTop(&context)) && context) {
-    if (BindContext(context) && broker_client_)
-      broker_client_->SetContext(context_generation_);
+    const auto previous = context_generation_;
+    if (BindContext(context) && broker_client_ &&
+        broker_client_->SetContext(context_generation_) && previous == context_generation_)
+      broker_client_->Control({{"op", "focus"}});
     context->Release();
   } else
     RevokeContext();
@@ -1615,12 +1689,12 @@ HRESULT STDMETHODCALLTYPE TextService::OnEndEdit(ITfContext* context,
   const bool own_edit = std::exchange(own_buffer_edit_, false);
   BOOL changed = FALSE;
   if (SUCCEEDED(record->GetSelectionStatus(&changed)) && changed &&
-      broker_client_->Capturing() && !own_edit) {
+      (broker_client_->Capturing() || buffer_focus_follow_) && !own_edit) {
     RevokeContext();
     // Chromium can move between fields using the same TSF context and only
     // report a selection change. Retire the capture immediately, then publish
-    // the current target after the edit callback so an explicit rebind works
-    // without sending a first key into the host. This never resumes capture.
+    // the current target after the edit callback. Resuming Buffer requires a
+    // new Broker challenge and a fresh, editable TSF caret under a read lock.
     if (notification_window_)
       PostMessageW(notification_window_, kRefreshFocusedContext, 0, 0);
   }
@@ -1643,6 +1717,11 @@ LRESULT CALLBACK TextService::NotificationProcedure(HWND window, UINT message,
     } catch (...) {
       self->RevokeContext();
     }
+    return 0;
+  }
+  if (message == WM_TIMER && wparam == kBufferFocusRetry && self) {
+    try { self->TryResumeBufferFocus(); }
+    catch (...) { self->CancelBufferFocusRequest(); }
     return 0;
   }
   if (message == kBrokerConnected && self && self->IsBrokerConnected()) {
@@ -1691,6 +1770,48 @@ void TextService::RefreshBrokerConnection() noexcept {
   last_delivery_ = 0;
   RevokeContext();
 }
+void TextService::CancelBufferFocusRequest() {
+  buffer_focus_request_ = 0;
+  buffer_focus_deadline_ = 0;
+  if (notification_window_) KillTimer(notification_window_, kBufferFocusRetry);
+}
+void TextService::TryResumeBufferFocus() {
+  if (!buffer_focus_request_) return;
+  DWORD process = 0;
+  GetWindowThreadProcessId(GetForegroundWindow(), &process);
+  if (GetTickCount64() > buffer_focus_deadline_ || !active_context_ ||
+      !edit_valid_ || !edit_valid_->load() || process != GetCurrentProcessId() ||
+      !IsFocusedContext() || (activation_flags_ & TF_TMAE_SECUREMODE)) {
+    CancelBufferFocusRequest();
+    return;
+  }
+  const auto generation = context_generation_;
+  const auto validity = edit_valid_;
+  const auto request = buffer_focus_request_;
+  auto* scope = new (std::nothrow) ScopeRead(active_context_);
+  if (!scope) return;
+  HRESULT result = E_FAIL;
+  const auto hr = active_context_->RequestEditSession(
+      client_id_, scope, TF_ES_SYNC | TF_ES_READ, &result);
+  const auto caret = scope->caret;
+  const bool read = SUCCEEDED(hr) && SUCCEEDED(result);
+  const bool allowed = scope->allowed;
+  scope->Release();
+  if (!read) return; // A host text-store lock may clear on the next bounded retry.
+  if (!allowed) { CancelBufferFocusRequest(); return; }
+  if (caret.bottom - caret.top <= 2 || caret.bottom - caret.top >= 600 ||
+      caret.right < caret.left || caret.right - caret.left > 2000) return;
+  GetWindowThreadProcessId(GetForegroundWindow(), &process);
+  if (request != buffer_focus_request_ || generation != context_generation_ ||
+      !validity->load() || process != GetCurrentProcessId() || !IsFocusedContext()) {
+    CancelBufferFocusRequest();
+    return;
+  }
+  CancelBufferFocusRequest();
+  broker_client_->Control({{"op", "focus_ready"}, {"request", request},
+      {"context", generation}, {"caret", {caret.left, caret.top,
+          caret.right - caret.left, caret.bottom - caret.top}}});
+}
 void TextService::OnBrokerNotification() {
   RefreshBrokerConnection();
   while (auto message = broker_client_->TakeNotification()) {
@@ -1715,6 +1836,8 @@ void TextService::OnBrokerNotification() {
       continue;
     }
     if (kind == "capture") {
+      CancelBufferFocusRequest();
+      buffer_focus_follow_ = message->value("focusFollow", false);
       candidate_window_.SetFont(
           (std::clamp)(message->value("font", 16U), 10U, 40U));
       candidate_window_.SetVertical(message->value("verticalCandidates", false));
@@ -1768,7 +1891,44 @@ void TextService::OnBrokerNotification() {
         }
       }
       if (opening_context != context_generation_) continue;
+      const auto route = message->value("inputRoute", 1U);
+      if (enabled && capture_active_ && route != buffer_route_) SetCapture(false);
+      buffer_route_ = enabled ? route : 0;
       SetCapture(enabled);
+      if (!enabled && message->value("focusRequest", 0ULL)) {
+        buffer_focus_request_ = message->value("focusRequest", 0ULL);
+        buffer_focus_deadline_ = GetTickCount64() + 1000;
+        // Some hosts still own the text lock at focus time. Retry this exact
+        // challenge briefly; never poll other apps or reuse a saved rectangle.
+        SetTimer(notification_window_, kBufferFocusRetry, 50, nullptr);
+        TryResumeBufferFocus();
+      }
+      continue;
+    }
+    if (kind == "buffer_transition") {
+      DWORD process = 0;
+      GetWindowThreadProcessId(GetForegroundWindow(), &process);
+      const auto generation = context_generation_;
+      const auto validity = edit_valid_;
+      bool valid = process == GetCurrentProcessId() && capture_active_ && buffer_route_ == 1 &&
+          broker_client_->Capturing() && active_context_ && IsFocusedContext() &&
+          message->value("openingRevision", 0ULL) == buffer_opening_;
+      if (valid) {
+        auto* scope = new (std::nothrow) ScopeRead(active_context_);
+        HRESULT result = E_FAIL;
+        valid = scope && SUCCEEDED(active_context_->RequestEditSession(
+            client_id_, scope, TF_ES_SYNC | TF_ES_READ, &result)) && SUCCEEDED(result) && scope->allowed;
+        if (scope) scope->Release();
+      }
+      GetWindowThreadProcessId(GetForegroundWindow(), &process);
+      if (valid && validity && validity->load() && generation == context_generation_ &&
+          process == GetCurrentProcessId() && IsFocusedContext() &&
+          broker_client_->Control({{"op", "buffer_transition"}, {"request", message->value("request", 0ULL)}})) {
+        // Retire only the captured TSF placeholder; committed text is staged in
+        // Buffer. No text is inserted into the host by this lifecycle action.
+        SetCapture(false);
+        if (!message->value("close", false)) SetCapture(true);
+      }
       continue;
     }
     if (kind != "deliver") continue;
@@ -1826,7 +1986,7 @@ void TextService::OnBrokerNotification() {
               {{"op", "ack"}, {"request", request}, {"accepted", accepted}});
         },
         static_cast<ITfTextInputProcessorEx*>(this),
-        [this, generation = broker_generation_](TfEditCookie) {
+        [this, request, guarded = message->value("guard", false), generation = broker_generation_](TfEditCookie) {
           if (generation != broker_client_->ConnectionGeneration())
             return false;
           DWORD process = 0;
@@ -1845,7 +2005,9 @@ void TextService::OnBrokerNotification() {
           if (identity) identity->Release();
           if (context) context->Release();
           if (manager) manager->Release();
-          return matches;
+          // Recheck the exact pending delivery after any async edit-session
+          // delay. Closing/reopening the same field is a new Buffer lifetime.
+          return matches && (!guarded || broker_client_->Control({{"op", "delivery_guard"}, {"request", request}}));
         });
     if (!session) {
       broker_client_->Control(

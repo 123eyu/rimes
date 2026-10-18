@@ -1,0 +1,13 @@
+{
+  "base_commit": "823c910b600c14f674e41ac906435eea0757972f",
+  "working_tree": "uncommitted; pre-existing Windows changes preserved",
+  "broker_sha256": {
+    "x64": "e22e36dabaa6430753def419ec30966f6735430f15fd5581655d14490ef25c88",
+    "x86": "dd3e178849a4a50a75129a01d92e7d9bb351a906bdf72fdc479ecb0c357ee072"
+  },
+  "installed": false,
+  "build_exit_codes": {
+    "x64": 0,
+    "x86": 0
+  }
+}

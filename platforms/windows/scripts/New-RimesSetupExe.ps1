@@ -24,7 +24,9 @@ if($SigningCertificateThumbprint){
     $setupCertificate=Get-Item -LiteralPath ('Cert:\CurrentUser\My\'+$SigningCertificateThumbprint)
     if(-not $setupCertificate.HasPrivateKey -or $setupCertificate.NotAfter -le (Get-Date) -or $setupCertificate.NotBefore -gt (Get-Date)){throw 'Setup signing requires a currently valid certificate with its private key in the current-user certificate store'}
 }
-if($manifest.product -ne 'RIMES' -or $version -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(-preview\.[1-9][0-9]*)?$'){throw 'Invalid product or version'}
+# Local, already-tested packages retain their feature/date identity when wrapped.
+# Keep the suffix restricted because the version also enters a filename and C#.
+if($manifest.product -ne 'RIMES' -or $version.Length -gt 64 -or $version -notmatch '^([0-9]+\.[0-9]+\.[0-9]+)(-preview\.[1-9][0-9]*|-win-[a-z][a-z0-9-]*\.[0-9]{8})?\z'){throw 'Invalid product or version'}
 $fileVersion=$Matches[1]+'.0'
 $OutputDirectory=[IO.Path]::GetFullPath($OutputDirectory)
 $output=Join-Path $OutputDirectory "RIMES-Windows-$version-Setup.exe"

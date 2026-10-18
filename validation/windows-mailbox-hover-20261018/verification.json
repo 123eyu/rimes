@@ -1,0 +1,40 @@
+{
+  "verified": true,
+  "version": "1.1.5-win-mailbox-hover.20261018",
+  "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-mailbox-hover.20261018-823c910b600c-ab9df91b210c",
+  "sourceSnapshot": "1fe4590540de7e9b1a7f20ba8d29aedf410d35dfd3304a0441d63fd8bdf61fb8",
+  "sourceFilesMatched": 154,
+  "binaryHashesMatched": true,
+  "brokerPid": 160272,
+  "settingsUnchanged": true,
+  "userDataRetained": true,
+  "peripheralFilesUnchanged": 49,
+  "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-mailbox-hover-20261018-110911",
+  "requiresSignOut": true,
+  "tests": [
+    "RimesPeripherals x64",
+    "RimesPeripherals x86",
+    "RimesPeripheralTests --ui x64"
+  ],
+  "nativeImages": 60,
+  "covered": [
+    "Mailbox first Chat selection",
+    "manual module selection",
+    "close/reopen",
+    "host restart",
+    "Terminal restore without automatic launch",
+    "disabled/invalid fallback",
+    "all-disabled state",
+    "Capsule independence",
+    "Chat draft retention",
+    "blocked opens",
+    "four-theme card hover pixels",
+    "bounded hover invalidation",
+    "same-card movement without repaint",
+    "stale leave events",
+    "no background erase",
+    "foreground focus retained"
+  ],
+  "testNote": "Isolated temporary profiles and synthetic clipboard. No typing or paste injected into user applications.",
+  "verifiedAt": "2026-10-18T11:09:51.3281656+08:00"
+}

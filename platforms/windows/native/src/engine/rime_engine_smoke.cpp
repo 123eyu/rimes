@@ -113,6 +113,16 @@ int wmain(int argc, wchar_t** argv) {
     return EXIT_FAILURE;
   }
 
+  // Closing/switching Buffer must settle the selected candidate, not the raw
+  // Latin code that a Return key can commit in several Rime schemas.
+  rimes::windows::engine::EngineSnapshot composed;
+  for (const auto keycode : {'r','i','m','e'}) for (const auto modifiers : {0,kRimeReleaseMask})
+    if (!engine.ProcessKey(session,keycode,modifiers,&composed,&error)) return EXIT_FAILURE;
+  rimes::windows::engine::EngineSnapshot settled;
+  if (!engine.CommitComposition(session,&settled,&error) || settled.composing ||
+      settled.commit_text != selection_down.commit_text) {
+    std::cerr << "Explicit composition settlement did not commit the selected candidate\n"; return EXIT_FAILURE;
+  }
   if (!engine.DestroySession(session, &error)) {
     std::cerr << "Session destruction failed: " << error << '\n';
     return EXIT_FAILURE;

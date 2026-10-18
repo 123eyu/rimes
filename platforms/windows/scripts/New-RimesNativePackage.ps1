@@ -77,6 +77,7 @@ foreach($entry in @(@('x64',$VCRedistX64),@('x86',$VCRedistX86))){
     Copy-Item -LiteralPath $runtime.FullName -Destination "$stage\runtimes\vc_redist.$($entry[0]).exe"
 }
 Copy-Item -LiteralPath "$windowsRoot\native\third_party\licenses" -Destination "$stage\licenses" -Recurse
+Copy-Item -LiteralPath "$windowsRoot\native\resources\fluent-system-icons\LICENSE" -Destination "$stage\licenses\Fluent-System-Icons-MIT.txt"
 Copy-Item -LiteralPath "$windowsRoot\native\librime\librime-windows.lock.json" -Destination "$stage\librime-windows.lock.json"
 Copy-Item -LiteralPath "$windowsRoot\native\third_party\nlohmann\LICENSE.MIT" -Destination "$stage\LICENSE-nlohmann-json.txt"
 Copy-Item -LiteralPath "$windowsRoot\native\third_party\nlohmann\README.md" -Destination "$stage\THIRD-PARTY-json.md"
