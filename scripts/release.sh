@@ -39,9 +39,8 @@ usage() {
 
 REMOTE="origin"
 EXPECTED_REPO="scholay/xsime"
-# The product release gate is macOS-only. CI includes the macOS build/runtime
-# smoke plus portable release-tooling checks. Windows/Linux preview workflows
-# remain maintenance checks, but never block a macOS preview or formal release.
+# Previews retain their existing gate. A stable application release now ships
+# four installers and the iOS source, so it requires all five native workflows.
 REQUIRED_WORKFLOWS=("CI")
 
 github_repo_from_url() {
@@ -197,6 +196,9 @@ if ! runs="$(gh api "repos/$EXPECTED_REPO/actions/runs?head_sha=$fetch_main&even
         --jq '.workflow_runs[] | [.name, .status, (.conclusion // "")] | @tsv' 2>&1)"; then
     die "无法读取 GitHub Actions 状态: $runs"
 fi
+if [[ "$KIND" == "stable" ]]; then
+    REQUIRED_WORKFLOWS+=("iOS checks" "Android checks" "Windows IME" "Linux IME")
+fi
 for workflow in "${REQUIRED_WORKFLOWS[@]}"; do
     rows="$(printf '%s\n' "$runs" | awk -F'\t' -v name="$workflow" '$1 == name')"
     if printf '%s\n' "$rows" | awk -F'\t' '$3 == "success" { found = 1 } END { exit !found }'; then
@@ -257,7 +259,7 @@ fi
 # --- Plan -------------------------------------------------------------------
 case "$KIND" in
     preview) channel="macOS 未签名预览版（Pre-release，不进入自动更新）" ;;
-    stable) channel="macOS 正式版（Developer ID 签名 + 公证，进入 latest 与自动更新）" ;;
+    stable) channel="四端正式安装包与更新清单（iOS 独立走 App Store 审核）" ;;
     platform) channel="Windows / Linux 数据预览版（Pre-release）" ;;
 esac
 

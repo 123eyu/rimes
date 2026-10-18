@@ -1935,7 +1935,7 @@ jobs:
 
   publish_staged_release:
     name: Approve and publish staged macOS release
-    needs: [build_and_smoke, sign_and_stage, build_linux_deb, build_windows_release, build_android_release]
+    needs: [build_and_smoke, sign_and_stage, build_linux_deb, build_windows_release, build_android_release, verify_signed_install]
     if: >-
       needs.build_and_smoke.result == 'success' &&
       needs.sign_and_stage.result == 'success' &&
@@ -1943,8 +1943,8 @@ jobs:
       github.repository == 'scholay/xsime'
     runs-on: macos-15
     # This separate environment holds no signing or notarization credentials.
-    # Required reviewers must inspect recorded real-Mac signed-stage rehearsal
-    # evidence before approving this publish-only job. Its first step also
+    # Required reviewers inspect the signed-stage rehearsal evidence. The
+    # 1.1.6 maintainer-authorized run uses a disposable hosted Mac. This job also
     # refuses a missing or weakened server-side environment configuration.
     environment: macos-publish
     permissions:
@@ -2291,3 +2291,48 @@ jobs:
             gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
             cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
           fi
+
+  verify_signed_install:
+    name: Install the exact signed package on a disposable Mac
+    needs: [build_and_smoke, sign_and_stage]
+    runs-on: macos-15
+    timeout-minutes: 25
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: scholay/xsime
+      VERSION: ${{ needs.build_and_smoke.outputs.version }}
+      PKG: ${{ needs.sign_and_stage.outputs.pkg }}
+      EXPECTED_PKG_SHA: ${{ needs.sign_and_stage.outputs.pkg_sha256 }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@fa0a91b85d4f404e444e00e005971372dc801d16
+        with:
+          name: ${{ needs.sign_and_stage.outputs.artifact_name }}
+          path: ${{ runner.temp }}/signed-stage
+      - name: Upgrade from the preceding public signed release
+        run: |
+          set -euo pipefail
+          [[ "$PKG" == "RIMES-$VERSION.pkg" ]]
+          stage="$RUNNER_TEMP/signed-stage"
+          [[ "$(shasum -a 256 "$stage/$PKG" | awk '{print $1}')" == "$EXPECTED_PKG_SHA" ]]
+          gh release list --exclude-drafts --exclude-pre-releases --limit 100 --json tagName > "$RUNNER_TEMP/public-versions.json"
+          previous=$(python3 - <<'PY'
+          import json, os, re
+          from pathlib import Path
+          current = tuple(map(int, os.environ['VERSION'].split('.')))
+          tags = [r['tagName'] for r in json.loads((Path(os.environ['RUNNER_TEMP'])/'public-versions.json').read_text())]
+          stable = [t for t in tags if re.fullmatch(r'v[0-9]+\.[0-9]+\.[0-9]+', t) and tuple(map(int, t[1:].split('.'))) < current]
+          assert stable, 'A previous public stable installer is required for the upgrade rehearsal'
+          print(max(stable, key=lambda t: tuple(map(int, t[1:].split('.')))))
+          PY
+          )
+          mkdir "$RUNNER_TEMP/previous-installer"
+          gh release download "$previous" --pattern "RIMES-${previous#v}.pkg" --pattern SHA256SUMS --dir "$RUNNER_TEMP/previous-installer"
+          (cd "$RUNNER_TEMP/previous-installer" && shasum -a 256 -c SHA256SUMS)
+          scripts/rehearse-release-pkg.sh --pkg "$RUNNER_TEMP/previous-installer/RIMES-${previous#v}.pkg" --install-packagekit
+          scripts/rehearse-release-pkg.sh --pkg "$stage/$PKG" --install-packagekit
+          printf 'Signed package upgrade %s -> v%s passed on a disposable GitHub-hosted Mac.\n' "$previous" "$VERSION" >> "$GITHUB_STEP_SUMMARY"

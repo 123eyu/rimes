@@ -70,7 +70,7 @@ class MainlineChannelTests(unittest.TestCase):
         text = workflow("release.yml")
         self.assertIn('needs: [build_and_smoke, build_linux_deb]', text)
         publish = text.split('  publish_staged_release:', 1)[1].split('\n  attach_linux_deb:', 1)[0]
-        self.assertIn('needs: [build_and_smoke, sign_and_stage, build_linux_deb, build_windows_release, build_android_release]', publish)
+        self.assertIn('needs: [build_and_smoke, sign_and_stage, build_linux_deb, build_windows_release, build_android_release, verify_signed_install]', publish)
         attach = text.split('  attach_linux_deb:', 1)[1]
         self.assertIn("needs.publish_unsigned_preview.result == 'success'", attach)
         self.assertIn("needs.publish_staged_release.result == 'success'", attach)

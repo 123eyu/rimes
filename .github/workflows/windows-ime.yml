@@ -1,9 +1,8 @@
 name: Windows IME
 
 on:
-  # Non-required Windows IME evidence on PRs that touch this tree. macOS
-  # remains the only product release gate (PR #31). Do not add this workflow
-  # to REQUIRED_WORKFLOWS or branch protection.
+  # Native Windows evidence is required for a stable multi-platform release.
+  # Branch protection remains separate from the release-script platform gate.
   pull_request:
     branches: [main]
     paths:

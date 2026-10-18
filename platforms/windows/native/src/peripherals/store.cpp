@@ -88,7 +88,9 @@ std::string Lower(std::string value) {
 }
 std::uint64_t Now() {
   FILETIME t{};
-  GetSystemTimeAsFileTime(&t);
+  // The coarse system clock can give successive disk saves the same tick,
+  // making the latest edit sort behind another note by its random identifier.
+  GetSystemTimePreciseAsFileTime(&t);
   return (static_cast<std::uint64_t>(t.dwHighDateTime) << 32) | t.dwLowDateTime;
 }
 bool ValidId(const std::string& id) {

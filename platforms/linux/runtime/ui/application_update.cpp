@@ -176,7 +176,7 @@ void ShowApplicationUpdate(GtkWindow* parent) {
         if (const auto pending = directory.Read("pending.json", 4096)) {
             const auto target = nlohmann::json::parse(*pending).at("version").get<std::string>();
             if (updates::Version(RIMES_PRODUCT_VERSION) >= updates::Version(target)) {
-                view->state->message = std::string("更新完成 / Updated to ") + RIMES_PRODUCT_VERSION;
+                view->state->message = std::string("更新完成 / Updated to ") + RIMES_PRODUCT_VERSION + "\n请确认已注销并重新登录，以加载新版输入法。 / Start a new login session to load the updated input method.";
                 directory.Remove("pending.json");
             } else view->state->message += "\n等待安装或重新登录，可重试 / Waiting for installation or a new session.";
         }

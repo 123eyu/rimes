@@ -75,7 +75,7 @@ std::string Download(const std::string& source, std::size_t limit, const std::fu
       if (bytes.size() + count > limit || GetTickCount64() - started > 600000)
         throw std::runtime_error("Update download exceeds size or time limit");
       bytes.append(buffer.data(), count);
-      if (progress) progress(static_cast<unsigned>(100 * bytes.size() / limit));
+      if (progress) progress(static_cast<unsigned>(100ull * bytes.size() / limit));
     }
   }
   throw std::runtime_error("Too many plugin redirects");
@@ -207,7 +207,7 @@ LRESULT CALLBACK Procedure(HWND hwnd, UINT message, WPARAM wparam, LPARAM lparam
       if (std::filesystem::exists(root / L"pending.json")) {
         const auto target = Json::parse(Read(root / L"pending.json", 4096)).at("version").get<std::string>();
         if (updates::Version(kProductVersion) >= updates::Version(target)) {
-          view->state->message = std::wstring(L"更新完成 / Updated to ") + kProductVersionWide;
+          view->state->message = std::wstring(L"更新完成 / Updated to ") + kProductVersionWide + L"\n如安装器要求注销或重启，请完成该步骤以更新应用中已加载的输入法。";
           std::filesystem::remove(root / L"pending.json");
         } else view->state->message += L"\n安装尚未完成或需注销后生效，可重试。";
       }

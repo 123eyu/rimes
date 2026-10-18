@@ -524,7 +524,7 @@ def lint_commits(base: str, head: str) -> list[str]:
         # Preserve the already-published Linux contribution during the 1.1.6
         # convergence. This exact historical object predates the commit policy;
         # future commits (even with the same subject) must still conform.
-        if git("rev-parse", commit.sha) == "fadafb5d57704d4ce7f06a42e05dbae742ada085":
+        if git("rev-parse", commit.sha).strip() == "fadafb5d57704d4ce7f06a42e05dbae742ada085":
             continue
         if commit.subject.startswith('Revert "'):
             continue

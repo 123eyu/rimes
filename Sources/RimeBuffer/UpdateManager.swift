@@ -322,16 +322,16 @@ final class UpdateManager {
     }
 
     private init() {
+        if UserDefaults.standard.object(forKey: Self.autoCheckKey) == nil {
+            autoCheckEnabled = true                 // opt-out, not opt-in
+        } else {
+            autoCheckEnabled = UserDefaults.standard.bool(forKey: Self.autoCheckKey)
+        }
         if let target = UserDefaults.standard.string(forKey: "applicationUpdateTarget"),
            UpdateNetworkRules.stableVersionComponents(currentVersion) != nil,
            currentVersion.compare(target, options: .numeric) != .orderedAscending {
             completionMessage = "更新完成，当前版本 \(currentVersion)"
             UserDefaults.standard.removeObject(forKey: "applicationUpdateTarget")
-        }
-        if UserDefaults.standard.object(forKey: Self.autoCheckKey) == nil {
-            autoCheckEnabled = true                 // opt-out, not opt-in
-        } else {
-            autoCheckEnabled = UserDefaults.standard.bool(forKey: Self.autoCheckKey)
         }
     }
 

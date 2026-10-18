@@ -1,11 +1,29 @@
 # 发布流程
 
-所有应用代码以 `main` 为集成主线，各平台独立构建和验收。Linux deb 跟随项目 `v*` 版本，
-附在同一 GitHub Release；iOS、Android、Windows 保持各自版本与发布渠道。
+所有应用代码以 `main` 为集成主线，各平台独立构建和验收。从 1.1.6 开始，正式 `v*` 发布统一构建
+macOS、Windows、Android、Linux 安装包并附在同一 GitHub Release；iOS 独立走 App Store 审核。
 分支与本地维护方式见 [MAINTENANCE.md](MAINTENANCE.md)。本地合入 `main` 不会触发远端构建，
 也不等于批准推送、创建 tag、安装或发布。下文的 `release.sh` 和签名包流程主要面向 macOS。
 
-**合并到 main → macOS CI 全绿 → `./scripts/release.sh <渠道>` → tag → 签名暂存 → 真机同路验收 → 第二次批准 → GitHub Release。**
+**合并到 main → 五端远端 CI 全绿 → `./scripts/release.sh stable` → tag → 构建、签名与安装验证 → 受保护发布 → 四端安装包读回校验 → 更新清单。**
+
+1.1.6 按维护者要求仅运行远端 CI，本机不构建、不安装、不做真机验收；发布记录应明确这一范围。
+后文的本机同路验收是常规流程，本次以已授权的远端 CI 发布方式替代该步骤，环境审批保护保持不变。
+签名、安装器测试和公开资产读回必须成功，不能把“发起安装”写成“更新完成”。
+
+## 设置内应用更新
+
+五端均从设置进入应用更新。macOS 下载并验证签名、公证的 PKG，由系统 Installer 安装；Windows 下载
+校验后的完整 EXE；Android 校验 APK 包名、版本及长期签名，交给系统确认安装；Linux 当前支持
+Ubuntu 24.04 amd64，通过 polkit 授权系统包管理器安装 DEB。安装保留现有用户数据，所需的注销或重启
+由页面和系统安装器提示。完成状态以重新运行的版本核对为准。
+
+iOS 查询实际可用的 App Store 版本，跳转商店下载和安装；TestFlight 包另有测试渠道入口。
+GitHub Release 出现新版本不表示该 iOS 版本已经获批或上架。
+
+`update-manifest.json` 是四端共同更新入口，包含版本、源码提交、包地址、大小、SHA-256、架构和系统要求。
+CI 先上传并读回所有安装包，最后才上传并读回清单。失败时不能发布缺少某个平台的清单，也不覆盖
+已有不同字节的资产。旧 macOS 客户端使用的 `RIMES-X.Y.Z.pkg` 文件名保持兼容。
 
 2026-10-07 的更新目标为 macOS、iOS、Android **1.1.1**，Windows **1.1.2**，当时未纳入 Linux。
 后续 `v*` 发布增加 Ubuntu 24.04 amd64 deb 与校验文件，Linux 本地默认版本也读取根 `VERSION`。
@@ -33,9 +51,9 @@ flowchart LR
 | macOS 预览版 | `vX.Y.Z-preview.N` | `./scripts/release.sh preview` | 未签名 PKG + `SHA256SUMS`，Pre-release | 手动安装，见 [UNSIGNED-PREVIEW.md](UNSIGNED-PREVIEW.md) |
 | macOS 正式版 | `vX.Y.Z` | `./scripts/release.sh stable` | Developer ID 签名并公证的 PKG + `SHA256SUMS`，Latest | 应用内自动更新 |
 | iOS | `ios-vX.Y.Z`（App Store 工作流） | [iOS 发布流程](platforms/ios/CI_RELEASE.md) | App Store 签名 IPA、独立 build number；当前公开测试使用 TestFlight | TestFlight / App Store，分别记录审核状态 |
-| Android | `android-vX.Y.Z`（维护者发布） | `platforms/android/scripts/build-release.sh` | 长期密钥签名 APK / AAB | 下载 APK 保留数据升级 |
-| Windows 原生 | `windows-vX.Y.Z`（维护者发布） | [Windows 构建](platforms/windows/native/README.md) | x64 / x86 完整载荷、EXE 安装器与 ZIP；当前 EXE 未签名 | 下载 EXE 升级，按安装器提示重启或注销 |
-| Linux 原生 | 同项目 `vX.Y.Z` / `vX.Y.Z-preview.N` | [Linux 安装与打包](platforms/linux/ime/README.md) | 同一 Release 的 `fcitx5-rimes_<version>_amd64.deb` 与 `.sha256` | 下载新 deb 后 `sudo apt install ./文件.deb` |
+| Android | 同项目 `vX.Y.Z` | 远端 Android checks 与 android-release 环境 | 原长期密钥签名 APK / AAB | 设置内下载 APK，系统确认后保留数据升级 |
+| Windows 原生 | 同项目 `vX.Y.Z` | [Windows 构建](platforms/windows/native/README.md) | x64 / x86 完整载荷、EXE 安装器与 ZIP；当前 EXE 未签名 | 设置内下载 EXE 并安装，按提示重启或注销 |
+| Linux 原生 | 同项目 `vX.Y.Z` / `vX.Y.Z-preview.N` | [Linux 安装与打包](platforms/linux/ime/README.md) | 同一 Release 的 `fcitx5-rimes_<version>_amd64.deb` 与 `.sha256` | Ubuntu 24.04 amd64 设置内下载并授权安装 |
 | Windows / Linux 数据预览（维护通道） | `platform-preview-vX.Y.Z` | `./scripts/release.sh platform minor` | 数据与脚本包，Pre-release | 手动安装，见 [CROSS-PLATFORM-PREVIEW.md](CROSS-PLATFORM-PREVIEW.md) |
 
 > GitHub required checks 不变。iOS、Windows IME、Linux IME 按相关路径分别运行 PR / main 检查；
@@ -82,7 +100,7 @@ git switch main && git pull --ff-only
 - `origin` 的 fetch / push 地址都指向 `scholay/xsime`；
 - 当前在 `main`，工作区干净，`HEAD` 等于 `origin/main`；
 - `origin/main` 这个提交的 `CI` 已通过（其中包含 macOS build/runtime smoke 与发布工具校验）；
-- Windows / Linux 的独立 workflow 结果不阻断创建 preview/stable tag；tag 后的本次 Linux deb 打包验收是公开 Release 的条件；
+- 正式版还要求同一提交的 iOS checks、Android checks、Windows IME、Linux IME 全部通过；预览版维持原有门禁；
 - 新 tag 不存在，并高于同渠道已发布的版本；
 - `Info.plist` 版本仍是占位值，预置插件 catalog 已同步；
 - 正式版还要求 `macos-release` 与 `macos-publish` 都存在；二者都要有非空 required reviewers、禁止

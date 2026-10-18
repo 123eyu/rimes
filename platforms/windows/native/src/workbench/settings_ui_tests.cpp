@@ -1514,7 +1514,19 @@ void TestBrandHome() {
         layout.nav[11].top < layout.nav[0].top && layout.nav[10].bottom < layout.body.bottom,
         "brand home is first, without crowding the last sidebar entry or renumbering existing pages");
   const auto shown = [&](int id) { return (GetWindowLongPtrW(GetDlgItem(window, id), GWL_STYLE) & WS_VISIBLE) != 0; };
-  Check(!shown(415) && !shown(417), "new settings open on the brand hero with no stale input or link controls");
+  Check(!shown(415) && shown(417), "brand home exposes software updates without stale input controls");
+  for (int opening = 0; opening < 2; ++opening) {
+    SendMessageW(GetDlgItem(window, 417), BM_CLICK, 0, 0);
+    const auto updater = FindWindowW(L"XSIMEApplicationUpdate", nullptr);
+    Check(updater && IsWindowVisible(updater) && GetWindow(updater, GW_OWNER) == window,
+          "settings opens and reopens its owned update window");
+    Check(updater && IsWindowEnabled(GetDlgItem(updater, 1)) &&
+              !IsWindowEnabled(GetDlgItem(updater, 2)) && !IsWindowEnabled(GetDlgItem(updater, 3)),
+          "fresh updater requires checking and a verified download before installation");
+    if (updater) SendMessageW(updater, WM_CLOSE, 0, 0);
+    Check(!IsWindow(updater) && host.IsOpen() && saves == 0 && opened.empty(),
+          "closing updates preserves settings without launching a browser or installer");
+  }
   SendMessageW(window, WM_KEYDOWN, VK_DOWN, 0);
   Check(shown(415), "down from the default home selects input settings");
   SendMessageW(window, WM_KEYDOWN, VK_UP, 0);
