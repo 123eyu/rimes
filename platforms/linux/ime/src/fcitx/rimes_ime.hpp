@@ -23,6 +23,8 @@
 #include "configuration.hpp"
 #include "local_translation.hpp"
 #include "ai_api.hpp"
+#include "codex_channel.hpp"
+#include "codex_image_jobs.hpp"
 #include "gateway_server.hpp"
 #include "session/session_monitor.hpp"
 #include "desktop/workspace_launcher.hpp"
@@ -74,6 +76,7 @@ private:
     void WatchPluginPackages();
     void WatchConfiguration();
     void ApplyConfiguration();
+    void ImageChanged();
 
     RimesConfiguration config_;
     std::string imported_schema_;
@@ -103,6 +106,10 @@ private:
     std::string configuration_revision_;
     rimes::runtime::LocalTranslationWorker translation_worker_;
     rimes::runtime::AIWorker ai_worker_;
+    rimes::runtime::CodexWorker codex_worker_;
+    rimes::mailbox::CodexImageJobs codex_images_;
+    std::unique_ptr<EventSourceTime> image_progress_timer_;
+    std::string notified_image_;
 };
 
 class RimesImeFactory : public AddonFactory {

@@ -152,6 +152,7 @@ void Validate(Json& document, const Limits& limits) {
                 auto& generation = thread.at("generation");
                 Object(generation);
                 ID(generation.at("id"));
+                if (generation.contains("linuxOwner")) Need(generation.at("linuxOwner") == true);
                 Date(generation.at("startedAt"));
                 OptionalDate(generation, "finishedAt");
                 OptionalText(generation, "failureMessage", 2048);
@@ -426,6 +427,67 @@ std::optional<std::string> Store::Image(const std::string& filename) const {
     return bytes;
 }
 
+Json Store::BeginGeneration(const Json& source, const std::string& title, const std::string& prompt,
+                            const std::string& generation, const std::string& workspace) {
+    Need(AI(source) && capsule::LooksLikeUuid(generation) &&
+         (workspace == "chat" || workspace == "inbox"), "无效的 AI 会话");
+    auto lock = files_.Lock(false);
+    auto state = Load();
+    Need(limits_.messages >= 2 && state.document.at("threads").size() < limits_.threads &&
+         state.document.at("nextSequence").get<std::int64_t>() < std::numeric_limits<std::int64_t>::max(),
+         "Mailbox 已达到本地容量上限");
+    const auto date = Now();
+    Json thread{{"id", capsule::NewUuidV4()}, {"sequence", state.document.at("nextSequence")},
+        {"source", source}, {"workspace", workspace}, {"messages", Json::array({NewMessage("user", "content", prompt, date)})},
+        {"generation", {{"id", generation}, {"phase", "generating"}, {"expectedFormat", "plain"}, {"startedAt", date}, {"linuxOwner", true}}},
+        {"unread", false}, {"createdAt", date}, {"updatedAt", date}};
+    thread["messages"][0]["author"] = "你";
+    if (!TrimText(title).empty()) thread["title"] = title;
+    state.document["threads"].push_back(thread);
+    state.document["nextSequence"] = state.document.at("nextSequence").get<std::int64_t>() + 1;
+    Save(state.document);
+    return thread;
+}
+Json Store::CompleteGeneration(const std::string& id, const std::string& generation,
+                               const std::string& response, const std::string& png) {
+    auto lock = files_.Lock(false);
+    auto state = Load(); auto& thread = Find(state.document, id);
+    Need(!Optional(thread, "generation") && thread.at("generation").at("id") == generation &&
+         thread.at("generation").at("phase") == "generating", "生成任务已失效");
+    const auto date = Now(); auto message = NewMessage("inbound", "content", response, date);
+    message["author"] = thread.at("source").at("displayName");
+    std::string attachment;
+    if (!png.empty()) {
+        Need(png.size() >= 24 && png.size() <= 24 * 1048576 &&
+             png.compare(0, 8, std::string("\x89PNG\r\n\x1a\n", 8)) == 0, "无效的 PNG 生成结果");
+        attachment = capsule::NewUuidV4() + ".png";
+        runtime::PrivateDirectory(files_.Path() / "images").Write(attachment, png);
+        message["imageFileName"] = attachment;
+    }
+    try {
+        thread["messages"].push_back(message);
+        thread["generation"]["phase"] = "succeeded"; thread["generation"]["finishedAt"] = date;
+        thread["unread"] = true; thread["updatedAt"] = date;
+        Save(state.document);
+    } catch (...) {
+        if (!attachment.empty()) runtime::PrivateDirectory(files_.Path() / "images").Remove(attachment);
+        throw;
+    }
+    return thread;
+}
+void Store::FailGeneration(const std::string& id, const std::string& generation,
+                           const std::string& message) {
+    auto lock = files_.Lock(false);
+    auto state = Load(); auto& thread = Find(state.document, id);
+    Need(!Optional(thread, "generation") && thread.at("generation").at("id") == generation &&
+         thread.at("generation").at("phase") == "generating", "生成任务已失效");
+    const auto date = Now();
+    thread["generation"]["phase"] = "failed"; thread["generation"]["finishedAt"] = date;
+    thread["generation"]["failureMessage"] = message;
+    thread["unread"] = true; thread["updatedAt"] = date;
+    Save(state.document);
+}
+
 Json Store::Change(const std::string& id, const std::string& expected,
                    const std::function<void(Json&)>& change) {
     auto lock = files_.Lock(false);
@@ -615,6 +677,12 @@ bool Store::RecoverInterrupted() {
         if (!Optional(thread, "generation") &&
             thread.at("generation").at("phase") == "generating") {
             auto& generation = thread.at("generation");
+            if (generation.value("linuxOwner", false)) {
+                try {
+                    auto owner = runtime::PrivateDirectory(files_.Path() / "generations" /
+                        generation.at("id").get<std::string>()).Lock(false);
+                } catch (const runtime::StorageBusy&) { continue; }
+            }
             generation["phase"] = "failed";
             generation["finishedAt"] = Now();
             generation["failureMessage"] = "应用重启，生成已中断";

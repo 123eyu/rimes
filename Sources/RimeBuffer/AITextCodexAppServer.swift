@@ -1225,3 +1225,57 @@ enum AITextCodexAppServerProtocolSmoke {
         }
     }
 }
+
+/// Public synthetic replay from the actual macOS parser and request builders.
+enum AITextCodexLinuxProtocolFixture {
+    static var value: [String: Any] {
+        let profile = AITextCodexInferenceProfile.channel(model: "gpt-6-sol", effort: "high")
+        let prefix: [[String: Any]] = [
+            ["id": 1, "result": [:]],
+            ["id": 2, "result": ["data": [], "nextCursor": NSNull()]],
+            ["id": 3, "result": ["thread": ["id": "public-thread"], "model": "gpt-6-sol"]],
+            ["id": 4, "result": ["turn": ["id": "public-turn"]]],
+        ]
+        let scenarios: [(String, [[String: Any]])] = [
+            ("text", prefix + [
+                ["method": "item/started", "params": ["item": ["type": "agentMessage", "id": "a", "phase": "final_answer"]]],
+                ["method": "item/agentMessage/delta", "params": ["itemId": "a", "delta": "公开"]],
+                ["method": "item/agentMessage/delta", "params": ["itemId": "a", "delta": "回复"]],
+                ["method": "item/completed", "params": ["item": ["type": "agentMessage", "id": "a", "phase": "final_answer", "text": "公开回复"]]],
+                ["method": "turn/completed", "params": ["turn": ["id": "public-turn", "status": "completed"]]],
+            ]),
+            ("commentary-is-not-answer", prefix + [
+                ["method": "item/started", "params": ["item": ["type": "agentMessage", "id": "a", "phase": "commentary"]]],
+                ["method": "item/agentMessage/delta", "params": ["itemId": "a", "delta": "处理中"]],
+                ["method": "item/completed", "params": ["item": ["type": "agentMessage", "id": "a", "phase": "commentary", "text": "处理中"]]],
+                ["method": "turn/completed", "params": ["turn": ["id": "public-turn", "status": "completed"]]],
+            ]),
+            ("mcp-must-be-empty", Array(prefix.prefix(1)) + [["id": 2, "result": ["data": [["name": "unexpected"]]]]]),
+            ("model-must-match", Array(prefix.prefix(2)) + [["id": 3, "result": ["thread": ["id": "public-thread"], "model": "other"]]]),
+            ("reroute-rejected", prefix + [["method": "model/rerouted", "params": [:]]]),
+            ("interrupted", prefix + [["method": "turn/completed", "params": ["turn": ["id": "public-turn", "status": "interrupted"]]]]),
+        ]
+        let replays: [[String: Any]] = scenarios.map { name, events in
+            var state = AITextCodexAppServerProtocolState(requiredModel: "gpt-6-sol", rejectModelReroute: true)
+            let outputs: [[String]] = events.map { event in
+                state.consume(event).compactMap { action in
+                    switch action {
+                    case .sendMCPIsolationCheck: return "mcp"
+                    case .sendThreadStart: return "thread"
+                    case .sendTurnStart(let id): return "turn:" + id
+                    case .textSnapshot(let text): return "text:" + text
+                    case .completed(let text): return "done:" + text
+                    case .failed: return "failed"
+                    default: return nil
+                    }
+                }
+            }
+            return ["name": name, "events": events, "outputs": outputs]
+        }
+        return [
+            "thread": AITextCodexAppServerRequestShape.threadStartParameters(currentDirectoryURL: URL(fileURLWithPath: "/RIMES_WORKSPACE"), inferenceProfile: profile),
+            "turn": AITextCodexAppServerRequestShape.turnStartParameters(threadID: "public-thread", prompt: "公开请求", outputSchema: ["type": "object"], inferenceProfile: profile),
+            "replays": replays,
+        ]
+    }
+}

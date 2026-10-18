@@ -12,6 +12,7 @@ class Workspace {
     bool Open(const std::string& module = "", const std::string& thread = "");
     void Hide();
     void Refresh();
+    bool NotifyCompleted(const std::string& thread);
     void Protect(bool protected_session);
     bool Protected() const;
     void Fixture(Snapshot state, const std::string& theme, const std::string& module,

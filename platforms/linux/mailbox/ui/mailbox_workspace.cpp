@@ -7,6 +7,7 @@
 #include "mailbox_buffer_client.hpp"
 #include "mailbox_tokens.hpp"
 #include "mailbox_workspace.hpp"
+#include "mailbox_toast.hpp"
 #include "official_catalog.hpp"
 #include <algorithm>
 #include <atomic>
@@ -301,6 +302,8 @@ struct Workspace::Impl {
         *index, *search, *filters, *heading, *source, *toolbar, *transcript, *composer, *hint,
         *send, *feedback, *scrim, *placeholder;
     GtkWidget* badge = nullptr;
+    std::unique_ptr<CompletionToast> toast;
+    std::map<std::string, std::string> notified;
     std::map<std::string, GtkWidget*> nav;
     std::map<std::string, std::string> grants, selections, drafts, queries, filter_values;
     std::map<std::string, std::uint64_t> draft_revisions;
@@ -430,6 +433,7 @@ struct Workspace::Impl {
         jobs.Shutdown();
         preview_jobs.Shutdown();
         clipboard.reset();
+        toast.reset();
         if (dialog)
             gtk_widget_destroy(dialog);
         if (auto* provider =
@@ -630,6 +634,7 @@ struct Workspace::Impl {
         if (clipboard)
             clipboard->Configure(false, value);
         if (value) {
+            if (toast) toast->Hide();
             if (dialog)
                 gtk_widget_destroy(dialog);
             gtk_widget_hide(window);
@@ -1553,6 +1558,12 @@ struct Workspace::Impl {
                         state = *loaded;
                     const bool changed = grants != enabled;
                     grants = enabled;
+                    if (toast && !toast->Target().empty()) {
+                        bool present = false;
+                        for (const auto& row : state.document.at("threads"))
+                            if (row.at("id") == toast->Target() && grants.count(Module(row))) present = true;
+                        if (!present) toast->Hide();
+                    }
                     if (theme != next_theme) {
                         theme = next_theme;
                         ApplyTheme(theme, root_view);
@@ -1698,6 +1709,33 @@ bool Workspace::Open(const std::string& module, const std::string& thread) {
 }
 void Workspace::Hide() { impl_->Hide(); }
 void Workspace::Refresh() { impl_->Refresh(); }
+bool Workspace::NotifyCompleted(const std::string& id) {
+    auto& host = *impl_;
+    if (!host.ready || !host.storage_available || host.refresh_running || host.refresh_again) return false;
+    if (host.Protected()) return true;
+    for (const auto& row : host.state.document.at("threads")) {
+        if (row.at("id") != id) continue;
+        if (!host.grants.count(Module(row)) || row.at("messages").empty()) return true;
+        const auto& last = row.at("messages").back();
+        if (last.value("role", "") != "inbound" ||
+            (row.contains("generation") && !row.at("generation").is_null() &&
+             row.at("generation").value("phase", "") != "succeeded")) return true;
+        const auto message = last.at("id").get<std::string>();
+        if (host.notified[id] == message) return true;
+        if (host.notified.size() > 200) host.notified.clear();
+        host.notified[id] = message;
+        const auto count = Unread(host.state);
+        const auto& source = row.at("source");
+        const auto kind = source.value("kind", "");
+        std::string label = count > 1 ? "Mailbox 有 " + std::to_string(count) + " 条新消息 · 点击查看" :
+            source.value("displayName", "Mailbox") +
+            (kind == "codexCLI" || kind == "claudeCodeCLI" || kind == "openAICompatible" ? " 已回复 · 点击查看" : " 发来新消息 · 点击查看");
+        if (!host.toast) host.toast = std::make_unique<CompletionToast>([this](const auto& target) { Open("", target); });
+        host.toast->Show(id, label, host.theme);
+        return true;
+    }
+    return false;
+}
 void Workspace::Protect(bool value) { impl_->Protect(value); }
 bool Workspace::Protected() const { return impl_->Protected(); }
 void Workspace::Fixture(Snapshot state, const std::string& theme, const std::string& module,
@@ -1726,6 +1764,7 @@ Json Workspace::Inspect() const {
             {"unread", Unread(impl_->state)},
             {"ready", impl_->ready},
             {"protected", impl_->Protected()},
+            {"notificationThread", impl_->toast ? impl_->toast->Target() : ""},
             {"narrow", impl_->narrow},
             {"sidebarVisible", impl_->sidebar_visible},
             {"sidebarOverlay", impl_->overlay_sidebar}};

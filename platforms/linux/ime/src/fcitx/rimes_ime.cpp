@@ -115,11 +115,13 @@ RimesIme::RimesIme(Instance* instance)
         {[] {}, [this] { translation_worker_.CancelAll(); }});
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.openai-compatible"),
         {[] {}, [this] { ai_worker_.CancelAll(); }});
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.codex-cli"),
+        {[] {}, [this] { codex_worker_.CancelAll(); codex_images_.Cancel(); }});
     for (const auto* module : {"terminal", "chat", "inbox"}) {
         const auto id = std::string("builtin.mailbox.") + module;
         if (std::string(module) == "inbox")
             plugins_.Register(rimes::plugins::CompiledAdapters().at(id),
-                {[this] { gateway_->SetModuleEnabled(true); }, [this] { gateway_->SetModuleEnabled(false); }});
+                {[this] { gateway_->SetModuleEnabled(true); }, [this] { gateway_->SetModuleEnabled(false); codex_images_.Cancel(); }});
         else plugins_.Register(rimes::plugins::CompiledAdapters().at(id), {[] {}, [] {}});
     }
     WatchPluginPackages();
@@ -145,6 +147,18 @@ RimesIme::RimesIme(Instance* instance)
         configuration_->Save(config, config.at("revision"));
         ApplyConfiguration();
     });
+    buffer_->BindPluginOptions([this](const auto& plugin, const auto& field, const auto& value) {
+        if (!configuration_) return;
+        const auto lease = plugins_.Authorize(plugin, "ai.generate");
+        if (!lease || !acceptsPluginResult(*lease)) return;
+        auto config = configuration_->Load();
+        auto fields = rimes::runtime::ConfigurationStore::NormalizePlugin(plugin,
+            config.at("plugins").value(plugin, rimes::runtime::Json::object()));
+        fields[field] = value;
+        config["plugins"][plugin] = rimes::runtime::ValidateFields(rimes::runtime::PluginFields(plugin), fields);
+        configuration_->Save(config, config.at("revision"));
+        ApplyConfiguration();
+    });
     buffer_->BindPlugins(plugins_, [this](const auto& lease) { return acceptsPluginResult(lease); },
         [this](std::string_view id) {
             if (!configuration_) throw std::runtime_error("Configuration unavailable");
@@ -164,6 +178,51 @@ RimesIme::RimesIme(Instance* instance)
                              rimes::runtime::AIErrorMessage(update.error), std::move(update.blocks)});
                 });
         });
+
+    buffer_->RegisterDerivedAdapter("builtin.codex-cli", "ai.generate",
+        [this](auto request, auto configuration, auto cancelled, auto receive) {
+            rimes::runtime::CodexRequest operation;
+            operation.mode = rimes::runtime::CodexMode::Text;
+            operation.text = std::move(request.text);
+            operation.model = configuration.plugin.at("model");
+            operation.effort = configuration.plugin.at("effort");
+            codex_worker_.Run(std::move(operation), std::move(cancelled),
+                [receive = std::move(receive)](rimes::runtime::CodexEvent event) {
+                    receive({0, std::move(event.text), event.finished,
+                        event.error == rimes::runtime::CodexError::None,
+                        rimes::runtime::CodexErrorMessage(event.error), std::move(event.blocks)});
+                });
+        }, false);
+    buffer_->BindImages([this, post](auto request, auto configuration) {
+        const auto inbox = plugins_.Authorize("builtin.mailbox.inbox", "mailbox.navigate");
+        if (!inbox || !acceptsPluginResult(*inbox) || !plugin_store_) return false;
+        std::vector<std::pair<std::string, std::string>> grants;
+        for (const auto* id : {"builtin.codex-cli", "builtin.mailbox.inbox"}) {
+            const auto entry = plugin_store_->Inspect(id);
+            if (!entry.available || !entry.enabled) return false;
+            grants.emplace_back(id, entry.grant);
+        }
+        rimes::runtime::CodexRequest operation;
+        operation.mode = rimes::runtime::CodexMode::Image;
+        operation.skill = "imagegen"; operation.timeout = std::chrono::minutes(10);
+        operation.text = std::move(request.text);
+        operation.model = configuration.plugin.at("model"); operation.effort = configuration.plugin.at("effort");
+        const auto root = operation.root;
+        return codex_images_.Start(std::move(operation), [root, grants](const auto& publish) {
+            rimes::plugins::PackageStore packages(root / "plugins", rimes::plugins::OfficialCatalog(),
+                rimes::plugins::BundledPackages(), rimes::plugins::CompiledAdapters(), RIMES_PRODUCT_VERSION, false);
+            packages.WithEnabledGrants(grants, publish, false);
+        }, [this, post] { post([this] { ImageChanged(); }); });
+    }, [this] { return codex_images_.State(); }, [this] { codex_images_.Cancel(); }, [this](const std::string& id) {
+        const auto lease = plugins_.Authorize("builtin.mailbox.inbox", "mailbox.navigate");
+        if (!lease || !acceptsPluginResult(*lease)) return;
+        const char* program = access(RIMES_INSTALLED_MAILBOX, X_OK) == 0 ? RIMES_INSTALLED_MAILBOX : RIMES_BUILD_MAILBOX;
+        gchar* arguments[] = {const_cast<gchar*>(program), const_cast<gchar*>("--module"),
+            const_cast<gchar*>("inbox"), const_cast<gchar*>("--thread"), const_cast<gchar*>(id.c_str()), nullptr};
+        GError* error = nullptr;
+        g_spawn_async(nullptr, arguments, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr, nullptr, &error);
+        g_clear_error(&error);
+    });
 
     destroy_watch_ = instance_->watchEvent(
         EventType::InputContextDestroyed, EventWatcherPhase::Default,
@@ -256,12 +315,45 @@ RimesIme::~RimesIme() {
     // dispatcher and service callbacks still exist, before detaching it.
     translation_worker_.Shutdown();
     ai_worker_.Shutdown();
+    codex_worker_.Shutdown();
+    codex_images_.Shutdown();
+    image_progress_timer_.reset();
     engine_.SetDeployReadyCallback(nullptr);
     engine_.Stop();
     // Socket readers also post to this dispatcher; join them before detach.
     buffer_.reset();
     capsule_.reset();
     dispatcher_.detach();
+}
+
+void RimesIme::ImageChanged() {
+    if (buffer_) buffer_->Publish();
+    const auto state = codex_images_.State();
+    if (state.Running()) {
+        if (!image_progress_timer_) {
+            image_progress_timer_ = instance_->eventLoop().addTimeEvent(
+                CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + 1000000, 0,
+                [this](EventSourceTime* timer, uint64_t) {
+                    timer->setEnabled(false);
+                    ImageChanged();
+                    return true;
+                });
+        } else {
+            image_progress_timer_->setTime(now(CLOCK_MONOTONIC) + 1000000);
+            image_progress_timer_->setOneShot();
+        }
+    } else if (image_progress_timer_) image_progress_timer_->setEnabled(false);
+    if (state.phase != rimes::mailbox::ImagePhase::Ready || state.thread.empty() ||
+        notified_image_ == state.thread) return;
+    notified_image_ = state.thread;
+    const auto lease = plugins_.Authorize("builtin.mailbox.inbox", "mailbox.navigate");
+    if (!lease || !acceptsPluginResult(*lease) || (!g_getenv("DISPLAY") && !g_getenv("WAYLAND_DISPLAY"))) return;
+    const char* program = access(RIMES_INSTALLED_MAILBOX, X_OK) == 0 ? RIMES_INSTALLED_MAILBOX : RIMES_BUILD_MAILBOX;
+    gchar* arguments[] = {const_cast<gchar*>(program), const_cast<gchar*>("--notify-thread"),
+        const_cast<gchar*>(state.thread.c_str()), nullptr};
+    GError* error = nullptr;
+    g_spawn_async(nullptr, arguments, nullptr, G_SPAWN_DEFAULT, nullptr, nullptr, nullptr, &error);
+    g_clear_error(&error);
 }
 
 void RimesIme::WatchPluginPackages() {
@@ -326,6 +418,9 @@ void RimesIme::ApplyConfiguration() {
         configuration_revision_ = revision;
         if (gateway_) gateway_->Configure(config);
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
+        buffer_->ConfigurePluginOptions(config);
+        buffer_->ConfigureImageSkill(rimes::runtime::ConfigurationStore::NormalizePlugin("builtin.codex-cli",
+            config.at("plugins").value("builtin.codex-cli", rimes::runtime::Json::object())).at("skill") == "imagegen");
         buffer_->Configure(config.at("closeAfterLast"), config.at("resetOnAppSwitch"), config.at("bufferWidth"), revision, config.at("theme"));
         buffer_->ConfigureAutoSend(config.at("autoSend"), config.at("autoSendSeconds"));
         capsule_->ConfigureTheme(config.at("theme"));

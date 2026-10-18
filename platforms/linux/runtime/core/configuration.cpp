@@ -73,7 +73,8 @@ std::vector<Field> PluginFields(std::string_view id) {
                     {"high", "high"},
                     {"xhigh", "xhigh"},
                     {"max", "max"},
-                    {"ultra", "ultra"}})};
+                    {"ultra", "ultra"}}),
+            Choice("skill", "Skill", "", {{"", "不使用"}, {"imagegen", "图片 · imagegen"}})};
   if (id == "builtin.claude-code-cli")
     return {Choice("model", "模型", "claude-opus-5-5",
                    {{"claude-opus-5-5", "Claude Opus 5.5"},

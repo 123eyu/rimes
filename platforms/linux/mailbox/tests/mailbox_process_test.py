@@ -69,11 +69,31 @@ with tempfile.TemporaryDirectory(prefix='xsime-mailbox-process-') as temporary:
             # when waitpid returns. Observe the primary after the display settles.
             wait(lambda: process.poll() is None and windows() == [window],
                  'primary window did not survive cross-bus conflict: ' + repr(windows()), seconds=2)
+            command('xdotool', 'key', 'ctrl+w')
+            wait(lambda: not windows(), 'window not hidden before receipt')
+            before_notification = data.read_bytes()
+            def toasts():
+                result = subprocess.run(['xdotool', 'search', '--onlyvisible', '--name', '^Mailbox 通知$'], env=env,
+                                        capture_output=True, text=True, timeout=2)
+                return result.stdout.split()
+            command(binary, '--notify-thread', fixture['selectedImage'])
+            wait(lambda: len(toasts()) == 1, 'completed image did not show a receipt')
+            assert not windows() and data.read_bytes() == before_notification, 'receipt opened/read a private thread'
+            toast = toasts()[0]
+            geometry = command('xdotool', 'getwindowgeometry', '--shell', toast).stdout
+            assert 'WIDTH=292' in geometry and 'HEIGHT=48' in geometry, geometry
+            command('xdotool', 'mousemove', '--window', toast, '140', '24')
+            command('xdotool', 'click', '1')
+            wait(lambda: windows() == [window] and read(fixture['selectedImage']), 'receipt click did not open exact image thread')
+            wait(lambda: not toasts(), 'clicked receipt stayed visible')
+            command(binary, '--notify-thread', fixture['selectedImage'])
+            time.sleep(.2)
+            assert not toasts(), 'duplicate completion displayed another receipt'
             before = data.read_bytes()
             command(binary, '--quit')
             process.wait(timeout=5)
             assert process.returncode == 0 and data.read_bytes() == before, 'quit changed persistent messages'
-            print('Mailbox process: one window/profile, deep links, notification action, hide/reopen, geometry and cross-bus ownership passed')
+            print('Mailbox process: one window/profile, deep links, notification action, passive receipt dimensions/click/deduplication, hide/reopen, geometry and cross-bus ownership passed')
         except BaseException:
             log.flush(); log.seek(0)
             print(log.read()[-8000:], file=sys.stderr)

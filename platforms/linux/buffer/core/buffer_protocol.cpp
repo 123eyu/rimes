@@ -77,7 +77,7 @@ std::string EncodeSnapshot(const Snapshot& snapshot) {
         return EncodeSnapshot(protected_snapshot);
     }
     const auto caret = snapshot.secure ? CaretRect{} : snapshot.caret;
-    Json blocks = Json::array(), results = Json::array(), choices = Json::array(), segments = Json::array();
+    Json blocks = Json::array(), results = Json::array(), choices = Json::array(), segments = Json::array(), options = Json::array();
     if (!snapshot.secure) {
         for (const auto& b : snapshot.blocks)
             blocks.push_back({{"id", b.id}, {"text", b.text}, {"origin", OriginTag(b.origin)},
@@ -90,6 +90,11 @@ std::string EncodeSnapshot(const Snapshot& snapshot) {
             segments.push_back({{"id", block.id}, {"bytes", block.text.size()}});
     }
     for (const auto& p : snapshot.plugins) choices.push_back({{"id", p.id}, {"name", p.name}});
+    for (const auto& option : snapshot.plugin_options) {
+        Json items = Json::array();
+        for (const auto& choice : option.choices) items.push_back({{"id", choice.id}, {"name", choice.name}});
+        options.push_back({{"id", option.id}, {"title", option.title}, {"value", option.value}, {"choices", items}});
+    }
     return Json{{"v", 1}, {"type", "snapshot"}, {"generation", snapshot.generation}, {"mailbox_scope", snapshot.mailbox_scope},
         {"width", snapshot.width}, {"visible", snapshot.visible}, {"capturing", snapshot.capturing},
         {"enabled", snapshot.enabled}, {"secure", snapshot.secure}, {"password_field", snapshot.password_field},
@@ -101,9 +106,11 @@ std::string EncodeSnapshot(const Snapshot& snapshot) {
         {"caret", {{"x", caret.x}, {"y", caret.y}, {"w", caret.width},
                    {"h", caret.height}, {"valid", caret.valid}}},
         {"ui_clients", snapshot.ui_clients}, {"blocks", blocks}, {"theme", snapshot.theme},
-        {"active_plugin", snapshot.active_plugin}, {"plugins", choices}, {"live_expand", snapshot.live_expand},
+        {"active_plugin", snapshot.active_plugin}, {"plugins", choices}, {"plugin_options", options}, {"live_expand", snapshot.live_expand},
         {"phase", PhaseName(snapshot.secure ? DerivedPhase::Protected : snapshot.phase)},
         {"message", snapshot.secure ? "" : snapshot.message},
+        {"mailbox_image", !snapshot.secure && snapshot.mailbox_image},
+        {"mailbox_thread", snapshot.secure ? "" : snapshot.mailbox_thread},
         {"can_generate", !snapshot.secure && snapshot.can_generate},
         {"can_deliver", !snapshot.secure && snapshot.can_deliver},
         {"selected_result", snapshot.secure ? "" : snapshot.selected_result}, {"results", results}, {"result_blocks", segments}}.dump();
@@ -160,9 +167,29 @@ bool ParseSnapshot(std::string_view text, Snapshot* output) {
             if (!value.at("plugins").is_array() || value.at("plugins").size() > 100) return false;
             for (const auto& p : value.at("plugins")) s.plugins.push_back({ReadText(p, "id"), ReadText(p, "name")});
         }
+        if (value.contains("plugin_options")) {
+            const auto& options = value.at("plugin_options");
+            if (!options.is_array() || options.size() > 3) return false;
+            for (const auto& item : options) {
+                PluginOption option{ReadText(item, "id"), ReadText(item, "title"), ReadText(item, "value"), {}};
+                if ((option.id != "model" && option.id != "effort" && option.id != "skill") || option.title.size() > 64 || option.value.size() > 256) return false;
+                const auto& choices = item.at("choices");
+                if (!choices.is_array() || choices.empty() || choices.size() > 64) return false;
+                for (const auto& choice : choices) {
+                    const auto id = ReadText(choice, "id"), name = ReadText(choice, "name");
+                    if (id.size() > 256 || name.empty() || name.size() > 256) return false;
+                    option.choices.push_back({id, name});
+                }
+                if (std::none_of(option.choices.begin(), option.choices.end(), [&](const auto& choice) { return choice.id == option.value; })) return false;
+                s.plugin_options.push_back(std::move(option));
+            }
+        }
         s.phase = ReadPhase(ReadText(value, "phase", "idle"));
         s.message = ReadText(value, "message", "");
         if (s.message.size() > 512) return false;
+        s.mailbox_image = value.value("mailbox_image", false);
+        s.mailbox_thread = ReadText(value, "mailbox_thread");
+        if (s.mailbox_thread.size() > 64) throw std::runtime_error("Invalid Mailbox thread");
         s.can_generate = value.value("can_generate", false);
         s.can_deliver = value.value("can_deliver", false);
         s.selected_result = ReadText(value, "selected_result");
@@ -197,7 +224,7 @@ bool ParseSnapshot(std::string_view text, Snapshot* output) {
             s.blocks.clear(); s.results.clear(); s.preedit.clear(); s.staged_text.clear();
             s.result_blocks.clear();
             s.auto_send_progress.clear();
-            s.selected_result.clear(); s.message.clear(); s.empty = true; s.can_generate = false; s.phase = DerivedPhase::Protected;
+            s.mailbox_image = false; s.mailbox_thread.clear(); s.selected_result.clear(); s.message.clear(); s.empty = true; s.can_generate = false; s.phase = DerivedPhase::Protected;
         }
         *output = std::move(s);
         return true;
@@ -221,7 +248,7 @@ bool ParseCommand(std::string_view text, Command* command, std::string* error) {
             {"select_all", CommandOp::SelectAll}, {"paste", CommandOp::Paste}, {"import_clipboard", CommandOp::Paste},
             {"set_insertion", CommandOp::SetInsertion}, {"drag_begin", CommandOp::DragBegin},
             {"drag_end", CommandOp::DragEnd}, {"select_plugin", CommandOp::SelectPlugin},
-            {"generate", CommandOp::Generate}, {"cancel_generation", CommandOp::CancelGeneration},
+            {"configure_plugin", CommandOp::ConfigurePlugin}, {"open_mailbox_image", CommandOp::OpenMailboxImage}, {"generate", CommandOp::Generate}, {"cancel_generation", CommandOp::CancelGeneration},
             {"return_to_edit", CommandOp::ReturnToEdit}, {"select_result", CommandOp::SelectResult},
             {"copy_result", CommandOp::CopyResult}, {"cycle_auto_send", CommandOp::CycleAutoSend},
             {"toggle_close_after_last", CommandOp::ToggleCloseAfterLast}, {"receive_mailbox", CommandOp::ReceiveMailbox}};
@@ -238,10 +265,15 @@ bool ParseCommand(std::string_view text, Command* command, std::string* error) {
             if (index < 0 || index > 65536) throw std::runtime_error("Invalid index");
             next.insertion_index = static_cast<int>(index);
         }
-        if (next.op == CommandOp::SelectPlugin || next.op == CommandOp::SelectResult || next.op == CommandOp::CopyResult) {
+        if (next.op == CommandOp::SelectPlugin || next.op == CommandOp::SelectResult || next.op == CommandOp::CopyResult || next.op == CommandOp::OpenMailboxImage) {
             next.id = ReadText(value, "id");
             if (!value.contains("id") || next.id.size() > 256 ||
                 (next.op != CommandOp::SelectPlugin && next.id.empty())) throw std::runtime_error("Invalid identity");
+        }
+        if (next.op == CommandOp::ConfigurePlugin) {
+            next.plugin = ReadText(value, "plugin"); next.id = ReadText(value, "id"); next.text = ReadText(value, "value");
+            if (next.plugin.empty() || next.plugin.size() > 128 || !value.contains("value") || next.text.size() > 256 ||
+                (next.id != "model" && next.id != "effort" && next.id != "skill")) throw std::runtime_error("Invalid plugin option");
         }
         if (next.op == CommandOp::ReceiveMailbox) {
             next.id = ReadText(value, "id"); next.thread = ReadText(value, "thread");

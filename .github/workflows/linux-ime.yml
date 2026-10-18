@@ -140,6 +140,12 @@ jobs:
           RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
             platforms/linux/ime/build/runtime/rimes-settings --render "$RUNNER_TEMP/settings-render"
 
+      - name: Codex CLI text and persistent Mailbox images through real Fcitx
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" \
+            platforms/linux/ime/build/rimes-codex-fcitx-e2e platforms/linux/ime/build . test-data \
+            "$GITHUB_WORKSPACE/platforms/linux/runtime/tests/codex_fixture.py"
+
       - name: Real AI API transport and Fcitx derived delivery
         run: |
           RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" python3 platforms/linux/runtime/tests/ai_http_fixture.py \

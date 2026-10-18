@@ -22,7 +22,7 @@ target_link_libraries(RimesRuntimeStorage PUBLIC OpenSSL::Crypto)
 set_target_properties(RimesRuntimeStorage PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_compile_options(RimesRuntimeStorage PRIVATE -Wall -Wextra -Wpedantic -Werror)
 
-add_library(RimesProcess STATIC core/process.cpp core/background_jobs.cpp)
+add_library(RimesProcess STATIC core/process.cpp core/background_jobs.cpp core/cli_session.cpp)
 target_compile_features(RimesProcess PUBLIC cxx_std_17)
 target_include_directories(RimesProcess PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/core")
 target_link_libraries(RimesProcess PUBLIC Threads::Threads)
@@ -131,6 +131,42 @@ target_compile_options(RimesAI PRIVATE -Wall -Wextra -Wpedantic -Werror)
 set_target_properties(RimesAI PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/AITextPlugins.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/AITextCodexAppServer.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/AITextCodexLogin.swift"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/AITextSkills.swift"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/native-codex.json"
+    "${CMAKE_CURRENT_SOURCE_DIR}/resources/native-codex-settings.json"
+    "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/SettingsWindow.swift"
+    "${CMAKE_CURRENT_SOURCE_DIR}/verify_codex_contract.py")
+execute_process(COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/verify_codex_contract.py"
+    --output "${CMAKE_CURRENT_BINARY_DIR}/generated/native_codex_contract.hpp"
+    RESULT_VARIABLE RIMES_CODEX_IMPORT_RESULT)
+if(NOT RIMES_CODEX_IMPORT_RESULT EQUAL 0)
+    message(FATAL_ERROR "Export and review the actual macOS Codex connector contract")
+endif()
+add_custom_target(RimesCodexContract
+    COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/verify_codex_contract.py")
+add_library(RimesCodex STATIC core/codex_channel.cpp core/codex_protocol.cpp)
+target_link_libraries(RimesCodex PUBLIC RimesAI)
+target_include_directories(RimesCodex PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated")
+target_compile_definitions(RimesCodex PRIVATE
+    RIMES_INSTALLED_CODEX_SKILL="${CMAKE_INSTALL_FULL_DATADIR}/rimes/skills/imagegen"
+    RIMES_BUILD_CODEX_SKILL="${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/Skills/imagegen")
+target_compile_options(RimesCodex PRIVATE -Wall -Wextra -Wpedantic -Werror)
+set_target_properties(RimesCodex PROPERTIES POSITION_INDEPENDENT_CODE ON)
+add_dependencies(RimesCodex RimesCodexContract)
+install(DIRECTORY "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/Resources/Skills/imagegen"
+    DESTINATION "${CMAKE_INSTALL_DATADIR}/rimes/skills")
+if(RIMES_BUILD_TESTS)
+    add_test(NAME codex-native-contract COMMAND "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/verify_codex_contract.py")
+    add_executable(rimes-codex-tests tests/codex_tests.cpp)
+    target_link_libraries(rimes-codex-tests PRIVATE RimesCodex)
+    target_compile_options(rimes-codex-tests PRIVATE -Wall -Wextra -Wpedantic -Werror)
+    add_test(NAME codex-channel COMMAND rimes-codex-tests "${CMAKE_CURRENT_SOURCE_DIR}/tests/codex_fixture.py")
+endif()
+
 pkg_check_modules(RuntimeGtk REQUIRED IMPORTED_TARGET gtk+-3.0)
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
     "${RIMES_REPOSITORY_ROOT}/Sources/RimeBuffer/RimeUI.swift"
@@ -166,7 +202,7 @@ endif()
 target_link_libraries(RimesDesktopUI PUBLIC RimesPluginCore PkgConfig::RuntimeGtk)
 target_compile_options(RimesDesktopUI PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_executable(rimes-settings ui/settings.cpp)
-target_link_libraries(rimes-settings PRIVATE RimesDesktopUI)
+target_link_libraries(rimes-settings PRIVATE RimesDesktopUI RimesCodex)
 target_compile_definitions(rimes-settings PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
 add_dependencies(rimes-settings rimes-translation)
 target_compile_options(rimes-settings PRIVATE -Wall -Wextra -Wpedantic -Werror)
@@ -218,5 +254,6 @@ if(BUILD_TESTING OR RIMES_BUILD_TESTS)
         add_dependencies(rimes-translation-ui-tests rimes-translation)
         add_test(NAME translation-ui COMMAND "${RIMES_XVFB_RUN}" -a $<TARGET_FILE:rimes-translation-ui-tests>)
         add_test(NAME settings-ui COMMAND "${RIMES_XVFB_RUN}" -a $<TARGET_FILE:rimes-settings> --smoke)
+        add_test(NAME codex-settings-ui COMMAND "${RIMES_XVFB_RUN}" -a $<TARGET_FILE:rimes-settings> --codex-smoke "${CMAKE_CURRENT_SOURCE_DIR}/tests/codex_fixture.py")
     endif()
 endif()

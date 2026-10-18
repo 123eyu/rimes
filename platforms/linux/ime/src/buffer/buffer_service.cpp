@@ -528,6 +528,15 @@ void BufferService::RegisterDerivedAdapter(std::string id, std::string capabilit
     derived_adapters_.emplace(std::move(id), DerivedAdapter{std::move(capability), std::move(run), live_expand});
 }
 
+void BufferService::BindImages(StartImage start, std::function<rimes::mailbox::ImageState()> state,
+                               std::function<void()> cancel, std::function<void(const std::string&)> open) {
+    start_image_ = std::move(start); image_state_ = std::move(state);
+    cancel_image_ = std::move(cancel); open_image_ = std::move(open);
+}
+bool BufferService::ImageMode() const {
+    return image_skill_ && plugins_ && plugins_->SelectedBuffer() == "builtin.codex-cli";
+}
+
 void BufferService::CancelDerived() {
     CancelTranslation(false);
     if (derived_cancel_) derived_cancel_->store(true);
@@ -561,6 +570,20 @@ void BufferService::SynchronizeDerived() {
     synchronizing_derived_ = false;
 }
 
+void BufferService::ConfigurePluginOptions(const rimes::runtime::Json& configuration) {
+    plugin_options_.clear();
+    for (const auto* id : {"builtin.codex-cli"}) {
+        const auto settings = rimes::runtime::ConfigurationStore::NormalizePlugin(id,
+            configuration.at("plugins").value(id, rimes::runtime::Json::object()));
+        for (const auto& field : rimes::runtime::PluginFields(id)) {
+            if (field.kind != rimes::runtime::FieldKind::Choice) continue;
+            rimes::buffer::PluginOption option{field.id, field.title, settings.at(field.id), {}};
+            for (const auto& [value, name] : field.choices) option.choices.push_back({value, name});
+            plugin_options_[id].push_back(std::move(option));
+        }
+    }
+}
+
 bool BufferService::SelectPlugin(const std::string& id) {
     if (!plugins_ || (!id.empty() && !derived_adapters_.count(id)) || !plugins_->SelectBuffer(id)) return false;
     CancelDerived();
@@ -584,6 +607,13 @@ bool BufferService::Generate() {
         const auto request = derived_.Begin(*lease);
         if (!request) return false;
         started = true;
+        if (ImageMode()) {
+            derived_.Cancel();
+            const bool accepted = start_image_ && start_image_(*request, configuration);
+            derived_error_ = accepted ? "" : "无法开始图片任务，请启用 Mailbox 收件箱后重试";
+            Publish();
+            return accepted;
+        }
         derived_error_.clear(); derived_logical_blocks_.clear();
         if (derived_cancel_) derived_cancel_->store(true);
         derived_request_ = request;
@@ -1048,13 +1078,31 @@ void BufferService::HandleCommand(const rimes::buffer::Command& command) {
             FCITX_LOGC(rimes_buffer_log, Info) << "toolbar drag_end received";
             EndDrag();
             return;
+        case rimes::buffer::CommandOp::ConfigurePlugin:
+            if (save_plugin_option_ && plugins_ && model_.visible() && !model_.secure() && !model_.password_field() &&
+                plugins_->SelectedBuffer() == command.plugin && plugin_options_.count(command.plugin)) {
+                const auto& options = plugin_options_.at(command.plugin);
+                const auto field = std::find_if(options.begin(), options.end(), [&](const auto& option) { return option.id == command.id; });
+                if (field != options.end() && std::any_of(field->choices.begin(), field->choices.end(), [&](const auto& choice) { return choice.id == command.text; })) {
+                    try { save_plugin_option_(command.plugin, command.id, command.text); }
+                    catch (const std::exception&) { WriteAll(rimes::buffer::EncodeError("settings", "AI 选项未保存，请重试")); }
+                }
+            }
+            break;
         case rimes::buffer::CommandOp::SelectPlugin:
             SelectPlugin(command.id);
             break;
         case rimes::buffer::CommandOp::Generate:
             Generate();
             break;
+        case rimes::buffer::CommandOp::OpenMailboxImage:
+            if (ImageMode() && image_state_ && open_image_ && !model_.secure() && !model_.password_field()) {
+                const auto image = image_state_();
+                if (image.phase == rimes::mailbox::ImagePhase::Ready && command.id == image.thread) open_image_(image.thread);
+            }
+            break;
         case rimes::buffer::CommandOp::CancelGeneration:
+            if (ImageMode() && cancel_image_) cancel_image_();
             CancelDerived();
             break;
         case rimes::buffer::CommandOp::ReturnToEdit:
@@ -1432,7 +1480,18 @@ void BufferService::Publish() {
             derived_adapters_.count(state.descriptor.id))
             snapshot.plugins.push_back({state.descriptor.id, state.descriptor.name});
     }
+    if (plugin_options_.count(snapshot.active_plugin)) snapshot.plugin_options = plugin_options_.at(snapshot.active_plugin);
     snapshot.can_deliver = !snapshot.active_plugin.empty() && CanDeliverDerived();
+    if (ImageMode() && image_state_) {
+        const auto image = image_state_();
+        snapshot.mailbox_image = true; snapshot.message = derived_error_.empty() ? image.message : derived_error_;
+        snapshot.mailbox_thread = image.phase == rimes::mailbox::ImagePhase::Ready ? image.thread : "";
+        snapshot.phase = image.Running() ? rimes::buffer::DerivedPhase::Running :
+            image.phase == rimes::mailbox::ImagePhase::Ready ? rimes::buffer::DerivedPhase::Ready :
+            image.phase == rimes::mailbox::ImagePhase::Failed ? rimes::buffer::DerivedPhase::Failed : rimes::buffer::DerivedPhase::Idle;
+        snapshot.can_generate = !image.Running() && derived_.CanGenerate();
+        snapshot.can_deliver = false; snapshot.results.clear(); snapshot.result_blocks.clear(); snapshot.selected_result.clear();
+    }
     if (delivery_conflict_) snapshot.message = "上屏状态未确认，请返回编辑后继续";
     snapshot.ui_clients = UiClientCount();
     const auto json = rimes::buffer::EncodeSnapshot(snapshot);

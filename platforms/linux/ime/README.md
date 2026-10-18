@@ -26,6 +26,7 @@ installation, status, cancellation and repair; see the
 [resource instructions](../runtime/README.md#local-translation-resources).
 Its Python 3.12 runtime is included in deb dependencies. Downloaded resources
 remain in the user directory when either source or deb installation is removed.
+The [ChatGPT/Codex connector](../runtime/README.md#chatgpt--codex-cli) adds explicit text generation, browser login and persistent Mailbox image tasks.
 The [Mailbox host](../mailbox/README.md) now provides independent navigation, persistent threads, local notes, reviewed Buffer/Capsule transfers and a loopback HTTP/MCP gateway. AI conversation and PTY adapters are tracked separately. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in

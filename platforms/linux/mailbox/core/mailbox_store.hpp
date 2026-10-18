@@ -37,6 +37,14 @@ class Store {
                         const std::string& format, const std::string& nonce = "",
                         const std::string& digest = "");
     std::optional<std::string> Image(const std::string& filename) const;
+    // The caller holds generations/<generation>/.lock until its worker exits.
+    // This lets a separately opened Mailbox distinguish live tasks from crashes.
+    Json BeginGeneration(const Json& source, const std::string& title, const std::string& prompt,
+                         const std::string& generation, const std::string& workspace);
+    Json CompleteGeneration(const std::string& thread, const std::string& generation,
+                            const std::string& response, const std::string& png = "");
+    void FailGeneration(const std::string& thread, const std::string& generation,
+                        const std::string& message);
     Json AddNote(const std::string& id, const std::string& expected, const std::string& body);
     Json Rename(const std::string& id, const std::string& expected, const std::string& title);
     Json Archive(const std::string& id, const std::string& expected, bool archived);

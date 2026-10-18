@@ -5,6 +5,7 @@
 #include "shortcuts.hpp"
 #include "launcher_client.hpp"
 #include "gateway_access.hpp"
+#include "codex_channel.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -31,6 +32,14 @@ struct Settings {
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
   std::string gateway_client = "cursor";
+  CodexWorker codex_worker;
+  std::shared_ptr<std::atomic<bool>> codex_cancel;
+  bool codex_busy = false, codex_login_running = false, codex_checked = false, codex_credential = false;
+  bool codex_test_no_browser = false, codex_feedback_error = false;
+  std::filesystem::path codex_test_executable;
+  CodexError codex_error = CodexError::Missing;
+  std::uint64_t codex_generation = 0;
+  std::string codex_feedback, codex_url;
 #ifdef RIMES_GATEWAY_CLIPBOARD
   std::unique_ptr<rimes::capsule::DesktopClipboard> gateway_clipboard;
 #endif
@@ -49,6 +58,7 @@ struct Settings {
       std::make_shared<std::atomic<bool>>(true);
   ~Settings() {
     alive->store(false);
+    codex_worker.Shutdown();
 #ifdef RIMES_GATEWAY_CLIPBOARD
     gateway_clipboard.reset();
 #endif
@@ -790,9 +800,89 @@ struct Settings {
     if (gateway_client == "claudeCode") section("终端命令（可选，当前预览已脱敏）", "复制终端命令", true);
     Add(body, panel);
   }
+  void StartCodex(bool login) {
+    if (rendering) return;
+    if (codex_cancel) codex_cancel->store(true);
+    if (login && codex_login_running) {
+      codex_feedback = "正在取消 Codex 登录…";
+      if (route == "core.connectors") Select(route, subpage);
+      return;
+    }
+    codex_cancel = std::make_shared<std::atomic<bool>>(false);
+    codex_busy = true; codex_login_running = login; codex_url.clear();
+    codex_feedback = login ? "正在启动 Codex 登录" : ""; codex_feedback_error = false;
+    const auto generation = ++codex_generation;
+    CodexRequest request; request.mode = login ? CodexMode::Login : CodexMode::Probe;
+    request.timeout = login ? std::chrono::minutes(5) : std::chrono::seconds(4);
+    request.executable = codex_test_executable;
+    const auto directory = request.root;
+    codex_worker.Run(request, codex_cancel, [this, life = alive, generation, login, directory](CodexEvent event) {
+      const bool credential = event.finished && HasCodexCredential(directory);
+      auto* callback = new std::function<void()>([this, life, generation, login, credential, event = std::move(event)] {
+        if (!life->load() || generation != codex_generation) return;
+        if (!event.authorization_url.empty()) {
+          codex_url = event.authorization_url; codex_feedback = "等待浏览器完成 ChatGPT 授权…";
+          if (!codex_test_no_browser) {
+            GError* error = nullptr;
+            if (!g_app_info_launch_default_for_uri(codex_url.c_str(), nullptr, &error))
+              codex_feedback = "无法打开浏览器，请复制登录链接后继续授权。";
+            g_clear_error(&error);
+          }
+        }
+        if (event.finished) {
+          codex_busy = false; codex_login_running = false; codex_checked = true;
+          codex_error = event.error; codex_credential = credential; codex_url.clear();
+          if (login) { codex_feedback = event.error == CodexError::None ? "Codex 登录成功。" : CodexErrorMessage(event.error); codex_feedback_error = event.error != CodexError::None; }
+        }
+        if (route == "core.connectors" && subpage == "ai-model") Select(route, subpage);
+      });
+      g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer value)->gboolean {
+        (*static_cast<std::function<void()>*>(value))(); return G_SOURCE_REMOVE;
+      }, callback, +[](gpointer value) { delete static_cast<std::function<void()>*>(value); });
+    });
+  }
+  void CopyCodexURL() {
+    if (!codex_login_running || !SafeCodexAuthorizationURL(codex_url)) return;
+#ifdef RIMES_GATEWAY_CLIPBOARD
+    const auto operation = codex_cancel;
+    if (gateway_clipboard && operation) gateway_clipboard->Restore(
+      rimes::capsule::ClipboardArchive{{{"text/plain;charset=utf-8", codex_url}, {"UTF8_STRING", codex_url}}}, true,
+      [](bool) {}, [life = alive, operation](const auto& publish) {
+        if (life->load() && !operation->load()) publish();
+      });
+#else
+    gtk_clipboard_set_text(gtk_clipboard_get(GDK_SELECTION_CLIPBOARD), codex_url.c_str(), -1);
+#endif
+  }
+  void CodexPanel(GtkWidget* body) {
+    auto* panel = Class(Column(10), "panel"); gtk_widget_set_size_request(panel, 650, -1);
+    auto* top = Class(Row(10), "shortcut-row"); gtk_widget_set_size_request(top, 626, 46);
+    auto* icon = Class(gtk_event_box_new(), "gateway-icon-tile");
+    gtk_widget_set_size_request(icon, 30, 30); gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(icon, 11);
+    gtk_container_add(GTK_CONTAINER(icon), Icon("rimes.brand.chatgpt", 19)); Add(top, icon);
+    auto* title = Label("Codex CLI", "name");
+    const bool ready = codex_checked && codex_error == CodexError::None;
+    const std::string detail = ready ? CodexContract().at("presentation").at("ready").get<std::string>() :
+      !codex_checked && codex_busy ? CodexContract().at("presentation").at("checking").get<std::string>() : CodexErrorMessage(codex_error);
+    gtk_widget_set_tooltip_text(title, detail.c_str()); Add(top, title, true);
+    auto* badge = Label(ready ? "可用" : "不可用", ready ? "connector-ready" : "connector-unavailable");
+    gtk_widget_set_margin_end(badge, 10); Add(top, badge); Add(panel, top);
+    auto* actions = Row(8);
+    Add(actions, Button(codex_login_running ? "取消登录" : codex_credential ? "重新授权 Codex" : "登录 Codex", [this] {
+      StartCodex(true); Select(route, subpage);
+    }, "connector-action"));
+    if (!codex_url.empty()) Add(actions, Button("复制登录链接", [this] { CopyCodexURL(); }, "connector-action"));
+    if (codex_busy) { auto* spinner = gtk_spinner_new(); gtk_widget_set_size_request(spinner, 16, 16); gtk_spinner_start(GTK_SPINNER(spinner)); Add(actions, spinner); }
+    Add(panel, actions);
+    if (!codex_feedback.empty()) { auto* label = Label(codex_feedback, "connector-feedback"); if (codex_feedback_error) Class(label, "error"); Add(panel, label); }
+    Add(body, panel);
+    if (!rendering && !codex_checked && !codex_busy) StartCodex(false);
+  }
   void Connectors(GtkWidget *body) {
     auto *row = Row(8);
     gtk_widget_set_size_request(row, 650, 68);
+    gtk_box_set_homogeneous(GTK_BOX(row), TRUE);
     for (const auto &entry : std::vector<std::pair<std::string, std::string>>{
              {"codex-cli", "ChatGPT"},
              {"claude-code-cli", "Claude"},
@@ -805,17 +895,45 @@ struct Settings {
               auto next = saved;
               next["activeConnector"] = id;
               Save(next);
+              if (id == "codex-cli" && !codex_busy) codex_checked = false;
               Select(route, subpage);
             });
           },
           "choice");
       if (saved.at("activeConnector") == id)
         Class(b, "selected");
+      auto* content = Row(9);
+      gtk_widget_set_margin_start(content, 10); gtk_widget_set_margin_end(content, 10);
+      auto* tile = gtk_event_box_new();
+      gtk_widget_set_size_request(tile, 24, 24); gtk_widget_set_valign(tile, GTK_ALIGN_CENTER);
+      gtk_container_add(GTK_CONTAINER(tile), Icon(id == "codex-cli" ? "rimes.brand.chatgpt" : id == "claude-code-cli" ? "rimes.brand.claude" : "network", 18));
+      Add(content, tile); Add(content, Label(entry.second, "name"), true);
+      auto* radio = gtk_drawing_area_new();
+      gtk_widget_set_size_request(radio, 16, 16); gtk_widget_set_valign(radio, GTK_ALIGN_CENTER);
+      g_signal_connect(radio, "draw", G_CALLBACK(+[](GtkWidget* widget, cairo_t* cr, gpointer raw)->gboolean {
+        const bool selected = GPOINTER_TO_INT(raw);
+        auto color = [&](const char* name) {
+          GdkRGBA rgba{}; gtk_style_context_lookup_color(gtk_widget_get_style_context(widget), name, &rgba);
+          gdk_cairo_set_source_rgba(cr, &rgba);
+        };
+        const double x = gtk_widget_get_allocated_width(widget) / 2.0;
+        const double y = gtk_widget_get_allocated_height(widget) / 2.0;
+        cairo_arc(cr, x, y, 7.5, 0, 6.283185307179586);
+        color("xsime_choice_surface"); cairo_fill_preserve(cr);
+        color(selected ? "xsime_switch_on" : "xsime_choice_border");
+        cairo_set_line_width(cr, selected ? 1.5 : 1); cairo_stroke(cr);
+        if (selected) { color("xsime_switch_on"); cairo_arc(cr, x, y, 16 * .22, 0, 6.283185307179586); cairo_fill(cr); }
+        return FALSE;
+      }), GINT_TO_POINTER(saved.at("activeConnector") == id));
+      Add(content, radio);
+      gtk_container_remove(GTK_CONTAINER(b), gtk_bin_get_child(GTK_BIN(b)));
+      gtk_container_add(GTK_CONTAINER(b), content);
       Add(row, b, true);
     }
     Add(body, row);
     if (saved.at("activeConnector") == "openai-compatible")
       ProviderEditor(body);
+    else if (saved.at("activeConnector") == "codex-cli") CodexPanel(body);
     else {
       auto *panel = Class(Column(10), "panel");
       gtk_widget_set_size_request(panel, 650, -1);
@@ -1132,6 +1250,76 @@ void SettleLayout() {
   g_main_loop_unref(loop);
 }
 
+int CodexSettingsSmoke(const std::filesystem::path& executable) {
+  char pattern[] = "/tmp/xsime-codex-settings-XXXXXX";
+  if (!mkdtemp(pattern)) return 1;
+  const auto root = std::filesystem::path(pattern);
+  setenv("RIMES_USER_DIR", root.c_str(), 1);
+  bool success = false;
+  std::string phase = "window";
+  try {
+    Settings app;
+    app.codex_test_executable = std::filesystem::absolute(executable);
+    app.codex_test_no_browser = true;
+    app.Build(true); app.rendering = false;
+    gtk_widget_show_all(app.window);
+    PrivateDirectory home(root / "ai/codex-home");
+    auto check = [](bool condition) { if (!condition) throw std::runtime_error("Codex settings state mismatch"); };
+    auto wait = [&](const auto& condition) {
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (!condition()) {
+        check(std::chrono::steady_clock::now() < deadline);
+        while (gtk_events_pending()) gtk_main_iteration();
+        g_usleep(10000);
+      }
+    };
+    auto control = [&](const char* name) {
+      auto* widget = FindControl(app.root, name);
+      if (!widget || !GTK_IS_BUTTON(widget)) throw std::runtime_error(std::string("Missing Codex control: ") + name);
+      return widget;
+    };
+    auto click = [&](const char* name) { gtk_button_clicked(GTK_BUTTON(control(name))); };
+    phase = "account probe";
+    home.Write("fixture-mode", "logged-out");
+    app.Select("core.connectors", "ai-model"); click("ChatGPT");
+    wait([&] { return app.codex_checked && !app.codex_busy; });
+    check(app.codex_error == CodexError::LoginRequired && app.codex_url.empty());
+    check(app.config.Load().at("activeConnector") == "codex-cli");
+    phase = "login and copy";
+    home.Write("fixture-mode", "login-cancel"); click("登录 Codex");
+    wait([&] { return !app.codex_url.empty(); });
+    check(app.codex_login_running && SafeCodexAuthorizationURL(app.codex_url));
+    SettleLayout(); click("复制登录链接");
+    auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
+    wait([&] {
+      auto* copied = gtk_clipboard_wait_for_text(clipboard);
+      const bool ok = copied && std::string(copied) == app.codex_url;
+      g_free(copied); return ok;
+    });
+    phase = "cancel"; click("取消登录");
+    wait([&] { return !app.codex_busy; });
+    check(!app.codex_login_running && app.codex_url.empty() && app.codex_error == CodexError::Cancelled);
+    phase = "successful retry";
+    home.Write("fixture-mode", "login"); click("登录 Codex");
+    wait([&] { return !app.codex_busy; });
+    check(app.codex_error == CodexError::None && app.codex_credential && app.codex_feedback == "Codex 登录成功。");
+    control("重新授权 Codex");
+    phase = "unsafe login URL";
+    home.Write("fixture-mode", "bad-login-url"); click("重新授权 Codex");
+    wait([&] { return !app.codex_busy; });
+    check(app.codex_error == CodexError::Protocol && app.codex_url.empty());
+    phase = "leave page: start";
+    home.Write("fixture-mode", "login-cancel"); click("重新授权 Codex");
+    wait([&] { return !app.codex_url.empty(); }); phase = "leave page: choose provider"; click("AI Provider");
+    check(app.saved.at("activeConnector") == "openai-compatible");
+    gtk_widget_destroy(app.window);
+    success = true;
+  } catch (const std::exception& error) { std::cerr << "FAILED: Codex settings " << phase << ": " << error.what() << "\n"; }
+  std::filesystem::remove_all(root);
+  if (success) std::cout << "Codex GTK settings: account probe, explicit login, safe link copy, cancel, retry, reauthorize, malformed URL and page/window lifecycle passed\n";
+  return success ? 0 : 1;
+}
+
 int SettingsSmoke() {
   char pattern[] = "/tmp/xsime-settings-smoke-XXXXXX";
   if (!mkdtemp(pattern))
@@ -1289,14 +1477,16 @@ int SettingsSmoke() {
 } // namespace
 int main(int argc, char **argv) {
   if (argc == 2 && std::string_view(argv[1]) == "--help") {
-    std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --smoke]\n";
+    std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --render-codex DIRECTORY | --smoke]\n";
     return 0;
   }
   try {
     const bool smoke = argc == 2 && std::string_view(argv[1]) == "--smoke";
+    const bool codex_smoke = argc == 3 && std::string_view(argv[1]) == "--codex-smoke";
     const bool gateway_render = argc == 3 && std::string_view(argv[1]) == "--render-gateway";
-    const bool render = gateway_render || (argc == 3 && std::string_view(argv[1]) == "--render");
-    if (argc != 1 && !render && !smoke)
+    const bool codex_render = argc == 3 && std::string_view(argv[1]) == "--render-codex";
+    const bool render = gateway_render || codex_render || (argc == 3 && std::string_view(argv[1]) == "--render");
+    if (argc != 1 && !render && !smoke && !codex_smoke)
       return 2;
     const std::filesystem::path output = render ? argv[2] : "";
     if (render && !std::getenv("RIMES_USER_DIR")) {
@@ -1309,6 +1499,8 @@ int main(int argc, char **argv) {
     }
     if (smoke)
       return SettingsSmoke();
+    if (codex_smoke)
+      return CodexSettingsSmoke(argv[2]);
     if (!render) {
       struct Session { std::unique_ptr<Settings> settings; bool failed = false; } session;
       // Isolate test/user roots; normal launches in the same desktop session
@@ -1341,6 +1533,23 @@ int main(int argc, char **argv) {
       std::filesystem::create_directories(output);
       gtk_widget_show_all(app.window);
       Json manifest = Json::array();
+      if (codex_render) {
+        const auto contract = CodexContract();
+        for (const auto& state : contract.at("settings").at("states")) {
+          app.saved["activeConnector"] = "codex-cli";
+          app.codex_checked = true; app.codex_busy = state.at("running");
+          app.codex_login_running = state.at("running"); app.codex_credential = state.at("credential");
+          app.codex_error = state.at("ready") == true ? CodexError::None : state.at("state") == "missing" ? CodexError::Missing : CodexError::LoginRequired;
+          app.codex_url = state.at("copyLink") == true ? "https://auth.openai.com/public-fixture" : "";
+          app.codex_feedback = state.at("feedback"); app.codex_feedback_error = state.at("state") == "failed";
+          app.Select("core.connectors", "ai-model");
+          gtk_window_resize(GTK_WINDOW(app.window), 980, 680); SettleLayout();
+          const auto name = "codex-" + state.at("state").get<std::string>() + ".png";
+          if (!Render(app.root, (output / name).string())) return 1;
+          manifest.push_back({{"file", name}, {"state", state.at("state")}, {"theme", app.saved.at("theme")}, {"width", 980}, {"height", 680}});
+        }
+        std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n'; return 0;
+      }
       if (gateway_render) {
         for (bool enabled : {true, false}) for (const auto* client : {"cursor", "codex", "claudeCode", "genericMCP"}) {
           app.saved["gatewayEnabled"] = enabled;

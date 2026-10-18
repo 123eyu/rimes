@@ -97,15 +97,34 @@ struct App {
     std::unique_ptr<Workspace> workspace;
     std::unique_ptr<rimes::runtime::FileLock> primary;
     std::unique_ptr<DesktopSession> session;
-    guint open_timer = 0;
+    guint open_timer = 0, notify_timer = 0;
+    std::string notification;
+    int notification_attempts = 0;
     std::string module, thread;
     int attempts = 0;
     bool initial_protection = true, failed = false;
     ~App() {
+        if (notify_timer) g_source_remove(notify_timer);
         if (open_timer)
             g_source_remove(open_timer);
         session.reset();
         workspace.reset();
+    }
+    void NotifySoon(std::string target) {
+        if (notify_timer) g_source_remove(notify_timer);
+        notification = std::move(target);
+        notification_attempts = 0;
+        workspace->Refresh();
+        notify_timer = g_timeout_add(50, +[](gpointer raw) -> gboolean {
+            auto* self = static_cast<App*>(raw);
+            ++self->notification_attempts;
+            if ((!self->initial_protection && self->workspace->NotifyCompleted(self->notification)) ||
+                self->notification_attempts >= 40) {
+                self->notify_timer = 0;
+                return G_SOURCE_REMOVE;
+            }
+            return G_SOURCE_CONTINUE;
+        }, this);
     }
     void OpenSoon(std::string requested, std::string target) {
         if (open_timer)
@@ -156,6 +175,8 @@ int main(int argc, char** argv) {
         g_application_add_main_option(G_APPLICATION(app), "thread", 0, G_OPTION_FLAG_NONE,
                                       G_OPTION_ARG_STRING, "Open an existing Mailbox thread",
                                       "UUID");
+        g_application_add_main_option(G_APPLICATION(app), "notify-thread", 0, G_OPTION_FLAG_NONE,
+                                      G_OPTION_ARG_STRING, "Show a passive receipt for a completed Mailbox message", "UUID");
         g_application_add_main_option(G_APPLICATION(app), "show", 0, G_OPTION_FLAG_NONE,
                                       G_OPTION_ARG_NONE, "Show the existing Mailbox window",
                                       nullptr);
@@ -210,12 +231,14 @@ int main(int argc, char** argv) {
                     g_application_quit(application);
                     return 0;
                 }
-                const gchar *module = "", *thread = "";
+                const gchar *module = "", *thread = "", *notification = "";
+                g_variant_dict_lookup(options, "notify-thread", "&s", &notification);
                 g_variant_dict_lookup(options, "module", "&s", &module);
                 g_variant_dict_lookup(options, "thread", "&s", &thread);
                 if ((*module && std::string(module) != "inbox" && std::string(module) != "chat" &&
                      std::string(module) != "terminal") ||
-                    (*thread && !rimes::capsule::LooksLikeUuid(thread))) {
+                    (*thread && !rimes::capsule::LooksLikeUuid(thread)) ||
+                    (*notification && (!rimes::capsule::LooksLikeUuid(notification) || *thread || *module))) {
                     g_application_command_line_printerr(command,
                                                         "Invalid Mailbox module or thread.\n");
                     return 2;
@@ -223,7 +246,11 @@ int main(int argc, char** argv) {
                 std::string target = thread;
                 std::transform(target.begin(), target.end(), target.begin(),
                                [](unsigned char c) { return std::tolower(c); });
-                state->OpenSoon(module, target);
+                if (*notification) {
+                    std::string receipt = notification;
+                    std::transform(receipt.begin(), receipt.end(), receipt.begin(), [](unsigned char c) { return std::tolower(c); });
+                    state->NotifySoon(receipt);
+                } else state->OpenSoon(module, target);
                 return 0;
             })),
             &state);
@@ -245,6 +272,7 @@ int main(int argc, char** argv) {
             g_source_remove(state.open_timer);
             state.open_timer = 0;
         }
+        if (state.notify_timer) { g_source_remove(state.notify_timer); state.notify_timer = 0; }
         state.session.reset();
         state.workspace.reset();
         g_object_unref(app);

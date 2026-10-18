@@ -138,3 +138,41 @@ from verified archives with network proxies disabled:
 ```bash
 python3 platforms/linux/runtime/tests/translation_engine_smoke.py /path/to/rimes-translation
 ```
+
+
+## ChatGPT / Codex CLI
+
+Install the official Codex CLI separately, then open **设置 → 连接器 → AI 模型 →
+ChatGPT**. This page checks the actual app-server protocol and login state. Use
+**登录 ChatGPT** for explicit browser authorization, **复制授权链接** if needed,
+and **取消** to stop a pending login. Missing or incompatible CLIs stay visibly
+unavailable. The probe does not submit a prompt or start a model turn.
+
+Enable the official **ChatGPT** Buffer plugin and select it in Buffer. Its toolbar
+provides the same model, reasoning effort and Skill choices as macOS. Type a
+complete request and click generate; typing alone does not contact ChatGPT.
+Streaming previews cannot be delivered until the response completes. Normal
+text delivery still uses Fcitx `commitString`, with the source consumed only after
+confirmed delivery. Closing/editing the Buffer, changing its target or disabling
+the plugin invalidates inline work and ignores late output.
+
+For images select **图片 · imagegen** in the Skill menu and enable **Mailbox →
+收件箱**. Only that explicit channel mounts the bundled imagegen Skill. Images
+are independent Mailbox jobs: the request is saved before generation, closing
+Buffer leaves the job running, and ordinary typing continues. The output row
+shows progress and opens the exact completed Mailbox thread. Image files are
+copied into Mailbox-owned storage; provider paths are never inserted into an
+input field. A passive completion receipt opens the same thread when clicked.
+Stopping the job or disabling its plugin cancels its process tree; host shutdown
+also stops it, and an interrupted generation remains visible as failed.
+
+The connector uses a dedicated private `ai/codex-home` under the XSIME user root
+(`$RIMES_USER_DIR`, otherwise `$XDG_DATA_HOME/rimes` or `~/.local/share/rimes`).
+It does not import the developer's `~/.codex` configuration, instructions, MCP
+servers or API keys. The official CLI manages its credentials there. Login data,
+generated files and Mailbox history survive upgrades, source uninstall and deb
+removal. Keep this directory private when making backups.
+
+[Codex validation and remaining desktop checks](CODEX-VALIDATION.md) distinguish
+protocol tests, the actual official Linux CLI probe, native UI screenshots and
+live authenticated generation.

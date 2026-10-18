@@ -2767,10 +2767,10 @@ final class CodexCLITextProvider: AITextProvider {
         case let .unavailable(message)?:
             return .unavailable(message)
         case nil:
-            return .unavailable("正在检查 Codex CLI 能力…")
+            return .unavailable(AITextCodexPresentation.checking)
         }
         guard homeStore.hasChatGPTCredential else {
-            return .unavailable("Codex 尚未完成 \(ProductIdentity.displayName) 专用的 ChatGPT 登录")
+            return .unavailable(AITextCodexPresentation.loginRequired)
         }
         return .ready
     }
@@ -2796,13 +2796,13 @@ final class CodexCLITextProvider: AITextProvider {
             guard let self else { return }
             let result: ProbeResult
             guard let executableURL = self.executableResolver() else {
-                result = .unavailable("未找到具备所需 app-server 能力的 Codex CLI")
+                result = .unavailable(AITextCodexPresentation.missing)
                 self.publishProbe(result, generation: generation)
                 return
             }
             guard let before = AITextVerifiedCLIExecutable.capture(executableURL),
                   self.compatibilityResolver(before.url) else {
-                result = .unavailable("Codex CLI 未通过所需启动参数与 app-server 握手检查")
+                result = .unavailable(AITextCodexPresentation.incompatible)
                 self.publishProbe(result, generation: generation)
                 return
             }
@@ -2866,7 +2866,7 @@ final class CodexCLITextProvider: AITextProvider {
         case let .unavailable(message)?:
             return .failure(.unavailable(message))
         case nil:
-            return .failure(.unavailable("正在检查 Codex CLI 能力…"))
+            return .failure(.unavailable(AITextCodexPresentation.checking))
         }
     }
 
@@ -2904,7 +2904,7 @@ final class CodexCLITextProvider: AITextProvider {
             return relay
         }
         guard homeStore.hasChatGPTCredential else {
-            completion(.failure(.unavailable("Codex 尚未完成 \(ProductIdentity.displayName) 专用的 ChatGPT 登录")))
+            completion(.failure(.unavailable(AITextCodexPresentation.loginRequired)))
             return relay
         }
         let prompt = request.preparedPrompt ?? AITextPrompt.request(for: request.sourceText)
@@ -4150,4 +4150,35 @@ final class AITextConnectorRegistry: AITextProvider {
         }
         return provider.generate(request, onEvent: onEvent, completion: completion)
     }
+}
+
+/// Export pure production builders for the Linux native connector. No provider,
+/// login, process, credential, or shared preference is instantiated here.
+enum AITextCodexLinuxContract {
+    static var value: [String: Any] {
+        let workspace = URL(fileURLWithPath: "/RIMES_WORKSPACE", isDirectory: true)
+        return [
+            "schemaVersion": 1, "purpose": "public-codex-channel-contract",
+            "textArguments": CodexCLITextProvider.appServerArguments(workspaceURL: workspace),
+            "imageArguments": CodexCLITextProvider.appServerArguments(workspaceURL: workspace, allowImageGeneration: true),
+            "prompt": AITextPrompt.request(for: "RIMES_SOURCE_TEXT"),
+            "schema": AITextResultDecoder.schemaObject,
+            "maximumSourceBytes": AITextRuntimeLimits.maximumSourceBytes,
+            "maximumWireBytes": AITextRuntimeLimits.maximumWireBytes,
+            "maximumLineBytes": AITextRuntimeLimits.maximumLineBytes,
+            "defaultTimeout": AITextRuntimeLimits.defaultTimeout,
+            "protocol": AITextCodexLinuxProtocolFixture.value,
+            "presentation": ["missing": AITextCodexPresentation.missing, "incompatible": AITextCodexPresentation.incompatible,
+                "loginRequired": AITextCodexPresentation.loginRequired, "checking": AITextCodexPresentation.checking,
+                "ready": AITextCodexPresentation.ready],
+        ]
+    }
+}
+
+enum AITextCodexPresentation {
+    static let missing = "未找到具备所需 app-server 能力的 Codex CLI"
+    static let incompatible = "Codex CLI 未通过所需启动参数与 app-server 握手检查"
+    static let loginRequired = "Codex 尚未完成 \(ProductIdentity.displayName) 专用的 ChatGPT 登录"
+    static let checking = "正在检查 Codex CLI 能力…"
+    static let ready = "使用 \(ProductIdentity.displayName) 专用的 ChatGPT 登录；不会读取 ~/.codex 中的 MCP、工具、Hook 或技能。"
 }

@@ -31,6 +31,8 @@ void Theme(const std::string &name, GdkScreen *screen) {
                                            GTK_STYLE_PROVIDER_PRIORITY_APPLICATION);
   std::string css =
       "@define-color xsime_switch_on " + c("accentGreen") + ";"
+      "@define-color xsime_choice_surface " + c("surfaceTertiary") + ";"
+      "@define-color xsime_choice_border " + c("borderStrong") + ";"
       "@define-color xsime_switch_off " + c("surfaceTertiary") + ";"
       "@define-color xsime_switch_border " + c("border") + ";"
       "@define-color xsime_switch_accent " + c("accentText") + ";"
@@ -122,6 +124,7 @@ void Theme(const std::string &name, GdkScreen *screen) {
       c("surfaceSecondary") + ", " + c("accentGreen") +
       ", 0.10); border-color: " + c("accentGreen") +
       "; }"
+      ".connector-ready { color: " + c("accentGreen") + "; font-size: 9px; font-weight: 600; } .connector-unavailable { color: " + c("textMuted") + "; font-size: 9px; font-weight: 600; } .connector-action, .connector-action label { font-size: 13px; font-weight: 600; } .connector-action { min-height: 20px; padding: 0 10px; } .connector-feedback { color: " + c("textSecondary") + "; font-size: 10px; font-weight: 500; } .connector-feedback.error { color: #e86565; }"
       ".icon-button { padding: 0; min-width: 24px; min-height: 24px; "
       "background: transparent; }"
       ".icon-button:hover { background: alpha(" +

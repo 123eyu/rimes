@@ -825,6 +825,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     )
     private let codexLoginSpinner = NSProgressIndicator()
     private let codexLoginStatusLabel = NSTextField(wrappingLabelWithString: "")
+    private var codexPreview: (availability: AITextProviderAvailability, credential: Bool, running: Bool)?
     private var codexLoginOperation: AITextCodexLoginOperation?
     private var codexLoginSessionID: UUID?
     private var codexLoginCancelling = false
@@ -1070,6 +1071,51 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
                 .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
             try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-gateway-settings", "clients": clients,
+                "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
+        } catch { return false }
+        return success
+    }
+
+    /// Render actual connector widgets with public readiness/login states only.
+    func renderCodexForPreview(to directory: String) -> Bool {
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        let previous = codexPreview
+        defer { codexPreview = previous; codexAuthorizationURL = nil; codexLoginFeedback = nil }
+        do { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
+        catch { return false }
+        let states: [(String, AITextProviderAvailability, Bool, Bool, String?)] = [
+            ("missing", .unavailable(AITextCodexPresentation.missing), false, false, nil),
+            ("signed-out", .unavailable(AITextCodexPresentation.loginRequired), false, false, nil),
+            ("ready", .ready, true, false, nil),
+            ("waiting", .unavailable(AITextCodexPresentation.loginRequired), false, true, "等待浏览器完成 ChatGPT 授权…"),
+            ("failed", .unavailable(AITextCodexPresentation.loginRequired), false, false, codexLoginErrorMessage(.timedOut)),
+        ]
+        var manifest: [[String: Any]] = []
+        var contract: [[String: Any]] = []
+        var success = true
+        for (name, availability, credential, running, feedback) in states {
+            codexPreview = (availability, credential, running)
+            if window == nil { build() }
+            reload()
+            codexLoginFeedback = feedback
+            codexLoginFeedbackIsError = name == "failed"
+            codexAuthorizationURL = running ? URL(string: "https://auth.openai.com/public-fixture") : nil
+            selectPreviewTarget(routeID: SettingsCoreRoute.connectors.id, subpageID: SettingsSubpageID(rawValue: "ai-model"))
+            let file = "codex-" + name + ".png"
+            success = renderCurrentView(to: root.appendingPathComponent(file).path) && success
+            manifest.append(["file": file, "state": name, "theme": RimeUI.appearance.rawValue, "width": 980, "height": 680])
+            let detail: String
+            switch availability { case .ready: detail = AITextCodexPresentation.ready; case .unavailable(let message): detail = message }
+            contract.append(["state": name, "ready": availability == .ready, "credential": credential,
+                "running": running, "copyLink": !codexCopyLoginLinkButton.isHidden,
+                "detail": detail, "button": codexLoginButton.title,
+                "feedback": codexLoginStatusLabel.isHidden ? "" : codexLoginStatusLabel.stringValue])
+        }
+        do {
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-codex-settings", "states": contract,
                 "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
                 .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
         } catch { return false }
@@ -3523,22 +3569,22 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
 
     private func aiModelConnectionsPage() -> NSView {
         let connectors = AITextConnectorRegistry.shared
-        let selected = AITextConnectorSelectionStore.shared.selectedKind
+        let selected = codexPreview == nil ? AITextConnectorSelectionStore.shared.selectedKind : .codexCLI
         let detailPanel: NSView
 
         switch selected {
         case .codexCLI:
-            let availability = connectors.availability(for: .codexCLI)
+            let availability = codexPreview?.availability ?? connectors.availability(for: .codexCLI)
             let ready = availability == .ready
             let detail: String
             switch availability {
             case .ready:
-                detail = "使用 \(ProductIdentity.displayName) 专用的 ChatGPT 登录；不会读取 ~/.codex 中的 MCP、工具、Hook 或技能。"
+                detail = AITextCodexPresentation.ready
             case let .unavailable(message):
                 detail = message
             }
             refreshCodexLoginControls(
-                hasCredential: connectors.codexHasStoredChatGPTCredential
+                hasCredential: codexPreview?.credential ?? connectors.codexHasStoredChatGPTCredential
             )
             codexLoginButton.removeFromSuperview()
             codexCopyLoginLinkButton.removeFromSuperview()
@@ -4936,7 +4982,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshAIConnectorSelection() {
-        let selected = AITextConnectorSelectionStore.shared.selectedKind
+        let selected = codexPreview == nil ? AITextConnectorSelectionStore.shared.selectedKind : .codexCLI
         for kind in AITextProviderKind.allCases {
             aiConnectorRadios[kind]?.state = kind == selected ? .on : .off
         }
@@ -4945,7 +4991,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private func refreshCodexLoginControls(hasCredential: Bool? = nil) {
         let authenticated = hasCredential
             ?? AITextConnectorRegistry.shared.codexHasStoredChatGPTCredential
-        let isRunning = codexLoginOperation != nil
+        let isRunning = codexPreview?.running ?? (codexLoginOperation != nil)
         codexLoginButton.title = AITextCodexLoginPresentation.buttonTitle(
             isRunning: isRunning,
             hasCredential: authenticated

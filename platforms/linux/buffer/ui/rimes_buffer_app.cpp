@@ -54,6 +54,7 @@ struct App {
     GtkWidget* source_actions = nullptr;
     GtkWidget* result_actions = nullptr;
     GtkWidget* selector = nullptr;
+    std::map<std::string, GtkWidget*> plugin_options;
     GtkWidget* edit = nullptr;
     GtkWidget* auto_send = nullptr;
     GtkWidget* close_after_last = nullptr;
@@ -62,6 +63,7 @@ struct App {
     GtkWidget* toolbar = nullptr;
     GtkWidget* copy = nullptr;
     GtkWidget* generate = nullptr;
+    GtkWidget* mailbox_open = nullptr;
     GtkWidget* pager = nullptr;
     GtkWidget* pager_count = nullptr;
     bool render = false;
@@ -193,7 +195,8 @@ void Refresh(App* app) {
     if (app->theme != s.theme) { LoadCss(s.theme, gtk_widget_get_screen(app->window)); app->theme = s.theme; }
     const bool derived = !s.active_plugin.empty();
     const bool output = s.phase == rimes::buffer::DerivedPhase::Running ||
-                        s.phase == rimes::buffer::DerivedPhase::Failed || !s.results.empty();
+                        s.phase == rimes::buffer::DerivedPhase::Failed || !s.results.empty() ||
+                        (s.mailbox_image && s.phase == rimes::buffer::DerivedPhase::Ready);
     const bool source = s.secure ? gtk_widget_get_visible(app->source_row) : !derived || (s.live_expand ? !s.blocks.empty() || !output : !output);
     const bool target = s.secure ? gtk_widget_get_visible(app->result_row) : derived && (output || (s.live_expand && !s.blocks.empty()));
     const int height = app->folded ? rimes::native::bufferToolbarOnlyHeight : s.secure ? app->height : source && target ? rimes::native::bufferDerivedHeight : kWindowHeight;
@@ -233,9 +236,10 @@ void Refresh(App* app) {
     gtk_widget_set_tooltip_text(app->auto_send, auto_help.c_str());
     atk_object_set_name(gtk_widget_get_accessible(app->auto_send), auto_help.c_str());
     const bool result_action = derived && (s.can_deliver || s.phase == rimes::buffer::DerivedPhase::Ready);
-    gtk_widget_set_visible(app->send, !derived || result_action);
+    gtk_widget_set_visible(app->send, !s.mailbox_image && (!derived || result_action));
     gtk_widget_set_sensitive(app->send, !s.secure && s.preedit.empty() && (derived ? s.can_deliver : s.capturing && !s.blocks.empty()));
-    gtk_widget_set_visible(app->generate, derived && !result_action);
+    gtk_widget_set_visible(app->generate, derived && (!result_action || s.mailbox_image));
+    gtk_widget_set_visible(app->mailbox_open, s.mailbox_image && !s.mailbox_thread.empty() && !s.secure);
     gtk_widget_set_sensitive(app->generate, !s.secure && (s.can_generate || s.phase == rimes::buffer::DerivedPhase::Running));
     const char* action = s.phase == rimes::buffer::DerivedPhase::Running ? "停止生成" : "生成结果";
     gtk_widget_set_tooltip_text(app->generate, action);
@@ -243,9 +247,19 @@ void Refresh(App* app) {
     std::string title = "Default";
     for (const auto& p : s.plugins) if (p.id == s.active_plugin) title = p.name;
     gtk_button_set_label(GTK_BUTTON(app->selector), (title + "  ⌄").c_str());
+    for (const auto& [id, button] : app->plugin_options) {
+        const auto option = std::find_if(s.plugin_options.begin(), s.plugin_options.end(), [&](const auto& value) { return value.id == id; });
+        gtk_widget_set_visible(button, option != s.plugin_options.end());
+        gtk_widget_set_sensitive(button, !s.secure && s.visible);
+        if (option != s.plugin_options.end()) {
+            for (const auto& choice : option->choices) if (choice.id == option->value)
+                gtk_button_set_label(GTK_BUTTON(button), (choice.name + "  ⌄").c_str());
+        }
+    }
+
     std::string status;
     if (s.secure) status = "内容已隐藏";
-    else if (!s.message.empty()) status = s.message;
+    else if (!s.message.empty() && !s.mailbox_image) status = s.message;
     else if (s.phase == rimes::buffer::DerivedPhase::Running) status = "正在生成…";
     else if (s.phase == rimes::buffer::DerivedPhase::Failed) status = "生成失败，可重试";
     else if (!s.capturing) status = "已暂停";
@@ -255,7 +269,7 @@ void Refresh(App* app) {
     gtk_progress_bar_set_fraction(GTK_PROGRESS_BAR(app->progress), CLAMP(s.hold_progress, 0.0, 1.0));
     gtk_widget_set_visible(app->progress, s.hold_progress > 0);
     const auto result = std::find_if(s.results.begin(), s.results.end(), [&](const auto& r) { return r.id == s.selected_result; });
-    const std::string text = s.secure ? "" : result == s.results.end() ? (s.phase == rimes::buffer::DerivedPhase::Failed ? "生成失败，可重试" : "等待结果…") : result->text;
+    const std::string text = s.secure ? "" : s.mailbox_image ? (s.message.empty() ? "图片将保存到 Mailbox" : s.message) : result == s.results.end() ? (s.phase == rimes::buffer::DerivedPhase::Failed ? "生成失败，可重试" : "等待结果…") : result->text;
     gtk_label_set_text(GTK_LABEL(app->result_text), text.c_str());
     gtk_widget_set_tooltip_text(app->result_text, text.c_str());
     auto* old_chips = gtk_container_get_children(GTK_CONTAINER(app->result_chips));
@@ -579,6 +593,7 @@ void LoadCss(const std::string& theme, GdkScreen* screen) {
         "#rimes-preedit { text-decoration: underline; color: " + c("accentBlue") + "; }"
         "button.rimes-action, button.rimes-selector { background: " + c("surfaceSecondary") + "; color: " + c("textPrimary") + "; border: 0.5px solid " + c("border") + "; border-radius: 6px; min-width: 21px; min-height: 21px; padding: 0; }"
         "button.rimes-selector { padding: 0 7px; font-weight: 600; }"
+        "button.rimes-ai-option { font-size: 10px; font-weight: 400; }"
         "button.rimes-action:hover, button.rimes-selector:hover { background: " + c("surfaceTertiary") + "; }"
         "button.rimes-action .glyph { color: " + c("textSecondary") + "; }"
         ".rimes-actions { background: linear-gradient(to right, transparent, " + c("candidateBackground") + " 18px); padding-left: 18px; }"
@@ -620,6 +635,27 @@ void PluginMenu(App* app, GtkWidget* anchor) {
     g_signal_connect(menu, "selection-done", G_CALLBACK(+[](GtkWidget* w) { gtk_widget_destroy(w); }), nullptr);
     gtk_widget_show_all(menu);
     gtk_menu_popup_at_widget(GTK_MENU(menu), anchor, GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, nullptr);
+}
+
+void PluginOptionMenu(App* app, const std::string& field) {
+    const auto selected = std::find_if(app->snapshot.plugin_options.begin(), app->snapshot.plugin_options.end(), [&](const auto& option) { return option.id == field; });
+    if (selected == app->snapshot.plugin_options.end() || app->snapshot.secure) return;
+    const auto plugin = app->snapshot.active_plugin;
+    auto* menu = gtk_menu_new();
+    for (const auto& choice : selected->choices) {
+        auto* item = gtk_check_menu_item_new_with_label(choice.name.c_str());
+        gtk_check_menu_item_set_draw_as_radio(GTK_CHECK_MENU_ITEM(item), TRUE);
+        gtk_check_menu_item_set_active(GTK_CHECK_MENU_ITEM(item), choice.id == selected->value);
+        auto* callback = new std::function<void()>([app, plugin, field, value = choice.id] {
+            SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "configure_plugin"}, {"plugin", plugin}, {"id", field}, {"value", value}}.dump());
+        });
+        g_signal_connect_data(item, "activate", G_CALLBACK(+[](GtkMenuItem*, gpointer raw) { (*static_cast<std::function<void()>*>(raw))(); }), callback,
+            +[](gpointer raw, GClosure*) { delete static_cast<std::function<void()>*>(raw); }, GConnectFlags(0));
+        gtk_menu_shell_append(GTK_MENU_SHELL(menu), item);
+    }
+    g_signal_connect(menu, "selection-done", G_CALLBACK(+[](GtkWidget* widget) { gtk_widget_destroy(widget); }), nullptr);
+    gtk_widget_show_all(menu);
+    gtk_menu_popup_at_widget(GTK_MENU(menu), app->plugin_options.at(field), GDK_GRAVITY_SOUTH_WEST, GDK_GRAVITY_NORTH_WEST, nullptr);
 }
 
 void FeatureMenu(App* app) {
@@ -712,6 +748,15 @@ void BuildUi(App* app) {
     app->selector = Button("Default  ⌄", [app] { PluginMenu(app, app->selector); }, "rimes-selector");
     gtk_widget_set_can_focus(app->selector, FALSE);
     Add(tools, app->selector);
+    for (const auto& [field, width] : std::vector<std::pair<std::string, int>>{{"model", 132}, {"effort", 88}, {"skill", 118}}) {
+        auto* button = Button("", [app, field] { PluginOptionMenu(app, field); }, "rimes-selector");
+        Class(button, "rimes-ai-option");
+        gtk_widget_set_can_focus(button, FALSE); gtk_widget_set_size_request(button, width, rimes::native::controlSize);
+        const char* title = field == "model" ? "AI 模型" : field == "effort" ? "推理深度" : "AI 技能";
+        gtk_widget_set_tooltip_text(button, title); atk_object_set_name(gtk_widget_get_accessible(button), title);
+        app->plugin_options[field] = button; Add(tools, button);
+    }
+
     app->status = Label("");
     gtk_widget_set_name(app->status, "rimes-status");
     Add(tools, app->status);
@@ -804,6 +849,10 @@ void BuildUi(App* app) {
         app->pending_copy = app->snapshot.selected_result;
         SendCommand(app, rimes::runtime::Json{{"v",1},{"op","copy_result"},{"id",app->pending_copy}}.dump());
     });
+    app->mailbox_open = Action("tray", "打开 Mailbox 查看图片", [app] {
+        SendCommand(app, rimes::runtime::Json{{"v", 1}, {"op", "open_mailbox_image"}, {"id", app->snapshot.mailbox_thread}}.dump());
+    });
+    Add(app->result_actions, app->mailbox_open);
     app->generate = Action("sparkles", "生成结果", [app] {
         SendCommand(app, app->snapshot.phase == rimes::buffer::DerivedPhase::Running ? R"({"v":1,"op":"cancel_generation"})" : R"({"v":1,"op":"generate"})");
     });
@@ -825,8 +874,8 @@ int RenderFixtures(App* app, const std::filesystem::path& output) {
     s.blocks = {{"fixture-source", "同一窗口先展开为双轨", rimes::buffer::Origin::Rime, 0}};
     rimes::runtime::Json manifest = rimes::runtime::Json::array();
     for (const std::string theme : {"night", "day", "quiet", "rasta", "liquidGlass"}) {
-        for (const std::string state : {"standard", "dual", "protected", "running", "failed", "alternatives", "exchange", "return-to-edit", "restored", "hold", "automatic", "translation-delivery"}) {
-            s.theme = theme;
+        for (const std::string state : {"standard", "dual", "protected", "running", "failed", "alternatives", "exchange", "return-to-edit", "restored", "hold", "automatic", "translation-delivery", "codex-image"}) {
+            s.theme = theme; s.mailbox_image = false; s.mailbox_thread.clear(); s.plugin_options.clear(); s.message.clear();
             s.secure = state == "protected";
             s.active_plugin = state == "standard" || state == "restored" || state == "hold" || state == "automatic" ? "" : "fixture.transform";
             s.auto_send_seconds = state == "automatic" ? 1 : 0;
@@ -851,6 +900,15 @@ int RenderFixtures(App* app, const std::filesystem::path& output) {
             s.can_deliver = s.phase == rimes::buffer::DerivedPhase::Ready && !s.secure;
             s.selected_result = s.results.empty() ? "" : s.results.front().id;
             s.can_generate = !s.active_plugin.empty() && s.phase != rimes::buffer::DerivedPhase::Running;
+            if (state == "codex-image") {
+                s.active_plugin = "builtin.codex-cli"; s.plugins = {{"builtin.codex-cli", "ChatGPT"}};
+                s.live_expand = false; s.mailbox_image = true; s.mailbox_thread = "fixture-image-thread";
+                s.message = "图片已生成，点击右侧按钮到 Mailbox 查看。";
+                s.results.clear(); s.result_blocks.clear(); s.selected_result.clear(); s.can_deliver = false;
+                s.plugin_options = {{"model", "模型", "gpt-6-sol", {{"gpt-6-sol", "GPT-6 Sol"}}},
+                                    {"effort", "推理深度", "medium", {{"medium", "medium"}}},
+                                    {"skill", "Skill", "imagegen", {{"imagegen", "图片 · imagegen"}}}};
+            }
             Refresh(app);
             if (s.secure && (!gtk_widget_get_visible(app->window) || app->height != rimes::native::bufferDerivedHeight ||
                 std::strlen(gtk_label_get_text(GTK_LABEL(app->result_text))) || std::strlen(gtk_label_get_text(GTK_LABEL(app->target))))) {

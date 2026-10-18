@@ -30,7 +30,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 18 | P1 | [#168 Mailbox 窗口、模块宿主和持久化](https://github.com/scholay/xsime/issues/168) | GTK 宿主、原生数据往返、单实例与锁屏测试通过；双端 24 状态截图仍需视觉验收 |
 | 19 | P1 | [#169 Mailbox 收件、附件与 Capsule/Buffer 流转](https://github.com/scholay/xsime/issues/169) | 收件操作、独立附件、Buffer 原生接收与回滚测试通过；48 组双端截图待视觉验收 |
 | 20 | P1 | [#170 本地 MCP/HTTP 网关与收件审核](https://github.com/scholay/xsime/issues/170) | 实际 TCP/MCP、Fcitx 撤权、原生数据往返及 deb 测试通过；16 组双端设置截图待视觉验收 |
-| 21 | P1 | [#171 ChatGPT/Codex CLI 渠道插件](https://github.com/scholay/xsime/issues/171) | 待开发 |
+| 21 | P1 | [#171 ChatGPT/Codex CLI 渠道插件](https://github.com/scholay/xsime/issues/171) | 实际 Fcitx 文本/图片、CLI 探测、通知和 deb 测试通过；10 组设置对照及真实账号/桌面待验收 |
 | 22 | P1 | [#172 Claude Code CLI 渠道插件](https://github.com/scholay/xsime/issues/172) | 待开发 |
 | 23 | P1 | [#173 Mailbox AI 对话工作区](https://github.com/scholay/xsime/issues/173) | 待开发 |
 | 24 | P1 | [#174 Mailbox PTY 终端与手动成果收取](https://github.com/scholay/xsime/issues/174) | 待开发 |

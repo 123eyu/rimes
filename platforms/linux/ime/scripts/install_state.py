@@ -42,6 +42,7 @@ def managed_path(raw):
         or re.fullmatch(r"share/icons/hicolor/[^/]+/apps/rimes\.(?:png|svg)", raw)
         or raw.startswith("share/licenses/rimes/")
         or raw.startswith("share/rimes/data/")
+        or raw.startswith("share/rimes/skills/imagegen/")
     )
     if not allowed or any(p in {"build", "userdb", "schemes", "learning"}
                           or ".userdb" in p or p.endswith(".bin") for p in path.parts):

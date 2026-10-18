@@ -87,17 +87,26 @@ int main() {
             R"({"op":"set_insertion","index":4294967297})", R"({"op":"set_insertion","index":1.5})",
             R"({"v":2,"op":"show"})", R"({"op":"select_result"})"})
         Expect(!rimes::buffer::ParseCommand(bad, &command, &error), "invalid command rejected");
+    Expect(rimes::buffer::ParseCommand(R"({"op":"open_mailbox_image","id":"fixture-thread"})", &command, &error) && command.id == "fixture-thread",
+           "image open command retains the exact Mailbox thread");
+    Expect(!rimes::buffer::ParseCommand(R"({"op":"open_mailbox_image"})", &command, &error), "image open without identity rejected");
+    Expect(rimes::buffer::ParseCommand(R"({"op":"configure_plugin","plugin":"builtin.codex-cli","id":"skill","value":""})", &command, &error) && command.text.empty(),
+           "explicit empty Skill is retained");
+    Expect(!rimes::buffer::ParseCommand(R"({"op":"configure_plugin","plugin":"builtin.codex-cli","id":"apiKey","value":"x"})", &command, &error), "renderer cannot set credentials");
     auto dual = snapshot;
     dual.active_plugin = "builtin.fixture";
     dual.phase = rimes::buffer::DerivedPhase::Ready;
     dual.results = {{"result", "Result includes ],{ and 中文🙂", 0, true}};
     dual.selected_result = "result";
+    dual.plugin_options = {{"model", "模型", "fixture", {{"fixture", "Fixture"}}}};
+    dual.mailbox_image = true; dual.mailbox_thread = "private-image-thread";
     dual.result_blocks = {{"child-1", "Result includes ", rimes::buffer::Origin::Local, 0},
                           {"child-2", "],{ and 中文🙂", rimes::buffer::Origin::Local, 0}};
     rimes::buffer::Snapshot decoded;
     Expect(rimes::buffer::ParseSnapshot(rimes::buffer::EncodeSnapshot(dual), &decoded), "dual snapshot round trip");
     Expect(decoded.results.size() == 1 && decoded.results.front().text == dual.results.front().text &&
            decoded.blocks.front().text == snapshot.blocks.front().text, "nested arrays and Unicode remain distinct");
+    Expect(decoded.plugin_options.size() == 1 && decoded.plugin_options[0].choices[0].id == "fixture" && decoded.mailbox_thread == "private-image-thread", "plugin controls and image identity round trip");
     Expect(decoded.result_blocks.size() == 2 && decoded.result_blocks.back().text == "],{ and 中文🙂",
            "derived segment ranges preserve Unicode text without duplicate transport");
     auto invalid_parts = dual;
@@ -113,6 +122,7 @@ int main() {
     Expect(protected_dual.find("private-target-name") == std::string::npos, "protected IPC scrubs target identity before rendering");
     Expect(rimes::buffer::ParseSnapshot(protected_dual, &decoded) && decoded.results.empty() && decoded.blocks.empty() && decoded.result_blocks.empty(),
            "protected renderer has no plaintext");
+    Expect(!decoded.mailbox_image && decoded.mailbox_thread.empty() && protected_dual.find("private-image-thread") == std::string::npos, "protected image identity leaked");
     Expect(decoded.target.empty() && !decoded.caret.valid && protected_dual.find("private-target") == std::string::npos,
            "protected target/caret leaked");
     dual.secure = false; dual.password_field = true;

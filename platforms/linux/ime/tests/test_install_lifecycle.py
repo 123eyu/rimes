@@ -38,6 +38,7 @@ install(PROGRAMS program DESTINATION bin RENAME rimes-settings)
 install(PROGRAMS program DESTINATION bin RENAME rimes-translation)
 install(PROGRAMS program DESTINATION bin RENAME rimes-launch)
 install(PROGRAMS program DESTINATION bin RENAME rimes-mailbox)
+install(FILES program DESTINATION share/rimes/skills/imagegen RENAME SKILL.md)
 install(PROGRAMS program DESTINATION bin RENAME rimes-gateway)
 install(FILES program DESTINATION libexec/rimes/translation RENAME runtime.py)
 install(FILES program DESTINATION libexec/rimes/translation RENAME translation_core.py)
@@ -98,6 +99,8 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ma
             "share/rimes/capsule/master-key", "share/rimes/capsule/reveal-credential-v1",
             "share/rimes/capsule/passwords/fixture.md",
             "share/rimes/gateway/token", "share/rimes/gateway/status.json",
+            "share/rimes/ai/codex-home/auth.json", "share/rimes/ai/codex-home/generated_images/fixture.png",
+            "share/rimes/mailbox/generations/fixture/.lock",
             "share/rimes/mailbox/mailbox.json", "share/rimes/mailbox/images/fixture.png", "share/rimes/mailbox/window.json",
             "share/rimes/capsule/captures/example/record.json", "share/rimes/capsule/captures/example/original.webm",
             "share/rimes/capsule/assets/reference.asset", "share/rimes/capsule/reference-style-v1",
@@ -109,6 +112,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ma
         self.install()
         installed = list(self.receipt()["files"])
         self.assertIn("share/rimes/data/default.yaml", installed)
+        self.assertIn("share/rimes/skills/imagegen/SKILL.md", installed)
         self.assertIn("lib/x86_64-linux-gnu/fcitx5/rimes.so", installed)
         self.assertIn("libexec/rimes/rimes-deploy", installed)
         self.assertIn("libexec/rimes/rimes-capsule-preview", installed)

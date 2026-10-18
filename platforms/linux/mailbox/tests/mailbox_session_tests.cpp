@@ -56,15 +56,17 @@ int main(int argc, char** argv) {
                             ++step;
                         } else if (step == 3 && Store(root / "mailbox")
                                                         .Get(fixture.at("selectedInbox"))
-                                                        .at("unread") == false) {
+                                                        .at("unread") == false &&
+                                   host.NotifyCompleted(fixture.at("selectedImage"))) {
                             check(visible, "explicit open stayed hidden");
+                            check(host.Inspect().at("notificationThread") == fixture.at("selectedImage"), "completed message receipt missing");
                             persisted = *runtime::PrivateDirectory(root / "mailbox")
                                              .Read("mailbox.json", 16 * 1024 * 1024);
                             session.Saver(true);
                             session.Sleep(true);
                             ++step;
                         } else if (step == 4 && host.Protected()) {
-                            check(!visible && !host.Open("chat"),
+                            check(!visible && host.Inspect().at("notificationThread") == "" && !host.Open("chat"),
                                   "live lock did not hide/reject open");
                             session.Saver(false);
                             ++step;
@@ -74,7 +76,7 @@ int main(int argc, char** argv) {
                             session.Sleep(false);
                             ++step;
                         } else if (step == 6 && !host.Protected()) {
-                            check(!visible, "wake silently reopened private window");
+                            check(!visible && host.Inspect().at("notificationThread") == "", "wake silently reopened private window or receipt");
                             session.bus.releaseName(SessionFixture::saver);
                             ++step;
                         } else if (step == 7 && host.Protected()) {
@@ -90,7 +92,7 @@ int main(int argc, char** argv) {
                                   "lock/wake changed messages");
                             std::cout << "Mailbox GTK session: initial/overlapping lock, "
                                          "sleep/wake, provider loss/restart, explicit reopen and "
-                                         "data retention passed\n";
+                                         "completion receipt concealment and data retention passed\n";
                             result = 0;
                             loop.exit();
                             return true;

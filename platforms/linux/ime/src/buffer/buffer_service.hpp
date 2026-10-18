@@ -21,6 +21,7 @@
 #include "buffer_protocol.hpp"
 #include "buffer_return.hpp"
 #include "configuration.hpp"
+#include "codex_image_jobs.hpp"
 #include "units.hpp"
 
 namespace fcitx {
@@ -79,6 +80,12 @@ public:
         std::function<rimes::runtime::RequestConfiguration(std::string_view)> freeze);
     // Only compiled adapters may register here, never renderer commands.
     void RegisterDerivedAdapter(std::string id, std::string capability, RunDerived run, bool live_expand = true);
+    using StartImage = std::function<bool(rimes::buffer::DerivedRequest, rimes::runtime::RequestConfiguration)>;
+    void BindImages(StartImage start, std::function<rimes::mailbox::ImageState()> state,
+                    std::function<void()> cancel, std::function<void(const std::string&)> open);
+    void ConfigureImageSkill(bool enabled) { image_skill_ = enabled; }
+    void BindPluginOptions(std::function<void(const std::string&, const std::string&, const std::string&)> save) { save_plugin_option_ = std::move(save); }
+    void ConfigurePluginOptions(const rimes::runtime::Json& configuration);
     bool SelectPlugin(const std::string& id);
     bool Generate();
     void CancelDerived();
@@ -87,6 +94,14 @@ public:
     bool TranslationTick(bool force = false);
 
 private:
+    bool ImageMode() const;
+    StartImage start_image_;
+    std::function<rimes::mailbox::ImageState()> image_state_;
+    std::function<void()> cancel_image_;
+    std::function<void(const std::string&)> open_image_;
+    bool image_skill_ = false;
+    std::map<std::string, std::vector<rimes::buffer::PluginOption>> plugin_options_;
+    std::function<void(const std::string&, const std::string&, const std::string&)> save_plugin_option_;
     struct Inbox;
     std::shared_ptr<Inbox> inbox_;
     void InitializeInbox();
