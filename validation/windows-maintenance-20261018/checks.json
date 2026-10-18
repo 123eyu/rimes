@@ -1,0 +1,437 @@
+{
+  "date": "2026-10-18",
+  "native": [
+    {
+      "architecture": "x64",
+      "buildPassed": true,
+      "finalPassed": 37,
+      "attempts": [
+        {
+          "kind": "tests",
+          "logSHA256": "8a384edbea2ea0dba9650e323dc6b4df0a7b101ef8ae9192d557e52a4119e059",
+          "results": [
+            {
+              "name": "RimesE2EBrokerEndpoint",
+              "result": "Passed",
+              "seconds": 0.1
+            },
+            {
+              "name": "RimesCaretRegression",
+              "result": "Passed",
+              "seconds": 0.13
+            },
+            {
+              "name": "RimesFirstKey",
+              "result": "Passed",
+              "seconds": 0.7
+            },
+            {
+              "name": "RimesCandidateUI",
+              "result": "Passed",
+              "seconds": 0.21
+            },
+            {
+              "name": "RimesTsfRuntime",
+              "result": "Passed",
+              "seconds": 0.09
+            },
+            {
+              "name": "RimesRecoveryTsfRuntimeImports",
+              "result": "Passed",
+              "seconds": 0.08
+            },
+            {
+              "name": "RimesTsfRuntimeImportGuard",
+              "result": "Passed",
+              "seconds": 0.05
+            },
+            {
+              "name": "RimesSurface",
+              "result": "Passed",
+              "seconds": 2.07
+            },
+            {
+              "name": "RimesMetrics",
+              "result": "Passed",
+              "seconds": 0.21
+            },
+            {
+              "name": "RimesPeripherals",
+              "result": "Passed",
+              "seconds": 1.88
+            },
+            {
+              "name": "RimesRuntime",
+              "result": "Passed",
+              "seconds": 9.52
+            },
+            {
+              "name": "RimesOfficialPlugins",
+              "result": "Passed",
+              "seconds": 0.38
+            },
+            {
+              "name": "RimesCodexConnector",
+              "result": "Passed",
+              "seconds": 3.45
+            },
+            {
+              "name": "RimesLocalGateway",
+              "result": "Passed",
+              "seconds": 3.61
+            },
+            {
+              "name": "RimesSseControl",
+              "result": "Passed",
+              "seconds": 0.07
+            },
+            {
+              "name": "RimesWorkbench",
+              "result": "Passed",
+              "seconds": 0.13
+            },
+            {
+              "name": "RimesBufferLayout",
+              "result": "Passed",
+              "seconds": 0.05
+            },
+            {
+              "name": "RimesBufferPlacement",
+              "result": "Passed",
+              "seconds": 0.04
+            },
+            {
+              "name": "RimesUiCommand",
+              "result": "Passed",
+              "seconds": 0.17
+            },
+            {
+              "name": "RimesCandidateWindow",
+              "result": "Passed",
+              "seconds": 0.11
+            },
+            {
+              "name": "RimesSettings",
+              "result": "Passed",
+              "seconds": 1.09
+            },
+            {
+              "name": "RimesChordProfile",
+              "result": "Passed",
+              "seconds": 0.08
+            },
+            {
+              "name": "RimesConnections",
+              "result": "Passed",
+              "seconds": 0.88
+            },
+            {
+              "name": "RimesBrokerHelp",
+              "result": "Passed",
+              "seconds": 0.07
+            },
+            {
+              "name": "RimesBrokerProtocol",
+              "result": "Passed",
+              "seconds": 0.09
+            },
+            {
+              "name": "RimesBrokerLaunch",
+              "result": "Passed",
+              "seconds": 0.04
+            },
+            {
+              "name": "RimesEngineUnit",
+              "result": "Passed",
+              "seconds": 0.05
+            },
+            {
+              "name": "RimesBrokerKeyTranslation",
+              "result": "Passed",
+              "seconds": 0.04
+            },
+            {
+              "name": "RimesBrokerOptions",
+              "result": "Passed",
+              "seconds": 0.05
+            },
+            {
+              "name": "RimesBrokerClientContract",
+              "result": "Passed",
+              "seconds": 0.06
+            },
+            {
+              "name": "RimesRegistrarMetadata",
+              "result": "Passed",
+              "seconds": 0.06
+            },
+            {
+              "name": "RimesRegistrarDiagnostics",
+              "result": "Passed",
+              "seconds": 0.04
+            },
+            {
+              "name": "RimesBrokerEndpoint",
+              "result": "Passed",
+              "seconds": 0.02
+            },
+            {
+              "name": "RimesBrokerPrintPaths",
+              "result": "Passed",
+              "seconds": 0.02
+            }
+          ]
+        },
+        {
+          "kind": "retest",
+          "logSHA256": "9983bf4beff52729f0d2cfb34d271765bfa2ed3bdeacf0bb645282af39bf4a0e",
+          "results": [
+            {
+              "name": "RimesSettingsUi",
+              "result": "Passed",
+              "seconds": 28.71
+            },
+            {
+              "name": "RimesCandidateLayout",
+              "result": "Passed",
+              "seconds": 0.05
+            },
+            {
+              "name": "scheme-import",
+              "result": "Passed",
+              "seconds": 0.36
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "architecture": "x86",
+      "buildPassed": true,
+      "finalPassed": 37,
+      "attempts": [
+        {
+          "kind": "tests",
+          "logSHA256": "f96583b00201d552f5f151ce05c8bbd648e34aeebb32a55be32d2a09c2631156",
+          "results": [
+            {
+              "name": "RimesE2EBrokerEndpoint",
+              "result": "Passed",
+              "seconds": 8.58
+            },
+            {
+              "name": "RimesCaretRegression",
+              "result": "Passed",
+              "seconds": 0.61
+            },
+            {
+              "name": "RimesFirstKey",
+              "result": "Passed",
+              "seconds": 2.8
+            },
+            {
+              "name": "RimesCandidateUI",
+              "result": "Passed",
+              "seconds": 1.27
+            },
+            {
+              "name": "RimesTsfRuntime",
+              "result": "Passed",
+              "seconds": 0.58
+            },
+            {
+              "name": "RimesRecoveryTsfRuntimeImports",
+              "result": "Passed",
+              "seconds": 1.22
+            },
+            {
+              "name": "RimesTsfRuntimeImportGuard",
+              "result": "Passed",
+              "seconds": 0.06
+            },
+            {
+              "name": "RimesSurface",
+              "result": "Passed",
+              "seconds": 4.22
+            },
+            {
+              "name": "RimesMetrics",
+              "result": "Passed",
+              "seconds": 0.75
+            },
+            {
+              "name": "RimesPeripherals",
+              "result": "Passed",
+              "seconds": 3.65
+            },
+            {
+              "name": "RimesRuntime",
+              "result": "Passed",
+              "seconds": 10.56
+            },
+            {
+              "name": "RimesOfficialPlugins",
+              "result": "Passed",
+              "seconds": 1.3
+            },
+            {
+              "name": "RimesLocalGateway",
+              "result": "Passed",
+              "seconds": 3.36
+            },
+            {
+              "name": "RimesSseControl",
+              "result": "Passed",
+              "seconds": 0.37
+            },
+            {
+              "name": "RimesWorkbench",
+              "result": "Passed",
+              "seconds": 0.21
+            },
+            {
+              "name": "RimesBufferLayout",
+              "result": "Passed",
+              "seconds": 0.18
+            },
+            {
+              "name": "RimesBufferPlacement",
+              "result": "Passed",
+              "seconds": 0.18
+            },
+            {
+              "name": "RimesUiCommand",
+              "result": "Passed",
+              "seconds": 0.25
+            },
+            {
+              "name": "RimesCandidateWindow",
+              "result": "Passed",
+              "seconds": 0.19
+            },
+            {
+              "name": "RimesSettings",
+              "result": "Passed",
+              "seconds": 1.15
+            },
+            {
+              "name": "RimesChordProfile",
+              "result": "Passed",
+              "seconds": 0.27
+            },
+            {
+              "name": "RimesConnections",
+              "result": "Passed",
+              "seconds": 4.66
+            },
+            {
+              "name": "RimesBrokerHelp",
+              "result": "Passed",
+              "seconds": 0.17
+            },
+            {
+              "name": "RimesBrokerProtocol",
+              "result": "Passed",
+              "seconds": 0.37
+            },
+            {
+              "name": "RimesBrokerLaunch",
+              "result": "Passed",
+              "seconds": 0.22
+            },
+            {
+              "name": "RimesEngineUnit",
+              "result": "Passed",
+              "seconds": 0.16
+            },
+            {
+              "name": "RimesBrokerKeyTranslation",
+              "result": "Passed",
+              "seconds": 0.28
+            },
+            {
+              "name": "RimesBrokerOptions",
+              "result": "Passed",
+              "seconds": 0.16
+            },
+            {
+              "name": "RimesCandidateLayout",
+              "result": "Passed",
+              "seconds": 0.16
+            },
+            {
+              "name": "RimesBrokerClientContract",
+              "result": "Passed",
+              "seconds": 0.15
+            },
+            {
+              "name": "RimesRegistrarMetadata",
+              "result": "Passed",
+              "seconds": 0.16
+            },
+            {
+              "name": "RimesRegistrarDiagnostics",
+              "result": "Passed",
+              "seconds": 0.04
+            },
+            {
+              "name": "RimesBrokerEndpoint",
+              "result": "Passed",
+              "seconds": 0.03
+            },
+            {
+              "name": "RimesBrokerPrintPaths",
+              "result": "Passed",
+              "seconds": 0.03
+            },
+            {
+              "name": "scheme-import",
+              "result": "Passed",
+              "seconds": 0.72
+            }
+          ]
+        },
+        {
+          "kind": "retest",
+          "logSHA256": "98898c903c8cef184cc6a78cd5ee1e585af22833f97396e7f85686005ab7460c",
+          "results": [
+            {
+              "name": "RimesCodexConnector",
+              "result": "Passed",
+              "seconds": 5.34
+            },
+            {
+              "name": "RimesSettingsUi",
+              "result": "Passed",
+              "seconds": 42.77
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "python": [
+    {
+      "name": "official-plugin-import",
+      "passed": 5
+    },
+    {
+      "name": "buffer-plugin-catalog",
+      "passed": 2
+    },
+    {
+      "name": "windows-native-data",
+      "passed": 11
+    },
+    {
+      "name": "plugin-packages (Python UTF-8 mode)",
+      "passed": 7
+    }
+  ],
+  "catalogCheck": true,
+  "pluginRepositoryCheck": true,
+  "practiceArticlesCheck": true,
+  "fontIndexBytesMatch": true,
+  "whitespaceCheck": true,
+  "credentialPatternReview": "No credential-pattern matches in staged text files."
+}

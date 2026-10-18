@@ -1,0 +1,98 @@
+[
+  {
+    "path": "THIRD_PARTY_NOTICES.md",
+    "sha256": "ec21665bc37068282484e770ab4654973f47815c0e0d2c735c7e7fd1e4a52bfd"
+  },
+  {
+    "path": "platforms/windows/scripts/New-RimesNativePackage.ps1",
+    "sha256": "1d166e1899d46d0201056f1fc7afda9446d68acc3a3f6bca4e6b6d4948e829ff"
+  },
+  {
+    "path": "platforms/windows/native/CMakeLists.txt",
+    "sha256": "9ac5368861becc6851b6b5abfbfa6da7135cbe930e14bdda360c7c18108ff523"
+  },
+  {
+    "path": "platforms/windows/native/PERIPHERALS.md",
+    "sha256": "574666819a91777bc1f2331ed985fa5b353d473139e63987656e8111b943d995"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/store.cpp",
+    "sha256": "35d10dc785d760a4ab4f9a6d60b120dc460963a7fd0906c597577d1cec620b7b"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/media.hpp",
+    "sha256": "d81d04aca5e604ab813392ccef257c1e64859c921ca9a9d0ef17c4851d276d9f"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/window.hpp",
+    "sha256": "5cc2941014bb33d988da8aebd2924c514fc5f874ddccee14183b7db1cd78a973"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/window.cpp",
+    "sha256": "445149adfc0d7e6cc4d78a7a18116ee050bf616708686233a79481baeb561b9b"
+  },
+  {
+    "path": "platforms/windows/native/src/peripherals/tests.cpp",
+    "sha256": "4ca3a70c6004753d3cc0e4dffd161ecfcba420475a6401cc47f9b0070617c461"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/window.cpp",
+    "sha256": "050e08f8c2df46fcadac0c8731ecd752982f2445299983d818e31eec0b7dc7f2"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/settings_ui.cpp",
+    "sha256": "52a9f3ef3763119467b117c16f92bd7cf2a0de693d7547b4d96efa2619767d74"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/settings_ui.hpp",
+    "sha256": "8aeef2e7cc6702a11406e6c8b6349a118fdf7c8f3ffc3b96755de6141873cd09"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/settings_ui_tests.cpp",
+    "sha256": "7e34a4c4388a3de511068f1499d93f838cdfd3defbb5309110e3b1c066d9d7f8"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/parity_settings.cpp",
+    "sha256": "950b194778cbfcfab65ca3d5016f0ce9726a4929d39dbf00ccdb2b35a238a436"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/parity_settings.hpp",
+    "sha256": "82a4a9b033e06ac58bccd211e2f5fcb8b09d0962c68aebe21f7046788122fb92"
+  },
+  {
+    "path": "platforms/windows/native/src/workbench/metrics_ui_tests.cpp",
+    "sha256": "475f84c33d0b76bd018a57d1bc60de7509edae27b42eab82c0540bd483f81cae"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/settings_layout.hpp",
+    "sha256": "2a01a703f76bf6a8893597526b3dbcb2ae07cc7434cf5828cc8b0be692118615"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/settings_paint.hpp",
+    "sha256": "09577ac7b49591fa27c4840566a7d03832019baa6aac26559c4901b47b871190"
+  },
+  {
+    "path": "platforms/windows/native/src/ui/fluent_icons.hpp",
+    "sha256": "62bb87e3e7c47b17dfe43ce6c6ddcaaab19ce6445e1a706115edcd5490e491d3"
+  },
+  {
+    "path": "platforms/windows/native/src/fluent_icons.rc.in",
+    "sha256": "49472d4749b4f015c19c526cde1832bbdf0d1640d6eda1fcec8c15978a2606ef"
+  },
+  {
+    "path": "platforms/windows/native/resources/fluent-system-icons/FluentSystemIcons-Regular.json",
+    "sha256": "c6e91d8b156b6d29aff3aeccd8d6b9752c2365c9f9ad02b194d5d791da7abee8"
+  },
+  {
+    "path": "platforms/windows/native/resources/fluent-system-icons/FluentSystemIcons-Regular.ttf",
+    "sha256": "f977ae5bfb46661e7ba94b098e0d7720e27af888e57b9b14e239933ac4c0e6f4"
+  },
+  {
+    "path": "platforms/windows/native/resources/fluent-system-icons/LICENSE",
+    "sha256": "69bc45dc42b9acb96a69823adbc6ae538374e3c0bde169b855b32c48eaaef52f"
+  },
+  {
+    "path": "platforms/windows/native/resources/fluent-system-icons/SOURCE.json",
+    "sha256": "24075d4e3b949021a4542151468bf5faf0941c51bbd45cdd14e381efe1caeb48"
+  }
+]

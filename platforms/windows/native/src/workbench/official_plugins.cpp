@@ -173,10 +173,35 @@ std::string OfficialPluginStore::Grant(const std::string& id) {
   std::lock_guard lock(mutex_);
   try { (void)Package(id); return State(id).at("grant").get<std::string>(); } catch (...) { return {}; }
 }
+// Selection is a preference, never a package grant or a saved Buffer draft.
+std::string OfficialPluginStore::LoadBufferSelection() {
+  std::lock_guard lock(mutex_);
+  try {
+    if (!ready_) return {};
+    const auto value = Json::parse(Read(Path("buffer-selection.json"), 4096),
+        [](int depth, Json::parse_event_t, Json&) {
+          if (depth > 4) throw std::runtime_error("Invalid Buffer selection");
+          return true;
+        });
+    if (value.at("version") != 1) return {};
+    const auto id = value.at("plugin").get<std::string>();
+    return id.empty() || Entry(id).at("kind") == "buffer" ? id : std::string{};
+  } catch (...) { return {}; }
+}
+bool OfficialPluginStore::SaveBufferSelection(const std::string& id, std::string* error) {
+  std::lock_guard lock(mutex_);
+  try {
+    if (!ready_ || (!id.empty() && (Entry(id).at("kind") != "buffer" || Grant(id).empty())))
+      throw std::runtime_error("Buffer plugin is unavailable");
+    Atomic(Path("buffer-selection.json"), Json{{"version", 1}, {"plugin", id}}.dump());
+    return true;
+  } catch (const std::exception& value) { Error(error, value); return false; }
+}
 std::vector<PluginView> OfficialPluginStore::Entries() {
   std::lock_guard lock(mutex_); std::vector<PluginView> result;
   for (const auto& entry : catalog_.at("plugins")) {
     PluginView view; view.id = entry.at("id"); view.name = entry.at("nameZH"); view.version = entry.at("version");
+    view.kind = entry.at("kind");
     view.bundled = entry.at("platforms").at("windows").at("distribution") == "bundled";
     try { const auto state = State(view.id); view.installed = state.at("installed"); view.grant = state.at("grant"); view.enabled = !Grant(view.id).empty(); } catch (...) {}
     result.push_back(view);

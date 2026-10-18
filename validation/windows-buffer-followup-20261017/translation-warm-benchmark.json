@@ -1,0 +1,40 @@
+[
+  {
+    "mode": "cold",
+    "ms": 4819,
+    "response": {
+      "text": "Today we go for a walk in the park."
+    }
+  },
+  {
+    "mode": "cold",
+    "ms": 11942,
+    "response": {
+      "text": "Today we go for a walk in the park."
+    }
+  },
+  {
+    "mode": "worker",
+    "request": 1,
+    "ms": 6408,
+    "response": {
+      "text": "Today we go for a walk in the park."
+    }
+  },
+  {
+    "mode": "worker",
+    "request": 2,
+    "ms": 199,
+    "response": {
+      "text": "Today we go for a walk in the park."
+    }
+  },
+  {
+    "mode": "worker",
+    "request": 3,
+    "ms": 206,
+    "response": {
+      "text": "Today we go for a walk in the park."
+    }
+  }
+]

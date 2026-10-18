@@ -68,6 +68,11 @@ int RunContractTests() {
   Expect(core::IsBufferSendChord('J', core::ShortcutModifiers(MOD_CONTROL | MOD_SHIFT), 'J', MOD_CONTROL | MOD_SHIFT),
          "custom key and modifiers use the same matcher as Broker");
   Expect(!core::IsBufferSendChord('J', 0, 'J', MOD_CONTROL | MOD_SHIFT), "bare letter never aliases a configured modified send");
+  Expect(core::BufferPluginCycleDirection(VK_UP, send_mods) == -1 && core::BufferPluginCycleDirection(VK_DOWN, send_mods) == 1, "default plugin directions");
+  Expect(core::BufferPluginCycleDirection('K', core::ShortcutModifiers(6), 'K', 6, 'J', 3) == -1 &&
+         core::BufferPluginCycleDirection('J', core::ShortcutModifiers(3), 'K', 6, 'J', 3) == 1, "custom plugin matcher");
+  Expect(!core::BufferPluginCycleDirection(VK_DOWN, send_mods, 'K', 6, 'J', 3), "removed defaults not aliases");
+  Expect(!core::BufferPluginCycleDirection(VK_UP, send_mods | unsigned(core::KeyModifiers::kAltGr)), "AltGr never aliases plugin switching");
   using rimes::windows::tsf::detail::RoutePrintableKey;
   const auto shift = static_cast<std::uint32_t>(
       rimes::windows::core::KeyModifiers::kShift);
@@ -112,6 +117,9 @@ int RunContractTests() {
   }
 
   Expect(!client->IsConnected(), "fresh client is disconnected");
+  Expect(!client->AsciiMode().has_value(), "disconnected client never invents an input mode");
+  ExpectUnavailable(client.get(), BrokerKeyPhase::kInputModeToggle, VK_SHIFT, 0,
+                    "disconnected indicator click never queues a delayed toggle");
 
   ExpectUnavailable(client.get(), BrokerKeyPhase::kTestKeyDown, 'N', 0,
                     "disconnected TestKeyDown is unavailable (fail-open)");

@@ -110,24 +110,26 @@ $expectedIconIndex = Get-ExpectedLanguageBarIconIndex
 $fullMascotPosition = $rc.IndexOf('IDI_RIMES ICON')
 $blackHornPosition = $rc.IndexOf('IDI_RIMES_HORN_BLACK ICON')
 $whiteHornPosition = $rc.IndexOf('IDI_RIMES_HORN_WHITE ICON')
+$contrastHornPosition = $rc.IndexOf('IDI_RIMES_HORN_CONTRAST ICON')
 if ($fullMascotPosition -ge 0 -and $blackHornPosition -gt $fullMascotPosition -and
-    $whiteHornPosition -gt $blackHornPosition) {
-    Add-DiagnosticCheck 'resource icon order' 'PASS' 'mascot, black horn, white horn'
+    $whiteHornPosition -gt $blackHornPosition -and $contrastHornPosition -gt $whiteHornPosition) {
+    Add-DiagnosticCheck 'resource icon order' 'PASS' 'mascot, black horn, white horn, contrast horn'
 } else {
     Add-DiagnosticCheck 'resource icon order' 'FAIL' 'product_version.rc.in icon groups are not in the expected order'
 }
 
-if ($expectedIconIndex -eq 1 -and
+if ($expectedIconIndex -eq 3 -and
     $registrar -match 'static_cast<ULONG>\(dll_path\.size\(\)\),\s*kLanguageProfileIconIndex\)') {
     Add-DiagnosticCheck 'TSF language-bar wiring' 'PASS' "AddLanguageProfile selects icon index $expectedIconIndex"
 } else {
-    Add-DiagnosticCheck 'TSF language-bar wiring' 'FAIL' 'AddLanguageProfile must select the black horn at index 1'
+    Add-DiagnosticCheck 'TSF language-bar wiring' 'FAIL' 'AddLanguageProfile must select the contrast horn at index 3'
 }
 
 foreach ($icon in @(
     @{ Name = 'full mascot ICO'; Path = Join-Path $nativeRoot 'resources\rimes.ico' },
     @{ Name = 'black horn ICO'; Path = Join-Path $nativeRoot 'resources\rhino-horn-black.ico' },
-    @{ Name = 'white horn ICO'; Path = Join-Path $nativeRoot 'resources\rhino-horn-white.ico' }
+    @{ Name = 'white horn ICO'; Path = Join-Path $nativeRoot 'resources\rhino-horn-white.ico' },
+    @{ Name = 'contrast horn ICO'; Path = Join-Path $nativeRoot 'resources\rhino-horn-contrast.ico' }
 )) {
     [void](Test-File -Path $icon.Path -Name $icon.Name -Required)
 }

@@ -1,0 +1,20 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-typing-ui.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-typing-ui.20261017-823c910b600c-01e6d8b85dce",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "95a83a3f17a48a560ebe2fef54b450fef9aded3e1e48291059c323c9749c3458",
+    "requiresSignOut":  true,
+    "brokerPid":  124944,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-typing-ui.20261017-823c910b600c-01e6d8b85dce\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-typing-ui-20261017-170605",
+    "schema":  "my_combo",
+    "ascii":  false,
+    "actualCodexFirstChord":  "Previously confirmed fixed by user",
+    "connector":  "local-deepseek",
+    "model":  "deepseek-flash",
+    "gatewayEnabled":  true
+}

@@ -1,0 +1,13 @@
+{
+  "version": "1.1.5-win-typing-ui.20261017",
+  "brokerCount": 1,
+  "brokerMatchesActive": true,
+  "brokerMatchesBuilt": true,
+  "tsfUnchanged": {
+    "x64": true,
+    "x86": true
+  },
+  "settingsUnchanged": true,
+  "userDataRetained": true,
+  "typingResultsUnchanged": true
+}

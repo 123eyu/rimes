@@ -45,10 +45,15 @@ int main() {
   snapshot.caret_rect = {100, 100, 100, 124};
   snapshot.items = {{L"1", L"你好", L""}};
   candidate.Update(snapshot);
-  HWND popup = FindWindowW(kCandidateWindowClass, nullptr);
+  HWND popup = nullptr;
   DWORD process = 0;
-  if (popup) GetWindowThreadProcessId(popup, &process);
+  while ((popup = FindWindowExW(nullptr, popup, kCandidateWindowClass, nullptr))) {
+    GetWindowThreadProcessId(popup, &process);
+    if (process == GetCurrentProcessId()) break;
+  }
   Check(popup && process == GetCurrentProcessId(), "test owns its isolated popup");
+  UpdateWindow(popup);
+  Check(candidate.IsVisible(), "layered candidate paints and remains visible");
   Check(GetWindow(popup, GW_OWNER) == owner, "candidate is owned by its input host");
   Check(GetForegroundWindow() == foreground, "candidate does not activate the host");
   const unsigned dpi = GetDpiForWindow(popup);
@@ -70,9 +75,8 @@ int main() {
   Check(EqualRect(&initial_rect, &long_composition_rect),
         "long inline composition does not widen the candidate popup");
   HRGN region = CreateRectRgn(0, 0, 0, 0);
-  Check(GetWindowRgn(popup, region) != ERROR, "rounded popup has an explicit region");
-  Check(!PtInRegion(region, 0, 0), "rounded outer corner stays transparent");
-  Check(PtInRegion(region, px(10), px(17)), "candidate occupies the only popup row");
+  Check(GetWindowRgn(popup, region) == ERROR, "alpha popup has no binary region clipping antialiased corners");
+  Check((GetWindowLongPtrW(popup, GWL_EXSTYLE) & WS_EX_LAYERED) != 0, "candidate uses per-pixel alpha composition");
   DeleteObject(region);
   const LPARAM click = MAKELPARAM(px(10), px(17));
   SendMessageW(popup, WM_LBUTTONUP, 0, click);
@@ -94,8 +98,9 @@ int main() {
   candidate.Update(snapshot);
   RECT full_page_rect{};
   GetWindowRect(popup, &full_page_rect);
-  Check(full_page_rect.bottom - full_page_rect.top == px(34),
-        "full horizontal page keeps one native window row");
+  Check(full_page_rect.right - full_page_rect.left > px(460) ||
+        full_page_rect.bottom - full_page_rect.top > px(34),
+        "full phrases grow beyond the old width cap or wrap without squeezing");
   snapshot.items.resize(2);
   candidate.Update(snapshot);
   candidate.SetVertical(true);
@@ -103,6 +108,8 @@ int main() {
   GetWindowRect(popup, &vertical_rect);
   Check(vertical_rect.bottom - vertical_rect.top == px(68),
         "vertical popup contains candidate rows only");
+  Check(vertical_rect.top == snapshot.caret_rect.top,
+        "first vertical candidate aligns with caret instead of the last candidate");
   snapshot.items.clear();
   candidate.Update(snapshot);
   Check(!IsWindowVisible(popup) && !candidate.snapshot().visible,
@@ -134,5 +141,5 @@ int main() {
   }
   Check(ime_show && ime_change && ime_hide, "show/change/hide notify light-dismiss hosts");
   UnhookWinEvent(hook);
-  std::cout << "Candidate region, click ownership and no-activation passed\n";
+  std::cout << "Candidate alpha surface, click ownership and no-activation passed\n";
 }

@@ -1,0 +1,113 @@
+{
+  "version": "1.1.5-win-buffer-focus.20261017",
+  "active": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-focus.20261017-823c910b600c-4db0da47e47f",
+  "requiresSignOut": true,
+  "brokers": [
+    {
+      "ProcessId": 121460,
+      "ExecutablePath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-focus.20261017-823c910b600c-4db0da47e47f\\x64\\RimesBroker.exe"
+    }
+  ],
+  "loadedHosts": [
+    {
+      "process": "AweSun",
+      "pid": 59016,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "ChatGPT",
+      "pid": 11768,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "chrome",
+      "pid": 52708,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-hosts.20261017-823c910b600c-34b0ebe2f72b\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "copilotapp",
+      "pid": 131744,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-remember.20261017-823c910b600c-f3e4b424bddc\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "Cursor",
+      "pid": 97384,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-metrics.20261017-823c910b600c-86d0b257d601\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "explorer",
+      "pid": 70260,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "FlClash",
+      "pid": 61372,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "Grok Bot",
+      "pid": 74300,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "msedgewebview2",
+      "pid": 80984,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "msedgewebview2",
+      "pid": 116472,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-remember.20261017-823c910b600c-f3e4b424bddc\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "msedgewebview2",
+      "pid": 142948,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-lifecycle.20261017-823c910b600c-3c82b1e60687\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "MSPCManager",
+      "pid": 17696,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "NVIDIA Overlay",
+      "pid": 19956,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-lifecycle.20261017-823c910b600c-3c82b1e60687\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "papr-desktop",
+      "pid": 102512,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-lifecycle.20261017-823c910b600c-3c82b1e60687\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "QQ",
+      "pid": 72772,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "SearchHost",
+      "pid": 32800,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "ShellExperienceHost",
+      "pid": 74060,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-ui.20261017-823c910b600c-917705ef8fb0\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "steamwebhelper",
+      "pid": 26468,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "WeChatAppEx",
+      "pid": 75452,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-hosts.20261017-823c910b600c-34b0ebe2f72b\\x64\\RimesTsf.dll"
+    },
+    {
+      "process": "Weixin",
+      "pid": 14480,
+      "module": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-hosts.20261017-823c910b600c-34b0ebe2f72b\\x64\\RimesTsf.dll"
+    }
+  ]
+}

@@ -30,6 +30,10 @@
       "distribution": "bundled",
       "legacyID": "chord"
     },
+    "linux": {
+      "distribution": "bundled",
+      "legacyID": "builtin.fly-chord-learning"
+    },
     "macos": {
       "distribution": "bundled",
       "legacyID": "builtin.fly-chord-learning"
@@ -44,5 +48,5 @@
   "sdkVersion": 1,
   "summaryEN": "Chord input official plugin; user data remains owned by the RIMES host.",
   "summaryZH": "并击官方插件；用户数据由 RIMES 宿主管理。",
-  "version": "2.0.0"
+  "version": "2.1.0"
 }

@@ -1,0 +1,19 @@
+{
+  "version": "1.1.5-win-parity.20261017",
+  "runningBrokerCount": 1,
+  "requiresSignOut": true,
+  "sourceSnapshot": "fe6bfdbc084d64ac6ae4ce615438b72c0510686750f1f4e9d53e12b73f53c7d0",
+  "tsf": [
+    {
+      "architecture": "x64",
+      "installedHash": "FF4C5554DC28D4B8D62F646C5B7B90EE319D5D383EEA6126D4C05CDB61DA6750",
+      "builtHash": "FF4C5554DC28D4B8D62F646C5B7B90EE319D5D383EEA6126D4C05CDB61DA6750"
+    },
+    {
+      "architecture": "x86",
+      "installedHash": "25B9BE03FFD4A6680B95D3A19765A5C99EBD0A2B304FDF961A7D6380152B5936",
+      "builtHash": "25B9BE03FFD4A6680B95D3A19765A5C99EBD0A2B304FDF961A7D6380152B5936"
+    }
+  ],
+  "brokerHashMatches": true
+}

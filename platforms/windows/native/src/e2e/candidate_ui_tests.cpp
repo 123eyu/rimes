@@ -4,6 +4,10 @@
 
 namespace rimes::windows::tsf {
 struct CandidateUIRegressionProbe {
+  static InputModeIndicator* Mode(TextService& service) {
+    service.input_mode_ = new InputModeIndicator([&service] { service.ToggleInputMode(); });
+    return service.input_mode_;
+  }
   static HRESULT Apply(TextService& service, ITfContext* context,
                        const BrokerInputState& state) {
     service.BindContext(context);
@@ -15,6 +19,8 @@ struct CandidateUIRegressionProbe {
 namespace {
 class StubBroker final : public rimes::windows::tsf::BrokerClient {
  public:
+  bool ascii = false;
+  std::optional<bool> AsciiMode() const noexcept override { return ascii; }
   using State = rimes::windows::tsf::BrokerInputState;
   void BeginConnect() noexcept override {}
   void Disconnect() noexcept override {}
@@ -28,6 +34,12 @@ class StubBroker final : public rimes::windows::tsf::BrokerClient {
   rimes::windows::tsf::BrokerKeyResult HandleKey(
       const rimes::windows::tsf::BrokerKeyEvent& event, State* state) noexcept override {
     using namespace rimes::windows::tsf;
+    if (event.phase == BrokerKeyPhase::kInputModeToggle ||
+        (event.phase == BrokerKeyPhase::kKeyUp && event.virtual_key == VK_SHIFT)) {
+      ascii = !ascii;
+      if (state) { *state = {}; state->has_snapshot = true; }
+      return BrokerKeyResult::kPassThrough;
+    }
     if (event.phase != BrokerKeyPhase::kKeyDown || event.virtual_key != '2')
       return BrokerKeyResult::kPassThrough;
     *state = {};
@@ -55,6 +67,26 @@ int main() {
   manager->SetFocus(document);
   auto* service = new tsf::TextService(std::make_unique<StubBroker>());
   expect(SUCCEEDED(service->ActivateEx(manager, 1, TF_TMAE_UIELEMENTENABLEDONLY)), "activate");
+  auto* mode = tsf::CandidateUIRegressionProbe::Mode(*service);
+  mode->AddRef(); // A shell may keep its item after the text service ends.
+  TF_LANGBARITEMINFO info{};
+  expect(mode->GetInfo(&info) == S_OK && info.guidItem == GUID_LBI_INPUTMODE &&
+      (info.dwStyle & TF_LBI_STYLE_SHOWNINTRAY), "native input indicator identity");
+  auto mode_text = [&] {
+    BSTR text = nullptr;
+    mode->GetText(&text);
+    std::wstring result(text ? text : L""); SysFreeString(text); return result;
+  };
+  DWORD mode_status = 0;
+  mode->GetStatus(&mode_status);
+  expect(mode_status & TF_LBI_STATUS_DISABLED, "unknown mode starts disabled");
+  tsf::CandidateUIRegressionProbe::Apply(*service, context, {});
+  expect(mode_text() == L"中", "mode is obtained from the authoritative broker session");
+  BOOL eaten = FALSE;
+  service->OnKeyUp(context, VK_SHIFT, 0, &eaten);
+  expect(mode_text() == L"英" && !eaten, "Shift updates indicator without eating host modifier");
+  mode->OnClick(TF_LBI_CLK_LEFT, {}, nullptr);
+  expect(mode_text() == L"中" && data.text.empty(), "indicator click changes mode through a validated edit without inserting text");
   tsf::BrokerInputState state;
   state.has_snapshot = state.composing = state.candidates_visible = true;
   state.composition = L"nihao";
@@ -114,6 +146,9 @@ int main() {
          "reentrant focus loss during Update retires the element");
   manager->on_ui_update = {};
   service->Deactivate();
+  expect(mode_text() == L"—" && mode->OnClick(TF_LBI_CLK_LEFT, {}, nullptr) == TF_E_DISCONNECTED,
+      "retained indicator clears state and cannot call a retired service");
+  mode->Release();
   service->Release();
   manager->Release();
   document->Release();

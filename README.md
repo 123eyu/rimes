@@ -89,9 +89,9 @@
 | AI API | `builtin.openai-compatible` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Polisher | `builtin.polisher` | 1.1.0 | 设置中按需下载 | 禁用 |
 | Reference | `builtin.scholay` | 0.1.0 | 设置中按需下载 | 禁用 |
-| 统计 | `builtin.statistics` | 2.0.0 | 随 XSIME 预装 | 启用 |
+| 统计 | `builtin.statistics` | 2.0.1 | 随 XSIME 预装 | 启用 |
 | 意识流输入 | `builtin.stream-input` | 1.4.0 | 随 XSIME 预装 | 启用 |
-| 打字测速 | `builtin.typing-speed` | 2.0.0 | 随 XSIME 预装 | 启用 |
+| 打字测速 | `builtin.typing-speed` | 2.0.1 | 随 XSIME 预装 | 启用 |
 
 预装插件在全新安装后按默认状态启用；选装插件下载后需手动启用。升级时保留已有插件状态。
 <!-- END PRESET BUFFER PLUGINS -->

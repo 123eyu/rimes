@@ -54,6 +54,11 @@ endif()
 if(BUILD_TESTING OR RIMES_BUILD_TESTS)
     enable_testing()
     add_executable(scheme-import-tests scheme_import_tests.cpp)
+    if(MSVC)
+        # Fixture paths and text must match the UTF-8 production importer.
+        # The parent library's PRIVATE compiler option does not reach tests.
+        target_compile_options(scheme-import-tests PRIVATE /utf-8)
+    endif()
     target_link_libraries(scheme-import-tests PRIVATE RimesSchemeImport miniz)
     add_test(NAME scheme-import COMMAND scheme-import-tests)
 endif()

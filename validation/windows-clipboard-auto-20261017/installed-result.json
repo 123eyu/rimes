@@ -1,0 +1,16 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-settings-live.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-settings-live.20261017-823c910b600c-a4e47c09c14c",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "09ab2df632e073b752c2cff1c9afff46ca6b723c0ae7917e994aae0135ab6c01",
+    "requiresSignOut":  true,
+    "brokerPid":  123696,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-settings-live.20261017-823c910b600c-a4e47c09c14c\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-settings-live-20261017-231909",
+    "schema":  "my_combo",
+    "ascii":  false
+}

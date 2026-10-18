@@ -164,6 +164,28 @@ int main() {
              *idle_service, idle_context, commit)) && idle_document.text == L"123" &&
              idle_context->write_requests > before_commit,
          "an idle commit still writes text exactly once");
+  tsf::BrokerInputState pending;
+  pending.has_snapshot = pending.pending_chord = true;
+  expect(SUCCEEDED(tsf::CaretRegressionProbe::Apply(
+             *idle_service, idle_context, pending)) && idle_document.composing &&
+             idle_document.composition == L"\u200B" && idle_document.text == L"123",
+         "a pending chord starts host marked text before engine preedit exists");
+  const auto guard_writes = idle_context->write_requests;
+  tsf::CaretRegressionProbe::Apply(*idle_service, idle_context, pending);
+  expect(idle_context->write_requests == guard_writes,
+         "a held chord retains its guard without repeated text writes");
+  preedit.pending_chord = true;
+  tsf::CaretRegressionProbe::Apply(*idle_service, idle_context, preedit);
+  expect(idle_document.composition == L"ni",
+         "pending next chord never replaces existing visible preedit with a guard");
+  tsf::CaretRegressionProbe::Apply(*idle_service, idle_context, idle);
+  expect(!idle_document.composing && idle_document.text == L"123",
+         "cancelling chord state leaves no placeholder or raw code in the document");
+  tsf::CaretRegressionProbe::Apply(*idle_service, idle_context, pending);
+  commit.commit_text = L"有";
+  tsf::CaretRegressionProbe::Apply(*idle_service, idle_context, commit);
+  expect(!idle_document.composing && idle_document.text == L"123有",
+         "a direct chord commit replaces the guard without leaking its placeholder");
   idle_service->Release();
   idle_context->Release();
   service->Release();

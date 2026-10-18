@@ -1,0 +1,19 @@
+{
+  "installed": true,
+  "version": "1.1.5-win-fluent-surfaces.20261018",
+  "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-fluent-surfaces.20261018-823c910b600c-6bc4bb8023f5",
+  "sourceSnapshot": "a912741fec730a099475f92d043168b8da00b65e6f709a44e53478e894b7f6fb",
+  "validatedSources": 8,
+  "binaryHashesMatch": true,
+  "soleBrokerPid": 102916,
+  "settingsUnchanged": true,
+  "peripheralPreferencesUnchanged": true,
+  "fluentLicensePresent": true,
+  "builds": [
+    "x64",
+    "x86"
+  ],
+  "tests": "Surface, BufferLayout, Peripherals, Runtime, UiCommand passed on both architectures; SettingsUi passed serially on both architectures (parallel graphics run timed out)",
+  "visualChecks": "Buffer: 5 DPI scales and 4 themes; Capsule/Mailbox: both layouts and all themes; settings: duplicate header removed",
+  "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-fluent-surfaces-20261018-004840"
+}

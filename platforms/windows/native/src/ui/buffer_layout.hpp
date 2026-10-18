@@ -11,13 +11,13 @@
 namespace rimes::windows::ui {
 
 struct BufferMetrics {
-  int default_width_dip = 680;
+  int default_width_dip = 760;
   int min_width_dip = 520;
   int max_width_dip = 1100;
   int ordinary_height_dip = 73;
   int two_rail_height_dip = 105;
   int toolbar_only_height_dip = 35;
-  int toolbar_height_dip = 33;
+  int toolbar_height_dip = 30;
   int chrome_inset_dip = 2;
   int chrome_radius_dip = 11;
   int rail_radius_dip = 6;
@@ -38,11 +38,16 @@ enum class BufferMode { kInput = 0, kGenerate = 1, kTranslate = 2 };
 struct BufferBlockView {
   std::wstring text;
   bool streaming = false;
+  float countdown = 0;
 };
 
 struct BufferPaintState {
   ThemeId theme = ThemeId::kNight;
   BufferMode mode = BufferMode::kInput;
+  std::wstring plugin_name;
+  std::wstring live_metrics = L"— 字/分  ·  码长 —  ·  击键 —/秒";
+  bool show_ai_choices = false, ai_choices_enabled = true;
+  std::wstring ai_model, ai_effort;
   bool bound = false;
   bool capturing = false;
   bool busy = false;
@@ -57,10 +62,14 @@ struct BufferPaintState {
   std::size_t insertion = 0;
   unsigned preedit_caret = 0, auto_send_seconds = 0;
   bool close_after_send = false;
+  bool translation_speech = false, translation_controls_enabled = true;
+  std::wstring source_language = L"简体中文", target_language = L"英语";
   float spinner_phase = 0;
+  float send_hold_progress = -1; // Negative means no active physical send gesture.
   std::wstring status;
+  std::wstring result_hint;
   std::wstring preedit;
-  std::wstring preview;
+  std::wstring preview, reasoning_summary;
   std::wstring empty_hint = L"等待输入";
   std::vector<BufferBlockView> source_blocks;
   std::vector<BufferBlockView> result_blocks;
@@ -74,13 +83,13 @@ struct BufferPaintState {
 enum class BufferHitKind {
   kNone = 0,
   kMode,
-  kMore,
   kClose,
   kPaste,
   kCopy,
   kSend,
   kBind,
-  kConfigure, kEdit, kAutoSend, kCloseAfter,
+  kEdit, kAutoSend, kCloseAfter,
+  kSourceLanguage, kSwapLanguages, kTargetLanguage, kSpeech, kAIModel, kAIEffort, kReasoning,
 };
 
 struct BufferLayout {
@@ -91,7 +100,6 @@ struct BufferLayout {
   DipRect divider{};
   DipRect mode_button{};
   DipRect mode_chip{};
-  DipRect more_button{};
   DipRect close_button{};
   DipRect bind_label{};
   DipRect status_label{};
@@ -103,7 +111,12 @@ struct BufferLayout {
   DipRect copy{};
   DipRect send{};
   DipRect waiting{};
-  DipRect configure{}, edit{}, auto_send{}, close_after{}, association{};
+  DipRect edit{}, auto_send{}, close_after{}, association{};
+  DipRect source_language{}, swap_languages{}, target_language{}, speech{};
+  DipRect ai_model{}, ai_effort{}, live_metrics{}, reasoning{};
+  bool show_reasoning = false;
+  bool show_ai_choices = false, show_live_metrics = false;
+  bool show_languages = false, show_auto_send = false;
   bool show_source = true, show_edit = false;
   bool show_result = false;
   bool show_paste = false;
@@ -115,7 +128,7 @@ struct BufferLayout {
 [[nodiscard]] inline bool BufferNeedsResultRail(
     const BufferPaintState& state) noexcept {
   return (state.mode == BufferMode::kTranslate && !state.source_blocks.empty()) || state.busy ||
-         state.translate || !state.result_blocks.empty() ||
+         !state.result_blocks.empty() ||
          !state.preview.empty();
 }
 
@@ -176,6 +189,9 @@ struct BufferLayout {
     layout.height_dip = static_cast<float>(metrics.ordinary_height_dip);
   }
 
+  layout.show_live_metrics = state.mode == BufferMode::kInput && !state.folded;
+  layout.show_reasoning = state.busy && !state.folded && !state.reasoning_summary.empty();
+  if (layout.show_live_metrics || layout.show_reasoning) layout.height_dip += 16;
   layout.chrome = {inset, inset, width_dip - inset, layout.height_dip - inset};
   layout.toolbar = {inset, inset, width_dip - inset, inset + toolbar_h};
   // Divider is one DIP at layout time; paint strokes 1 physical pixel.
@@ -189,40 +205,68 @@ struct BufferLayout {
   layout.close_button = {layout.toolbar.right - 6.0f - icon,
                          layout.mode_button.top, layout.toolbar.right - 6.0f,
                          layout.mode_button.bottom};
-  layout.more_button = {layout.close_button.left - gap - icon,
-                        layout.mode_button.top, layout.close_button.left - gap,
-                        layout.mode_button.bottom};
   layout.mode_chip = {layout.mode_button.right + 6.0f, layout.toolbar.top + 6.0f,
                       layout.mode_button.right + 78.0f,
                       layout.toolbar.bottom - 6.0f};
-  layout.configure = {layout.mode_chip.right + gap, layout.mode_button.top,
-                       layout.mode_chip.right + gap + icon, layout.mode_button.bottom};
-  layout.edit = {layout.configure.right + gap, layout.mode_button.top,
-                  layout.configure.right + gap + icon, layout.mode_button.bottom};
-  layout.auto_send = {layout.edit.right + gap, layout.mode_button.top,
-                       layout.edit.right + gap + 46, layout.mode_button.bottom};
-  layout.close_after = {layout.auto_send.right + gap, layout.mode_button.top,
-                         layout.auto_send.right + gap + icon, layout.mode_button.bottom};
+  layout.edit = {layout.mode_chip.right + gap, layout.mode_button.top,
+                  layout.mode_chip.right + gap + icon, layout.mode_button.bottom};
+  float controls_right = layout.show_edit ? layout.edit.right : layout.mode_chip.right;
+  layout.show_languages = state.mode == BufferMode::kTranslate;
+  if (layout.show_languages) {
+    const float language_width = width_dip < 620 ? 60.0f : 86.0f;
+    layout.source_language = {controls_right + 6, layout.mode_chip.top,
+                              controls_right + 6 + language_width, layout.mode_chip.bottom};
+    layout.swap_languages = {layout.source_language.right + 6, layout.mode_button.top + 2,
+                              layout.source_language.right + 24, layout.mode_button.bottom - 2};
+    layout.target_language = {layout.swap_languages.right + 6, layout.mode_chip.top,
+                              layout.swap_languages.right + 6 + language_width, layout.mode_chip.bottom};
+    layout.speech = {layout.target_language.right + 6, layout.mode_button.top + 2,
+                     layout.target_language.right + 26, layout.mode_button.bottom - 2};
+    controls_right = layout.speech.right;
+  }
+  layout.show_ai_choices = state.mode == BufferMode::kGenerate && state.show_ai_choices;
+  if (layout.show_ai_choices) {
+    layout.ai_model = {controls_right + gap, layout.mode_chip.top,
+                       controls_right + gap + (width_dip < 620 ? 104.f : 138.f), layout.mode_chip.bottom};
+    layout.ai_effort = {layout.ai_model.right + gap, layout.mode_chip.top,
+                        layout.ai_model.right + gap + 72, layout.mode_chip.bottom};
+    controls_right = layout.ai_effort.right;
+  }
   layout.association = {layout.close_button.left - gap - icon, layout.mode_button.top,
                          layout.close_button.left - gap, layout.mode_button.bottom};
-  layout.more_button = {layout.association.left - gap - icon, layout.mode_button.top,
-                         layout.association.left - gap, layout.mode_button.bottom};
-  layout.bind_label = {layout.close_after.right + 8.0f, layout.toolbar.top + 8.0f,
-                       layout.more_button.left - 8.0f,
+  float trailing_left = layout.association.left;
+  layout.show_auto_send = state.mode == BufferMode::kInput;
+  if (layout.show_auto_send) {
+    layout.close_after = {trailing_left - gap - 26, layout.mode_button.top,
+                          trailing_left - gap, layout.mode_button.bottom};
+    layout.auto_send = {layout.close_after.left - gap - icon, layout.mode_button.top,
+                        layout.close_after.left - gap, layout.mode_button.bottom};
+    trailing_left = layout.auto_send.left;
+  }
+  layout.bind_label = {controls_right + 8.0f, layout.toolbar.top + 8.0f,
+                       (std::max)(controls_right + 8.0f, trailing_left - 8.0f),
                        layout.toolbar.bottom - 8.0f};
   layout.status_label = layout.bind_label;
 
   if (layout.toolbar_only) {
-    // No rail hit targets while folded; paste stays reachable via more menu.
+    // No rail hit targets while folded.
     return layout;
   }
 
-  const float rail_top = layout.divider.bottom;
-  const float rail_left = inset + 4.0f;
-  const float rail_right = width_dip - inset - 4.0f;
+  // Current macOS source: 30pt utility shelf, 38/70pt main bar; the 32/64pt
+  // inline view is centered in it. Translation adds 5pt inside that view.
+  const float vertical_inset = two_rails ? 8.0f : 3.0f;
+  const float rail_top = layout.divider.bottom + vertical_inset;
+  const float horizontal_inset = two_rails ? 10.0f : 5.0f;
+  const float rail_left = inset + horizontal_inset;
+  const float rail_right = width_dip - inset - horizontal_inset;
   const float rail_gap = static_cast<float>(metrics.rail_spacing_dip);
   // Both rows must clear the inner chrome, including its bottom stroke.
-  const float available = layout.chrome.bottom - 1.0f - rail_top;
+  const float main_bottom = layout.chrome.bottom - ((layout.show_live_metrics || layout.show_reasoning) ? 16 : 0);
+  if (layout.show_live_metrics)
+    layout.live_metrics = {rail_left + 9, main_bottom, rail_right - 5, layout.chrome.bottom};
+  if (layout.show_reasoning) layout.reasoning = {rail_left + 9, main_bottom, rail_right - 5, layout.chrome.bottom};
+  const float available = main_bottom - vertical_inset - rail_top;
   const float rail_h = (std::min)(preferred_rail_h,
       two_rails ? (available - rail_gap) * 0.5f : available);
   if (layout.show_source)
@@ -276,8 +320,14 @@ struct BufferLayout {
   if (!RectInside(layout.chrome, bounds)) return false;
   if (!RectInside(layout.toolbar, bounds)) return false;
   if (!RectInside(layout.mode_button, bounds)) return false;
-  if (!RectInside(layout.more_button, bounds)) return false;
   if (!RectInside(layout.close_button, bounds)) return false;
+  for (const auto& control : {layout.auto_send, layout.close_after,
+                             layout.source_language, layout.swap_languages, layout.target_language, layout.speech, layout.ai_model, layout.ai_effort})
+    if (!RectInside(control, layout.toolbar)) return false;
+  if (layout.close_after.right > layout.association.left) return false;
+  if (layout.show_ai_choices && layout.ai_effort.right > layout.association.left) return false;
+  if (layout.show_live_metrics && !RectInside(layout.live_metrics, layout.chrome)) return false;
+  if (layout.show_reasoning && !RectInside(layout.reasoning, layout.chrome)) return false;
   if (layout.toolbar_only) {
     // Folded: rail/action hit targets must be empty / off-window.
     return layout.source_rail.height() <= 0.0f &&
@@ -302,13 +352,20 @@ struct BufferLayout {
 
 [[nodiscard]] inline BufferHitKind HitTestBuffer(const BufferLayout& layout,
                                                  float x, float y) noexcept {
+  if (layout.show_reasoning && layout.reasoning.contains(x, y)) return BufferHitKind::kReasoning;
   if (layout.mode_button.contains(x, y) || layout.mode_chip.contains(x, y))
     return BufferHitKind::kMode;
-  if (layout.more_button.contains(x, y)) return BufferHitKind::kMore;
-  if (layout.configure.contains(x, y)) return BufferHitKind::kConfigure;
+  if (layout.show_ai_choices && layout.ai_model.contains(x, y)) return BufferHitKind::kAIModel;
+  if (layout.show_ai_choices && layout.ai_effort.contains(x, y)) return BufferHitKind::kAIEffort;
   if (layout.show_edit && layout.edit.contains(x, y)) return BufferHitKind::kEdit;
   if (layout.auto_send.contains(x, y)) return BufferHitKind::kAutoSend;
   if (layout.close_after.contains(x, y)) return BufferHitKind::kCloseAfter;
+  if (layout.show_languages) {
+    if (layout.source_language.contains(x, y)) return BufferHitKind::kSourceLanguage;
+    if (layout.swap_languages.contains(x, y)) return BufferHitKind::kSwapLanguages;
+    if (layout.target_language.contains(x, y)) return BufferHitKind::kTargetLanguage;
+    if (layout.speech.contains(x, y)) return BufferHitKind::kSpeech;
+  }
   if (layout.close_button.contains(x, y)) return BufferHitKind::kClose;
   if (layout.show_paste && layout.paste.contains(x, y))
     return BufferHitKind::kPaste;

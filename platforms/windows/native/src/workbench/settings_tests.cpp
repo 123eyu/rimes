@@ -12,16 +12,20 @@ void Check(bool ok, const char* reason) {
   if (!ok) throw std::runtime_error(reason);
 }
 bool SameSettings(const Settings& a, const Settings& b) {
-  return a.revision == b.revision && a.schema == b.schema &&
+  return a.revision == b.revision && a.schema == b.schema && a.send_hold_ms == b.send_hold_ms &&
          a.base_url == b.base_url && a.model == b.model && a.ai_connector == b.ai_connector &&
          a.codex_path == b.codex_path && a.codex_model == b.codex_model &&
-         a.target_language == b.target_language && a.theme == b.theme &&
+         a.chatgpt_model == b.chatgpt_model && a.chatgpt_effort == b.chatgpt_effort &&
+         a.target_language == b.target_language && a.source_language == b.source_language &&
+         a.translation_speech == b.translation_speech && a.theme == b.theme &&
          a.ascii == b.ascii && a.traditional == b.traditional &&
          a.ascii_punctuation == b.ascii_punctuation &&
          a.font_size == b.font_size && a.candidate_count == b.candidate_count &&
          a.vertical_candidates == b.vertical_candidates &&
          a.hotkey_modifiers == b.hotkey_modifiers && a.hotkey_key == b.hotkey_key &&
          a.send_key == b.send_key && a.send_modifiers == b.send_modifiers &&
+         a.previous_plugin_key == b.previous_plugin_key && a.previous_plugin_modifiers == b.previous_plugin_modifiers &&
+         a.next_plugin_key == b.next_plugin_key && a.next_plugin_modifiers == b.next_plugin_modifiers &&
          a.auto_send_seconds == b.auto_send_seconds && a.close_after_send == b.close_after_send &&
          a.translation_provider == b.translation_provider;
 }
@@ -62,7 +66,7 @@ int main() {
   try {
     IsolatedSettings test;
     Settings settings;
-    Check(LoadSettings(&settings, nullptr) && settings.theme == "night" &&
+    Check(LoadSettings(&settings, nullptr) && settings.theme == "night" && settings.ai_connector == "codex-cli" &&
               settings.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
               settings.hotkey_key == 'B' && settings.send_key == VK_RETURN &&
               settings.send_modifiers == (MOD_ALT | MOD_SHIFT),
@@ -77,8 +81,11 @@ int main() {
                 restored.model == settings.model,
             "round trip retains theme and unrelated settings");
     }
+    Check(settings.chatgpt_model == "gpt-6-sol" && settings.chatgpt_effort == "medium", "ChatGPT defaults match macOS");
+    settings.chatgpt_model = "gpt-6-astra"; settings.chatgpt_effort = "high";
     settings.candidate_count = 5;
     settings.auto_send_seconds = 3; settings.close_after_send = true; settings.translation_provider = "ai";
+    settings.source_language = "Japanese"; settings.translation_speech = true;
     settings.connections[1].executable = "C:/Program Files/Codex/codex.exe";
     settings.connections[1].model = "fixture-model";
     Check(SelectConnection(&settings, "codex"), "select saved Codex profile");
@@ -108,8 +115,17 @@ int main() {
       Settings legacy;
       Check(LoadSettings(&legacy, nullptr) && legacy.theme == "night" && legacy.candidate_count == 9 && !legacy.vertical_candidates &&
                 legacy.hotkey_modifiers == (MOD_ALT | MOD_SHIFT) &&
-                legacy.hotkey_key == 'B',
+                legacy.hotkey_key == 'B' && legacy.send_hold_ms == 600,
             "legacy and unknown themes fall back safely");
+    }
+    Check(Settings{}.send_hold_ms == 600, "new Buffer hold default matches macOS 0.6 seconds");
+    for (unsigned hold : {600U, 1200U, 2300U}) {
+      std::ofstream(test.path(), std::ios::trunc) << "{\"send_hold_ms\":" << hold << "}";
+      Settings saved;
+      Check(LoadSettings(&saved, nullptr) && saved.send_hold_ms == hold && SaveSettings(saved, nullptr),
+            "explicit old or custom hold duration is preserved");
+      Settings reloaded;
+      Check(LoadSettings(&reloaded, nullptr) && reloaded.send_hold_ms == hold, "hold duration survives save and reload");
     }
     for (const unsigned modifiers : {MOD_CONTROL | MOD_ALT,
                                      MOD_CONTROL | MOD_SHIFT,
@@ -167,10 +183,25 @@ int main() {
               after_rejection.hotkey_modifiers == (MOD_CONTROL | MOD_SHIFT) &&
               after_rejection.hotkey_key == 'J',
           "rejected modifier changes preserve the saved shortcut");
+    std::ofstream(test.path(), std::ios::trunc) << "{\"version\":5,\"hotkey_key\":38,\"hotkey_modifiers\":5,\"send_key\":40,\"send_modifiers\":5}";
+    Settings migrated_cycle;
+    Check(LoadSettings(&migrated_cycle, nullptr) && migrated_cycle.hotkey_key == VK_UP && migrated_cycle.send_key == VK_DOWN &&
+        migrated_cycle.hotkey_modifiers == 5 && migrated_cycle.send_modifiers == 5 &&
+        migrated_cycle.previous_plugin_modifiers != 5 && migrated_cycle.next_plugin_modifiers != 5,
+        "adding missing cycle shortcuts preserves explicit legacy arrow bindings");
+    auto duplicate = migrated_cycle;
+    duplicate.next_plugin_key = duplicate.previous_plugin_key; duplicate.next_plugin_modifiers = duplicate.previous_plugin_modifiers;
+    Check(!SaveSettings(duplicate, nullptr), "duplicate cycle shortcuts rejected");
+    duplicate = migrated_cycle; duplicate.next_plugin_key = 'S'; duplicate.next_plugin_modifiers = 5;
+    Check(!SaveSettings(duplicate, nullptr), "reserved settings shortcut rejected");
+    duplicate.next_plugin_key = '4';
+    Check(!SaveSettings(duplicate, nullptr), "reserved screenshot shortcut rejected");
     Settings trusted;
     Settings custom;
     custom.hotkey_key = VK_F8; custom.hotkey_modifiers = MOD_CONTROL | MOD_SHIFT;
     custom.send_key = 'J'; custom.send_modifiers = MOD_ALT | MOD_SHIFT;
+    custom.previous_plugin_key = 'K'; custom.previous_plugin_modifiers = 6;
+    custom.next_plugin_key = 'L'; custom.next_plugin_modifiers = 3;
     Check(SaveSettings(custom, nullptr), "save independently configurable non-letter toggle and non-Enter send");
     Settings custom_loaded;
     Check(LoadSettings(&custom_loaded, nullptr) && SameSettings(custom, custom_loaded), "custom shortcuts survive restart");
@@ -192,6 +223,7 @@ int main() {
     trusted.base_url = "https://example.invalid/v1";
     trusted.model = "trusted-model";
     trusted.target_language = "Chinese";
+    trusted.source_language = "English";
     trusted.theme = "quiet";
     trusted.ascii = trusted.traditional = trusted.ascii_punctuation = true;
     trusted.font_size = 21;

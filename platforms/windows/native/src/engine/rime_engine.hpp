@@ -70,6 +70,9 @@ class RimeEngine final {
   bool ProcessKey(SessionId session, std::int32_t keycode,
                  std::int32_t modifiers, EngineSnapshot* output,
                  std::string* error = nullptr) noexcept;
+  // Resolve the selected conversion, unlike Return which may commit raw code.
+  bool CommitComposition(SessionId session, EngineSnapshot* output,
+                         std::string* error = nullptr) noexcept;
   // One qualified physical tap; process both legal Rime phases under one
   // engine lock. Canceled host shortcuts never create Rime modifier state.
   bool ProcessShiftTap(SessionId session, std::int32_t keycode,

@@ -3,6 +3,7 @@
 #include <Windows.h>
 #include <msctf.h>
 #include <textstor.h>
+#include <inputscope.h>
 
 #include <atomic>
 #include <functional>
@@ -132,11 +133,14 @@ class FakeContext final : public ITfContext,
                           public ITfInsertAtSelection,
                           public ITfContextComposition,
                           public ITfContextView,
-                          public ITfProperty {
+                          public ITfProperty, public ITfInputScope {
  public:
   explicit FakeContext(FakeDocument* document) noexcept;
   bool defer_edits = false, read_only = false;
+  bool password_scope = false;
   bool refuse_write_edits = false;
+  bool refuse_read_edits = false;
+  unsigned read_requests = 0;
   unsigned write_requests = 0;
   void DrainEdits();
   void TerminateComposition();
@@ -210,6 +214,11 @@ class FakeContext final : public ITfContext,
                                       TfAnchor) override;
 
   FakeDocument* document() noexcept { return document_; }
+  HRESULT STDMETHODCALLTYPE GetInputScopes(InputScope** scopes, UINT* count) override;
+  HRESULT STDMETHODCALLTYPE GetPhrase(BSTR**, UINT*) override { return E_NOTIMPL; }
+  HRESULT STDMETHODCALLTYPE GetRegularExpression(BSTR*) override { return E_NOTIMPL; }
+  HRESULT STDMETHODCALLTYPE GetSRGS(BSTR*) override { return E_NOTIMPL; }
+  HRESULT STDMETHODCALLTYPE GetXML(BSTR*) override { return E_NOTIMPL; }
 
  private:
   friend class FakeDocumentMgr;

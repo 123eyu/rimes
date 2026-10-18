@@ -1,0 +1,68 @@
+{
+  "version": "1.1.5-win-capsule-functional.20261017",
+  "sourceSnapshot": "87f7598ae5cc65f8029c0e75a843d682712d3e0fec9dfb995c76d6c673a991fd",
+  "installed": true,
+  "requiresSignOut": true,
+  "checks": {
+    "x64/RimesBroker.exe": true,
+    "x64/RimesTsf.dll": true,
+    "x86/RimesTsf.dll": true,
+    "settingsUnchanged": true,
+    "userDataDirectoryExists": true
+  },
+  "dataRetention": {
+    "peripherals-v1": {
+      "backedUpFiles": 1,
+      "missingFiles": 0,
+      "changedFilesAfterRestart": 0
+    },
+    "metrics-v1": {
+      "backedUpFiles": 1,
+      "missingFiles": 0,
+      "changedFilesAfterRestart": 0
+    },
+    "official-plugins-v1": {
+      "backedUpFiles": 1,
+      "missingFiles": 0,
+      "changedFilesAfterRestart": 0
+    }
+  },
+  "tested": {
+    "x64": {
+      "ctestSuites": 6,
+      "settingsUiFocusedRerunPassed": true,
+      "peripheralUiPassed": true,
+      "metricsUiIsolatedRerunPassed": true
+    },
+    "x86": {
+      "ctestSuites": 6,
+      "allPassed": true,
+      "peripheralUiPassed": true,
+      "metricsUiPassed": true
+    }
+  },
+  "visualFixtures": {
+    "x64": 54,
+    "x86": 54
+  },
+  "testNotes": [
+    "x64 final grouped run had focus-dependent home navigation assertions fail; focused rerun passed. Earlier grouped runs passed. Original failure log retained.",
+    "x64 metrics first run measured two idle frames (commanded timer/notification paints zero); isolated rerun measured one and passed. No assertion threshold was relaxed."
+  ],
+  "scope": [
+    "Alt+Shift+4 region capture, lower-left stack, PNG/DIB copy, PNG export, annotation/crop and re-edit undo document",
+    "Clipboard history opt-in UI, busy retry, cross-type deduplication and file import/copy",
+    "Unavailable capture/Capsule actions explicitly disabled",
+    "Capsule/Mailbox prepared layout before showing, composited children and buffered paint",
+    "Four-theme live preview and rollback without losing Mailbox draft",
+    "Alt+Shift+S hide/restore with preserved draft; first-show visibility and queued startup requests"
+  ],
+  "manualAcceptanceRemaining": [
+    "Physical global shortcut conflicts",
+    "Mixed-DPI multiple monitors",
+    "Actual desktop capture and pasting pixels/files into external apps",
+    "Frame-by-frame native animation observation",
+    "Live macOS side-by-side comparison"
+  ],
+  "audit": "platforms/windows/native/PERIPHERALS.md"
+}

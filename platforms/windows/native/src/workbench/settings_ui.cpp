@@ -1,4 +1,4 @@
-#include "../core/product_brand.hpp"
+﻿#include "../core/product_brand.hpp"
 #include "settings_ui.hpp"
 
 #include <dwmapi.h>
@@ -55,6 +55,7 @@ SettingsUiHost::SettingsUiHost(SettingsUiCallbacks callbacks)
 
 SettingsUiHost::~SettingsUiHost() {
   if (hwnd_) DestroyWindow(hwnd_);
+  if (settings_icon_) DestroyIcon(settings_icon_);
   fonts_.Release();
   if (edit_brush_) DeleteObject(edit_brush_);
 }
@@ -80,6 +81,8 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   draft_.auto_send_seconds = config.auto_send_seconds;
   draft_.close_after_send = config.close_after_send;
   draft_.translation_provider_index = config.translation_provider == "ai" ? 1 : 0;
+  draft_.plugin_keys = {config.previous_plugin_key, config.next_plugin_key};
+  draft_.plugin_modifiers = {config.previous_plugin_modifiers, config.next_plugin_modifiers};
   draft_.hotkey_modifiers = config.hotkey_modifiers;
   draft_.hotkey = static_cast<wchar_t>(config.hotkey_key);
   draft_.send_key = config.send_key;
@@ -90,8 +93,9 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
   draft_.codex_path = Wide(config.codex_path);
   draft_.codex_model = Wide(config.codex_model);
   draft_.target_language = Wide(config.target_language);
+  draft_.source_language = Wide(config.source_language);
   draft_.api_key.clear();
-  draft_.page = ui::SettingsPage::kInput;
+  draft_.page = ui::SettingsPage::kHome;
   draft_.subpage = 0;
   draft_.keyboard_focus = false;
   draft_.hover = -1;
@@ -99,27 +103,50 @@ void SettingsUiHost::SyncDraftFromConfig(const Settings& config) {
 }
 
 void SettingsUiHost::OpenPage(HWND owner, ui::SettingsPage page, int subpage, bool visible) {
-  Open(owner, visible); draft_.page = page; draft_.subpage = subpage; Relayout();
+  Open(owner, visible);
+  draft_.page = page;
+  draft_.subpage = subpage;
+  draft_.focus = static_cast<int>(page);
+  Relayout();
+}
+void SettingsUiHost::Toggle(HWND owner) {
+  if (hwnd_ && IsWindowVisible(hwnd_) && !IsIconic(hwnd_)) {
+    StopRecording();
+    if (extensions_) extensions_->Deactivate();
+    if (pending_save_) CommitSave();
+    ShowWindow(hwnd_, SW_HIDE);  // Keep the current page and editor state.
+    return;
+  }
+  Open(owner);
 }
 void SettingsUiHost::Open(HWND owner, bool visible) {
   owner_ = owner;
   if (hwnd_) {
-    if (visible) { ShowWindow(hwnd_, SW_SHOWNORMAL); SetForegroundWindow(hwnd_); }
+    if (visible) {
+      ShowWindow(hwnd_, SW_SHOWNORMAL);
+      // The process's first ShowWindow may honor a launcher's SW_HIDE instead.
+      SetWindowPos(hwnd_, HWND_TOP, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+      SetForegroundWindow(hwnd_);
+    }
     return;
   }
   if (callbacks_.load) SyncDraftFromConfig(callbacks_.load());
-  saved_ = false;
+  ready_ = false;
+  pending_save_ = false;
+  draft_.save_error.clear();
   WNDCLASSW wc{};
   wc.lpfnWndProc = Procedure;
   wc.hInstance = GetModuleHandleW(nullptr);
   wc.lpszClassName = L"Rimes.SettingsHost";
   wc.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-  wc.hIcon = LoadIconW(wc.hInstance, MAKEINTRESOURCEW(IDI_RIMES));
+  if (!settings_icon_) settings_icon_ = ui::CreateSettingsIcon(GetSystemMetrics(SM_CXSMICON));
+  wc.hIcon = nullptr;
   wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(NULL_BRUSH));
   wc.style = CS_HREDRAW | CS_VREDRAW;
   RegisterClassW(&wc);
 
-  dpi_ = 96;
+  dpi_ = GetDpiForSystem();
   if (owner) dpi_ = GetDpiForWindow(owner);
   RECT client{0, 0, MulDiv(980, static_cast<int>(dpi_), 96),
               MulDiv(680, static_cast<int>(dpi_), 96)};
@@ -135,28 +162,44 @@ void SettingsUiHost::Open(HWND owner, bool visible) {
   const int top = monitor.rcWork.top +
                   (monitor.rcWork.bottom - monitor.rcWork.top - height) / 2;
   hwnd_ = CreateWindowExW(
-      0, wc.lpszClassName, rimes::branding::Text(L"{brand} 设置").c_str(), WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+      // Present the shell and native children together during navigation.
+      // Buffering only the parent can expose a frame of old child pixels.
+      WS_EX_COMPOSITED, wc.lpszClassName, L"设置", WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
       left, top, width, height,
       // Use the Buffer only to select initial placement. A native owner would
       // make Settings inherit its topmost state. SettingsUiHost owns this
       // ordinary top-level window and destroys it when the Broker closes.
       nullptr, nullptr, wc.hInstance, this);
   if (!hwnd_) return;
+  SendMessageW(hwnd_, WM_SETICON, ICON_SMALL, reinterpret_cast<LPARAM>(settings_icon_));
+  SendMessageW(hwnd_, WM_SETICON, ICON_BIG, reinterpret_cast<LPARAM>(settings_icon_));
   CreateOrUpdateChildren();
   parity_ = std::make_unique<ParitySettings>();
-  parity_->Create(hwnd_, callbacks_.load ? callbacks_.load() : Settings{});
-  for (const auto id : {6000, 6005, 6007, 6011, 6023, 6032})
+  parity_->Create(hwnd_, callbacks_.load ? callbacks_.load() : Settings{}, callbacks_.connectors);
+  if (callbacks_.metrics) extensions_ = std::make_unique<ExtensionPages>(hwnd_, ExtensionCallbacks{
+      callbacks_.metrics, callbacks_.load, callbacks_.plugins, callbacks_.manage_plugin,
+      [this](ui::SettingsPage page) { OpenPage(owner_, page); }});
+  for (const auto id : {5112, 6000, 6007, 6011, 6023, 6032})
     SetWindowSubclass(GetDlgItem(hwnd_, id), ComboProcedure, 1, reinterpret_cast<DWORD_PTR>(this));
+  SetWindowSubclass(GetDlgItem(hwnd_, 6070), ConnectorScrollProcedure, 1, reinterpret_cast<DWORD_PTR>(this));
+  ready_ = true;
   SetTimer(hwnd_, 11, 500, nullptr);
   Relayout();
-  if (visible) { ShowWindow(hwnd_, SW_SHOWNORMAL); SetForegroundWindow(hwnd_); }
+  if (visible) {
+      ShowWindow(hwnd_, SW_SHOWNORMAL);
+      // The process's first ShowWindow may honor a launcher's SW_HIDE instead.
+      SetWindowPos(hwnd_, HWND_TOP, 0, 0, 0, 0,
+                   SWP_NOMOVE | SWP_NOSIZE | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+      SetForegroundWindow(hwnd_);
+    }
   draft_.focus = static_cast<int>(draft_.page);
   if (visible) SetFocus(hwnd_);
 }
 
-void SettingsUiHost::Close(bool persist) {
+void SettingsUiHost::Close() {
   if (!hwnd_) return;
-  if (persist && !CommitSave()) return;
+  if (pending_save_) CommitSave();
+  ready_ = false;
   DestroyWindow(hwnd_);
 }
 
@@ -164,41 +207,54 @@ void SettingsUiHost::StopRecording() {
   recording_shortcut_ = -1;
   SetWindowTextW(record_hotkey_, L"录入快捷键");
   SetWindowTextW(record_send_, L"录入快捷键");
+  for (const auto control : record_plugin_) SetWindowTextW(control, L"录入快捷键");
 }
 
 void SettingsUiHost::RecordShortcut(unsigned key, unsigned modifiers) {
   if (!RecordingShortcut()) return;
   const bool send = recording_shortcut_ == 1;
   if (key == VK_DELETE && !modifiers) {
-    key = send ? VK_RETURN : 'B';
+    const unsigned defaults[] = {'B', VK_RETURN, VK_UP, VK_DOWN};
+    key = defaults[recording_shortcut_];
     modifiers = MOD_ALT | MOD_SHIFT;
   }
   if (!core::ValidShortcut(key, modifiers, send)) {
     SetWindowTextW(shortcut_feedback_, L"该组合不安全或是系统编辑快捷键，请换一个组合。无修饰键仅允许发送键使用 Enter 或 F6–F12。");
     return;
   }
-  if (key == 'S' && modifiers == (MOD_ALT | MOD_SHIFT)) {
-    SetWindowTextW(shortcut_feedback_, L"Alt+Shift+S 用于打开设置，请使用另一个组合。");
+  if ((key == 'S' || key == 'V' || key == 'M' || key == '4') && modifiers == (MOD_ALT | MOD_SHIFT)) {
+    SetWindowTextW(shortcut_feedback_, L"Alt+Shift+S / V / M / 4 用于设置、Capsule、Mailbox 和截图，请使用另一个组合。");
     return;
   }
-  const HWND other_combo = send ? combo_hotkey_modifiers_ : combo_send_modifiers_;
-  const auto other_choice = SendMessageW(other_combo, CB_GETCURSEL, 0, 0);
-  const unsigned other_modifiers = other_choice >= 0 && other_choice < static_cast<LRESULT>(kBufferHotkeyChoices.size())
-      ? kBufferHotkeyChoices[static_cast<std::size_t>(other_choice)].modifiers : 0U;
-  if (key == ParseShortcutKey(GetText(send ? edit_hotkey_ : edit_send_)) && modifiers == other_modifiers) {
-    SetWindowTextW(shortcut_feedback_, L"该组合已用于另一项快捷键，请先修改冲突项。");
-    return;
+  const HWND edits[] = {edit_hotkey_, edit_send_, edit_plugin_[0], edit_plugin_[1]};
+  const HWND combos[] = {combo_hotkey_modifiers_, combo_send_modifiers_, combo_plugin_modifiers_[0], combo_plugin_modifiers_[1]};
+  for (int i = 0; i < 4; ++i) {
+    if (i == recording_shortcut_) continue;
+    const auto choice = SendMessageW(combos[i], CB_GETCURSEL, 0, 0);
+    const unsigned other_modifiers = choice >= 0 && choice < static_cast<LRESULT>(kBufferHotkeyChoices.size())
+        ? kBufferHotkeyChoices[static_cast<std::size_t>(choice)].modifiers : 0U;
+    if (key == ParseShortcutKey(GetText(edits[i])) && modifiers == other_modifiers) {
+      SetWindowTextW(shortcut_feedback_, L"该组合已用于另一项快捷键，请先修改冲突项。");
+      return;
+    }
   }
-  SetWindowTextW(send ? edit_send_ : edit_hotkey_, ShortcutKeyTitle(key).c_str());
-  SendMessageW(send ? combo_send_modifiers_ : combo_hotkey_modifiers_, CB_SETCURSEL,
+  SetWindowTextW(edits[recording_shortcut_], ShortcutKeyTitle(key).c_str());
+  SendMessageW(combos[recording_shortcut_], CB_SETCURSEL,
       modifiers ? static_cast<WPARAM>(BufferHotkeyChoiceIndex(modifiers)) : kBufferHotkeyChoices.size(), 0);
-  SetWindowTextW(shortcut_feedback_, (L"已录入 " + ShortcutTitle(key, modifiers) + L"；点击保存后生效。").c_str());
+  SetWindowTextW(shortcut_feedback_, (L"已录入 " + ShortcutTitle(key, modifiers) + L"；完成修改后立即生效。").c_str());
   StopRecording();
+  QueueSave(true);
 }
 
 bool SettingsUiHost::HandleDialogMessage(MSG* message) {
   if (!hwnd_ || (message->hwnd != hwnd_ && !IsChild(hwnd_, message->hwnd)))
     return false;
+  if (extensions_ && extensions_->Owns(message->hwnd)) {
+    // The practice editor owns Return, Tab, arrows and composition. Dialog
+    // navigation must never turn a typing key into Save or a sidebar command.
+    if (GetDlgCtrlID(message->hwnd) == 7004) return false;
+    return IsDialogMessageW(extensions_->window(), message) != FALSE;
+  }
   const bool down = message->message == WM_KEYDOWN || message->message == WM_SYSKEYDOWN;
   const bool up = message->message == WM_KEYUP || message->message == WM_SYSKEYUP;
   if ((down || up) && recorded_key_ && message->wParam == recorded_key_) {
@@ -228,19 +284,19 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
     draft_.keyboard_focus = true;
     const auto key = message->wParam;
     const int control_id = GetDlgCtrlID(GetParent(message->hwnd) == hwnd_ ? message->hwnd : GetParent(message->hwnd));
-    if ((message->hwnd == combo_hotkey_modifiers_ || message->hwnd == combo_send_modifiers_ || message->hwnd == combo_connector_ ||
-         control_id == 6000 || control_id == 6005 || control_id == 6007 || control_id == 6011 || control_id == 6023 || control_id == 6032 ||
+    if ((message->hwnd == combo_hotkey_modifiers_ || message->hwnd == combo_send_modifiers_ || message->hwnd == combo_plugin_modifiers_[0] || message->hwnd == combo_plugin_modifiers_[1] || message->hwnd == combo_connector_ ||
+         control_id == 5112 || control_id == 6000 || control_id == 6005 || control_id == 6007 || control_id == 6011 || control_id == 6023 || control_id == 6032 || control_id == 6050 ||
          message->hwnd == combo_auto_send_ || message->hwnd == combo_translation_) &&
         (key == VK_RETURN || key == VK_ESCAPE) &&
         SendMessageW(GetParent(message->hwnd) == hwnd_ ? message->hwnd : GetParent(message->hwnd), CB_GETDROPPEDSTATE, 0, 0))
-      return false;  // Confirm/cancel the native popup before Save/Close.
+      return false;  // Confirm/cancel the native popup before window commands.
     if (key == VK_ESCAPE ||
-        (key >= '1' && key <= '7' && (GetKeyState(VK_CONTROL) & 0x8000))) {
+        (key >= '1' && key <= '9' && (GetKeyState(VK_CONTROL) & 0x8000))) {
       SendMessageW(hwnd_, WM_KEYDOWN, key, message->lParam);
       return true;
     }
     if (key == VK_TAB && (GetKeyState(VK_CONTROL) & 0x8000)) {
-      draft_.subpage = 1 - draft_.subpage;
+      draft_.subpage = (draft_.subpage + 1) % ui::SettingsTabCount(draft_.page);
       draft_.focus = static_cast<int>(draft_.page);
       Relayout();
       SetFocus(hwnd_);
@@ -252,18 +308,25 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
         SendMessageW(GetFocus(), BM_CLICK, 0, 0);
         return true;
       }
-      Close(true);
+      if (pending_save_) CommitSave();
       return true;
     }
     if (key == VK_TAB) {
       std::vector<HWND> controls;
       for (const auto control : {schemes_button_, check_ascii_, check_trad_, check_punct_,
                                 edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_, record_hotkey_,
-                                combo_send_modifiers_, edit_send_, record_send_, reset_shortcuts_, edit_base_,
-                                edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
+                                combo_send_modifiers_, edit_send_, record_send_,
+                                combo_plugin_modifiers_[0], edit_plugin_[0], record_plugin_[0],
+                                combo_plugin_modifiers_[1], edit_plugin_[1], record_plugin_[1], reset_shortcuts_, edit_base_,
+                                edit_model_, edit_key_, edit_lang_, edit_source_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
                                 combo_auto_send_, check_close_after_, combo_translation_})
         if (control && IsWindowVisible(control)) controls.push_back(control);
       if (parity_) { const auto added=parity_->VisibleControls(); controls.insert(controls.end(),added.begin(),added.end()); }
+      for (const auto control : {plugin_filter_, plugin_previous_, plugin_next_, clipboard_recording_, peripheral_open_, home_action_})
+        if (control && IsWindowVisible(control) && IsWindowEnabled(control)) controls.push_back(control);
+      for (std::size_t i = 0; i < plugin_labels_.size(); ++i)
+        for (const auto control : {plugin_install_[i], plugin_enable_[i], plugin_remove_[i]})
+          if (control && IsWindowVisible(control) && IsWindowEnabled(control)) controls.push_back(control);
       const bool back = (GetKeyState(VK_SHIFT) & 0x8000) != 0;
       const int sidebar = static_cast<int>(draft_.page);
       int grid = sidebar;
@@ -281,23 +344,20 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
         if (!back) {
           if (current < ui::kSettingsPageCount && grid != sidebar) focus_shell(grid);
           else if (current >= 200 && current < 204) focus_shell(400 + current - 200);
-          else if (current >= 400 && current < 404) focus_shell(300);
-          else if (current < 300 && !controls.empty()) SetFocus(controls.front());
-          else if (current < 300) focus_shell(300);
-          else focus_shell(current == 300 ? 301 : sidebar);
+          else if (!controls.empty()) SetFocus(controls.front());
+          else focus_shell(sidebar);
         } else {
-          if (current < ui::kSettingsPageCount) focus_shell(301);
-          else if (current == 301) focus_shell(300);
-          else if (current == 300 && grid >= 200 && grid < 204) focus_shell(400 + grid - 200);
-          else if (current >= 400 && current < 404) focus_shell(200 + current - 400);
-          else if (current == 300 && !controls.empty()) SetFocus(controls.back());
-          else focus_shell(current == 300 ? grid : sidebar);
+          if (current >= 400 && current < 404) focus_shell(200 + current - 400);
+          else if (current >= 100) focus_shell(sidebar);
+          else if (!controls.empty()) SetFocus(controls.back());
+          else if (grid >= 200 && grid < 204) focus_shell(400 + grid - 200);
+          else focus_shell(grid);
         }
         return true;
       }
       if (!controls.empty() && GetFocus() ==
           (back ? controls.front() : controls.back())) {
-        focus_shell(back ? grid : 300);
+        focus_shell(back ? (grid >= 200 && grid < 204 ? 400 + grid - 200 : grid) : sidebar);
         return true;
       }
     }
@@ -349,15 +409,30 @@ void SettingsUiHost::CreateOrUpdateChildren() {
         0, 0, 1, 1, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
   };
   make_button(schemes_button_, L"导入与管理方案…", 415);
+  make_button(peripheral_open_, L"打开独立窗口…", 416);
+  make_button(home_action_, L"", 417);
   EnableWindow(schemes_button_, static_cast<bool>(callbacks_.open_schemes));
   if (!imported_label_) imported_label_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT,
       0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
   SetWindowTextW(imported_label_, (L"当前使用导入方案：" + draft_.imported_schema + rimes::branding::Text(L"\n可在方案管理中启用其他方案或恢复内置方案。重启 {brand} 后生效。").c_str()).c_str());
   make_button(record_hotkey_, L"录入快捷键", 409);
   make_button(record_send_, L"录入快捷键", 410);
+  for (int i = 0; i < 2; ++i) {
+    make_edit(&edit_plugin_[i], false);
+    SetWindowLongPtrW(edit_plugin_[i], GWLP_ID, 420 + i);
+    if (!combo_plugin_modifiers_[i]) {
+      combo_plugin_modifiers_[i] = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
+          0, 0, 160, 130, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(422 + i)), GetModuleHandleW(nullptr), nullptr);
+      for (const auto& choice : kBufferHotkeyChoices)
+        SendMessageW(combo_plugin_modifiers_[i], CB_ADDSTRING, 0, reinterpret_cast<LPARAM>(choice.label));
+    }
+    make_button(record_plugin_[i], L"录入快捷键", 418 + i);
+    SetWindowTextW(edit_plugin_[i], ShortcutKeyTitle(draft_.plugin_keys[i]).c_str());
+    SendMessageW(combo_plugin_modifiers_[i], CB_SETCURSEL, BufferHotkeyChoiceIndex(draft_.plugin_modifiers[i]), 0);
+  }
   make_button(reset_shortcuts_, L"恢复全部默认快捷键", 411);
   if (!shortcut_feedback_) shortcut_feedback_ = CreateWindowExW(0, L"STATIC",
-      L"可选择组合并填写 A–Z、0–9、Enter、F1–F24 或方向键名，也可点击录入。\n录入时 Esc 取消，Delete 恢复该项默认；保存后生效。\n发送键轻按逐块发送，长按默认 1.2 秒全部发送。Alt+Shift+S 打开设置。",
+      L"录入时 Esc 取消，Delete 恢复该项默认；完成修改后立即生效。\n切换按已启用插件的工具栏顺序循环，保留原文；仅 Buffer 捕获时生效。\n发送键轻按逐块发送，长按默认 1.2 秒全部发送。",
       WS_CHILD | SS_LEFT, 0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
   make_edit(&edit_base_, false);
   make_edit(&edit_codex_path_, false);
@@ -371,11 +446,13 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   make_edit(&edit_model_, false);
   make_edit(&edit_key_, true);
   make_edit(&edit_lang_, false);
+  make_edit(&edit_source_lang_, false);
   make_check(&check_ascii_, L"英文直输", 401);
   make_check(&check_trad_, L"繁体转换", 402);
   make_check(&check_punct_, L"英文标点", 403);
   make_check(&check_vertical_, L"竖向排列候选", 404);
   make_check(&check_close_after_, L"全部发送完成后关闭 Buffer", 412);
+  make_check(&clipboard_recording_, L"自动记录剪贴板历史", 424);
   auto make_combo = [&](HWND& slot, int id, std::initializer_list<const wchar_t*> labels) {
     if (slot) return;
     slot = CreateWindowExW(0, L"COMBOBOX", L"", WS_CHILD | WS_TABSTOP | WS_VSCROLL | CBS_DROPDOWNLIST | CBS_OWNERDRAWFIXED | CBS_HASSTRINGS,
@@ -386,7 +463,7 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   make_combo(combo_translation_, 414, {L"本地离线翻译 · 中文 / English", L"AI 翻译 · 使用连接器"});
   SendMessageW(combo_auto_send_, CB_SETCURSEL, draft_.auto_send_seconds == 5 ? 4 : draft_.auto_send_seconds, 0);
   SendMessageW(combo_translation_, CB_SETCURSEL, draft_.translation_provider_index, 0);
-  for (const HWND combo : {combo_hotkey_modifiers_, combo_send_modifiers_, combo_connector_, combo_auto_send_, combo_translation_})
+  for (const HWND combo : {combo_hotkey_modifiers_, combo_send_modifiers_, combo_plugin_modifiers_[0], combo_plugin_modifiers_[1], combo_connector_, combo_auto_send_, combo_translation_})
     SetWindowSubclass(combo, ComboProcedure, 1, reinterpret_cast<DWORD_PTR>(this));
   SetWindowTextW(edit_font_, std::to_wstring(draft_.font_size).c_str());
   SetWindowTextW(edit_candidate_count_, std::to_wstring(draft_.candidate_count).c_str());
@@ -403,6 +480,7 @@ void SettingsUiHost::CreateOrUpdateChildren() {
   SetWindowTextW(edit_codex_model_, draft_.codex_model.c_str());
   SetWindowTextW(edit_key_, L"");
   SetWindowTextW(edit_lang_, draft_.target_language.c_str());
+  SetWindowTextW(edit_source_lang_, draft_.source_language.c_str());
   for (std::size_t i = 0; i < plugin_labels_.size(); ++i) {
     auto make = [&](HWND& control, const wchar_t* kind, const wchar_t* title, DWORD style, int action) {
       control = CreateWindowExW(0, kind, title, WS_CHILD | style, 0, 0, 1, 1, hwnd_,
@@ -414,16 +492,40 @@ void SettingsUiHost::CreateOrUpdateChildren() {
     make(plugin_remove_[i], L"BUTTON", L"卸载", WS_TABSTOP | BS_OWNERDRAW, 2);
   }
   plugin_status_ = CreateWindowExW(0, L"STATIC", L"", WS_CHILD | SS_LEFT, 0, 0, 1, 1, hwnd_, nullptr, GetModuleHandleW(nullptr), nullptr);
+  make_combo(plugin_filter_, 5112, {L"全部", L"缓冲插件", L"Capsule 插件", L"Mailbox 插件", L"内置扩展"});
+  SendMessageW(plugin_filter_, CB_SETCURSEL, 0, 0);
+  plugin_offset_ = 0;
+  auto plugin_navigation = [&](int id, const wchar_t* title, bool label = false) {
+    return CreateWindowExW(0, label ? L"STATIC" : L"BUTTON", title,
+        WS_CHILD | (label ? SS_CENTER : WS_TABSTOP | BS_OWNERDRAW), 0, 0, 1, 1,
+        hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
+  };
+  plugin_previous_ = plugin_navigation(5113, L"上一页");
+  plugin_next_ = plugin_navigation(5114, L"下一页");
+  plugin_page_ = plugin_navigation(5115, L"", true);
   UpdatePlugins(); ThemeEdits();
 }
 
 void SettingsUiHost::UpdatePlugins() {
   if (callbacks_.plugins) plugin_rows_ = callbacks_.plugins();
+  constexpr const char* kinds[] = {"", "buffer", "capsule", "mailbox", "extension"};
+  const auto filter = SendMessageW(plugin_filter_, CB_GETCURSEL, 0, 0);
+  if (filter > 0 && filter < static_cast<LRESULT>(std::size(kinds)))
+    std::erase_if(plugin_rows_, [&](const auto& item) { return item.kind != kinds[filter]; });
+  const auto page_size = plugin_labels_.size();
+  const auto count = plugin_rows_.size();
+  plugin_offset_ = (std::min)(plugin_offset_, count ? ((count - 1) / page_size) * page_size : 0);
+  EnableWindow(plugin_previous_, plugin_offset_ > 0);
+  EnableWindow(plugin_next_, plugin_offset_ + page_size < count);
+  const auto page_text = count ? std::to_wstring(plugin_offset_ / page_size + 1) + L" / " +
+      std::to_wstring((count + page_size - 1) / page_size) : L"暂无插件";
+  SetWindowTextW(plugin_page_, page_text.c_str());
   for (std::size_t i = 0; i < plugin_labels_.size(); ++i) {
-    if (i >= plugin_rows_.size()) continue;
-    const auto& item = plugin_rows_[i];
+    if (plugin_offset_ + i >= plugin_rows_.size()) continue;
+    const auto& item = plugin_rows_[plugin_offset_ + i];
     const auto name = item.id == "builtin.apple-translation" ? std::string("翻译") : item.name;
-    const auto label = Wide(name + "  " + item.version + "\n" + (item.installed ? item.enabled ? "已启用" : "已停用" : "未安装"));
+    const std::string kind = item.kind == "capsule" ? "Capsule 插件" : item.kind == "mailbox" ? "Mailbox 插件" : item.kind == "extension" ? "内置扩展" : "缓冲插件";
+    const auto label = Wide(name + "  " + item.version + "\n" + kind + " · " + (item.installed ? item.enabled ? "已启用" : "已停用" : "未安装"));
     SetWindowTextW(plugin_labels_[i], label.c_str());
     SetWindowTextW(plugin_install_[i], item.bundled ? L"恢复安装" : L"下载安装");
     EnableWindow(plugin_install_[i], !item.installed);
@@ -446,8 +548,8 @@ void SettingsUiHost::ThemeEdits() {
   if (edit_brush_) DeleteObject(edit_brush_);
   edit_brush_ = CreateSolidBrush(ui::ToColorRef(p.surface));
   HWND edits[] = {edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_,
-                  combo_send_modifiers_, edit_send_, record_hotkey_, record_send_, reset_shortcuts_, shortcut_feedback_, edit_base_,
-                  edit_model_, edit_key_, edit_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
+                  combo_send_modifiers_, edit_send_, record_hotkey_, record_send_, combo_plugin_modifiers_[0], edit_plugin_[0], record_plugin_[0], combo_plugin_modifiers_[1], edit_plugin_[1], record_plugin_[1], reset_shortcuts_, shortcut_feedback_, edit_base_,
+                  edit_model_, edit_key_, edit_lang_, edit_source_lang_, combo_connector_, edit_codex_path_, edit_codex_model_,
                   combo_auto_send_, check_close_after_, combo_translation_};
   for (HWND edit : edits) {
     if (!edit) continue;
@@ -459,6 +561,8 @@ void SettingsUiHost::ThemeEdits() {
       SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   }
   SendMessageW(plugin_status_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
+  for (const auto control : {plugin_filter_, plugin_previous_, plugin_next_, plugin_page_})
+    SendMessageW(control, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   HWND checks[] = {check_ascii_, check_trad_, check_punct_, check_vertical_};
   for (HWND check : checks) {
     if (!check) continue;
@@ -467,6 +571,18 @@ void SettingsUiHost::ThemeEdits() {
 }
 
 void SettingsUiHost::Relayout() {
+  if (!hwnd_) return;
+  const bool was_updating = updating_controls_;
+  updating_controls_ = true;
+  if (callbacks_.plugins && extensions_) {
+    for (const auto& item : callbacks_.plugins()) {
+      if (item.id == "builtin.fly-chord-learning") draft_.extensions_enabled[0] = item.enabled;
+      if (item.id == "builtin.typing-speed") draft_.extensions_enabled[1] = item.enabled;
+      if (item.id == "builtin.statistics") draft_.extensions_enabled[2] = item.enabled;
+    }
+    if (!ui::SettingsPageAvailable(draft_, draft_.page)) { draft_.page = ui::SettingsPage::kPlugins; draft_.subpage = 4; }
+  }
+  draft_.subpage = (std::clamp)(draft_.subpage, 0, ui::SettingsTabCount(draft_.page)-1);
   pressed_hit_ = -2;
   if (GetCapture() == hwnd_) ReleaseCapture();
   if (draft_.page != ui::SettingsPage::kAppearance || draft_.subpage != 0)
@@ -510,6 +626,12 @@ void SettingsUiHost::Relayout() {
   place_edit(edit_send_, layout_.send_edit, buffer);
   Place(record_hotkey_, layout_.hotkey_record, dpi_, buffer);
   Place(record_send_, layout_.send_record, dpi_, buffer);
+  for (int i = 0; i < 2; ++i) {
+    auto dropdown = layout_.plugin_modifiers[i]; dropdown.bottom += 160;
+    Place(combo_plugin_modifiers_[i], dropdown, dpi_, buffer);
+    place_edit(edit_plugin_[i], layout_.plugin_edit[i], buffer);
+    Place(record_plugin_[i], layout_.plugin_record[i], dpi_, buffer);
+  }
   Place(reset_shortcuts_, layout_.shortcut_reset, dpi_, buffer);
   Place(shortcut_feedback_, layout_.shortcut_feedback, dpi_, buffer);
   place_edit(edit_base_, layout_.base_edit, api);
@@ -522,6 +644,7 @@ void SettingsUiHost::Relayout() {
   place_edit(edit_key_, layout_.key_edit,
              false);
   place_edit(edit_lang_, behavior ? layout_.buffer_language : layout_.lang_edit, api || behavior);
+  place_edit(edit_source_lang_, layout_.buffer_source_language, behavior);
   auto auto_dropdown = layout_.auto_send_combo; auto_dropdown.bottom += 180;
   auto translation_dropdown = layout_.translation_combo; translation_dropdown.bottom += 100;
   Place(combo_auto_send_, auto_dropdown, dpi_, behavior);
@@ -538,19 +661,43 @@ void SettingsUiHost::Relayout() {
   Place(check_trad_, layout_.check_trad, dpi_, input);
   Place(check_punct_, layout_.check_punct, dpi_, input);
   Place(check_vertical_, layout_.check_vertical, dpi_, appearance);
-  const bool plugins = draft_.page == ui::SettingsPage::kPlugins && draft_.subpage == 0;
+  const bool plugins = !extensions_ && draft_.page == ui::SettingsPage::kPlugins && draft_.subpage == 0;
   UpdatePlugins();
+  Place(plugin_filter_, {layout_.body.left, layout_.body.top, layout_.body.left+220, layout_.body.top+180}, dpi_, plugins);
   for (std::size_t i = 0; i < plugin_labels_.size(); ++i) {
-    const float y = layout_.body.top + static_cast<float>(i) * 78.0f;
-    const float x = layout_.body.left; const bool visible = plugins && i < plugin_rows_.size();
+    const float y = layout_.body.top + 48 + static_cast<float>(i) * 66.0f;
+    const float x = layout_.body.left;
+    const bool visible = plugins && plugin_offset_ + i < plugin_rows_.size();
+    const bool installable = visible && plugin_rows_[plugin_offset_ + i].can_install;
     Place(plugin_labels_[i], {x,y,x+285,y+52}, dpi_, visible);
-    Place(plugin_install_[i], {x+300,y+6,x+414,y+38}, dpi_, visible);
+    Place(plugin_install_[i], {x+300,y+6,x+414,y+38}, dpi_, installable);
     Place(plugin_enable_[i], {x+426,y+6,x+510,y+38}, dpi_, visible);
-    Place(plugin_remove_[i], {x+522,y+6,x+606,y+38}, dpi_, visible);
+    Place(plugin_remove_[i], {x+522,y+6,x+606,y+38}, dpi_, installable);
   }
-  Place(plugin_status_, {layout_.body.left,layout_.body.top+320,layout_.body.right,layout_.body.top+370}, dpi_, plugins);
+  Place(plugin_previous_, {layout_.body.left,layout_.body.top+320,layout_.body.left+90,layout_.body.top+350}, dpi_, plugins);
+  Place(plugin_page_, {layout_.body.left+100,layout_.body.top+324,layout_.body.left+220,layout_.body.top+350}, dpi_, plugins);
+  Place(plugin_next_, {layout_.body.left+230,layout_.body.top+320,layout_.body.left+320,layout_.body.top+350}, dpi_, plugins);
+  Place(plugin_status_, {layout_.body.left,layout_.body.top+364,layout_.body.right,layout_.body.top+398}, dpi_, plugins);
+  const bool peripheral = draft_.page == ui::SettingsPage::kCapsule || draft_.page == ui::SettingsPage::kMailbox;
+  const bool capsule = draft_.page == ui::SettingsPage::kCapsule;
+  if (capsule && callbacks_.load_clipboard_recording)
+    clipboard_recording_enabled_ = callbacks_.load_clipboard_recording();
+  Place(clipboard_recording_, {layout_.body.left,layout_.body.top+154,layout_.body.right,layout_.body.top+186}, dpi_, capsule);
+  EnableWindow(clipboard_recording_, static_cast<bool>(callbacks_.save_clipboard_recording));
+  SendMessageW(clipboard_recording_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
+  const auto peripheral_y = layout_.body.top + (capsule ? 204 : 150);
+  Place(peripheral_open_, {layout_.body.left,peripheral_y,layout_.body.left+220,peripheral_y+34}, dpi_, peripheral);
+  SendMessageW(peripheral_open_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
+  const auto* home_link = draft_.page == ui::SettingsPage::kHome ? ui::HomeLink(draft_.subpage) : nullptr;
+  Place(home_action_, layout_.home_action, dpi_, home_link != nullptr);
+  if (home_link) SetWindowTextW(home_action_, home_link->action);
+  SendMessageW(home_action_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   if (parity_) parity_->Layout(draft_.page, draft_.subpage, layout_.body, dpi_, fonts_.body);
-  InvalidateRect(hwnd_, nullptr, FALSE);
+  if (extensions_) extensions_->Layout(draft_.page, draft_.subpage, layout_.body, dpi_, draft_.preview_theme);
+  // WS_CLIPCHILDREN excludes native labels/controls from the shell repaint.
+  // They must also redraw after navigation, resizing or a theme preview.
+  RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
+  updating_controls_ = was_updating;
 }
 
 LRESULT CALLBACK SettingsUiHost::ComboProcedure(HWND hwnd, UINT message, WPARAM wparam,
@@ -568,32 +715,89 @@ LRESULT CALLBACK SettingsUiHost::ComboProcedure(HWND hwnd, UINT message, WPARAM 
   if (dc) {
     const auto& p = ui::Palette(self->draft_.preview_theme);
     RECT client{}; GetClientRect(hwnd, &client);
-    ui::FillRectColor(dc, client, ui::ToColorRef(p.settings_background));
+    self->PaintChildBackground(hwnd, dc);
     ui::FillRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(p.surface));
     ui::StrokeRoundRect(dc, client, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(GetFocus() == hwnd || IsChild(hwnd, GetFocus()) ? p.accent : p.border));
     RECT arrow = client; arrow.left = arrow.right - MulDiv(26, static_cast<int>(self->dpi_), 96);
-    const auto pen = CreatePen(PS_SOLID, (std::max)(1, MulDiv(1, static_cast<int>(self->dpi_), 96)), ui::ToColorRef(p.text_secondary));
-    const auto old_pen = SelectObject(dc, pen);
-    const int cx = (arrow.left + arrow.right) / 2, cy = (arrow.top + arrow.bottom) / 2;
-    const int step = MulDiv(4, static_cast<int>(self->dpi_), 96);
-    MoveToEx(dc, cx - step, cy - 2, nullptr); LineTo(dc, cx, cy + 2); LineTo(dc, cx + step, cy - 2);
-    SelectObject(dc, old_pen); DeleteObject(pen);
+    ui::DrawFluentIcon(dc, ui::FluentIcon::kChevronDown, arrow, ui::ToColorRef(p.text_secondary));
     RECT label = client; label.left += MulDiv(8, static_cast<int>(self->dpi_), 96); label.right = arrow.left;
-    const auto text = GetText(hwnd); const auto old = SelectObject(dc, self->fonts_.control);
-    SetBkMode(dc, TRANSPARENT); SetTextColor(dc, ui::ToColorRef(p.text_primary));
-    DrawTextW(dc, text.c_str(), -1, &label, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
-    SelectObject(dc, old);
+    // Editable combos own a native EDIT child. Painting the same string here
+    // underneath it leaves duplicate glyphs when editing or selecting text.
+    if ((GetWindowLongPtrW(hwnd, GWL_STYLE) & 3) != CBS_DROPDOWN) {
+      const auto text = GetText(hwnd); const auto old = SelectObject(dc, self->fonts_.control);
+      SetBkMode(dc, TRANSPARENT); SetTextColor(dc, ui::ToColorRef(p.text_primary));
+      DrawTextW(dc, text.c_str(), -1, &label, DT_LEFT | DT_VCENTER | DT_SINGLELINE | DT_END_ELLIPSIS);
+      SelectObject(dc, old);
+    }
   }
   if (message == WM_PAINT) EndPaint(hwnd, &ps);
   return 0;
 }
+LRESULT CALLBACK SettingsUiHost::ConnectorScrollProcedure(HWND h, UINT message, WPARAM w, LPARAM l,
+                                                          UINT_PTR id, DWORD_PTR data) {
+  auto* self = reinterpret_cast<SettingsUiHost*>(data);
+  if (message == WM_NCDESTROY) RemoveWindowSubclass(h, ConnectorScrollProcedure, id);
+  if (message == WM_ERASEBKGND) return 1;
+  if (message == WM_PAINT || message == WM_PRINT || message == WM_PRINTCLIENT) {
+    PAINTSTRUCT paint{};
+    const auto dc = message == WM_PAINT ? BeginPaint(h, &paint) : reinterpret_cast<HDC>(w);
+    RECT r{}; GetClientRect(h, &r);
+    const auto& p = ui::Palette(self->draft_.preview_theme);
+    const auto px = [self](int n) { return MulDiv(n, self->dpi_, 96); };
+    ui::FillRectColor(dc, r, ui::ToColorRef(p.settings_background));
+    SCROLLBARINFO info{sizeof(info)};
+    if (GetScrollBarInfo(h, OBJID_CLIENT, &info)) {
+      const bool pressed = (info.rgstate[3] & STATE_SYSTEM_PRESSED) != 0;
+      POINT cursor{}; GetCursorPos(&cursor); ScreenToClient(h, &cursor);
+      const bool hover = PtInRect(&r, cursor) != FALSE;
+      const int width = px(hover || pressed ? 7 : 5);
+      RECT thumb{(r.right-width)/2, info.xyThumbTop, (r.right+width)/2, info.xyThumbBottom};
+      if (thumb.bottom > thumb.top) ui::FillRoundRect(dc, thumb, px(3), ui::ToColorRef(
+          pressed ? p.text_secondary : ui::Blend(p.settings_background,p.text_secondary,hover ? .65f : .45f)));
+      for (bool up : {true,false}) {
+        RECT arrow{0, up ? 0 : r.bottom-info.dxyLineButton, r.right, up ? info.dxyLineButton : r.bottom};
+        const int saved = SaveDC(dc);
+        if (up) {
+          SetGraphicsMode(dc,GM_ADVANCED);
+          XFORM rotate{-1,0,0,-1,static_cast<FLOAT>(arrow.right),static_cast<FLOAT>(arrow.bottom)};
+          ModifyWorldTransform(dc,&rotate,MWT_LEFTMULTIPLY);
+        }
+        ui::DrawFluentIcon(dc,ui::FluentIcon::kChevronDown,arrow,ui::ToColorRef(p.text_muted));
+        RestoreDC(dc,saved);
+      }
+    }
+    if (message == WM_PAINT) EndPaint(h,&paint);
+    return 0;
+  }
+  if (message == WM_MOUSEMOVE) { TRACKMOUSEEVENT track{sizeof(track),TME_LEAVE,h,0}; TrackMouseEvent(&track); }
+  const auto result = DefSubclassProc(h,message,w,l);
+  if (message == WM_MOUSEMOVE || message == WM_MOUSELEAVE || message == WM_LBUTTONUP || message == WM_ENABLE)
+    InvalidateRect(h,nullptr,FALSE);
+  return result;
+}
 void SettingsUiHost::ApplyControlTheme() { ThemeEdits(); }
 
+void SettingsUiHost::SaveError(const std::wstring& message) {
+  draft_.save_error = message;
+  InvalidateRect(hwnd_, nullptr, FALSE);
+}
+
+void SettingsUiHost::QueueSave(bool immediate) {
+  if (!ready_ || updating_controls_) return;
+  pending_save_ = true;
+  KillTimer(hwnd_, 12);
+  if (immediate) CommitSave();
+  else SetTimer(hwnd_, 12, 400, nullptr);
+}
+
 bool SettingsUiHost::CommitSave() {
-  if (!callbacks_.save && !callbacks_.save_connections) return true;
+  KillTimer(hwnd_, 12);
+  if (!pending_save_) return true;
+  if (!callbacks_.save && !callbacks_.save_connections) { pending_save_ = false; return true; }
   try {
     Settings config = callbacks_.load ? callbacks_.load() : Settings{};
-    config.schema = Utf8(std::wstring(kSchemas[draft_.schema_index]));
+    if (draft_.imported_schema.empty())
+      config.schema = Utf8(std::wstring(kSchemas[draft_.schema_index]));
     config.theme = ui::ThemeIdString(
         static_cast<ui::ThemeId>(draft_.theme_index));
     config.base_url = Utf8(GetText(edit_base_));
@@ -604,6 +808,7 @@ bool SettingsUiHost::CommitSave() {
     config.codex_path = Utf8(GetText(edit_codex_path_));
     config.codex_model = Utf8(GetText(edit_codex_model_));
     config.target_language = Utf8(GetText(edit_lang_));
+    config.source_language = Utf8(GetText(edit_source_lang_));
     const auto automatic = SendMessageW(combo_auto_send_, CB_GETCURSEL, 0, 0);
     const auto translation = SendMessageW(combo_translation_, CB_GETCURSEL, 0, 0);
     if (automatic < 0 || automatic > 4 || translation < 0 || translation > 1) throw std::runtime_error("Buffer behavior choice");
@@ -631,11 +836,17 @@ bool SettingsUiHost::CommitSave() {
       throw std::runtime_error("send modifier choice");
     config.send_modifiers = send_choice == static_cast<LRESULT>(kBufferHotkeyChoices.size()) ? 0U
         : kBufferHotkeyChoices[static_cast<std::size_t>(send_choice)].modifiers;
-    if (!core::ValidShortcut(config.hotkey_key, config.hotkey_modifiers) ||
-        !core::ValidShortcut(config.send_key, config.send_modifiers, true) ||
-        (config.hotkey_key == config.send_key && config.hotkey_modifiers == config.send_modifiers)) {
-      SetWindowTextW(shortcut_feedback_, L"快捷键无效、占用系统编辑键或两项重复；尚未保存。请修改后重试。无修饰键的发送键仅支持 Enter 或 F6–F12。");
-      draft_.page = ui::SettingsPage::kBuffer; draft_.subpage = 0; Relayout();
+    for (int i = 0; i < 2; ++i) {
+      auto& key = i ? config.next_plugin_key : config.previous_plugin_key;
+      auto& modifiers = i ? config.next_plugin_modifiers : config.previous_plugin_modifiers;
+      key = ParseShortcutKey(GetText(edit_plugin_[i]));
+      const auto choice = SendMessageW(combo_plugin_modifiers_[i], CB_GETCURSEL, 0, 0);
+      modifiers = choice >= 0 && choice < static_cast<LRESULT>(kBufferHotkeyChoices.size())
+          ? kBufferHotkeyChoices[static_cast<std::size_t>(choice)].modifiers : 0U;
+    }
+    if (!ValidBufferShortcuts(config)) {
+      SetWindowTextW(shortcut_feedback_, L"快捷键无效、占用保留快捷键或与另一项重复；尚未保存。无修饰键仅允许发送键使用 Enter 或 F6–F12。");
+      SaveError(L"快捷键无效或重复，原设置保持不变。");
       return false;
     }
     config.ascii = draft_.ascii;
@@ -645,7 +856,7 @@ bool SettingsUiHost::CommitSave() {
     auto key = GetText(edit_key_);
     std::string error;
     if (parity_ && !parity_->Read(&config, &error)) {
-      MessageBoxW(hwnd_, Wide(error).c_str(), L"设置未保存", MB_OK | MB_ICONERROR); return false;
+      SaveError(Wide(error)); return false;
     }
     const bool ok = callbacks_.save_connections && parity_
         ? callbacks_.save_connections(config, parity_->Secrets(), &error)
@@ -653,20 +864,48 @@ bool SettingsUiHost::CommitSave() {
     if (!key.empty())
       SecureZeroMemory(key.data(), key.size() * sizeof(wchar_t));
     if (!ok) {
-      MessageBoxW(hwnd_, Wide(error).c_str(), rimes::branding::Text(L"{brand}").c_str(), MB_OK);
+      SaveError(Wide(error));
       return false;
     }
-    draft_.theme = static_cast<ui::ThemeId>(draft_.theme_index);
+    draft_.theme = config.follow_system_theme && callbacks_.load_theme
+        ? callbacks_.load_theme() : static_cast<ui::ThemeId>(draft_.theme_index);
     draft_.preview_theme = draft_.theme;
     opened_theme_ = draft_.theme;
-    saved_ = true;
+    pending_save_ = false;
+    draft_.save_error.clear();
+    updating_controls_ = true;
+    if (parity_) parity_->Saved();
+    SetWindowTextW(edit_key_, L"");
+    updating_controls_ = false;
+    InvalidateRect(hwnd_, nullptr, FALSE);
     if (callbacks_.on_theme_preview)
       callbacks_.on_theme_preview(draft_.theme);
+    // Persisting text must keep the native editor and its caret in place.
+    // Relayout hides/re-shows page children, so only refresh their colors here.
+    ThemeEdits();
+    RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
     return true;
   } catch (...) {
-    MessageBoxW(hwnd_, L"请检查输入方案、候选数（1–9）、字号和快捷键。", rimes::branding::Text(L"{brand}").c_str(), MB_OK);
+    SaveError(L"请输入有效的候选数（1–9）、字号或快捷键；原设置保持不变。");
     return false;
   }
+}
+
+void SettingsUiHost::PaintChildBackground(HWND child, HDC dc) {
+  // Transparent STATICs and rounded owner-drawn controls cannot rely on the
+  // parent's pixels: the parent deliberately clips every visible child HWND.
+  // Render the current shell at the child's exact origin, including card
+  // backgrounds. This also makes corners independent of stale/default pixels.
+  RECT client{};
+  GetClientRect(child, &client);
+  POINT origin{};
+  MapWindowPoints(child, hwnd_, &origin, 1);
+  const int saved = SaveDC(dc);
+  IntersectClipRect(dc, client.left, client.top, client.right, client.bottom);
+  OffsetViewportOrgEx(dc, -origin.x, -origin.y, nullptr);
+  ui::PaintSettingsShell(dc, layout_, draft_, fonts_, dpi_);
+  if (parity_) parity_->PaintFields(dc, draft_.preview_theme, dpi_);
+  RestoreDC(dc, saved);
 }
 
 void SettingsUiHost::Paint(HDC dc) {
@@ -710,13 +949,17 @@ void SettingsUiHost::InvalidateHover(int hit) {
   InvalidateRect(hwnd_, &rect, FALSE);
 }
 
+void SettingsUiHost::SelectPage(ui::SettingsPage page) {
+  remembered_subpages_[static_cast<int>(draft_.page)] = draft_.subpage;
+  draft_.page = page;
+  draft_.subpage = remembered_subpages_[static_cast<int>(page)];
+  draft_.focus = static_cast<int>(page);
+  Relayout();
+}
 void SettingsUiHost::ActivateHit(int hit) {
   if (hit >= 0 && hit < ui::kSettingsPageCount) {
-    draft_.page = static_cast<ui::SettingsPage>(hit);
-    draft_.subpage = 0;
-    draft_.focus = hit;
-    Relayout();
-  } else if (hit >= 500 && hit < 502) {
+    SelectPage(static_cast<ui::SettingsPage>(hit));
+  } else if (hit >= 500 && hit < 500 + ui::SettingsTabCount(draft_.page)) {
     draft_.subpage = hit - 500;
     draft_.focus = static_cast<int>(draft_.page);
     Relayout();
@@ -724,6 +967,7 @@ void SettingsUiHost::ActivateHit(int hit) {
              draft_.page == ui::SettingsPage::kInput && draft_.subpage == 0 && draft_.imported_schema.empty()) {
     draft_.schema_index = hit - 100;
     draft_.focus = hit;
+    QueueSave(true);
     InvalidateRect(hwnd_, nullptr, FALSE);
   } else if (hit >= 200 && hit < 204 &&
              draft_.page == ui::SettingsPage::kAppearance && draft_.subpage == 0) {
@@ -732,17 +976,14 @@ void SettingsUiHost::ActivateHit(int hit) {
     draft_.theme_detail = -1;
     draft_.preview_theme = static_cast<ui::ThemeId>(draft_.theme_index);
     draft_.focus = hit;
-    if (callbacks_.on_theme_preview) callbacks_.on_theme_preview(draft_.preview_theme);
+    QueueSave(true);
     Relayout();
   } else if (hit >= 400 && hit < 404 &&
              draft_.page == ui::SettingsPage::kAppearance && draft_.subpage == 0) {
     draft_.theme_detail = draft_.theme_detail == hit - 400 ? -1 : hit - 400;
     draft_.focus = hit;
     Relayout();
-  } else if (hit == 300) {
-    Close(true);
-  } else if (hit == 301) {
-    Close(false);
+
   }
 }
 
@@ -772,24 +1013,84 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
     case WM_ERASEBKGND:
       return 1;
     case WM_TIMER:
-      if (self->parity_) self->parity_->Tick();
+      if (wparam == 12) { self->CommitSave(); return 0; }
+      self->updating_controls_ = true;
+      if (self->parity_ && self->parity_->Tick()) self->Relayout();
+      self->updating_controls_ = false;
       if (wparam == 11 && self->draft_.page == ui::SettingsPage::kPlugins) self->UpdatePlugins();
       return 0;
+    case WM_APP + 73:
+      self->Relayout();
+      return 0;
     case WM_COMMAND:
-      if (self->parity_ && self->parity_->Command(LOWORD(wparam), HIWORD(wparam))) return 0;
+      if (!self->ready_ || self->updating_controls_) return 0;
+      if (LOWORD(wparam) == 424 && HIWORD(wparam) == BN_CLICKED) {
+        std::string error;
+        const bool enabled = !self->clipboard_recording_enabled_;
+        if (self->callbacks_.save_clipboard_recording &&
+            self->callbacks_.save_clipboard_recording(enabled, &error))
+          self->clipboard_recording_enabled_ = enabled;
+        else if (!error.empty()) self->SaveError(Wide(error));
+        InvalidateRect(self->clipboard_recording_, nullptr, FALSE);
+        return 0;
+      }
+      if (LOWORD(wparam) == 417 && HIWORD(wparam) == BN_CLICKED) {
+        if (self->draft_.page == ui::SettingsPage::kHome) {
+          if (const auto* link = ui::HomeLink(self->draft_.subpage)) {
+            const bool opened = self->callbacks_.open_brand_link
+                ? self->callbacks_.open_brand_link(link->destination)
+                : reinterpret_cast<INT_PTR>(ShellExecuteW(hwnd, L"open", link->destination, nullptr, nullptr, SW_SHOWNORMAL)) > 32;
+            if (!opened) MessageBoxW(hwnd, (std::wstring(L"无法打开，请使用浏览器或邮件应用访问：\n\n") + link->destination).c_str(),
+                                    L"打开链接", MB_OK | MB_ICONINFORMATION);
+          }
+        }
+        return 0;
+      }
+      if (LOWORD(wparam) == 416 && HIWORD(wparam) == BN_CLICKED) {
+        if (self->draft_.page == ui::SettingsPage::kCapsule && self->callbacks_.open_capsule) self->callbacks_.open_capsule();
+        if (self->draft_.page == ui::SettingsPage::kMailbox && self->callbacks_.open_mailbox) self->callbacks_.open_mailbox();
+        return 0;
+      }
+      if (self->parity_) {
+        self->updating_controls_ = true;
+        const bool handled = self->parity_->Command(LOWORD(wparam), HIWORD(wparam));
+        self->updating_controls_ = false;
+        if (handled) {
+          const auto id = LOWORD(wparam);
+          if ((HIWORD(wparam) == BN_CLICKED &&
+               (id == 6001 || id == 6002 || id == 6003 || id == 6013 || id == 6016 ||
+                id == 6024 || id == 6025 || id == 6041 || id == 6042 || id == 6050 || id == 6060 || id == 6062)))
+            self->QueueSave(true);
+          else if (id == 6000 && HIWORD(wparam) == CBN_SELCHANGE && self->pending_save_)
+            self->CommitSave();
+          if (HIWORD(wparam) == CBN_SELCHANGE || HIWORD(wparam) == BN_CLICKED) self->Relayout();
+          return 0;
+        }
+      }
+      // Mapping editor and preview fields become a setting only through their
+      // Add/Update action. Read-only gateway snippets and plugin filters do not.
+      if (HIWORD(wparam) == EN_CHANGE || HIWORD(wparam) == CBN_EDITCHANGE ||
+          HIWORD(wparam) == EN_KILLFOCUS || HIWORD(wparam) == CBN_SELCHANGE) {
+        const auto id = LOWORD(wparam);
+        if (id < 5100 || (id >= 6004 && id <= 6015) || (id >= 6030 && id <= 6035) || id == 6063) {
+          if (HIWORD(wparam) == EN_KILLFOCUS) {
+            if (self->pending_save_) self->CommitSave();
+          } else self->QueueSave(HIWORD(wparam) == CBN_SELCHANGE);
+        }
+      }
       if (LOWORD(wparam) == 415 && HIWORD(wparam) == BN_CLICKED) {
         if (!self->callbacks_.open_schemes || !self->callbacks_.open_schemes())
           MessageBoxW(hwnd, L"无法打开方案管理。", rimes::branding::Text(L"{brand} 设置").c_str(), MB_OK | MB_ICONERROR);
         return 0;
       }
-      if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 409 || LOWORD(wparam) == 410)) {
-        const int recording = LOWORD(wparam) == 410 ? 1 : 0;
+      if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 409 || LOWORD(wparam) == 410 || LOWORD(wparam) == 418 || LOWORD(wparam) == 419)) {
+        const int recording = LOWORD(wparam) >= 418 ? LOWORD(wparam) - 416 : LOWORD(wparam) - 409;
         const bool stop = self->recording_shortcut_ == recording;
         self->StopRecording();
         if (!stop) {
           self->recording_shortcut_ = recording;
-          SetWindowTextW(recording ? self->record_send_ : self->record_hotkey_, L"请按快捷键…");
-          SetWindowTextW(self->shortcut_feedback_, L"按下新的组合键；Esc 取消，Delete 恢复此项默认。点击保存后生效。");
+          SetWindowTextW(recording >= 2 ? self->record_plugin_[recording - 2] : recording ? self->record_send_ : self->record_hotkey_, L"请按快捷键…");
+          SetWindowTextW(self->shortcut_feedback_, L"按下新的组合键；Esc 取消，Delete 恢复此项默认。完成修改后立即生效。");
         }
         return 0;
       }
@@ -797,9 +1098,12 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
         self->StopRecording();
         SetWindowTextW(self->edit_hotkey_, L"B");
         SetWindowTextW(self->edit_send_, L"Enter");
-        for (const HWND combo : {self->combo_hotkey_modifiers_, self->combo_send_modifiers_})
+        SetWindowTextW(self->edit_plugin_[0], L"Up");
+        SetWindowTextW(self->edit_plugin_[1], L"Down");
+        for (const HWND combo : {self->combo_hotkey_modifiers_, self->combo_send_modifiers_, self->combo_plugin_modifiers_[0], self->combo_plugin_modifiers_[1]})
           SendMessageW(combo, CB_SETCURSEL, BufferHotkeyChoiceIndex(MOD_ALT | MOD_SHIFT), 0);
-        SetWindowTextW(self->shortcut_feedback_, L"已恢复默认 Alt+Shift+B / Alt+Shift+Enter；点击保存后生效。");
+        SetWindowTextW(self->shortcut_feedback_, L"已恢复默认 Alt+Shift+B / Enter / ↑ / ↓。");
+        self->QueueSave(true);
         return 0;
       }
       if (LOWORD(wparam) == 405 && HIWORD(wparam) == CBN_SELCHANGE) {
@@ -809,14 +1113,26 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
         InvalidateRect(hwnd, nullptr, FALSE);
         return 0;
       }
+      if (LOWORD(wparam) == 5112 && HIWORD(wparam) == CBN_SELCHANGE) {
+        self->plugin_offset_ = 0;
+        self->Relayout();
+        return 0;
+      }
+      if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 5113 || LOWORD(wparam) == 5114)) {
+        const auto size = self->plugin_labels_.size();
+        if (LOWORD(wparam) == 5113 && self->plugin_offset_ >= size) self->plugin_offset_ -= size;
+        if (LOWORD(wparam) == 5114 && self->plugin_offset_ + size < self->plugin_rows_.size()) self->plugin_offset_ += size;
+        self->Relayout();
+        return 0;
+      }
       if (HIWORD(wparam) == BN_CLICKED && LOWORD(wparam) >= 5100 && LOWORD(wparam) < 5112) {
-        const auto index = static_cast<std::size_t>((LOWORD(wparam) - 5100) / 3);
+        const auto index = self->plugin_offset_ + static_cast<std::size_t>((LOWORD(wparam) - 5100) / 3);
         const int action = (LOWORD(wparam) - 5100) % 3;
         if (self->callbacks_.manage_plugin && index < self->plugin_rows_.size()) {
           const auto item = self->plugin_rows_[index]; std::string error;
           const std::string operation = action == 0 ? "install" : action == 2 ? "uninstall" : item.enabled ? "disable" : "enable";
           if (!self->callbacks_.manage_plugin(item.id, operation, &error)) MessageBoxW(hwnd, Wide(error).c_str(), rimes::branding::Text(L"{brand}").c_str(), MB_OK);
-          self->UpdatePlugins();
+          self->Relayout();
         }
         return 0;
       }
@@ -829,21 +1145,29 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
           case 412: self->draft_.close_after_send = !self->draft_.close_after_send; break;
           default: return 0;
         }
+        self->QueueSave(true);
         InvalidateRect(reinterpret_cast<HWND>(lparam), nullptr, FALSE);
         return 0;
       }
       break;
     case WM_DRAWITEM: {
       const auto* draw = reinterpret_cast<DRAWITEMSTRUCT*>(lparam);
+      if (self->parity_ && self->parity_->DrawControl(*draw, self->draft_.preview_theme, self->dpi_, self->fonts_.body)) return TRUE;
       if (draw->CtlType != ODT_BUTTON && draw->CtlType != ODT_COMBOBOX) break;
       const auto& p = ui::Palette(self->draft_.preview_theme);
-      if (draw->CtlType == ODT_COMBOBOX || !(draw->CtlID >= 401 && draw->CtlID <= 404 || draw->CtlID == 412)) {
-        const bool selected = (draw->itemState & ODS_SELECTED) != 0;
+      if (draw->CtlType == ODT_COMBOBOX || !(draw->CtlID >= 401 && draw->CtlID <= 404 || draw->CtlID == 412 || draw->CtlID == 424)) {
+        const bool selected = (draw->itemState & ODS_SELECTED) != 0 ||
+            GetPropW(draw->hwndItem, L"RimesSelectedSegment") != nullptr;
         const bool disabled = (draw->itemState & ODS_DISABLED) != 0;
-        ui::FillRoundRect(draw->hDC, draw->rcItem, MulDiv(6, static_cast<int>(self->dpi_), 96),
-            ui::ToColorRef(selected ? p.surface_tertiary : p.surface));
-        if (draw->CtlType == ODT_BUTTON)
+        if (draw->CtlType == ODT_BUTTON) {
+          self->PaintChildBackground(draw->hwndItem, draw->hDC);
+          ui::FillRoundRect(draw->hDC, draw->rcItem, MulDiv(6, static_cast<int>(self->dpi_), 96),
+              ui::ToColorRef(selected ? p.surface_tertiary : p.surface));
           ui::StrokeRoundRect(draw->hDC, draw->rcItem, MulDiv(6, static_cast<int>(self->dpi_), 96), ui::ToColorRef(p.border));
+        } else {
+          ui::FillRectColor(draw->hDC, draw->rcItem,
+              ui::ToColorRef(selected ? p.surface_tertiary : p.surface));
+        }
         std::wstring text;
         if (draw->CtlType == ODT_COMBOBOX && draw->itemID != static_cast<UINT>(-1)) {
           const auto length = SendMessageW(draw->hwndItem, CB_GETLBTEXTLEN, draw->itemID, 0);
@@ -860,6 +1184,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       ui::FillRectColor(draw->hDC, draw->rcItem,
                        ui::ToColorRef(draw->CtlID == 412 ? p.surface_secondary : p.settings_background));
       const bool checked = draw->CtlID == 401 ? self->draft_.ascii
+          : draw->CtlID == 424 ? self->clipboard_recording_enabled_
           : draw->CtlID == 402 ? self->draft_.traditional
                                : draw->CtlID == 403 ? self->draft_.ascii_punctuation
                                 : draw->CtlID == 412 ? self->draft_.close_after_send : self->draft_.vertical_candidates;
@@ -872,7 +1197,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
                         ui::ToColorRef(checked ? p.accent : p.surface));
       ui::StrokeRoundRect(draw->hDC, box, MulDiv(3, static_cast<int>(self->dpi_), 96),
                           ui::ToColorRef(checked ? p.accent : p.border_strong));
-      if (checked) ui::DrawIconGlyph(draw->hDC, ui::IconId::kCheck, box,
+      if (checked) ui::DrawFluentIcon(draw->hDC, ui::FluentIcon::kCheck, box,
                                     ui::ToColorRef(p.accent_foreground));
       RECT text_box = draw->rcItem;
       text_box.left = box.right + MulDiv(8, static_cast<int>(self->dpi_), 96);
@@ -899,6 +1224,10 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
     case WM_SIZE:
       self->Relayout();
       return 0;
+    case WM_VSCROLL:
+    case WM_MOUSEWHEEL:
+      if (self->parity_ && self->parity_->Scroll(message, wparam)) { self->Relayout(); return 0; }
+      break;
     case WM_DPICHANGED: {
       auto* rect = reinterpret_cast<RECT*>(lparam);
       SetWindowPos(hwnd, nullptr, rect->left, rect->top,
@@ -920,7 +1249,21 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       HDC dc = reinterpret_cast<HDC>(wparam);
       SetBkColor(dc, ui::ToColorRef(p.surface));
       SetTextColor(dc, ui::ToColorRef(p.text_primary));
-      if (message == WM_CTLCOLORSTATIC) { SetBkMode(dc, TRANSPARENT); return reinterpret_cast<LRESULT>(GetStockObject(HOLLOW_BRUSH)); }
+      if (message == WM_CTLCOLORSTATIC) {
+        const auto child = reinterpret_cast<HWND>(lparam);
+        wchar_t kind[16]{};
+        GetClassNameW(child, kind, 16);
+        // Disabled/read-only edits also use WM_CTLCOLORSTATIC, but still need
+        // the field surface instead of the label's parent background.
+        if (_wcsicmp(kind, L"Static") == 0) {
+          self->PaintChildBackground(child, dc);
+          SetBkMode(dc, TRANSPARENT);
+          SetTextColor(dc, ui::ToColorRef(!IsWindowEnabled(child) || GetPropW(child, L"RimesMuted") ? p.text_muted :
+              GetPropW(child, L"RimesError") ? p.danger_text : GetPropW(child, L"RimesAccent") ? p.accent_text :
+              GetPropW(child, L"RimesSecondary") ? p.text_secondary : p.text_primary));
+          return reinterpret_cast<LRESULT>(GetStockObject(HOLLOW_BRUSH));
+        }
+      }
       if (!self->edit_brush_)
         self->edit_brush_ = CreateSolidBrush(ui::ToColorRef(p.surface));
       return reinterpret_cast<LRESULT>(self->edit_brush_);
@@ -957,6 +1300,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       return 0;
     }
     case WM_ACTIVATE:
+      if (LOWORD(wparam) == WA_INACTIVE && self->extensions_) self->extensions_->Deactivate();
       if (LOWORD(wparam) == WA_INACTIVE) self->StopRecording();
       if (LOWORD(wparam) == WA_INACTIVE && self->draft_.theme_detail >= 0) {
         self->draft_.theme_detail = -1;
@@ -1009,14 +1353,11 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
           self->Relayout();
           return 0;
         }
-        DestroyWindow(hwnd);
+        self->Close();
         return 0;
       }
-      if (wparam >= '1' && wparam <= '7' && (GetKeyState(VK_CONTROL) & 0x8000)) {
-        self->draft_.page =
-            static_cast<ui::SettingsPage>(static_cast<int>(wparam - '1'));
-        self->draft_.focus = static_cast<int>(wparam - '1');
-        self->Relayout();
+      if (wparam >= '1' && wparam <= '9' && (GetKeyState(VK_CONTROL) & 0x8000)) {
+        self->SelectPage(ui::kSettingsNavOrder[wparam - '1']);
         return 0;
       }
       if (wparam == VK_UP || wparam == VK_DOWN || wparam == VK_LEFT ||
@@ -1024,12 +1365,13 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
         auto& focus = self->draft_.focus;
         if (focus < 0) focus = static_cast<int>(self->draft_.page);
         if (focus < ui::kSettingsPageCount) {
-          if (wparam == VK_DOWN || wparam == VK_RIGHT)
-            focus = (focus + 1) % ui::kSettingsPageCount;
-          else
-            focus = (focus + ui::kSettingsPageCount - 1) % ui::kSettingsPageCount;
-          self->draft_.page = static_cast<ui::SettingsPage>(focus);
-          self->Relayout();
+          auto index = ui::SettingsNavIndex(static_cast<ui::SettingsPage>(focus));
+          do {
+            const int step = (wparam == VK_DOWN || wparam == VK_RIGHT) ? 1 : ui::kSettingsPageCount - 1;
+            index = (index + step) % ui::kSettingsPageCount;
+          } while (!ui::SettingsPageAvailable(self->draft_, ui::kSettingsNavOrder[index]));
+          focus = static_cast<int>(ui::kSettingsNavOrder[index]);
+          self->SelectPage(static_cast<ui::SettingsPage>(focus));
           return 0;
         }
         if (self->draft_.page == ui::SettingsPage::kInput &&
@@ -1058,22 +1400,32 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
         return 0;
       }
       break;
+    case WM_CLOSE:
+      self->Close();
+      return 0;
     case WM_DESTROY:
+      self->ready_ = false;
+      KillTimer(hwnd, 12);
+      self->extensions_.reset();
       self->parity_.reset();
       self->recording_shortcut_ = -1; self->recorded_key_ = 0;
       self->edit_send_ = self->combo_send_modifiers_ = nullptr;
+      self->edit_plugin_ = {}; self->combo_plugin_modifiers_ = {}; self->record_plugin_ = {};
       self->record_hotkey_ = self->record_send_ = self->reset_shortcuts_ = self->shortcut_feedback_ = nullptr;
       KillTimer(hwnd, 11);
       self->hwnd_ = nullptr;
       self->schemes_button_ = self->imported_label_ = nullptr;
+      self->peripheral_open_ = self->home_action_ = nullptr;
+      self->clipboard_recording_ = nullptr;
+      self->plugin_filter_ = self->plugin_previous_ = self->plugin_next_ = self->plugin_page_ = nullptr;
       self->edit_font_ = self->edit_candidate_count_ = self->edit_hotkey_ = self->edit_base_ = nullptr;
       self->combo_hotkey_modifiers_ = nullptr;
       self->edit_model_ = self->edit_key_ = self->edit_lang_ = nullptr;
+      self->edit_source_lang_ = nullptr;
       self->combo_auto_send_ = self->check_close_after_ = self->combo_translation_ = nullptr;
       self->combo_connector_ = self->edit_codex_path_ = self->edit_codex_model_ = nullptr;
       self->check_vertical_ = self->check_ascii_ = self->check_trad_ = self->check_punct_ = nullptr;
-      if (!self->saved_ && self->callbacks_.on_theme_preview)
-        self->callbacks_.on_theme_preview(self->opened_theme_);
+
       if (self->callbacks_.on_closed) self->callbacks_.on_closed();
       return 0;
     default:

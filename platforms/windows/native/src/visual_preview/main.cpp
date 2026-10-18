@@ -23,6 +23,7 @@ struct PreviewState {
   int scenario = 0;
   unsigned font_size = 16;
   unsigned dpi_sim = 96;
+  bool vertical = false, phrases = false;
   ID2D1Factory* factory = nullptr;
   IDWriteFactory* write = nullptr;
   ID2D1HwndRenderTarget* render = nullptr;
@@ -112,6 +113,14 @@ void UpdateCandidate(PreviewState* self) {
                 {L"7", L"尼皓", L""},         {L"8", L"你号", L""},
                 {L"9", L"拟好", L""}};
   self->candidate.SetFont(self->font_size);
+  if (self->phrases) {
+    snap.items = {{L"1", L"中华人民共和国", L""}, {L"2", L"输入法设置", L""},
+        {L"3", L"后台静默下载", L""}, {L"4", L"候选词完整显示", L""},
+        {L"5", L"中文输入模式", L""}, {L"6", L"第一行跟随光标", L""},
+        {L"7", L"屏幕边缘避让", L""}, {L"8", L"中英文切换", L""},
+        {L"9", L"本地离线翻译", L""}};
+  }
+  self->candidate.SetVertical(self->vertical);
   self->candidate.SetTheme(self->theme);
   self->candidate.Update(snap);
 }
@@ -180,7 +189,7 @@ void Paint(PreviewState* self) {
     self->brush->SetColor(rimes::windows::ui::ColorF(
         rimes::windows::ui::Palette(self->theme).text_primary));
     const auto tip =
-        std::wstring(L"1-4 theme  5-9 scenario  0 DPI  S settings  Esc quit  | ") +
+        std::wstring(L"1-4 theme  5-9 scenario  0 DPI  S settings  V vertical  P phrases  Esc quit  | ") +
         ScenarioName(self->scenario) + L" @ " +
         std::to_wstring(self->dpi_sim) + L" DPI";
     self->render->DrawTextW(
@@ -297,6 +306,10 @@ LRESULT CALLBACK Proc(HWND hwnd, UINT msg, WPARAM wparam, LPARAM lparam) {
         InvalidateRect(hwnd, nullptr, FALSE);
       } else if (wparam == 'S' || wparam == 's') {
         OpenSettingsFixture(self);
+      } else if (wparam == 'V' || wparam == 'P') {
+        if (wparam == 'V') self->vertical = !self->vertical;
+        else self->phrases = !self->phrases;
+        UpdateCandidate(self);
       } else if (wparam == VK_ESCAPE) {
         DestroyWindow(hwnd);
       }

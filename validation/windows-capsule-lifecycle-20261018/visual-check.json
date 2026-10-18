@@ -1,0 +1,10 @@
+{
+  "passed": true,
+  "exportedImages": 165,
+  "inspected": [
+    "visual/settings-0-7-0.png",
+    "visual/settings-1-7-0.png",
+    "native-x64/day-capsule-rail.png"
+  ],
+  "result": "Recording preference and cleanup explanation fit in Settings; quick rail has no recording switch."
+}

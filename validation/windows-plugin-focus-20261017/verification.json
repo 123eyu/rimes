@@ -1,0 +1,99 @@
+{
+  "version": "1.1.5-win-plugin-focus.20261017",
+  "sourceSnapshot": "78ea81591c01738ce73da5852c057ccb3bc652ecc5051132be4dcd2563e33fa1",
+  "installed": true,
+  "installation": {
+    "installed": true,
+    "version": "1.1.5-win-plugin-focus.20261017",
+    "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-plugin-focus.20261017-823c910b600c-a2a9c6834275",
+    "commit": "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot": "78ea81591c01738ce73da5852c057ccb3bc652ecc5051132be4dcd2563e33fa1",
+    "requiresSignOut": true,
+    "brokerPid": 134228,
+    "brokerPath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-plugin-focus.20261017-823c910b600c-a2a9c6834275\\x64\\RimesBroker.exe",
+    "settingsUnchanged": true,
+    "autostartEnabled": true,
+    "userDataRetained": true,
+    "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-plugin-focus-20261017-183441",
+    "schema": "my_combo",
+    "ascii": false
+  },
+  "tests": [
+    {
+      "architecture": "x64",
+      "suites": [
+        "RimesRuntime",
+        "RimesUiCommand",
+        "RimesSettingsUi"
+      ],
+      "passed": 3,
+      "failed": 0
+    },
+    {
+      "architecture": "x86",
+      "suites": [
+        "RimesRuntime",
+        "RimesUiCommand",
+        "RimesSettingsUi"
+      ],
+      "passed": 3,
+      "failed": 0
+    }
+  ],
+  "binaries": [
+    {
+      "architecture": "x64",
+      "binary": "RimesBroker.exe",
+      "sha256": "f58b5a27c8ec8180b53502a0f9fa930ba6ef2d41cb54278021453529d8af083c",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x64",
+      "binary": "RimesTsf.dll",
+      "sha256": "a0e54dc08c1be2414a8ee862d54da323b89d8672876a57c6e55623468b6e0cbc",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x86",
+      "binary": "RimesTsf.dll",
+      "sha256": "06069d692bff193f537ab0350607fa999d46ecc556bb0f436e43cd26d2650743",
+      "matchesBuild": true
+    }
+  ],
+  "retainedData": [
+    {
+      "directory": "peripherals-v1",
+      "backedUpFiles": 7,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "directory": "metrics-v1",
+      "backedUpFiles": 1,
+      "missing": [],
+      "changed": []
+    },
+    {
+      "directory": "official-plugins-v1",
+      "backedUpFiles": 1,
+      "missing": [],
+      "changed": []
+    }
+  ],
+  "diagnosis": {
+    "chromeProcessId": 52708,
+    "loadedTsfVersion": "1.1.5-win-hosts.20261017-823c910b600c-34b0ebe2f72b",
+    "olderLoadedTsfLacksPluginCyclePrediction": true
+  },
+  "coverage": [
+    "Native plugin hotkey registration, conflict, replacement and release lifecycle",
+    "Forward/backward enabled plugin wraparound",
+    "Preserve exact input lease, unsent source and opening position; subsequent typing stays captured",
+    "Custom bindings and rejection of stale chords, foreign foreground, other context, paused capture, peripheral borrowing and pending delivery",
+    "Existing TSF plugin-cycle path retained"
+  ],
+  "manualBoundary": [
+    "Physical Alt+Shift+Up/Down in user Chrome session was not synthesized or visually tested",
+    "Unsettled composition uses updated TSF path; fully restart affected applications or sign out/in to replace loaded older DLLs"
+  ]
+}

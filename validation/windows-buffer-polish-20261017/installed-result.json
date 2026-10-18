@@ -1,0 +1,20 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-buffer-ui.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-ui.20261017-823c910b600c-917705ef8fb0",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "627adecbf063866a8101004ae6f22883fc7d84ec89de6991edb94fe7b30e1cdf",
+    "requiresSignOut":  true,
+    "brokerPid":  115356,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-ui.20261017-823c910b600c-917705ef8fb0\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-ui-20261017-160610",
+    "schema":  "my_combo",
+    "ascii":  false,
+    "actualCodexFirstChord":  "Previously confirmed fixed by user",
+    "connector":  "local-deepseek",
+    "model":  "deepseek-flash",
+    "gatewayEnabled":  true
+}

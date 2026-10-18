@@ -1,0 +1,42 @@
+{
+  "verified": true,
+  "version": "1.1.5-win-connectors-parity.20261018",
+  "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-connectors-parity.20261018-823c910b600c-458f28673400",
+  "sourceSnapshot": "8ff2f09bc3be2ff77bd08896e8e762fc80490af34a31a925ea103399d7d5620c",
+  "sourceFilesMatched": 154,
+  "binaryHashesMatched": true,
+  "brokerPid": 130696,
+  "settingsUnchanged": true,
+  "userDataRetained": true,
+  "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-connectors-parity-20261018-020431",
+  "requiresSignOut": true,
+  "tests": [
+    "Runtime",
+    "CodexConnector",
+    "LocalGateway",
+    "Settings",
+    "Connections",
+    "SettingsUi"
+  ],
+  "testedArchitectures": [
+    "x64",
+    "x86"
+  ],
+  "nativeThemeCount": 4,
+  "nativeImages": 123,
+  "renderingChecked": [
+    "AI Provider",
+    "ChatGPT waiting/cancel/retry/ready",
+    "advanced options",
+    "gateway client tabs",
+    "disabled gateway",
+    "minimum-size scrolling"
+  ],
+  "unavailable": [
+    "Claude connector",
+    "OpenRouter Native Decisions/Jev routes"
+  ],
+  "testNote": "UI tests were rerun serially after concurrent build/package activity timed out the initial runs. Final runs passed with the original timeout.",
+  "authorizationTestNote": "Synthetic isolated login service and process fixtures; real accounts, clipboard and browser were not exercised.",
+  "verifiedAt": "2026-10-18T02:05:20.2190839+08:00"
+}

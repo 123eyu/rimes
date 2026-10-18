@@ -512,6 +512,21 @@ class RimeEngine::Impl final {
     }
   }
 
+  bool CommitComposition(SessionId session, EngineSnapshot* output, std::string* error) noexcept {
+    if (!output) return false;
+    *output = {};
+    try {
+      std::lock_guard lock(mutex_);
+      if (!healthy_ || !api_ || !api_->commit_composition || !sessions_.contains(session)) {
+        SetError(error, "unknown or inactive librime session"); return false;
+      }
+      api_->commit_composition(session);
+      return CollectSnapshotLocked(session, output, error);
+    } catch (...) {
+      SetError(error, "exception while committing librime composition"); return false;
+    }
+  }
+
   bool ProcessShiftTap(SessionId session, std::int32_t keycode,
                        std::int32_t modifiers, EngineSnapshot* output,
                        std::string* error) noexcept {
@@ -882,6 +897,10 @@ bool RimeEngine::ProcessKey(SessionId session, std::int32_t keycode,
                             std::int32_t modifiers, EngineSnapshot* output,
                             std::string* error) noexcept {
   return impl_->ProcessKey(session, keycode, modifiers, output, error);
+}
+
+bool RimeEngine::CommitComposition(SessionId session, EngineSnapshot* output, std::string* error) noexcept {
+  return impl_->CommitComposition(session, output, error);
 }
 
 bool RimeEngine::ProcessShiftTap(SessionId session, std::int32_t keycode,

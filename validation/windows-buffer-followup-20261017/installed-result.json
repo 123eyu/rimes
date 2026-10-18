@@ -1,0 +1,16 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-buffer-followup.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-followup.20261017-823c910b600c-9a2fccf1096d",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "92630f3288f0ed8ac9c927d789aa818b6e0620b79b1f47c7f70bc03bde860432",
+    "requiresSignOut":  true,
+    "brokerPid":  113544,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-followup.20261017-823c910b600c-9a2fccf1096d\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-followup-20261017-173633",
+    "schema":  "my_combo",
+    "ascii":  false
+}

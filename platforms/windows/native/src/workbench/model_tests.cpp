@@ -2,6 +2,10 @@
 #include <iostream>
 
 #include "model.hpp"
+#include "semantic_blocks.hpp"
+#include "buffer_metrics.hpp"
+#include "buffer_auto_send.hpp"
+#include "translation_languages.hpp"
 using namespace rimes::windows::workbench;
 void Check(bool ok, const char* message) {
   if (!ok) {
@@ -171,6 +175,53 @@ int main() {
   Check(!stable.Generate(1, true).source.empty() && stable.busy,
         "explicit translation can send an unfinished suffix");
   Model disposable;
+  Check(NormalizeTranslation("  First sentence.  ", "第一句。", "English") == "First sentence. " &&
+        NormalizeTranslation("你好", "  Hello.\n", "Chinese") == "  你好\n",
+        "translated units retain source whitespace and separate Latin sentences");
+  Model chips;
+  chips.Focus(a); chips.Open(); chips.BeginTranslation(); chips.Append("一句较长的原文。");
+  auto chips_job = chips.Generate(1, true);
+  const std::string long_translation = "This translated sentence contains several words and preserves every original byte.";
+  chips.Stream(chips_job, 1, long_translation); chips.Finish(chips_job, 1, true);
+  Check(chips.result.size() > 1 && chips.ResultText() == long_translation,
+        "long translations form small chips without losing spaces or source ownership");
+  const auto chip_delivery = chips.Send(false); chips.Acknowledge(chip_delivery->request, a, true);
+  Check(chips.source.empty() && !chips.result.empty(), "first small chip retires the entire source unit exactly once");
+  Model tail;
+  tail.Focus(a); tail.Open(); tail.BeginTranslation(); tail.Append("我想", InputKind::kDirect);
+  auto partial = tail.Generate(1, true);
+  tail.Stream(partial, 1, "I want"); tail.Finish(partial, 1, true);
+  const auto original_tail = tail.source.front().id;
+  tail.Append("回家", InputKind::kDirect);
+  Check(tail.result.empty() && tail.source.size() == 1 && tail.source.front().id == original_tail,
+        "continuing a translated unfinished sentence preserves editability and retires stale output");
+  partial = tail.Generate(1, true);
+  Check(partial.source == "我想回家", "retranslation includes the entire changed sentence");
+  tail.Append("。下一句");
+  Check(!tail.busy && !tail.Stream(partial, 1, "stale"), "late partial translation cannot survive a tail edit");
+  auto prefix_job = tail.Generate(1, true);
+  tail.Append("x", InputKind::kDirect); tail.Backspace();
+  Check(tail.Stream(prefix_job, 1, "First. Remaining.") && tail.Finish(prefix_job, 1, true),
+        "editing a later sentence does not cancel the stable active unit");
+  auto sent = tail.Send(false); Check(sent.has_value(), "stable prefix is deliverable");
+  tail.Acknowledge(sent->request, a, true);
+  tail.ResetTranslation();
+  Check(tail.ResultText() == "Remaining." && tail.SourceText() == "下一句",
+        "language change keeps immutable pending children and never restores their retired source");
+  tail.translate = false; tail.Append("补充");
+  Check(tail.ResultText() == "Remaining.", "editing in another mode retains already-started translation");
+  tail.ReturnToEdit();
+  Check(tail.ResultText() == "Remaining.", "another plugin's edit action cannot erase retired translation children");
+  tail.BeginTranslation();
+  Check(tail.Generate(2, true).source == "下一句补充", "resuming never retranslates retired source");
+  tail.Cancel();
+  auto parked = tail.ParkResults();
+  Check(tail.result.empty(), "parked plugin output is removed from the active rail");
+  tail.translate = false; tail.Append("继续");
+  tail.RestoreResults(std::move(parked)); tail.BeginTranslation();
+  Check(tail.ResultText() == "Remaining." && tail.Generate(3, true).source == "下一句补充继续",
+        "restoring a workspace preserves retired children without reviving consumed source");
+  tail.Discard(); Check(tail.result.empty(), "privacy discard erases retained translation");
   disposable.Focus(a); disposable.Open(); disposable.Append("Temporary.");
   auto obsolete = disposable.Generate(1, false);
   disposable.Stream(obsolete, 1, "Temporary result.");
@@ -189,5 +240,40 @@ int main() {
   disposable.Acknowledge(old_delivery->request, a, true);
   Check(disposable.SourceText() == "New." && disposable.Pending(),
         "late reset acknowledgement never consumes new content");
+  Model streamed; streamed.Focus(a); streamed.Open(); streamed.Append("Request"); streamed.generated_mode = true;
+  const auto live_job = streamed.Generate(4, false);
+  Check(streamed.Stream(live_job, 4, "First. ") && streamed.streaming.size() == 1, "first delta stages a live chip");
+  const auto stable_id = streamed.streaming.front().id;
+  streamed.Focus({});
+  Check(!streamed.capture && streamed.busy && streamed.streaming.front().id == stable_id,
+        "blur revokes input but retains live stream and block identities");
+  Check(streamed.Stream(live_job, 4, "Second 💡.") && streamed.streaming.size() == 2 &&
+      streamed.streaming.front().id == stable_id && streamed.result.empty() && !streamed.Send(false), "incomplete chips cannot be delivered");
+  streamed.Focus(b); streamed.Open();
+  Check(streamed.Accepts(live_job, 4) && streamed.SourceText() == "Request",
+        "fresh focus resumes the existing workspace without restarting generation");
+  Check(streamed.Finish(live_job, 4, true) && streamed.result.front().id == stable_id && streamed.streaming.empty(), "finalization preserves streamed identities");
+  streamed.ReturnToEdit();
+  const auto failed = streamed.Generate(4, false); streamed.Stream(failed, 4, "Partial.");
+  Check(!streamed.Finish(failed, 4, false) && streamed.streaming.empty() && streamed.result.empty() && streamed.SourceText() == "Request", "failed stream retires every partial chip");
+  for (const std::string exact : {"Dr. Smith uses https://example.com/a.b?q=1,2 and version 1.2.3. Next.",
+      "\"Keep, this quote.\" Then split.", "`x = 1.2; y = 3;` done.", "组合 e\xcc\x81 👩‍💻。 下一句，继续。"}) {
+    const auto fragments = SemanticBlocks(exact); std::string joined;
+    for (const auto& fragment : fragments) joined += fragment.text;
+    Check(joined == exact, "semantic blocks preserve Unicode and every original byte");
+    if (exact.starts_with("Dr.")) Check(fragments.front().text.find("https://example.com/a.b?q=1,2") != std::string::npos, "URL stays in one semantic block");
+  }
+  std::string many; for (int i=0; i<550; ++i) many += "句。";
+  Check(SemanticBlocks(many).size() == 200, "oversized semantic output uses bounded balanced groups");
+  BufferLiveMetrics metrics; metrics.Key(0,false,false); metrics.Key(200,true,false); metrics.Commit(1000,2);
+  Check(metrics.keys == 1 && metrics.Line().find("120 字/分") != std::string::npos, "typing burst rate ignores repeat");
+  metrics.Key(2000,false,true); Check(metrics.backspaces == 1, "typing burst counts backspace");
+  metrics.Key(9001,false,false); Check(metrics.keys == 1 && metrics.characters == 0, "six-second idle starts a fresh burst");
+  BufferAutoSendClock clock; std::deque<Block> timed{{1,"first"},{2,"second"}};
+  Check(!clock.Tick(timed,0,true,1000) && clock.Tick(timed,1000,true,1000) && clock.Age(2) == 1000, "all blocks age concurrently");
+  clock.Pause(); timed.pop_front(); Check(clock.Tick(timed,9000,true,1000), "next already-mature block does not restart its wait");
+  timed.front().text = "edited"; Check(!clock.Tick(timed,10000,true,1000) && clock.Age(2) == 0, "text replacement resets only its clock");
+  clock.Tick(timed,10500,true,1000); clock.Tick(timed,10600,false,1000); clock.Tick(timed,20000,true,1000);
+  Check(clock.Age(2) == 500, "paused time is excluded from countdown");
   std::cout << "Workbench model tests passed\n";
 }

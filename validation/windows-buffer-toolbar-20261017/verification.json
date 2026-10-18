@@ -1,0 +1,56 @@
+{
+  "verifiedAt": "2026-10-17T22:14:25.364217+08:00",
+  "installation": {
+    "installed": true,
+    "version": "1.1.5-win-buffer-toolbar.20261017",
+    "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-toolbar.20261017-823c910b600c-341c6a31b781",
+    "commit": "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot": "2ce9ed85b084c3ceee026809392ada4df66b3a564cedfca17064371774fd0de4",
+    "requiresSignOut": true,
+    "brokerPid": 142900,
+    "brokerPath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-toolbar.20261017-823c910b600c-341c6a31b781\\x64\\RimesBroker.exe",
+    "settingsUnchanged": true,
+    "autostartEnabled": true,
+    "userDataRetained": true,
+    "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-toolbar-20261017-221342",
+    "schema": "my_combo",
+    "ascii": false
+  },
+  "binaries": [
+    {
+      "path": "x64/RimesBroker.exe",
+      "sha256": "870c992c56faa60cb85a3aae418c262dc3e2857b433b835ca2714a9b2f0f303f"
+    },
+    {
+      "path": "x64/RimesTsf.dll",
+      "sha256": "f4818068b12a13d615ade8ac088790b3591601a5d79f705055e4bd9b8f990a63"
+    },
+    {
+      "path": "x86/RimesTsf.dll",
+      "sha256": "0848557654faaeb9d11f48d3a86f54075e3cef79ede02618bc9377fb6aabe1f8"
+    }
+  ],
+  "changes": [
+    "Removed Buffer settings button, its reserved width, tooltip and click action",
+    "Removed toolbar status prose",
+    "Native vector speaker: filled body and two rounded waves when on; outline and diagonal slash when off; idle border removed"
+  ],
+  "validation": {
+    "regressionSuitesPerArchitecture": 4,
+    "architectures": [
+      "x64",
+      "x86"
+    ],
+    "renderedThemes": 4,
+    "dpi": [
+      96,
+      120,
+      144,
+      192,
+      240
+    ],
+    "exports": 160,
+    "visualReview": "Default, folded ChatGPT, speech on/off in dark and light themes"
+  },
+  "activation": "Updated Broker is running; these toolbar changes are Broker-owned. Existing host processes may retain older TSF components from earlier updates."
+}

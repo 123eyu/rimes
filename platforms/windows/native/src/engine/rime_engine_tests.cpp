@@ -192,6 +192,9 @@ void TestDllPathGate() {
         "relative DLL path must be rejected before loading");
   Check(!error.empty(), "rejected DLL path should report a reason");
   Check(!engine.IsHealthy(), "failed load must leave the engine unhealthy");
+  EngineSnapshot snapshot; snapshot.commit_text = "stale";
+  Check(!engine.CommitComposition(9, &snapshot, &error) && snapshot.commit_text.empty(),
+        "composition settlement fails closed without an owning engine session");
 }
 #endif
 

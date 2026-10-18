@@ -9,8 +9,9 @@ namespace rimes::windows::workbench {
 // including boundaries inside UTF-8 and CRLF. No payload is logged.
 class SseDecoder {
  public:
-  explicit SseDecoder(std::function<bool(const std::string&)> chunk)
-      : chunk_(std::move(chunk)) {}
+  explicit SseDecoder(std::function<bool(const std::string&)> chunk,
+      std::function<bool(bool, const std::string&)> progress = {})
+      : chunk_(std::move(chunk)), progress_(std::move(progress)) {}
   bool Feed(std::string_view bytes) {
     if (done_ || failed_) return false;
     total_ += bytes.size();
@@ -36,6 +37,16 @@ class SseDecoder {
           if (data.contains("error")) return Fail();
           if (data.contains("choices") && !data["choices"].empty()) {
             const auto& delta = data.at("choices").at(0).at("delta");
+            // Compatibility providers may expose a public reasoning_summary.
+            // Raw reasoning_content/reasoning only changes the activity label.
+            if (progress_ && delta.contains("reasoning_summary") && delta["reasoning_summary"].is_string()) {
+              const auto addition = delta["reasoning_summary"].get<std::string>();
+              if (summary_.size() + addition.size() > 16384) return Fail();
+              summary_ += addition;
+              if (!progress_(true, summary_)) return Fail();
+            } else if (progress_ && (delta.contains("reasoning_content") || delta.contains("reasoning"))) {
+              if (!progress_(false, "模型正在思考…")) return Fail();
+            }
             if (delta.contains("content") && delta["content"].is_string() &&
                 !chunk_(delta["content"].get<std::string>()))
               return Fail();
@@ -57,7 +68,8 @@ class SseDecoder {
     return false;
   }
   std::function<bool(const std::string&)> chunk_;
-  std::string pending_, event_;
+  std::function<bool(bool, const std::string&)> progress_;
+  std::string pending_, event_, summary_;
   std::size_t total_ = 0;
   bool done_ = false, failed_ = false;
 };

@@ -1,0 +1,14 @@
+{
+  "version": "1.1.5-win-buffer-followup.20261017",
+  "brokerCount": 1,
+  "brokerMatchesActive": true,
+  "brokerMatchesBuilt": true,
+  "tsfMatchesBuilt": {
+    "x64": true,
+    "x86": true
+  },
+  "translationMatchesSource": true,
+  "settingsUnchanged": true,
+  "requiresSignOut": true,
+  "typingResultsUnchanged": true
+}

@@ -79,9 +79,9 @@ This table is generated from [`Catalog/buffer-plugins.json`](Catalog/buffer-plug
 | AI API | `builtin.openai-compatible` | 1.1.0 | On demand in Settings | Disabled |
 | Polisher | `builtin.polisher` | 1.1.0 | On demand in Settings | Disabled |
 | Reference | `builtin.scholay` | 0.1.0 | On demand in Settings | Disabled |
-| Statistics | `builtin.statistics` | 2.0.0 | Bundled with XSIME | Enabled |
+| Statistics | `builtin.statistics` | 2.0.1 | Bundled with XSIME | Enabled |
 | Stream of Consciousness Input | `builtin.stream-input` | 1.4.0 | Bundled with XSIME | Enabled |
-| Typing practice | `builtin.typing-speed` | 2.0.0 | Bundled with XSIME | Enabled |
+| Typing practice | `builtin.typing-speed` | 2.0.1 | Bundled with XSIME | Enabled |
 
 Bundled plug-ins use the defaults above. Optional plug-ins require installation and explicit enablement. Upgrades preserve existing plugin state.
 <!-- END PRESET BUFFER PLUGINS -->

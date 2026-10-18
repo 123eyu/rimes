@@ -21,6 +21,7 @@ enum class BrokerKeyPhase {
   kTestKeyUp,
   kKeyUp,
   kPreservedKey,
+  kInputModeToggle, // Native language-bar action; never an injected host key.
 };
 
 struct BrokerKeyEvent {
@@ -52,6 +53,9 @@ struct BrokerCandidate {
 struct BrokerInputState {
   bool has_snapshot = false;
   bool buffer_capture = false;
+  // Physical chord keys are owned before their final release creates Rime
+  // preedit. Keep the host composition lifetime separate from `composing`.
+  bool pending_chord = false;
   bool composing = false;
   bool candidates_visible = false;
   std::uint64_t revision = 0;
@@ -82,6 +86,7 @@ class BrokerClient {
   virtual bool Control(core::Json message) noexcept = 0;
   virtual bool Capturing() const noexcept = 0;
   virtual bool IsBufferSendKey(WPARAM) const noexcept { return false; }
+  virtual std::optional<bool> AsciiMode() const noexcept { return std::nullopt; }
   virtual std::uint64_t ConnectionGeneration() const noexcept = 0;
   [[nodiscard]] virtual bool IsConnected() const noexcept = 0;
   virtual BrokerKeyResult HandleKey(const BrokerKeyEvent& event,

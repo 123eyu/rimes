@@ -1,0 +1,17 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-parity.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "fe6bfdbc084d64ac6ae4ce615438b72c0510686750f1f4e9d53e12b73f53c7d0",
+    "requiresSignOut":  true,
+    "brokerPid":  90260,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-parity-20261017-132114",
+    "schema":  "my_combo",
+    "ascii":  false,
+    "actualCodexFirstChord":  "Pending user verification after host reload"
+}

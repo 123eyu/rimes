@@ -1,0 +1,314 @@
+﻿[
+    {
+        "path":  "platforms/windows/native/PERIPHERALS.md",
+        "sha256":  "d5babfaa863e4ae4a566d172b39f7b14680dfd248d2b00c021819bd87f52ddc5"
+    },
+    {
+        "path":  "platforms/windows/native/resources/input-mode-disabled.ico",
+        "sha256":  "e994b7c526c371ab83224bea9fb69c3a8331c5f41e0c083103918ec6ac257ae2"
+    },
+    {
+        "path":  "platforms/windows/native/resources/input-mode-en.ico",
+        "sha256":  "9b5dfd7e9dc81dcf268dfecca3e114fdcb6f4ff05923fbcf539462425f973e72"
+    },
+    {
+        "path":  "platforms/windows/native/resources/input-mode-zh.ico",
+        "sha256":  "7ef0fdcf550c7a600147cf25287f91c7dcb3a051cf558ade1a5ba7e5bd9df550"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/chord_tests.hpp",
+        "sha256":  "6c79b53d214349ee077de5ceae887684b49ebd095e65745d9c6122503650effe"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/first_key_tests.cpp",
+        "sha256":  "a5a52d80701cd6d63ae4b1f80f2fd20ddfbc942f125c0a1112c41517f3f0b1e3"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/appearance.hpp",
+        "sha256":  "dfab9e5941600c6234d795929a82c4eefa046a331b56c49ee3c39f5d6c137ec4"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/media.cpp",
+        "sha256":  "f0475078f20e7847abd0887f1afd26d434cea1dd57eb9854555d8a5d639a5ce4"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/media.hpp",
+        "sha256":  "6fa93b17b2cb9acb9bc1639288cf26f54e84faf805938d46e9c399f8b10ddc0d"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/messages.cpp",
+        "sha256":  "0526c725302400faac667165f0d51eb3a1fe1ff67e04e01c0dc60303e4971f2f"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/messages.hpp",
+        "sha256":  "2bcbe1129441c16a9880890065303552112a90b9eb2eb9ab9f4f33f7c4bb91e1"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/store.cpp",
+        "sha256":  "e65c8a748b5fa5724d6ee7652aed90b3014ba3c85b5b71414d23d7b3ea336fa9"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/store.hpp",
+        "sha256":  "719779b84ecb0f07b9d4d5fd9f037db287c4007fcbbd4a018a7163dbfc90dc25"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/terminal.cpp",
+        "sha256":  "4b69e0989bdb74e7ccef2b9afa253a78587859f425ef60f9f28e3b552f1bb612"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/terminal.hpp",
+        "sha256":  "f4a902ab8978f2fafd81072f7c8c31c3aad41b860abcc9f7bff598931c638fbc"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/tests.cpp",
+        "sha256":  "0fb6ca7642756b1374228cc2afc7612e3e2521a0aea5163679d0a6fd83c48500"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/window.cpp",
+        "sha256":  "9a3acd622136f9bab61ee68480f452f1c7f1016e5877361488a237a6b2e1534b"
+    },
+    {
+        "path":  "platforms/windows/native/src/peripherals/window.hpp",
+        "sha256":  "6de19276d1ace8752d341a84f472536a420487922aaf66fce1807388ab3b4fee"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/InputModeIndicator.h",
+        "sha256":  "d84e983183a61661fbd8c84a08822cbd6d173f733560f2481b91eebe55a0c944"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/translation_languages.hpp",
+        "sha256":  "33e0c75c45ecbbc8020bba0ab48d9391b83a9f8b252364edd5f184bfe35fd584"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/translation_speech.hpp",
+        "sha256":  "4190c5b53d4a8164d26f7edbd7bb18aefec542e6aab8263ecb0c5dca251867fe"
+    },
+    {
+        "path":  "platforms/windows/scripts/Export-RimesInputModeIcons.ps1",
+        "sha256":  "a2670afd535542353daf46bfaf7998a0dd9459844fd136a07338294eff43de8c"
+    },
+    {
+        "path":  "platforms/windows/native/CMakeLists.txt",
+        "sha256":  "3c2037f827ccaa42f11b959865f66a92db97390617775d947e3fb199c95b324b"
+    },
+    {
+        "path":  "platforms/windows/native/README.md",
+        "sha256":  "4e858146aac4fc5ec7e8aa4a0881eff5638d2ab873b6ab1e819c81fb2d42ebfd"
+    },
+    {
+        "path":  "platforms/windows/native/src/broker/broker_connection.cpp",
+        "sha256":  "2e084364a4907677c6a6571b92b59dc433bc4f9c55a6759075aab77072f66397"
+    },
+    {
+        "path":  "platforms/windows/native/src/broker/broker_connection.hpp",
+        "sha256":  "874b0c7e9a5fc18da6f2228082597b01b53765ad3eada2fc47be87d804c07806"
+    },
+    {
+        "path":  "platforms/windows/native/src/broker/main.cpp",
+        "sha256":  "ce982acaf72af1f3b82b9d635f8ef4e7b84e6ec89590a7170a3b825a0c49bb3e"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/candidate_ui_tests.cpp",
+        "sha256":  "0de2651699cb2e067587a47e7d212c251bbd2874b448c0534535e0c1847ba1f6"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/caret_regression.cpp",
+        "sha256":  "1e0ce9cd03b48adf2fc8c24a5f24843120f2d14cb3649467cc368b0873c2b225"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/fake_tsf.cpp",
+        "sha256":  "04730b14f9aff8483041813fb401e9ff4551116b627ed596041589e75ef56a40"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/fake_tsf.hpp",
+        "sha256":  "8560e97f3e25d07e052f29d32074848c1a844612ca4fb264c1d410311a7e18ae"
+    },
+    {
+        "path":  "platforms/windows/native/src/e2e/main.cpp",
+        "sha256":  "180d6edd3dbf342206fcd917d78e7e6c3211d0fb4a4282e1f408be1acc1b2d39"
+    },
+    {
+        "path":  "platforms/windows/native/src/product_version.rc.in",
+        "sha256":  "5ac1762ed2b707d5530f1be6ba5b82ae43387f99353203c7ae4d318cae7d792c"
+    },
+    {
+        "path":  "platforms/windows/native/src/registrar/main.cpp",
+        "sha256":  "b859d36689529438f13e9f10386bdfddbe87977c76b26dbd33186533ae70d5ab"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/BrokerClient.cpp",
+        "sha256":  "e49a8d79c779e4a9d4234b6590212c71fe239568c45fe72c805d0cbd3c9b45b6"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/BrokerClient.h",
+        "sha256":  "5a6f9ecd2b4838afa986074ede4065d8e5b7fe18e46a43a27fe18401438521f2"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/CandidateWindow.cpp",
+        "sha256":  "1561d590903507638e2d34f7272437ba2410fdcff0403036bec89c82d1532b0a"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/TextService.cpp",
+        "sha256":  "50d4d562e28debdd30b6f2bb47003851e4f3420d7e9e04e8494db4f65f4422db"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/TextService.h",
+        "sha256":  "910544ed644ad75dc5fe4de91f6056f1e03eaa53d25d743d3e10437fc82e8dec"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/broker_client_contract_tests.cpp",
+        "sha256":  "bd037a394171b08ca0da29b9710507e5e05450fdc80b4fe87cba9b834cb2ec6f"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/candidate_layout.hpp",
+        "sha256":  "f8c9c6b9450dd7a37371d22b41e923bf9fcae38bec425055d2408811062f40f1"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/candidate_layout_tests.cpp",
+        "sha256":  "4c2400580c5b85c618db10d6308dc37abec13ee413cd3b2a8477a5fcac41cfe8"
+    },
+    {
+        "path":  "platforms/windows/native/src/tsf/candidate_window_tests.cpp",
+        "sha256":  "268a6ff367b91de330081605dcc06fb5a52adae9af6090c88866aef7ef7686c0"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/buffer_layout.hpp",
+        "sha256":  "c2312f283ff0f016c422408970c3bb4d016cc984e5f5ee86a7046e8127c915f8"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/buffer_paint.hpp",
+        "sha256":  "6cf1d090c4af1618cacdab6b9bd95b54067f8d94d42241b05f14bee03d961496"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/candidate_strip.hpp",
+        "sha256":  "62a3b1bb97b17bc077be1e607e95a6e2027e92b71f3f00bf1eb34e90d124122c"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/product_icon.h",
+        "sha256":  "58c78f9b6224a5fa4e8026f327e828821033b50a6e66518b645630c24dadb228"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/settings_layout.hpp",
+        "sha256":  "43137e940f992543c168aeac0f51d4d0c8d8f8479fcb2eed92b2e11604dc41f4"
+    },
+    {
+        "path":  "platforms/windows/native/src/ui/settings_paint.hpp",
+        "sha256":  "d638865a2bf9481bc6f7525008ab97640bede5cac1233a34712cbbf19878c235"
+    },
+    {
+        "path":  "platforms/windows/native/src/visual_preview/export.hpp",
+        "sha256":  "f0ae6195da22e2c772bf93659f4524557de84a932bb0c835c6644b4deb9a736b"
+    },
+    {
+        "path":  "platforms/windows/native/src/visual_preview/main.cpp",
+        "sha256":  "cdd1abd333aa43baed114d32b373384a22327d84da82f22c945ae370c6145511"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/buffer_layout_tests.cpp",
+        "sha256":  "82959727aadcee8ffaa93b816b361d97fa60b05fc03098287935a1f73fa2df6c"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/codex_cli.cpp",
+        "sha256":  "fe899c4e88e8c6fa87a5b207c55fb9a3a0fb484ff83754326b56bb04c873e397"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/codex_cli_tests.cpp",
+        "sha256":  "d0ab88bd6eb8e5545770a61038994ec2c1eb661948efaf266b8e8d4659fff62a"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/local_translation.cpp",
+        "sha256":  "cf61f700d11e9b3b82cf4b349a80e1440a270aab84ef1418a0949fc3cabbaab2"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/local_translation.hpp",
+        "sha256":  "782c7349a41cd2079f045fae87d116765968db8793b1020d55f3ea93fdb843e6"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/local_translation_probe.cpp",
+        "sha256":  "a627a267179cd806999b54211ca8a41619a700f93512b3bcc49c6c7add9e91c3"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/model.cpp",
+        "sha256":  "ad570b43a85c8701eb4076728a04e696c3159f007ac0e85d763c799bbe6be02c"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/model.hpp",
+        "sha256":  "784a0ac8a8ae45bf48771937190ffff07f568d5405a9928f2e1bc7c356f90c28"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/model_tests.cpp",
+        "sha256":  "a7169f0a3c78b945cc6870e1e85108b3160dd02dae755a81bb1638c8c18ca010"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/official_plugins.cpp",
+        "sha256":  "cd702ca5e13aa0062be8540656da14c1bc7c915321760e7dee41fce4f5163819"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/official_plugins.hpp",
+        "sha256":  "a721086f524243b1946e9907ee7d477efa449b5302caf1e4a2adf1511fa9701d"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/parity_settings.cpp",
+        "sha256":  "ce4f6c464e694c414974b01787829277f9d131dac86f3b53d27a937152ff196f"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/provider.cpp",
+        "sha256":  "c72d960e05610bcfc725ede2aeb8ecd305d9a56aa397b6bc685d20bf1442aca6"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/provider.hpp",
+        "sha256":  "756fc0fe17b160fc9ab88196d8e9878b2eb9bfeeab0150753e5dbf51fc8b4e04"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/runtime.cpp",
+        "sha256":  "a67aa01213c208ebeb1340b5e52387a18df3a59219ee2e54481d44dc404a8fde"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/runtime.hpp",
+        "sha256":  "5c0198a7ac0ae8b28ca9c08dfcf5daff547a9b3f3c38b0385408e0473629f46a"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/runtime_tests.cpp",
+        "sha256":  "1083dc606b2f64bbbefaaff3dabe60ec3519c11d868eee8606bbb04de62bd1fd"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/settings_tests.cpp",
+        "sha256":  "f2449f37296b74c49ffb01217542ce48c81c08545887775a332be6492b59fa47"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/settings_ui.cpp",
+        "sha256":  "be1a13593d3ed22972a9475645faaea335f7d371ce893b9ee75442d37621a85b"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/settings_ui.hpp",
+        "sha256":  "b6401e8df988c041fdac3645a9a02091a74e99168ca3c72a56401017d7ed784f"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/settings_ui_tests.cpp",
+        "sha256":  "33fb888fafa42c876049757c2414c0a17fb0d6ecd56b9ce280b82c9cea19403e"
+    },
+    {
+        "path":  "platforms/windows/native/src/workbench/window.cpp",
+        "sha256":  "116f62a360fa3fa87a44be316cc18ef8a9774ac7f1c45db5c506eeef4f5dfd48"
+    },
+    {
+        "path":  "platforms/windows/native/testdata/e2e/rimes_e2e.dict.yaml",
+        "sha256":  "ff78038f3248cfabea53ee6772965544c4c8ef3d74840f1fa48c313418c76e4c"
+    },
+    {
+        "path":  "platforms/windows/scripts/Debug-RimesWindows.ps1",
+        "sha256":  "1e0ca57210fe6d77e887adb0163c5917ffc8ab50c9be7a07e51e37dbf626969e"
+    },
+    {
+        "path":  "platforms/windows/tests/Invoke-RimesImeE2E.ps1",
+        "sha256":  "bd4632a97663a8bc08e98c168f1bd0e5b34ef199a035e69c390b1f3433c14074"
+    },
+    {
+        "path":  "platforms/windows/translation/Install-LocalTranslation.ps1",
+        "sha256":  "0e2a1c8841afd78b494ef70ace64f46d41d61eb3a4e4791a1cb1879ac6ded8db"
+    },
+    {
+        "path":  "platforms/windows/translation/translate.py",
+        "sha256":  "f6c57691f93343d6cc312f744401fe1d7d1448d591f4d2e43a7ec89b24b9aaf4"
+    }
+]

@@ -1,0 +1,91 @@
+{
+  "version": "1.1.5-win-buffer-cycle.20261017",
+  "installed": true,
+  "installation": {
+    "installed": true,
+    "version": "1.1.5-win-buffer-cycle.20261017",
+    "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-cycle.20261017-823c910b600c-82b4e2a2ad74",
+    "commit": "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot": "2615edb434ca71ca1fbcc0e5ce796694a782873b91ac7bacf175762256d9cdf5",
+    "requiresSignOut": true,
+    "brokerPid": 11168,
+    "brokerPath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-cycle.20261017-823c910b600c-82b4e2a2ad74\\x64\\RimesBroker.exe",
+    "settingsUnchanged": true,
+    "autostartEnabled": true,
+    "userDataRetained": true,
+    "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-cycle-20261017-222901",
+    "schema": "my_combo",
+    "ascii": false
+  },
+  "tests": [
+    {
+      "architecture": "x64",
+      "passed": 12,
+      "failed": 0
+    },
+    {
+      "architecture": "x86",
+      "passed": 12,
+      "failed": 0
+    }
+  ],
+  "binaries": [
+    {
+      "architecture": "x64",
+      "binary": "RimesBroker.exe",
+      "sha256": "22e36789c64c189c3a164d9bd2d63d746afea7ebea167d851e1b1069c78c5c67",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x64",
+      "binary": "RimesTsf.dll",
+      "sha256": "f4818068b12a13d615ade8ac088790b3591601a5d79f705055e4bd9b8f990a63",
+      "matchesBuild": true
+    },
+    {
+      "architecture": "x86",
+      "binary": "RimesTsf.dll",
+      "sha256": "0848557654faaeb9d11f48d3a86f54075e3cef79ede02618bc9377fb6aabe1f8",
+      "matchesBuild": true
+    }
+  ],
+  "brokerProcesses": [
+    {
+      "ProcessId": 11168,
+      "ExecutablePath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-cycle.20261017-823c910b600c-82b4e2a2ad74\\x64\\RimesBroker.exe"
+    }
+  ],
+  "loadedTsf": [
+    {
+      "process": "chrome",
+      "pid": 52708,
+      "dll": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-hosts.20261017-823c910b600c-34b0ebe2f72b\\x64\\RimesTsf.dll",
+      "current": false
+    },
+    {
+      "process": "ChatGPT",
+      "pid": 11768,
+      "dll": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-parity.20261017-823c910b600c-84b069ddb235\\x64\\RimesTsf.dll",
+      "current": false
+    },
+    {
+      "process": "Cursor",
+      "pid": 97384,
+      "dll": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-metrics.20261017-823c910b600c-86d0b257d601\\x64\\RimesTsf.dll",
+      "current": false
+    }
+  ],
+  "regressionBeforeFix": "late background focus cannot revoke a plugin switch's live host",
+  "regressionAfterFix": "pass",
+  "coverage": [
+    "Forward/backward first-last wrap and manual selection retain exact capture and source block IDs",
+    "Background focus cannot supersede the foreground host",
+    "Unrelated session retirement preserves cycle down/repeat/up ownership and in-flight focus proof",
+    "Transient foreground loss revokes delivery then requires a fresh TSF caret proof to resume",
+    "Real target changes, explicit pause, close, protection and old delivery guards remain enforced"
+  ],
+  "manualBoundary": [
+    "No physical input was synthesized into user applications; actual user-host reproduction still needs confirmation",
+    "Some running hosts retain an older TSF DLL; full application restart or Windows sign-out is needed for those hosts"
+  ]
+}

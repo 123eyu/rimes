@@ -1,0 +1,43 @@
+{
+  "installation": {
+    "installed": true,
+    "version": "1.1.5-win-buffer-lifecycle.20261017",
+    "directory": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-lifecycle.20261017-823c910b600c-3c82b1e60687",
+    "commit": "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot": "db1a9ce483e9f0e7abb23df90a600759b9146aaf0e40b787c78d6175d733dbc5",
+    "requiresSignOut": true,
+    "brokerPid": 136860,
+    "brokerPath": "C:\\Program Files\\RIMES\\versions\\1.1.5-win-buffer-lifecycle.20261017-823c910b600c-3c82b1e60687\\x64\\RimesBroker.exe",
+    "settingsUnchanged": true,
+    "autostartEnabled": true,
+    "userDataRetained": true,
+    "backupDirectory": "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-buffer-lifecycle-20261017-213223",
+    "schema": "my_combo",
+    "ascii": false
+  },
+  "binaryHashes": {
+    "x64/RimesBroker.exe": "11a2c949da7e4789bfcb1487e16552470cba18e1f4491373001392991d9711ca",
+    "x64/RimesTsf.dll": "71988dc37bbd9ac28070a6778a0b44486c620f4685edfac13c46c6b8889a8d6f",
+    "x86/RimesTsf.dll": "bfea25898e2fbffe2e5240a6600702763ab79155d6cd7b7e218ed094b3dac4f6"
+  },
+  "tests": {
+    "x64": 12,
+    "x86": 12,
+    "realLibrimeCommitComposition": "PASS both architectures",
+    "localCodexAppServerHandshake": "PASS without prompt",
+    "renderedSurfaces": 60,
+    "dpi": [
+      96,
+      120,
+      144,
+      192,
+      240
+    ],
+    "themes": 4
+  },
+  "limits": [
+    "macOS source comparison, no macOS live side-by-side test",
+    "No paid/live model generation; stream/cancellation covered by inert process fixtures and SSE fixtures",
+    "Existing TSF hosts require DLL reload; installer requires sign-out"
+  ]
+}

@@ -20,6 +20,13 @@ Vendor/
 
 *.log
 
+# Generated local Windows validation frames and superseded patch snapshots.
+# Keep the small verification records and written acceptance notes in Git.
+/validation/windows-*-2026101[78]/**/*.png
+/validation/windows-*-2026101[78]/*.patch
+/validation/windows-*-2026101[78]/*.diff
+/platforms/windows/translation/%SystemDrive%/
+
 # Local installer builds (CI produces the released pkg)
 *.pkg
 
@@ -109,6 +116,11 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 /platforms/windows/native/src/workbench/official_features.hpp
 /platforms/windows/native/src/workbench/official_plugin_catalog.generated.hpp
 /platforms/linux/runtime/generated/
+/platforms/windows/native/src/workbench/metrics.hpp
+/platforms/windows/native/src/workbench/metrics.cpp
+/platforms/windows/native/src/workbench/metrics_articles.cpp
+/platforms/windows/native/src/workbench/metrics_ui.hpp
+/platforms/windows/native/src/workbench/metrics_ui.cpp
 /platforms/windows/native/resources/my_combo.schema.yaml
 
 # Locally built Linux Rime/Lua runtime

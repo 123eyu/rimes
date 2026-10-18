@@ -22,6 +22,10 @@
   "nameZH": "Claude",
   "notice": "RIMES Official Plugins\nCopyright 2026 scholay\n\nCore maintainer / 核心维护者: 学术海\nMaintainer homepage: https://pm.scholay.com\nPlugin repository: https://github.com/scholay/rimes-plugins\nHost project: https://github.com/scholay/rimes\n\nThis repository is maintained for official free plugins for RIMES.\nRIMES provides Chinese text input using the Rime Input Method Engine (librime).\nRime / librime: https://github.com/rime/librime\n\nThe Rime reference identifies the host platform's input engine. Individual\nplugins have their own component dependencies and attribution records.\nSee THIRD_PARTY_NOTICES.md and individual plugin documentation.\n",
   "platforms": {
+    "linux": {
+      "distribution": "download",
+      "legacyID": "builtin.claude-code-cli"
+    },
     "macos": {
       "distribution": "download",
       "legacyID": "builtin.claude-code-cli"
@@ -32,5 +36,5 @@
   "sdkVersion": 1,
   "summaryEN": "Claude official plugin; user data remains owned by the RIMES host.",
   "summaryZH": "通过 Claude Code CLI 使用 Claude 生成内容，可选择模型与推理深度。",
-  "version": "1.1.0"
+  "version": "1.2.0"
 }

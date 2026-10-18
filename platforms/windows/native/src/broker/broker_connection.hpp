@@ -51,6 +51,7 @@ class BrokerConnection final {
     workbench::Target target;
     std::uint64_t settings_revision = 0;
     bool capture = false;
+    unsigned input_route = 0;
     std::optional<std::uint64_t> candidate_guard;
     std::string schema_id;
     std::bitset<256> handled_key_downs;

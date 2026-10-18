@@ -9,6 +9,8 @@
 
 #include "../engine/rime_engine.hpp"
 #include "../workbench/window.hpp"
+#include "../workbench/local_translation.hpp"
+#include "../workbench/local_gateway.hpp"
 #include "autostart.hpp"
 #include "../schemes/scheme_library.hpp"
 #include "broker_connection.hpp"
@@ -43,7 +45,9 @@ void ReportBackgroundFailure(const BrokerOptions& options, const char* stage,
 
 void PrintUsage() {
   std::wcout
-      << rimes::branding::Text(L"{brand} Windows Broker ").c_str() << kProductVersionWide << L"\n\n"
+      // The installer probes this output through a pipe in the default C
+      // locale. A localized non-ASCII prefix can fail wcout before --settings.
+      << L"XSIME Windows Broker " << kProductVersionWide << L"\n\n"
       << L"Usage:\n"
       << L"  RimesBroker --print-endpoint\n"
       << L"  RimesBroker --print-paths\n"
@@ -213,10 +217,18 @@ int wmain(const int argc, wchar_t** argv) {
 
   NamedPipeServer server(&security);
   NamedPipeServer input_server(&security, true);
-  workbench::Runtime runtime;
+  workbench::Runtime runtime(workbench::GenerateText,
+      {workbench::LocalTranslationReady, workbench::PrepareLocalTranslation});
   if (imported) runtime.SetImportedSchema(imported->schema);
   workbench::UiCommands commands;
   const bool interactive = security.session_id() != 0;
+#ifndef RIMES_E2E_TEST_IDENTITY
+  std::unique_ptr<workbench::LocalGateway> gateway;
+  if (interactive && !options.serve_once)
+    gateway = std::make_unique<workbench::LocalGateway>([&] {
+      return !runtime.Stopping() && runtime.Configuration().gateway_enabled;
+    });
+#endif
   struct StopEvent {
     HANDLE handle = nullptr;
     ~StopEvent() { if (handle) CloseHandle(handle); }

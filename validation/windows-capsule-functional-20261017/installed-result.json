@@ -1,0 +1,16 @@
+﻿{
+    "installed":  true,
+    "version":  "1.1.5-win-capsule-functional.20261017",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-capsule-functional.20261017-823c910b600c-f0c1da4525af",
+    "commit":  "823c910b600c14f674e41ac906435eea0757972f",
+    "sourceSnapshot":  "87f7598ae5cc65f8029c0e75a843d682712d3e0fec9dfb995c76d6c673a991fd",
+    "requiresSignOut":  true,
+    "brokerPid":  75788,
+    "brokerPath":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-capsule-functional.20261017-823c910b600c-f0c1da4525af\\x64\\RimesBroker.exe",
+    "settingsUnchanged":  true,
+    "autostartEnabled":  true,
+    "userDataRetained":  true,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-capsule-functional-20261017-181700",
+    "schema":  "my_combo",
+    "ascii":  false
+}

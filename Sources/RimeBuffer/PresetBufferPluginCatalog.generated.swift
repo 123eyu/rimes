@@ -86,40 +86,40 @@ enum PresetBufferPluginCatalog {
             id: "builtin.claude-code-cli",
             nameZH: "Claude",
             nameEN: "Claude",
-            version: "1.1.0",
+            version: "1.2.0",
             summaryZH: "通过 Claude Code CLI 使用 Claude 生成内容，可选择模型与推理深度。",
             summaryEN: "Claude official plugin; user data remains owned by the RIMES host.",
             producerID: "anthropic",
             defaultInstalled: false,
             defaultEnabled: false,
-            downloadAssetName: "preset-plugin-builtin.claude-code-cli-1.1.0.json",
-            sha256: "6809e538d77f1f1717c9f2ddde77e504d60342f6e25ee17cb1df6c89d42d104b"
+            downloadAssetName: "preset-plugin-builtin.claude-code-cli-1.2.0.json",
+            sha256: "2c0e8ca250f3736373dcd926c4cd21bef5c5d411d524a8b49e4ae769d56370e6"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.codex-cli",
             nameZH: "ChatGPT",
             nameEN: "ChatGPT",
-            version: "1.1.1",
+            version: "1.2.0",
             summaryZH: "通过 Codex CLI 使用 ChatGPT 生成内容，可选择模型与推理深度。",
             summaryEN: "ChatGPT official plugin; user data remains owned by the RIMES host.",
             producerID: "openai",
             defaultInstalled: false,
             defaultEnabled: false,
-            downloadAssetName: "preset-plugin-builtin.codex-cli-1.1.1.json",
-            sha256: "356fc11d7ec340999e5a3a3d6d595e0100b36c26d3e827a10ae96d3c09a63555"
+            downloadAssetName: "preset-plugin-builtin.codex-cli-1.2.0.json",
+            sha256: "93ebc23304c4c9aa4f9c8af464dd66aac26c7855a3a35d6690bf8d93c2a5bd70"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.fly-chord-learning",
             nameZH: "并击",
             nameEN: "Chord input",
-            version: "2.0.0",
+            version: "2.1.0",
             summaryZH: "并击官方插件；用户数据由 RIMES 宿主管理。",
             summaryEN: "Chord input official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: false,
-            downloadAssetName: "preset-plugin-builtin.fly-chord-learning-2.0.0.json",
-            sha256: "0cc21ee5e8b2b60326777ea33cc20610258f77bf367d2d156a418018b5ea1402"
+            downloadAssetName: "preset-plugin-builtin.fly-chord-learning-2.1.0.json",
+            sha256: "43b820c898641772c8c2e1044cd5fa8583a0d4afc32e9b23af84d5a6d32545f6"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.latex",
@@ -242,14 +242,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.statistics",
             nameZH: "统计",
             nameEN: "Statistics",
-            version: "2.0.0",
+            version: "2.1.0",
             summaryZH: "统计官方插件；用户数据由 RIMES 宿主管理。",
             summaryEN: "Statistics official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: true,
-            downloadAssetName: "preset-plugin-builtin.statistics-2.0.0.json",
-            sha256: "acea981dd79f06087b63be5b4f39d2c4196e37322ecc725a987523b19a6be8ee"
+            downloadAssetName: "preset-plugin-builtin.statistics-2.1.0.json",
+            sha256: "28efd609f467a86a68b69e1e2e7911f4afe2902fa2de73ed27915d0b15ac5253"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.stream-input",
@@ -268,14 +268,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.typing-speed",
             nameZH: "打字测速",
             nameEN: "Typing practice",
-            version: "2.0.0",
+            version: "2.1.0",
             summaryZH: "打字测速官方插件；用户数据由 RIMES 宿主管理。",
             summaryEN: "Typing practice official plugin; user data remains owned by the RIMES host.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: true,
-            downloadAssetName: "preset-plugin-builtin.typing-speed-2.0.0.json",
-            sha256: "e4f6a12092263c3f7b8c4d237633f9f0fc68cb62ad9e8d23d63a666e0cf01d22"
+            downloadAssetName: "preset-plugin-builtin.typing-speed-2.1.0.json",
+            sha256: "7996bfb550f3f7368c8e268c739ba4c43db351b38bd85b213c7064fcda9c92a7"
         ),
     ]
 

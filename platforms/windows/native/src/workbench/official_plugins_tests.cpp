@@ -22,11 +22,35 @@ int main() {
   std::ofstream(root / L"settings.json") << "private settings";
   std::ofstream(root / L"user.db") << "private words";
   std::string error;
+  {
+    const auto selection_root = root / L"selection";
+    workbench::OfficialPluginStore store(selection_root);
+    Check(store.LoadBufferSelection().empty(), "missing preference defaults to input");
+    const auto grant = store.Grant(official::kTranslation);
+    Check(store.SaveBufferSelection(official::kTranslation, &error), "persist valid Buffer selection");
+    workbench::OfficialPluginStore reopened(selection_root);
+    Check(reopened.LoadBufferSelection() == official::kTranslation && reopened.Grant(official::kTranslation) == grant,
+          "persisted selection restores identity without changing authorization");
+    Check(!store.SaveBufferSelection("builtin.statistics", &error) && !store.SaveBufferSelection("missing", &error) &&
+          store.LoadBufferSelection() == official::kTranslation, "invalid and non-Buffer selections preserve the prior owner");
+    Check(store.Enable(official::kTranslation, false, &error) && !store.SaveBufferSelection(official::kTranslation, &error),
+          "remembering a selection cannot enable a disabled plugin");
+    Check(store.SaveBufferSelection("", &error) && reopened.LoadBufferSelection().empty(), "explicit input preference persists");
+    for (const auto& bytes : {std::string("invalid JSON"), std::string(R"({"version":1,"plugin":17})"),
+             std::string(R"({"version":1,"plugin":"missing"})"), std::string(R"({"version":2,"plugin":"builtin.apple-translation"})"),
+             std::string(4097, 'x')}) {
+      std::ofstream(selection_root / L"buffer-selection.json", std::ios::trunc) << bytes;
+      Check(reopened.LoadBufferSelection().empty(), "unreadable or unsupported preference safely defaults to input");
+    }
+  }
   const auto data = workbench::OfficialPluginStore::BundledData(official::kAI);
   const auto location = root / L"fresh" / L"plugins";
   {
     workbench::OfficialPluginStore store(location);
-    Check(store.Entries().size() == 4, "exact Windows catalog");
+    Check(store.Entries().size() == 6, "exact Windows catalog");
+    Check(!store.Grant("builtin.statistics").empty() && !store.Grant("builtin.typing-speed").empty(), "native metric extensions available offline");
+    Check(store.Enable("builtin.statistics", false, &error) && store.Grant("builtin.statistics").empty(), "statistics lifecycle revokes collection grant");
+    Check(store.Enable("builtin.statistics", true, &error), "statistics can resume");
     Check(!store.Grant(official::kCodex).empty(), "bundled Codex connector available offline");
     Check(official::Instruction(store.Package(official::kCodex), "English").find("Respond") != std::string::npos, "Codex package supplies text instruction");
     Check(!store.Grant(official::kTranslation).empty() && !store.Grant(official::kChord).empty(), "bundled features available offline");

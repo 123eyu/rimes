@@ -67,8 +67,8 @@ struct CandidateStripLayout {
 };
 
 // Reserve each item inside the actual viewport, including a single very long
-// candidate. Horizontal pages stay on one row, using the monitor width before
-// clipping long entries. Painting and hit testing use these exact rectangles;
+// candidate. Horizontal pages use the monitor width, then wrap whole entries
+// instead of shrinking every phrase to a character. Painting and hit testing use these exact rectangles;
 // semibold width is supplied by the native measurer. Composition stays inline
 // in the host editor, so this layout contains only candidates.
 [[nodiscard]] inline CandidateStripLayout LayoutCandidateStripMeasured(
@@ -78,8 +78,7 @@ struct CandidateStripLayout {
   if (items.empty()) return layout;
   const float viewport = available_width_dip > 0.f ? available_width_dip
       : static_cast<float>(metrics.max_strip_width_dip);
-  const float max_width = (std::max)(1.f, vertical ? (std::min)(viewport,
-      static_cast<float>(metrics.max_strip_width_dip)) : viewport);
+  const float max_width = (std::max)(1.f, viewport);
   const float pad = (std::min)(static_cast<float>(metrics.bar_horizontal_padding_dip),
                                max_width * 0.2f);
   const float inner = max_width - 2.f * pad;
@@ -95,36 +94,46 @@ struct CandidateStripLayout {
       : static_cast<int>((std::max)(std::size_t{1}, items.size()));
   const int vertical_columns = vertical
       ? (std::max)(1, (static_cast<int>(items.size()) + vertical_rows - 1) / vertical_rows) : 1;
-  const float column_width = inner / static_cast<float>(vertical_columns);
   std::vector<float> widths;
   widths.reserve(items.size());
   for (const auto& item : items) {
     widths.push_back(static_cast<float>((std::max)(0, item.content_width_dip)) +
                      2.f * static_cast<float>(metrics.pill_padding_dip));
   }
-  float width_limit = column_width;
-  if (!vertical) {
-    // Share the remaining width among long entries, preserving short entries
-    // at their natural width instead of letting one long phrase crowd them out.
-    auto sorted = widths;
+  std::vector<float> column_widths(static_cast<std::size_t>(vertical_columns), inner);
+  if (vertical) {
+    std::fill(column_widths.begin(), column_widths.end(), 0.f);
+    for (std::size_t i = 0; i < widths.size(); ++i) {
+      auto& column = column_widths[i / static_cast<std::size_t>(vertical_rows)];
+      column = (std::max)(column, (std::min)(widths[i],
+          static_cast<float>(metrics.max_strip_width_dip)));
+    }
+    auto sorted = column_widths;
     std::sort(sorted.begin(), sorted.end());
-    float remaining = inner - gap * static_cast<float>(items.size() - 1);
+    float remaining = inner - gap * static_cast<float>(vertical_columns - 1), limit = inner;
     for (std::size_t i = 0; i < sorted.size(); ++i) {
-      width_limit = remaining / static_cast<float>(sorted.size() - i);
-      if (sorted[i] >= width_limit) break;
+      limit = remaining / static_cast<float>(sorted.size() - i);
+      if (sorted[i] >= limit) break;
       remaining -= sorted[i];
     }
+    for (auto& column : column_widths) column = (std::min)(column, limit);
   }
   float row_end = 0.f, widest = 0.f;
   int row = 0;
   layout.pills.reserve(items.size());
   layout.order.reserve(items.size());
   for (std::size_t i = 0; i < items.size(); ++i) {
-    const float width = (std::min)(width_limit, widths[i]);
+    const auto column = vertical ? i / static_cast<std::size_t>(vertical_rows) : 0;
+    const float width = (std::min)(column_widths[column], widths[i]);
     float x = row_end == 0.f ? 0.f : row_end + gap;
+    if (!vertical && x > 0.f && x + width > inner) {
+      ++row;
+      x = 0.f;
+    }
     if (vertical) {
       row = static_cast<int>(i) % vertical_rows;
-      x = static_cast<float>(static_cast<int>(i) / vertical_rows) * column_width;
+      x = 0.f;
+      for (std::size_t c = 0; c < column; ++c) x += column_widths[c] + gap;
     }
     const float y = strip_h * static_cast<float>(row) +
                     (strip_h - pill_h) * 0.5f;
@@ -134,7 +143,7 @@ struct CandidateStripLayout {
     row_end = right - pad;
     widest = (std::max)(widest, row_end);
   }
-  layout.row_count = vertical ? (std::min)(vertical_rows, static_cast<int>(items.size())) : 1;
+  layout.row_count = vertical ? (std::min)(vertical_rows, static_cast<int>(items.size())) : row + 1;
   layout.width_dip = (std::min)(max_width, widest + 2.f * pad);
   layout.height_dip = strip_h * static_cast<float>(layout.row_count);
   layout.strip = {0.f, 0.f, layout.width_dip, layout.height_dip};
