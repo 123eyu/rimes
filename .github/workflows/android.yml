@@ -94,8 +94,10 @@ jobs:
               # This disposable emulator contains only public test fixtures.
               # Preserve Java assertions and native crashes before stopping it.
               adb -s emulator-5554 logcat -b crash -d > .native/instrumentation-crash.log 2>&1 || true
+              adb -s emulator-5554 shell dumpsys activity lastanr > .native/instrumentation-anr.log 2>&1 || true
               adb -s emulator-5554 logcat -d -v threadtime 'RIMES-WubiContract:I' 'AndroidRuntime:E' 'DEBUG:F' '*:S' > .native/instrumentation-logcat.log 2>&1 || true
               tail -n 160 .native/instrumentation-crash.log
+              tail -n 120 .native/instrumentation-anr.log
               tail -n 100 .native/instrumentation-logcat.log
             fi
             adb -s emulator-5554 emu kill || true
@@ -158,6 +160,7 @@ jobs:
             platforms/android/.native/app-update.log
             platforms/android/.native/wubi-emulator.log
             platforms/android/.native/instrumentation-crash.log
+            platforms/android/.native/instrumentation-anr.log
             platforms/android/.native/instrumentation-logcat.log
           retention-days: 14
           if-no-files-found: warn
