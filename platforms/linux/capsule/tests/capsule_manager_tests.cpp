@@ -64,8 +64,8 @@ int main(int argc,char** argv) {
                 return rect.x==x && rect.y==y && rect.width==w && rect.height==h;
             };
             return bounds("capsule-modules",14,56,118,height-86) &&
-                bounds("capsule-list",142,90,list_width,height-120) &&
-                bounds("capsule-editor",editor_x,56,width-editor_x-14,height-86);
+                bounds("capsule-list",142,90,list_width,height-119) &&
+                bounds("capsule-editor",editor_x,56,width-editor_x-14,height-85);
         };
         auto contents=[&](const char* value){gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(body)),value,-1);};
         Wait([&]{return std::string(gtk_entry_get_text(GTK_ENTRY(title)))==kDefaultEntryTitle;});

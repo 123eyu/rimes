@@ -2,13 +2,75 @@
   "schemaVersion": 1,
   "scope": "Existing comparison manifests only; this is not complete state coverage or visual acceptance.",
   "deferredTask": 25,
-  "manifestCount": 19,
-  "pairCount": 229,
+  "manifestCount": 20,
+  "pairCount": 233,
   "statusCounts": {
-    "requires_review": 229
+    "requires_review": 233
   },
   "acceptance": "pending: review each discrepancy and cover missing interaction states on the target desktops",
   "reports": [
+    {
+      "manifest": "validation/linux-capsule-calibration-20261018/compare/manifest.json",
+      "sha256": "a12a41ffb1f497979f0a4ee34ef62c845b4040dfe2dc8bf7ea53a556c5164512",
+      "pages": [
+        {
+          "page": "day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/day-pair.png",
+              "sha256": "47b2722631c7b77ab8e1d0499dfcc4fb3e5e59447317a0e3fd7e7cf70a4f4e7a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/day-diff.png",
+              "sha256": "c8eb8ae739a2fc6e7ff9de68655b9cab0a5e92b4f3c5abc97afad872f53c1959"
+            }
+          }
+        },
+        {
+          "page": "night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/night-pair.png",
+              "sha256": "3e8d83d9b404c3b2bff9d0299d48d844e08a0459bb3c542a0a964eaeeb2529f8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/night-diff.png",
+              "sha256": "87bbe77fb876258c8109d7fcf8d468c28e2bf6a134d16528157f0effc851d8be"
+            }
+          }
+        },
+        {
+          "page": "quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/quiet-pair.png",
+              "sha256": "b759afdeaccf7caf9fd8acb25128da4e1ab80c4f354dcf3f912b2d84d4940385"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/quiet-diff.png",
+              "sha256": "d6b89a6f8e8769e0aea1a793f0e2c6f84bb1df3d945742f03588d4a407452412"
+            }
+          }
+        },
+        {
+          "page": "rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/rasta-pair.png",
+              "sha256": "e7543f68682e1c25244b71ab8f76abd0862418d732aa90426d260a35ad97cfd2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-calibration-20261018/compare/rasta-diff.png",
+              "sha256": "8e5dcbfccf400f66a277c29d4421ca5e3286a66ecce9b21b2bd52b1e61d537f7"
+            }
+          }
+        }
+      ]
+    },
     {
       "manifest": "validation/linux-capsule-capture-20261018/comparison/manifest.json",
       "sha256": "295edd91670416b28f323176a7e90857b5dc1b580719a8d3fd89fc54515d5ac8",

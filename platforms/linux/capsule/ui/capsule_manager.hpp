@@ -3,6 +3,7 @@
 #include <functional>
 #include <memory>
 #include <gtk/gtk.h>
+#include <nlohmann/json.hpp>
 namespace rimes::capsule {
 class ManagerWindow {
 public:
@@ -15,6 +16,7 @@ public:
     void ClipboardStatus(const std::string& status);
     GtkWidget* Window() const;
     GtkWidget* Root() const;
+    nlohmann::json PreviewGeometry() const;
 private:
     struct Impl;
     std::unique_ptr<Impl> impl_;

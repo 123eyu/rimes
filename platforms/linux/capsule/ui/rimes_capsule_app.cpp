@@ -41,6 +41,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <map>
 #include <set>
 #include <string>
@@ -1405,6 +1406,12 @@ int main(int argc, char** argv) {
     app.preview = preview;app.preview_image=capture_image;
     app.socket_path = socket_path;
     BuildUi(&app);
+    if (manager_preview && !render_path.empty()) {
+        // Match the inactive AppKit cacheDisplay fixture. Interactive previews
+        // and the real manager still accept focus and native text editing.
+        gtk_window_set_accept_focus(GTK_WINDOW(app.manager->Window()), FALSE);
+        gtk_window_set_focus_on_map(GTK_WINDOW(app.manager->Window()), FALSE);
+    }
 
     if (preview) {
         app.snapshot.visible = true;
@@ -1508,6 +1515,11 @@ int main(int argc, char** argv) {
         if (!render_path.empty()) {
             if(manager_preview) gtk_window_set_focus(GTK_WINDOW(app.manager->Window()),nullptr);
             for (int i = 0; i < 30; ++i) { while (gtk_events_pending()) gtk_main_iteration(); g_usleep(10000); }
+            if (manager_preview) {
+                std::ofstream geometry(render_path + ".json");
+                geometry << app.manager->PreviewGeometry().dump(2) << '\n';
+                if (!geometry) return 1;
+            }
             return rimes::desktop::Render(capture_preview ? app.card_rows.front().event : manager_preview ? app.manager->Root() : gtk_bin_get_child(GTK_BIN(app.window)), render_path) ? 0 : 1;
         }
         if (!app.dump_geometry.empty()) {

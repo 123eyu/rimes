@@ -1,0 +1,1098 @@
+[
+  {
+    "theme": "night",
+    "state": {
+      "width": 940,
+      "height": 660,
+      "scale": 2,
+      "keyWindow": false,
+      "selectedRow": 0,
+      "appearance": "dark"
+    },
+    "status": "requires_review",
+    "controls": {
+      "body": {
+        "macosAlignment": {
+          "height": 303,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 249
+        },
+        "linux": {
+          "height": 302,
+          "width": 500,
+          "x": 410,
+          "y": 249
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 18,
+          "width": -1.5,
+          "height": -23
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        }
+      },
+      "editor": {
+        "macosAlignment": {
+          "height": 575,
+          "width": 531.5,
+          "x": 394.5,
+          "y": 56
+        },
+        "linux": {
+          "height": 575,
+          "width": 532,
+          "x": 394,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "format": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 203
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 203
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 12,
+          "width": -1.5,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "list": {
+        "macosAlignment": {
+          "height": 541,
+          "width": 225.5,
+          "x": 142,
+          "y": 90
+        },
+        "linux": {
+          "height": 541,
+          "width": 225,
+          "x": 142,
+          "y": 90
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "new": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 57,
+          "x": 310.5,
+          "y": 57
+        },
+        "linux": {
+          "height": 20,
+          "width": 57,
+          "x": 310,
+          "y": 57
+        },
+        "beforeDelta": {
+          "x": 5.5,
+          "y": -1,
+          "width": -6,
+          "height": 2
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "remove": {
+        "macosAlignment": {
+          "height": 18,
+          "width": 32,
+          "x": 830,
+          "y": 600
+        },
+        "linux": {
+          "height": 18,
+          "width": 32,
+          "x": 762,
+          "y": 600
+        },
+        "beforeDelta": {
+          "x": -63,
+          "y": -4,
+          "width": -4,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "save": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 40,
+          "x": 870,
+          "y": 599
+        },
+        "linux": {
+          "height": 20,
+          "width": 40,
+          "x": 802,
+          "y": 599
+        },
+        "beforeDelta": {
+          "x": -67,
+          "y": -3,
+          "width": -2,
+          "height": 1
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "search": {
+        "macosAlignment": {
+          "height": 22,
+          "width": 160.5,
+          "x": 142,
+          "y": 56
+        },
+        "linux": {
+          "height": 22,
+          "width": 160,
+          "x": 142,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": 5.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "summary": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 157
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 157
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 9,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "title": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 111
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 111
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 6,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      }
+    }
+  },
+  {
+    "theme": "day",
+    "state": {
+      "width": 940,
+      "height": 660,
+      "scale": 2,
+      "keyWindow": false,
+      "selectedRow": 0,
+      "appearance": "light"
+    },
+    "status": "requires_review",
+    "controls": {
+      "body": {
+        "macosAlignment": {
+          "height": 303,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 249
+        },
+        "linux": {
+          "height": 302,
+          "width": 500,
+          "x": 410,
+          "y": 249
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 18,
+          "width": -1.5,
+          "height": -23
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        }
+      },
+      "editor": {
+        "macosAlignment": {
+          "height": 575,
+          "width": 531.5,
+          "x": 394.5,
+          "y": 56
+        },
+        "linux": {
+          "height": 575,
+          "width": 532,
+          "x": 394,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "format": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 203
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 203
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 12,
+          "width": -1.5,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "list": {
+        "macosAlignment": {
+          "height": 541,
+          "width": 225.5,
+          "x": 142,
+          "y": 90
+        },
+        "linux": {
+          "height": 541,
+          "width": 225,
+          "x": 142,
+          "y": 90
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "new": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 57,
+          "x": 310.5,
+          "y": 57
+        },
+        "linux": {
+          "height": 20,
+          "width": 57,
+          "x": 310,
+          "y": 57
+        },
+        "beforeDelta": {
+          "x": 5.5,
+          "y": -1,
+          "width": -6,
+          "height": 2
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "remove": {
+        "macosAlignment": {
+          "height": 18,
+          "width": 32,
+          "x": 830,
+          "y": 600
+        },
+        "linux": {
+          "height": 18,
+          "width": 32,
+          "x": 762,
+          "y": 600
+        },
+        "beforeDelta": {
+          "x": -63,
+          "y": -4,
+          "width": -4,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "save": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 40,
+          "x": 870,
+          "y": 599
+        },
+        "linux": {
+          "height": 20,
+          "width": 40,
+          "x": 802,
+          "y": 599
+        },
+        "beforeDelta": {
+          "x": -67,
+          "y": -3,
+          "width": -2,
+          "height": 1
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "search": {
+        "macosAlignment": {
+          "height": 22,
+          "width": 160.5,
+          "x": 142,
+          "y": 56
+        },
+        "linux": {
+          "height": 22,
+          "width": 160,
+          "x": 142,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": 5.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "summary": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 157
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 157
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 9,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "title": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 111
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 111
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 6,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      }
+    }
+  },
+  {
+    "theme": "quiet",
+    "state": {
+      "width": 940,
+      "height": 660,
+      "scale": 2,
+      "keyWindow": false,
+      "selectedRow": 0,
+      "appearance": "dark"
+    },
+    "status": "requires_review",
+    "controls": {
+      "body": {
+        "macosAlignment": {
+          "height": 303,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 249
+        },
+        "linux": {
+          "height": 302,
+          "width": 500,
+          "x": 410,
+          "y": 249
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 18,
+          "width": -1.5,
+          "height": -23
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        }
+      },
+      "editor": {
+        "macosAlignment": {
+          "height": 575,
+          "width": 531.5,
+          "x": 394.5,
+          "y": 56
+        },
+        "linux": {
+          "height": 575,
+          "width": 532,
+          "x": 394,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "format": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 203
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 203
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 12,
+          "width": -1.5,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "list": {
+        "macosAlignment": {
+          "height": 541,
+          "width": 225.5,
+          "x": 142,
+          "y": 90
+        },
+        "linux": {
+          "height": 541,
+          "width": 225,
+          "x": 142,
+          "y": 90
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "new": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 57,
+          "x": 310.5,
+          "y": 57
+        },
+        "linux": {
+          "height": 20,
+          "width": 57,
+          "x": 310,
+          "y": 57
+        },
+        "beforeDelta": {
+          "x": 5.5,
+          "y": -1,
+          "width": -6,
+          "height": 2
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "remove": {
+        "macosAlignment": {
+          "height": 18,
+          "width": 32,
+          "x": 830,
+          "y": 600
+        },
+        "linux": {
+          "height": 18,
+          "width": 32,
+          "x": 762,
+          "y": 600
+        },
+        "beforeDelta": {
+          "x": -63,
+          "y": -4,
+          "width": -4,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "save": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 40,
+          "x": 870,
+          "y": 599
+        },
+        "linux": {
+          "height": 20,
+          "width": 40,
+          "x": 802,
+          "y": 599
+        },
+        "beforeDelta": {
+          "x": -67,
+          "y": -3,
+          "width": -2,
+          "height": 1
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "search": {
+        "macosAlignment": {
+          "height": 22,
+          "width": 160.5,
+          "x": 142,
+          "y": 56
+        },
+        "linux": {
+          "height": 22,
+          "width": 160,
+          "x": 142,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": 5.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "summary": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 157
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 157
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 9,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "title": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 111
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 111
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 6,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      }
+    }
+  },
+  {
+    "theme": "rasta",
+    "state": {
+      "width": 940,
+      "height": 660,
+      "scale": 2,
+      "keyWindow": false,
+      "selectedRow": 0,
+      "appearance": "dark"
+    },
+    "status": "requires_review",
+    "controls": {
+      "body": {
+        "macosAlignment": {
+          "height": 303,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 249
+        },
+        "linux": {
+          "height": 302,
+          "width": 500,
+          "x": 410,
+          "y": 249
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 18,
+          "width": -1.5,
+          "height": -23
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        }
+      },
+      "editor": {
+        "macosAlignment": {
+          "height": 575,
+          "width": 531.5,
+          "x": 394.5,
+          "y": 56
+        },
+        "linux": {
+          "height": 575,
+          "width": 532,
+          "x": 394,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "format": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 203
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 203
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 12,
+          "width": -1.5,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "list": {
+        "macosAlignment": {
+          "height": 541,
+          "width": 225.5,
+          "x": 142,
+          "y": 90
+        },
+        "linux": {
+          "height": 541,
+          "width": 225,
+          "x": 142,
+          "y": 90
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": -1
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "new": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 57,
+          "x": 310.5,
+          "y": 57
+        },
+        "linux": {
+          "height": 20,
+          "width": 57,
+          "x": 310,
+          "y": 57
+        },
+        "beforeDelta": {
+          "x": 5.5,
+          "y": -1,
+          "width": -6,
+          "height": 2
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "remove": {
+        "macosAlignment": {
+          "height": 18,
+          "width": 32,
+          "x": 830,
+          "y": 600
+        },
+        "linux": {
+          "height": 18,
+          "width": 32,
+          "x": 762,
+          "y": 600
+        },
+        "beforeDelta": {
+          "x": -63,
+          "y": -4,
+          "width": -4,
+          "height": 3
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "save": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 40,
+          "x": 870,
+          "y": 599
+        },
+        "linux": {
+          "height": 20,
+          "width": 40,
+          "x": 802,
+          "y": 599
+        },
+        "beforeDelta": {
+          "x": -67,
+          "y": -3,
+          "width": -2,
+          "height": 1
+        },
+        "afterDelta": {
+          "x": -68,
+          "y": 0,
+          "width": 0,
+          "height": 0
+        }
+      },
+      "search": {
+        "macosAlignment": {
+          "height": 22,
+          "width": 160.5,
+          "x": 142,
+          "y": 56
+        },
+        "linux": {
+          "height": 22,
+          "width": 160,
+          "x": 142,
+          "y": 56
+        },
+        "beforeDelta": {
+          "x": 0,
+          "y": 0,
+          "width": 5.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": 0,
+          "y": 0,
+          "width": -0.5,
+          "height": 0
+        }
+      },
+      "summary": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 157
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 157
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 9,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      },
+      "title": {
+        "macosAlignment": {
+          "height": 20,
+          "width": 499.5,
+          "x": 410.5,
+          "y": 111
+        },
+        "linux": {
+          "height": 20,
+          "width": 500,
+          "x": 410,
+          "y": 111
+        },
+        "beforeDelta": {
+          "x": 0.5,
+          "y": 6,
+          "width": -1.5,
+          "height": 0
+        },
+        "afterDelta": {
+          "x": -0.5,
+          "y": 0,
+          "width": 0.5,
+          "height": 0
+        }
+      }
+    }
+  }
+]

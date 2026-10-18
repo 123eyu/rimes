@@ -2581,6 +2581,55 @@ final class CapsulePaneViewController: NSViewController,
             && cell.pointingHandCursorKindForSmoke == .arrow
     }
 
+    /// Put the isolated preview in the same selected state as the Linux fixture.
+    func prepareManagerPreviewForSmoke() {
+        guard !rows.isEmpty else { return }
+        applyingSelection = true
+        tableView.reloadData()
+        tableView.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        for index in rows.indices {
+            (tableView.view(atColumn: 0, row: index, makeIfNecessary: true)
+                as? CapsuleWindowEntryCell)?.configure(row: rows[index], selected: index == 0)
+        }
+        applyingSelection = false
+        view.window?.makeFirstResponder(nil)
+    }
+
+    /// Read-only measurements emitted only by the isolated manager preview.
+    func managerPreviewGeometryForSmoke() -> [String: Any] {
+        var controls: [String: Any] = [:]
+        let fields: [(String, NSView?)] = [
+            ("search", searchField), ("new", newButton),
+            ("list", listContainer), ("editor", editorContainer),
+            ("title", titleField), ("summary", summaryField),
+            ("format", noteFormatButton),
+            ("body", contentTextView?.enclosingScrollView),
+            ("save", saveButton), ("remove", deleteButton),
+        ]
+        for (name, control) in fields {
+            guard let control else { continue }
+            let rect = control.convert(control.bounds, to: view)
+            let alignment = control.superview?.convert(
+                control.alignmentRect(forFrame: control.frame), to: view) ?? rect
+            controls[name] = ["x": rect.minX, "y": view.bounds.height - rect.maxY,
+                              "width": rect.width, "height": rect.height,
+                              "alignment": ["x": alignment.minX,
+                                  "y": view.bounds.height - alignment.maxY,
+                                  "width": alignment.width, "height": alignment.height]]
+        }
+        let rows = formStack.arrangedSubviews.map { child -> [String: Any] in
+            let rect = child.convert(child.bounds, to: view)
+            return ["x": rect.minX, "y": view.bounds.height - rect.maxY,
+                    "width": rect.width, "height": rect.height]
+        }
+        return ["width": view.bounds.width, "height": view.bounds.height,
+                "keyWindow": view.window?.isKeyWindow ?? false,
+                "appearance": view.effectiveAppearance.bestMatch(from: [.aqua, .darkAqua]) == .darkAqua ? "dark" : "light",
+                "scale": view.window?.backingScaleFactor ?? 1,
+                "selectedRow": tableView.selectedRow, "controls": controls,
+                "formRows": rows]
+    }
+
     func numberOfRows(in tableView: NSTableView) -> Int { rows.count }
 
     func tableView(_ tableView: NSTableView,

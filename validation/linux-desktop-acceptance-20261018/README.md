@@ -8,7 +8,7 @@
 - `wayland-clipboard.log`：headless Sway 多 MIME、二进制/大文本、敏感复制与真实粘贴、60 秒清除、更新内容保留、保护态通过。
 - `wayland-capture.log`：真实 Sway 交互 PNG 截图通过。软件 headless 环境没有 DMA-BUF，录屏被 xdpw 拒绝，失败会清除未完成文件；物理录屏仍未验证。
 - `practice-private-bus.log`：隔离总线下实际 GTK/Fcitx 练习、物理键、回退、预编辑排除和结束保存通过。
-- `visual-inventory.json`：19 份对照清单、229 组双端截图与差异图文件/摘要存在，全部 `requires_review`。缺失交互状态和像素差异仍须处理。
+- `visual-inventory.json`：20 份对照清单、233 组双端截图与差异图文件/摘要存在，全部 `requires_review`。最新四组为 Capsule 表单坐标校准，缺失交互状态和像素差异仍须处理。
 
 本轮修复三个产品问题：10 毫秒输入源切换等待使用明确计时精度；首次加载所有插件后按 macOS 默认选择 Capsule 词条页（停用时保留可用页）；X11 快捷键待主键释放及原窗口焦点确认后才申请新输入目标。保留真实失焦、保护输入和输入源变化的撤权行为，不恢复旧输入租约。失败记录 `failure-launcher.log` 与 `failure-native-host.log` 与 `failure-capsule-default.log` 保留初次观察。
 

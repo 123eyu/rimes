@@ -34,6 +34,15 @@ GtkWidget* Scroll(GtkWidget* child) {
     gtk_scrolled_window_set_policy(GTK_SCROLLED_WINDOW(scroll),GTK_POLICY_NEVER,GTK_POLICY_AUTOMATIC);
     gtk_container_add(GTK_CONTAINER(scroll),child); return scroll;
 }
+GtkWidget* FormLabel(const char* text, const char* style, int line_height) {
+    auto* label = Label(text, style);
+    auto* attributes = pango_attr_list_new();
+    pango_attr_list_insert(attributes,
+                          pango_attr_line_height_new_absolute(line_height * PANGO_SCALE));
+    gtk_label_set_attributes(GTK_LABEL(label), attributes);
+    pango_attr_list_unref(attributes);
+    return label;
+}
 } // namespace
 struct ManagerWindow::Impl {
     Send send;
@@ -140,28 +149,71 @@ struct ManagerWindow::Impl {
         }),nullptr);
         header = Row(9); auto* caption=Label("Capsule","capsule-heading"); Add(header,caption);
         count=Label("0 ITEMS","capsule-count"); Add(header,count); Add(header,gtk_label_new(""),true);
-        Add(header,Button("Capsule 插件…",[this] { g_spawn_command_line_async("rimes-settings",nullptr); },"capsule-link"));
-        Add(header,Class(IconButton("gearshape","返回 Capsule 底栏",[this] { Navigate({{"v",1},{"op","rail"}}); }),"capsule-gear"));
-        Add(header,Class(IconButton("xmark","关闭 Capsule",[this] { Navigate({{"v",1},{"op","close"}}); }),"capsule-close"));
+        auto* plugins_button=Button("Capsule 插件…",[this] { g_spawn_command_line_async("rimes-settings",nullptr); },"capsule-link");
+        auto* rail_button=Class(IconButton("gearshape","返回 Capsule 底栏",[this] { Navigate({{"v",1},{"op","rail"}}); }),"capsule-gear");
+        auto* close_button=Class(IconButton("xmark","关闭 Capsule",[this] { Navigate({{"v",1},{"op","close"}}); }),"capsule-close");
+        gtk_widget_set_size_request(plugins_button,-1,18);
+        for(auto* action:{plugins_button,rail_button,close_button}) {
+            gtk_widget_set_valign(action,GTK_ALIGN_CENTER); Add(header,action);
+        }
         modules=Column(3); modules_scroll=Class(Scroll(modules),"capsule-modules");
         gtk_widget_set_margin_start(modules,8); gtk_widget_set_margin_end(modules,8);
         gtk_widget_set_margin_top(modules,10); gtk_widget_set_margin_bottom(modules,10);
         toolbar=Row(8); search=gtk_search_entry_new(); gtk_entry_set_placeholder_text(GTK_ENTRY(search),"搜索标题或内容");
+        Class(search,"capsule-search");
         gtk_widget_set_tooltip_text(search,"搜索 Capsule"); Add(toolbar,search,true);
         create=Button("＋ 新建",[this] { NewNote(); }); Add(toolbar,create);
+        gtk_widget_set_size_request(create,57,20);
+        gtk_widget_set_valign(create,GTK_ALIGN_CENTER);
         list=Column(1); list_scroll=Class(Scroll(list),"capsule-list"); divider=Class(gtk_separator_new(GTK_ORIENTATION_VERTICAL),"capsule-divider");
         gtk_widget_set_margin_top(list,10); gtk_widget_set_margin_start(list,16); gtk_widget_set_margin_end(list,16);
         editor=Class(Column(8),"capsule-editor");
         auto* form=Column(10); gtk_widget_set_margin_start(form,16); gtk_widget_set_margin_end(form,16);
         gtk_widget_set_margin_top(form,16); gtk_widget_set_margin_bottom(form,16);
-        heading=Label("新建笔记","capsule-form-heading"); Add(form,heading);
+        heading=FormLabel("新建笔记","capsule-form-heading",13); Add(form,heading);
         auto field=[&](const char* name,GtkWidget* widget,bool expands=false) {
-            auto* stack=Column(5); Add(stack,Label(name,"capsule-field-label")); Add(stack,widget,expands); Add(form,stack,expands);
+            auto* stack=Column(5); Add(stack,FormLabel(name,"capsule-field-label",11)); Add(stack,widget,expands); Add(form,stack,expands);
         };
         title=Class(gtk_entry_new(),"capsule-field"); gtk_entry_set_placeholder_text(GTK_ENTRY(title),"标题"); field("标题",title);
         summary=Class(gtk_entry_new(),"capsule-field"); gtk_entry_set_placeholder_text(GTK_ENTRY(summary),"一句话说明，显示在卡片上（可选）"); field("摘要",summary);
-        format=gtk_combo_box_text_new();
+        format=Class(gtk_combo_box_text_new(),"capsule-note-format");
         for (const auto* name:{"其他","Bullet","富文本"}) gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(format),name);
+        auto* cells=gtk_cell_layout_get_cells(GTK_CELL_LAYOUT(format));
+        for(auto* cell=cells;cell;cell=cell->next) {
+            if(!GTK_IS_CELL_RENDERER_TEXT(cell->data)) continue;
+            auto* attributes=pango_attr_list_new();
+            pango_attr_list_insert(attributes,pango_attr_line_height_new_absolute(16*PANGO_SCALE));
+            g_object_set(cell->data,"ypad",0,"height",16,"attributes",attributes,nullptr);
+            pango_attr_list_unref(attributes);
+        }
+        g_list_free(cells);
+        g_signal_connect_after(format,"draw",G_CALLBACK(+[](GtkWidget* widget,cairo_t* cr,gpointer raw)->gboolean {
+            const auto* self=static_cast<Impl*>(raw);
+            const auto& palette=Visuals().at("palettes").at(self->theme=="liquidGlass"?"day":self->theme);
+            const double opacity=gtk_widget_is_sensitive(widget)?1.0:0.46;
+            auto color=[&](const char* key) {
+                GdkRGBA value{};gdk_rgba_parse(&value,palette.at(key).get<std::string>().c_str());
+                cairo_set_source_rgba(cr,value.red,value.green,value.blue,value.alpha*opacity);
+            };
+            // RimeFixedAccentPopUpButton's 19 pt, theme-owned indicator.
+            const double w=19;
+            const double h=19;
+            const double r=6;
+            const double x=gtk_widget_get_allocated_width(widget)-w-0.5;
+            const double y=(gtk_widget_get_allocated_height(widget)-h)/2.0;
+            cairo_save(cr);cairo_new_sub_path(cr);
+            constexpr double pi=3.14159265358979323846;
+            cairo_arc(cr,x+w-r,y+r,r,-pi/2,0);cairo_arc(cr,x+w-r,y+h-r,r,0,pi/2);
+            cairo_arc(cr,x+r,y+h-r,r,pi/2,pi);cairo_arc(cr,x+r,y+r,r,pi,3*pi/2);
+            cairo_close_path(cr);color("surfaceTertiary");cairo_fill_preserve(cr);
+            color("border");cairo_set_line_width(cr,1);cairo_stroke(cr);
+            color("accentText");cairo_set_line_width(cr,1.5);
+            cairo_set_line_cap(cr,CAIRO_LINE_CAP_ROUND);cairo_set_line_join(cr,CAIRO_LINE_JOIN_ROUND);
+            const double cx=x+w/2;
+            const double cy=y+h/2;
+            cairo_move_to(cr,cx-3,cy+1.2);cairo_line_to(cr,cx,cy-1.2);cairo_line_to(cr,cx+3,cy+1.2);
+            cairo_stroke(cr);cairo_restore(cr);return FALSE;
+        }),this);
         field("笔记类型",format);
         projection_warning = Column(6);
         auto* warning =
@@ -203,18 +255,20 @@ struct ManagerWindow::Impl {
             gtk_widget_hide(bar);
         }
         body=gtk_text_view_new(); gtk_text_view_set_wrap_mode(GTK_TEXT_VIEW(body),GTK_WRAP_WORD_CHAR);
-        gtk_text_view_set_left_margin(GTK_TEXT_VIEW(body),14); gtk_text_view_set_right_margin(GTK_TEXT_VIEW(body),14);
-        gtk_text_view_set_top_margin(GTK_TEXT_VIEW(body),10); gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(body),10);
+        // NSTextView uses an 8 pt inset and 5 pt line-fragment padding.
+        gtk_text_view_set_left_margin(GTK_TEXT_VIEW(body),13); gtk_text_view_set_right_margin(GTK_TEXT_VIEW(body),13);
+        gtk_text_view_set_top_margin(GTK_TEXT_VIEW(body),8); gtk_text_view_set_bottom_margin(GTK_TEXT_VIEW(body),8);
         note_editor = std::make_unique<NoteEditor>(body, [this] { Changed(); });
         auto* area=Class(Scroll(body),"capsule-text"); gtk_widget_set_size_request(area,-1,220); field("内容",area,true);
-        auto* writing_hint=Label("写法：「- 标签：值」是字段，复制时只复制值；「## "
-                                   "标题」分组；其余每行单独复制。","capsule-writing-hint");
+        auto* writing_hint=FormLabel("写法：「- 标签：值」是字段，复制时只复制值；「## "
+                                   "标题」分组；其余每行单独复制。","capsule-writing-hint",13);
         gtk_label_set_line_wrap(GTK_LABEL(writing_hint),TRUE); gtk_label_set_max_width_chars(GTK_LABEL(writing_hint),1); Add(form,writing_hint);
         note_form = Scroll(form);
         Add(editor, note_form, true);
         auto* actions=Row(8); gtk_widget_set_margin_start(actions,16); gtk_widget_set_margin_end(actions,16); gtk_widget_set_margin_bottom(actions,12);
-        status=Label("选择一条 Capsule 内容","capsule-status"); Add(actions,status,true);
+        status=FormLabel("选择一条 Capsule 内容","capsule-status",11); Add(actions,status,true);
         remove=Button("删除",[this] { Remove(); },"capsule-link"); Add(actions,remove);
+        gtk_widget_set_valign(remove,GTK_ALIGN_CENTER);
         save = Button("保存", [this] { Save(); });
         Add(actions, save);
         Add(editor, actions);
@@ -414,14 +468,19 @@ struct ManagerWindow::Impl {
         const int list_x=inset+module_width+10, rule_x=list_x+list_width+12, editor_x=rule_x+15;
         auto place=[&](GtkWidget* child,int x,int y,int w,int h) { gtk_layout_move(GTK_LAYOUT(root),child,x,y); gtk_widget_set_size_request(child,std::max(w,1),std::max(h,1)); };
         place(header,inset,12,width-2*inset,30); place(modules_scroll,inset,56,module_width,height-86);
-        place(toolbar,list_x,56,list_width,22); place(list_scroll,list_x,90,list_width,height-120);
-        place(divider,rule_x,56,1,height-86); place(editor,editor_x,56,width-editor_x-inset,height-86);
+        place(toolbar,list_x,56,list_width,22); place(list_scroll,list_x,90,list_width,height-119);
+        place(divider,rule_x,56,1,height-85); place(editor,editor_x,56,width-editor_x-inset,height-85);
         place(hint,inset,height-20,width-2*inset,10);
     }
     void SetTheme(const std::string& name) {
         theme=name; Theme(name,gtk_widget_get_screen(window));
         const auto& palette=Visuals().at("palettes").at(name=="liquidGlass"?"day":name);
         auto c=[&](const char* key){ return palette.at(key).get<std::string>(); };
+        const bool light=name=="day" || name=="liquidGlass";
+        const std::string field_fill=light?"white":"mix("+c("surfaceSecondary")+",white,0.12)";
+        const std::string popup_fill=light?"white":"mix("+c("surfaceSecondary")+",white,0.30)";
+        const std::string search_fill=light?"white":"mix("+c("bufferBackground")+",white,0.12)";
+        const std::string new_fill=light?"white":"mix("+c("bufferBackground")+",white,0.30)";
         const std::string rules =
             ".capsule-manager { background: " + c("bufferBackground") +
             "; color: " + c("textPrimary") +
@@ -438,7 +497,7 @@ struct ManagerWindow::Impl {
             c("textSecondary") +
             "; }"
             ".capsule-list,.capsule-editor { background: " +
-            c("surfaceSecondary") + "; border: 1px solid " + c("border") +
+            c("surfaceSecondary") + "; border: 0; box-shadow: inset 0 0 0 1px " + c("border") +
             "; border-radius: 6px; }"
             ".capsule-modules { background: transparent; border: 0; }"
             ".capsule-manager textview,.capsule-manager textview text { "
@@ -447,8 +506,21 @@ struct ManagerWindow::Impl {
             "; }"
             ".capsule-manager entry { min-height: 0; padding: 0 3px; font-family: "
             "monospace; font-size: 11px; }"
-            ".capsule-manager .capsule-field { border-radius: 0; font-size: 12px; }"
-            ".capsule-manager combobox button { min-height: 18px; padding: 0 5px; }"
+            ".capsule-manager .capsule-search { background: " + search_fill + "; border-color: alpha(" + c("textPrimary") + ",0.22); }"
+            ".capsule-manager .capsule-search image { color: " + c("textPrimary") + "; }"
+            ".capsule-manager .capsule-field { border-radius: 0; font-size: 12px; "
+            "background: " + field_fill + "; border-color: alpha(" + c("textPrimary") + ",0.22); }"
+            ".capsule-manager .capsule-field:focus { border-color: " + c("accentGreen") + "; }"
+            ".capsule-manager combobox button { min-height: 20px; padding: 0 5px; border: 0; "
+            "background: " + popup_fill + "; }"
+            ".capsule-manager .capsule-note-format arrow { opacity: 0; }"
+            ".capsule-manager #capsule-new,.capsule-manager #capsule-save { min-height: 20px; padding: 0 8px; }"
+            ".capsule-manager #capsule-new { background: " + new_fill + "; color: " + (light?"black":"white") + "; }"
+            ".capsule-manager #capsule-save { background: " + popup_fill + "; color: " + (light?"black":"white") + "; }"
+            ".capsule-manager #capsule-new label,.capsule-manager #capsule-save label { font-family: monospace; font-size: 10px; font-weight: 600; }"
+            ".capsule-manager #capsule-save { min-width: 24px; }"
+            ".capsule-manager #capsule-delete { min-height: 18px; min-width: 22px; padding: 0 5px; }"
+            ".capsule-manager #capsule-delete label { font-size: 10px; font-weight: 400; }"
             ".capsule-manager .capsule-text { border: 1px solid " +
             c("border") +
             "; }"
@@ -478,6 +550,7 @@ struct ManagerWindow::Impl {
             "background: alpha(" +
             c("accentGreen") +
             ",0.2); border-radius: 6px; }"
+            ".capsule-manager .capsule-gear .glyph { color: " + c("textPrimary") + "; }"
             ".capsule-manager .capsule-close { min-width: 16px; min-height: 16px; }"
             ".capsule-module label { font-size: 12px; font-weight: 500; color: " +
             c("textPrimary") +
@@ -985,4 +1058,32 @@ void ManagerWindow::ClipboardStatus(const std::string& status) {
 }
 GtkWidget* ManagerWindow::Window() const{return impl_->window;}
 GtkWidget* ManagerWindow::Root() const{return impl_->root;}
+nlohmann::json ManagerWindow::PreviewGeometry() const {
+    Json controls = Json::object();
+    gboolean dark=FALSE;
+    g_object_get(gtk_settings_get_for_screen(gtk_widget_get_screen(impl_->window)),
+                 "gtk-application-prefer-dark-theme",&dark,nullptr);
+    const std::vector<std::pair<const char*, GtkWidget*>> fields = {
+        {"search", impl_->search}, {"new", impl_->create},
+        {"list", impl_->list_scroll}, {"editor", impl_->editor},
+        {"title", impl_->title}, {"summary", impl_->summary},
+        {"format", impl_->format},
+        {"body", gtk_widget_get_ancestor(impl_->body, GTK_TYPE_SCROLLED_WINDOW)},
+        {"save", impl_->save}, {"remove", impl_->remove}
+    };
+    for (const auto& [name, widget] : fields) {
+        if (!widget) continue;
+        int x = 0, y = 0;
+        gtk_widget_translate_coordinates(widget, impl_->root, 0, 0, &x, &y);
+        controls[name] = {{"x", x}, {"y", y},
+                         {"width", gtk_widget_get_allocated_width(widget)},
+                         {"height", gtk_widget_get_allocated_height(widget)}};
+    }
+    return {{"width", gtk_widget_get_allocated_width(impl_->root)},
+            {"height", gtk_widget_get_allocated_height(impl_->root)},
+            {"keyWindow", bool(gtk_window_is_active(GTK_WINDOW(impl_->window)))},
+            {"appearance", dark?"dark":"light"},
+            {"scale", gtk_widget_get_scale_factor(impl_->root)},
+            {"selectedRow", impl_->state.selected}, {"controls", controls}};
+}
 } // namespace rimes::capsule

@@ -31,7 +31,7 @@
 
 ## 视觉状态
 
-`visual_inventory.py` 当前校验了 19 份对照清单、229 组双端截图及差异图，全部为 `requires_review`；该清单不代表完整状态覆盖。匹配页面尺寸、自动化通过或图片相似度均不能关闭像素验收。字体度量、控件、图标、材质及未覆盖的交互状态必须逐项处理；第 25 项的界面不在本轮验收中。
+`visual_inventory.py` 当前校验了 20 份对照清单、233 组双端截图及差异图，全部为 `requires_review`；该清单不代表完整状态覆盖。新增的 [Capsule 表单校准](../../../validation/linux-capsule-calibration-20261018/README.md) 包含实际控件坐标与一致的窗口/选中状态。匹配页面尺寸、自动化通过或图片相似度均不能关闭像素验收。字体度量、控件、图标、材质及未覆盖的交互状态必须逐项处理；第 25 项的界面不在本轮验收中。
 
 本轮 [源码与容器证据](../../../validation/linux-desktop-acceptance-20261018/README.md) 包含实际 GTK3/Qt5/Firefox/xterm 原生上屏，前三者的 Buffer 捕获/Return，以及 Firefox 密码框保护。详细逐项证据见各模块 `VALIDATION.md` 与 PARITY.md。只有所有适用目标有结果后才能关闭 #179；发行流程可准备并演练，公开发布不由此文档触发。
 

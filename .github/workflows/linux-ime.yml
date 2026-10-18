@@ -203,9 +203,9 @@ jobs:
       - name: Render Capsule manager themes for macOS comparison
         run: |
           mkdir -p "$RUNNER_TEMP/capsule-render"
+          python3 platforms/linux/validation/render_capsule_manager.py \
+            --binary platforms/linux/ime/build/rimes-capsule --output "$RUNNER_TEMP/capsule-render"
           for theme in night day quiet rasta; do
-            xvfb-run -a platforms/linux/ime/build/rimes-capsule --manager-preview --theme "$theme" \
-              --render "$RUNNER_TEMP/capsule-render/$theme.png"
             GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/rimes-capsule \
               --clipboard-preview --theme "$theme" --render "$RUNNER_TEMP/capsule-render/clipboard-$theme.png"
             GDK_SCALE=2 xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/rimes-capsule \
