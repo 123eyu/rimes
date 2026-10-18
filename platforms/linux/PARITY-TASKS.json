@@ -673,9 +673,11 @@
         "验证新装、升级、重装和卸载，保留用户词库、学习记录、笔记、会话和凭据；校验源安装清单兼容。",
         "同步安装、使用、权限、卸载和发布文档；生成并验证确切版本产物，不把配置完成等同已公开发布。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 180,
-      "url": "https://github.com/scholay/xsime/issues/180"
+      "url": "https://github.com/scholay/xsime/issues/180",
+      "implementation_status": "implemented",
+      "validation": "validation/release-lifecycle.md"
     }
   ],
   "milestone": {

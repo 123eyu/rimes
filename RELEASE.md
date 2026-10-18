@@ -40,7 +40,7 @@ flowchart LR
 
 > GitHub required checks 不变。iOS、Windows IME、Linux IME 按相关路径分别运行 PR / main 检查；
 > 旧数据预览与 Windows Foundation 保留每周/手动检查。`v*` 的发布工作流另外要求本次 Linux deb
-> 构建与安装／重装／卸载测试成功后才公开 Release。真实桌面验收须单独记录。
+> 构建与安装／升级／重装／卸载测试成功后才公开 Release。真实桌面验收须单独记录。
 
 > Developer Program 资格或一张 Developer ID 证书本身不能把预览版变成正式版。首个正式
 > `vX.Y.Z` 必须同时具备同一 Team 的 **Developer ID Application + Developer ID Installer** 证书及私钥、
@@ -120,8 +120,12 @@ git switch main && git pull --ff-only
    重公证，然后以完全相同的字节创建 Latest，并下载公开资产再次读回校验。
 5. **发布说明** = 安装与校验说明 + 自动生成的「变更」：自上一个**公开 GitHub macOS Release**以来的提交
    按类型分组，列出合并的 PR 和完整对比链接。取消或未公开的 tag 绝不作为比较基线。
-6. **Linux deb**：`linux-deb.yml` 在 Ubuntu 24.04 amd64 构建同一提交，运行原生测试与 deb 安装／重装／
-   卸载验证；Release 公开须等待此 job 成功。随后只向已公开的同名 `v*` Release 附加 deb 与其 `.sha256`，
+6. **Linux deb**：`linux-deb.yml` 在 Ubuntu 24.04 amd64 构建同一提交，运行原生测试与 deb 新装／升级／重装／
+   卸载验证，每步比对用户数据内容、权限、所有者及目录结构，新装和升级后均执行安装后二进制检查。
+   优先从已公开项目 `v*` Release 选择低于本次版本且架构相同的最新 deb，验证摘要及包身份后升级。
+   首次没有历史 deb 时明确使用当前载荷生成的旧版本夹具，并检查旧文件退役；这不代表历史应用数据迁移通过。
+   API、下载或校验失败必须使验收失败，不能伪装成“没有旧包”。所有 Linux 模块变化都触发发布演练。
+   Release 公开须等待此 job 成功。随后只向已公开的同名 `v*` Release 附加 deb 与其 `.sha256`，
    再下载读回比对，重试只接受相同字节，不覆盖资产。预览版本映射为 `X.Y.Z~preview.N`，正式版本必须与
    根 `VERSION` 一致。每次发布同步 Linux 变更与安装文档；完整验收另需 X11/Wayland 实际输入测试。
 

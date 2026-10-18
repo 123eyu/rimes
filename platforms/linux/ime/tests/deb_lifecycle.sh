@@ -5,7 +5,9 @@ set -euo pipefail
     echo "error: requires a disposable runner and RIMES_DEB_TEST_DISPOSABLE=1" >&2
     exit 1
 }
-[[ $# == 1 && -f "$1" ]] || { echo "Usage: deb_lifecycle.sh /path/to/package.deb" >&2; exit 2; }
+[[ $# -ge 1 && $# -le 2 && -f "$1" ]] || {
+    echo "Usage: deb_lifecycle.sh /path/to/package.deb [/path/to/older.deb]" >&2; exit 2;
+}
 DEB=$(realpath "$1")
 if dpkg-query -W -f='${db:Status-Status}' fcitx5-rimes 2>/dev/null | grep -qx installed; then
     echo "error: refusing to replace an existing fcitx5-rimes installation" >&2
@@ -13,15 +15,46 @@ if dpkg-query -W -f='${db:Status-Status}' fcitx5-rimes 2>/dev/null | grep -qx in
 fi
 [[ "$(dpkg-deb -f "$DEB" Package)" == fcitx5-rimes ]]
 VERSION=$(dpkg-deb -f "$DEB" Version)
+ARCH=$(dpkg-deb -f "$DEB" Architecture)
 (cd "$(dirname "$DEB")" && sha256sum -c "$(basename "$DEB").sha256")
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
+FIXTURE_UPGRADE=0
+RETIRED_FILE=/usr/share/rimes/lifecycle-retired-fixture
+if [[ $# == 2 ]]; then
+    OLD_DEB=$(realpath "$2")
+    (cd "$(dirname "$OLD_DEB")" && sha256sum -c "$(basename "$OLD_DEB").sha256")
+else
+    # The first release has no historical deb. Exercise a real dpkg upgrade
+    # using a clearly identified older-version payload, not a reinstall.
+    # This covers package replacement, not historical application migrations.
+    FIXTURE_UPGRADE=1
+    OLD_DEB="$WORK/fcitx5-rimes-upgrade-fixture.deb"
+    dpkg-deb -R "$DEB" "$WORK/old-root"
+    [[ ! -e "$WORK/old-root$RETIRED_FILE" && ! -e "$RETIRED_FILE" ]]
+    python3 - "$WORK/old-root/DEBIAN/control" "$VERSION~lifecycle.1" <<'PY'
+import re, sys
+from pathlib import Path
+path = Path(sys.argv[1])
+text, count = re.subn(r'^Version: .*$', 'Version: ' + sys.argv[2], path.read_text(), flags=re.M)
+assert count == 1
+path.write_text(text)
+PY
+    printf '%s\n' 'obsolete managed payload; must disappear on upgrade' > "$WORK/old-root$RETIRED_FILE"
+    dpkg-deb --root-owner-group -b "$WORK/old-root" "$OLD_DEB"
+    echo "Upgrade coverage: controlled old-version payload fixture; no historical application migration claim."
+fi
+[[ "$(dpkg-deb -f "$OLD_DEB" Package)" == fcitx5-rimes ]]
+[[ "$(dpkg-deb -f "$OLD_DEB" Architecture)" == "$ARCH" ]]
+OLD_VERSION=$(dpkg-deb -f "$OLD_DEB" Version)
+dpkg --compare-versions "$OLD_VERSION" lt "$VERSION"
+echo "Upgrade path: $OLD_VERSION -> $VERSION ($ARCH)"
+sha256sum "$DEB" "$OLD_DEB"
 DATA="$WORK/user-data/rimes"
 CLI_HOME="$WORK/home"
 mkdir -p "$CLI_HOME/.claude"
 printf '%s\n' 'keep CLI-owned Claude authentication' > "$CLI_HOME/.claude/.credentials.json"
 printf '%s\n' 'keep CLI-owned Claude preferences' > "$CLI_HOME/.claude.json"
-(cd "$CLI_HOME" && find . -type f -exec sha256sum {} +) > "$WORK/cli-home.sha256"
 mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule/clipboard" "$DATA/capsule/passwords" "$DATA/capsule/assets" "$DATA/capsule/captures/fixture" "$DATA/translation/cache" "$DATA/mailbox/images" "$DATA/gateway" "$DATA/ai/codex-home/generated_images" "$DATA/mailbox/generations/fixture" "$DATA/configuration/credentials"
 printf '%s\n' 'keep learned dictionary' > "$DATA/rime_ice.userdb/CURRENT"
 printf '%s\n' 'keep imported learning' > "$DATA/schemes/learning/custom.userdb/CURRENT"
@@ -55,11 +88,52 @@ printf '%s\n' 'keep independent physical key history' > "$DATA/stats/key_frequen
 printf '%s\n' 'keep daily character totals, active seconds and sessions' > "$DATA/stats/typing_speed.json"
 printf '%s\n' 'keep article practice aggregate scores and comparison identities' > "$DATA/stats/typing_tests.json"
 printf '%s\n' 'keep explicit corrupt statistics backup' > "$DATA/stats/corrupt-statistics-backup.json"
-(cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
+find "$DATA" "$CLI_HOME" -type d -exec chmod 700 {} +
+find "$DATA" "$CLI_HOME" -type f -exec chmod 600 {} +
+# A user-chosen non-secret permission must also remain unchanged.
+chmod 640 "$DATA/capsule/note.md"
+if [[ $(id -u) == 0 ]]; then
+    # Root-only disposable containers should still prove that package scripts
+    # preserve data owned by an unprivileged account.
+    chown -R "$(id -u nobody):$(id -g nobody)" "$DATA" "$CLI_HOME"
+fi
+snapshot_user_data() {
+    python3 - "$DATA" "$CLI_HOME" <<'PY'
+import hashlib, json, stat, sys
+from pathlib import Path
+rows = []
+for index, name in enumerate(sys.argv[1:]):
+    root = Path(name)
+    for path in [root, *sorted(root.rglob('*'))]:
+        info = path.lstat()
+        assert stat.S_ISDIR(info.st_mode) or stat.S_ISREG(info.st_mode), path
+        rows.append([index, str(path.relative_to(root)), stat.S_IFMT(info.st_mode),
+                     stat.S_IMODE(info.st_mode), info.st_uid, info.st_gid,
+                     hashlib.sha256(path.read_bytes()).hexdigest() if path.is_file() else None])
+print(json.dumps(rows, ensure_ascii=False, indent=2))
+PY
+}
+snapshot_user_data > "$WORK/user-before.json"
+USER_FILE_COUNT=$(python3 -c 'import json,sys; print(sum(row[-1] is not None for row in json.load(open(sys.argv[1]))))' "$WORK/user-before.json")
+check_user_data() {
+    snapshot_user_data > "$WORK/user-after.json"
+    diff -u "$WORK/user-before.json" "$WORK/user-after.json"
+    echo "ok: $1 preserved $USER_FILE_COUNT user/CLI files, directory layout, ownership and permissions"
+}
+install_deb() {
+    sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$@"
+}
+remove_deb() {
+    sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get remove -y fcitx5-rimes
+    for file in "${FILES[@]}"; do
+        [[ ! -f "$file" && ! -L "$file" ]] || { echo "Package file survived removal: $file" >&2; exit 1; }
+    done
+}
 
-sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
+verify_installed() {
+local WORK="$WORK/runtime-$1"
+mkdir -p "$WORK"
 [[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
-mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
 [[ -s /usr/share/licenses/rimes/plugins/Swift-Apache-2.0.txt ]]
 [[ -x /usr/bin/rimes-settings && -x /usr/bin/rimes-plugins && -x /usr/bin/rimes-mailbox ]]
@@ -114,11 +188,26 @@ PY
 dbus-run-session -- xvfb-run -a python3 "$SCRIPT_DIR/../../capsule/tests/password_ui_test.py" \
     python3 "$SCRIPT_DIR/../../mailbox/tests/mailbox_process_test.py" /usr/bin/rimes-mailbox \
     "$SCRIPT_DIR/../../mailbox/tests/fixtures/native-mailbox.json"
-sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install --reinstall -y "$DEB"
-sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get remove -y fcitx5-rimes
-for file in "${FILES[@]}"; do
-    [[ ! -f "$file" && ! -L "$file" ]] || { echo "Package file survived removal: $file" >&2; exit 1; }
-done
-(cd "$DATA" && sha256sum -c "$WORK/user-data.sha256")
-(cd "$CLI_HOME" && sha256sum -c "$WORK/cli-home.sha256")
-echo "deb install/reinstall/remove passed; user dictionaries, learning and notes preserved."
+}
+
+install_deb "$DEB"
+mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
+check_user_data "fresh install"
+verify_installed fresh
+remove_deb
+check_user_data "fresh removal"
+
+install_deb "$OLD_DEB"
+[[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$OLD_VERSION" ]]
+if (( FIXTURE_UPGRADE )); then [[ -f "$RETIRED_FILE" ]]; fi
+check_user_data "older-version install"
+install_deb "$DEB"
+[[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
+if (( FIXTURE_UPGRADE )); then [[ ! -e "$RETIRED_FILE" ]]; fi
+check_user_data "version upgrade"
+verify_installed upgraded
+install_deb --reinstall "$DEB"
+check_user_data "reinstall"
+remove_deb
+check_user_data "final removal"
+echo "deb fresh install/upgrade/reinstall/remove passed; user dictionaries, learning, records and permissions preserved."

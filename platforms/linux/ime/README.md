@@ -220,11 +220,15 @@ fcitx5 -r
 ```
 
 Remove XSIME from the Fcitx5 input-method list as well. User dictionaries,
-learning records, imported schemes, Capsule notes and original-format clipboard
-history/favorites remain in
+learning records, imported schemes, Capsule notes, original-format clipboard
+history/favorites, resources, captures, encrypted passwords, Mailbox sessions and
+attachments, plugin configuration/credentials, daily statistics and practice results remain in
 `${XDG_DATA_HOME:-$HOME/.local/share}/rimes`. Do not delete this directory
 when removing the application. If a source installation already exists,
 uninstall it with the instructions below before switching to the deb.
+Deleting the source or build directory does not uninstall files already copied
+by `install.sh`; use its manifest-based `uninstall.sh` for those files. Keep
+CLI-owned Codex/Claude login data when removing XSIME.
 
 ## Build and install from source (development)
 
@@ -327,8 +331,11 @@ python3 platforms/linux/ime/scripts/build-engine.py
 platforms/linux/ime/scripts/package-deb.sh /tmp/rimes-deb
 ```
 
-writes `fcitx5-rimes_<version>_<arch>.deb` and its `.sha256` (addon + `rimes-buffer` +
-`rimes-buffer-ctl` + `rimes-capsule` + `rimes-capsule-ctl` + `rimes-schemes` + private Rime/Lua + reviewed data).
+writes `fcitx5-rimes_<version>_<arch>.deb` and its `.sha256`: the Fcitx addon,
+Buffer/Capsule and control clients, settings/plugin/resource managers, Mailbox,
+gateway and native helpers, ordinary chord data, statistics/practice resources,
+pinned official plugins, private Rime/Lua and reviewed dictionaries. The deferred
+stream-input feature is not part of this Linux delivery.
 The release package targets Ubuntu 24.04 amd64; install with `sudo apt install ./fcitx5-rimes_1.1.5_amd64.deb`. The package manager removes application files while user dictionaries remain in the user data directory.
 The package recommends `libgtk-layer-shell0`, `wl-clipboard` and the Inter/Noto
 fonts (including emoji). GStreamer base/good/PipeWire plugins and
@@ -350,8 +357,16 @@ orders it before `X.Y.Z`. `RIMES_RELEASE_VERSION` supplies this tag version
 in CI; a formal package version must match root `VERSION`.
 
 The reusable `linux-deb.yml` workflow builds on Ubuntu 24.04 amd64, runs source
-install/uninstall tests, then installs, reinstalls and removes the exact deb
-on a disposable runner while checking user-data preservation. Publication
+install/uninstall tests, then installs, upgrades, reinstalls and removes the exact deb
+on a disposable runner. Every phase checks user/CLI data bytes, ownership,
+permissions and directory layout. Installed binary/runtime checks run after
+fresh installation and upgrade. The workflow downloads the highest strictly
+older matching-architecture deb from a published project `v*` Release and verifies
+its checksum and package identity before upgrading it. If no older deb exists,
+it explicitly uses an older-version fixture built from the current payload,
+including an obsolete managed file that must disappear on upgrade. This first-release
+fixture proves dpkg replacement and preservation, not historical application
+data migration; API/checksum failures never silently fall back to the fixture. Publication
 waits for this job; only an existing, successfully published `v*` Release
 receives the deb and checksum. PR/manual/nightly rehearsals retain CI
 artifacts without publishing. Source changes, installed-host typing, CI
@@ -372,6 +387,11 @@ platforms/linux/ime/scripts/run-tests.sh
 The Python lifecycle tests use real CMake file installation in temporary
 prefixes and do not install an input method on the host. The deb lifecycle
 test is only for disposable Linux runners (`RIMES_DEB_TEST_DISPOSABLE=1`).
+For a manual upgrade check, pass the new deb and optionally an older deb as the
+first and second arguments to `tests/deb_lifecycle.sh`; both need adjacent
+`.sha256` files. Without the second argument, the report clearly identifies
+the controlled old-version fixture. The script refuses an already installed
+`fcitx5-rimes` and must not be run on a personal desktop.
 
 1. CTest unit tests (keysyms, UTF-8 snapshot, path isolation)
 2. Live `librime` smoke: `nihao` + Space, number selection, paging, Escape
@@ -381,6 +401,9 @@ test is only for disposable Linux runners (`RIMES_DEB_TEST_DISPOSABLE=1`).
    manager, so toolkit IM modules may not commit even when DBus does)
 6. Weston headless is probed when installed; injecting keys into a
    seat-less compositor is a documented limitation
+7. A separate strict Xvfb/Xfwm4 suite reads actual GTK/Qt commits, xterm PTY
+   input and optional Firefox DOM values, including Buffer and password-field
+   checks; see [desktop acceptance](../validation/desktop-acceptance.md).
 
 GitHub Actions workflow `.github/workflows/linux-ime.yml` runs the same
 sequence on `ubuntu-latest`. It is **not** a macOS merge/release gate.

@@ -72,10 +72,20 @@ jobs:
           sudo apt-get remove -y fcitx5-rimes
 
 
-      - name: Install, reinstall and remove the exact deb
+      - name: Install, upgrade, reinstall and remove the exact deb
         env:
           RIMES_DEB_TEST_DISPOSABLE: '1'
-        run: platforms/linux/ime/tests/deb_lifecycle.sh "$RUNNER_TEMP"/rimes-deb/*.deb
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          packages=("$RUNNER_TEMP"/rimes-deb/*.deb)
+          [[ ${#packages[@]} == 1 ]]
+          previous=$(python3 platforms/linux/ime/scripts/fetch-previous-deb.py "${packages[0]}" "$RUNNER_TEMP/previous-deb")
+          if [[ -n "$previous" ]]; then
+            platforms/linux/ime/tests/deb_lifecycle.sh "${packages[0]}" "$previous"
+          else
+            platforms/linux/ime/tests/deb_lifecycle.sh "${packages[0]}"
+          fi
 
       - name: Name the immutable package artifact
         id: artifact
