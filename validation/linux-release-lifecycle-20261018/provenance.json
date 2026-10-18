@@ -54,7 +54,25 @@
     "localOldVersion": "1.1.5~lifecycle.1",
     "coverage": "controlled older-version payload fixture; no historical application migration claim",
     "publishedAmd64Candidate": "v1.1.4",
-    "publishedCandidateChecksumAndMetadata": "verified; actual amd64 upgrade pending CI"
+    "publishedCandidateChecksumAndMetadata": "verified; actual amd64 1.1.4 -> 1.1.5 lifecycle passed in CI 39111233064"
   },
-  "desktopAndVisualGate": "open under #179; package checks do not grant desktop or pixel acceptance"
+  "desktopAndVisualGate": "open under #179; package checks do not grant desktop or pixel acceptance",
+  "ci": {
+    "run": "https://github.com/scholay/xsime/actions/runs/39111233064",
+    "commit": "fff17a358e28441c3fee40308f79917408462538",
+    "conclusion": "success",
+    "package": {
+      "file": "fcitx5-rimes_1.1.5_amd64.deb",
+      "sha256": "169581c73e4071313ae87763b1269574e540452b2dc606d7eb2d45e9cc4001e0",
+      "downloadReadback": "matches tested package and uploaded checksum",
+      "architecture": "amd64",
+      "published": false
+    },
+    "oldPackage": {
+      "version": "1.1.4",
+      "sha256": "15adfbb237ec5330a358d74d0ef87b62c96bd9ba4a35f2f5072327a369e2ad1e"
+    },
+    "preservedFilesAtEveryPhase": 32,
+    "newUiCalibrationIncluded": false
+  }
 }

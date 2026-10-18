@@ -11,4 +11,6 @@
 - `source-tests.log`：22 项源安装、卸载、版本、历史 deb 选择与完整性检查通过；`release-tests.log`：5 项主线渠道与 23 项产品版本检查通过。
 - `previous-release-selection.json` 和 `previous-asset-verification.log`：实际读取 28 个 GitHub Release；本次 1.1.5 的 amd64 历史候选为 v1.1.4，已下载核验摘要、包名、版本与架构。arm64 没有历史候选，因此本地升级明确使用夹具，不能宣称旧版应用数据迁移已验证。真实 amd64 历史升级由 CI 另行记录。
 
+提交 `fff17a35` 的 [完整 CI](https://github.com/scholay/xsime/actions/runs/39111233064) 已通过。`ci-run.json` 记录两个 job 的最终结果，`ci-amd64-lifecycle.log` 记录已发布 `1.1.4` → `1.1.5` 的真实 amd64 升级、新装、重装、卸载及每步 32 个用户/CLI 文件保留。CI 产物下载读回与运行时测试使用的包及摘要一致，SHA-256 为 `169581c73e4071313ae87763b1269574e540452b2dc606d7eb2d45e9cc4001e0`。该包不包含后续 Capsule 视觉校准分支的改动。
+
 发布流程继续使用同一项目 v* Release，包含所有 Linux 模块路径的演练。公开 Release 必须等待本次包检查并附加相同字节的 deb/摘要；本记录没有触发发布。#180 保持开放，#179 的 GNOME/KDE、硬件录屏、多屏/睡眠/锁屏及像素验收尚未完成。

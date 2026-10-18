@@ -24,3 +24,5 @@ Debian/Ubuntu 用户优先使用项目 `v*` Release 附带的 `fcitx5-rimes_<ver
 源安装/卸载、历史包选择与完整性共 22 项 Python 检查通过；主线发布渠道 5 项、版本守卫 23 项通过。已从 GitHub 实际读取 28 个 Release，v1.1.4 的 amd64 deb 是本次 1.1.5 的历史升级候选，已下载校验摘要和包身份；没有 arm64 历史候选。本机容器为 Ubuntu 24.04 arm64，使用明确标记的旧版本夹具做升级。
 
 本次确切包、构建与生命周期证据见 [验收记录](../../../validation/linux-release-lifecycle-20261018/README.md)。#180 保持开放直至关联的 [桌面与像素验收](desktop-acceptance.md) 完成；流程接入和本地包通过不等于已经公开发布。
+
+`fff17a35` 的 [amd64 完整 CI](https://github.com/scholay/xsime/actions/runs/39111233064) 已通过：使用已发布 v1.1.4 包升级到 1.1.5，六阶段均保留 32 个用户/CLI 文件及其权限、所有者。已下载 CI 的 deb 与摘要读回验证；这是开发验收产物，没有创建公开 Release，也未包含后续界面校准。
