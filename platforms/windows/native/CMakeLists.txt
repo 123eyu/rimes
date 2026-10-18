@@ -126,7 +126,7 @@ add_library(RimesWorkbench STATIC
     src/workbench/connection_probe.cpp
     src/workbench/codex_cli.cpp src/workbench/local_translation.cpp
     src/workbench/runtime.cpp
-    src/workbench/settings_ui.cpp
+    src/workbench/settings_ui.cpp src/workbench/application_update.cpp
     src/workbench/metrics.cpp
     src/workbench/metrics_articles.cpp
     src/workbench/metrics_ui.cpp
@@ -568,7 +568,7 @@ if(RIMES_BUILD_TESTS)
 
     add_executable(RimesVisualPreview WIN32
         src/visual_preview/main.cpp
-        src/workbench/settings_ui.cpp
+        src/workbench/settings_ui.cpp src/workbench/application_update.cpp
         src/workbench/parity_settings.cpp
         src/workbench/connection_probe.cpp
         src/workbench/chord_profile.cpp

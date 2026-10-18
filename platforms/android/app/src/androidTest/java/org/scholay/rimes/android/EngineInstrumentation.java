@@ -119,6 +119,7 @@ public final class EngineInstrumentation extends Instrumentation {
                     engine.initialize(data.getAbsolutePath(),user.getAbsolutePath()); return engine;
                 }).get(10,java.util.concurrent.TimeUnit.SECONDS);
             }
+            AppUpdateContract.run();
             touchChecks=NativeTouchContract.run(this);
             java.util.concurrent.atomic.AtomicReference<Throwable> renderingError=new java.util.concurrent.atomic.AtomicReference<>();
             runOnMainSync(() -> {

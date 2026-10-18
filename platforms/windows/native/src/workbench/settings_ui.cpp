@@ -1,5 +1,6 @@
 ﻿#include "../core/product_brand.hpp"
 #include "settings_ui.hpp"
+#include "application_update.hpp"
 
 #include <dwmapi.h>
 #include <commctrl.h>
@@ -689,7 +690,8 @@ void SettingsUiHost::Relayout() {
   Place(peripheral_open_, {layout_.body.left,peripheral_y,layout_.body.left+220,peripheral_y+34}, dpi_, peripheral);
   SendMessageW(peripheral_open_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   const auto* home_link = draft_.page == ui::SettingsPage::kHome ? ui::HomeLink(draft_.subpage) : nullptr;
-  Place(home_action_, layout_.home_action, dpi_, home_link != nullptr);
+  Place(home_action_, layout_.home_action, dpi_, home_link != nullptr || (draft_.page == ui::SettingsPage::kHome && draft_.subpage == 0));
+  if (draft_.page == ui::SettingsPage::kHome && draft_.subpage == 0) SetWindowTextW(home_action_, L"检查更新…");
   if (home_link) SetWindowTextW(home_action_, home_link->action);
   SendMessageW(home_action_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   if (parity_) parity_->Layout(draft_.page, draft_.subpage, layout_.body, dpi_, fonts_.body);
@@ -1036,6 +1038,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       }
       if (LOWORD(wparam) == 417 && HIWORD(wparam) == BN_CLICKED) {
         if (self->draft_.page == ui::SettingsPage::kHome) {
+          if (self->draft_.subpage == 0) { ShowApplicationUpdate(hwnd); return 0; }
           if (const auto* link = ui::HomeLink(self->draft_.subpage)) {
             const bool opened = self->callbacks_.open_brand_link
                 ? self->callbacks_.open_brand_link(link->destination)

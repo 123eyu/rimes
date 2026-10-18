@@ -31,6 +31,11 @@ jobs:
       - name: Pinned plugin import tests
         run: python3 scripts/test-official-plugin-import.py
 
+      - name: Application update manifest contracts
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror -Iplatforms/windows/native/third_party Shared/AppUpdate/manifest_tests.cpp -o "$RUNNER_TEMP/update-contract"
+          "$RUNNER_TEMP/update-contract"
+
       - name: Release tool tests
         run: python3 -m unittest discover -s scripts/release -p "test*.py" -v
 

@@ -130,8 +130,9 @@ public final class AppUpdateActivity extends Activity {
             });
         });
     }
-    private static void validateAsset(JSONObject asset) throws Exception {
+    static void validateAsset(JSONObject asset) throws Exception {
         String version = asset.getString("version");
+        if (!version.matches("(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)\\.(0|[1-9][0-9]*)")) throw new Exception("Invalid version");
         String expected = "https://github.com/scholay/xsime/releases/download/v" + version + "/RIMES-Android-" + version + ".apk";
         if (!expected.equals(asset.getString("url")) || !asset.getString("sha256").matches("[a-f0-9]{64}") ||
                 asset.getLong("size") <= 0 || asset.getLong("size") > 512L * 1024 * 1024) throw new Exception("Invalid package metadata");

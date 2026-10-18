@@ -253,6 +253,7 @@ struct SettingsLayout {
   const float gap = static_cast<float>(m.choice_gap_dip);
   if (draft.page == SettingsPage::kHome) {
     layout.home_hero = {layout.body.left, layout.body.top, layout.body.right, layout.body.top + 168};
+    if (draft.subpage == 0) layout.home_action = {layout.body.left, layout.body.top + 220, layout.body.left + 160, layout.body.top + 254};
     if (HomeLink(draft.subpage))
       layout.home_action = {layout.body.left, layout.body.top + 106, layout.body.left + 160, layout.body.top + 140};
   }

@@ -1,4 +1,5 @@
 #include "translation_resources.hpp"
+#include "application_update.hpp"
 #include "native_buffer_metrics.hpp"
 #include "desktop.hpp"
 #include "official_catalog.hpp"
@@ -334,6 +335,7 @@ struct Settings {
       Add(body, Label("XSIME", "heading"));
       Add(body, Label(std::string("版本 ") + RIMES_PRODUCT_VERSION, "caption"));
       Add(body, Label("学术海 · 原生中文输入与文本工作台", "section"));
+      Add(body, Button("检查更新…", [this] { ShowApplicationUpdate(GTK_WINDOW(window)); }));
     } else if (route == "core.maintenance" && subpage == "logs-data") {
       Add(body, Label("用户词库、学习记录和工作台数据", "section"));
       Add(body, Button("打开数据目录…", [this] { OpenPath(UserRoot()); }));
