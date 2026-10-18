@@ -24,23 +24,6 @@ on:
       - 'scripts/platform-preview/**'
   push:
     branches: [main]
-    paths:
-      - 'platforms/windows/**'
-      - 'Shared/SchemeImport/**'
-      - 'Shared/CandidateMatrix/**'
-      - 'Shared/AppUpdate/**'
-      - 'scripts/input-schemes/fetch_fixture.py'
-      - 'OfficialPlugins'
-      - 'plugins.lock.json'
-      - 'scripts/prepare-official-plugins.py'
-      - 'scripts/test-official-plugin-import.py'
-      - 'scripts/sync-buffer-plugin-catalog.py'
-      - 'scripts/test-buffer-plugin-catalog.py'
-      - '.gitattributes'
-      - '.github/workflows/windows-ime.yml'
-      - '.github/workflows/windows-native.yml'
-      - 'rime-data/**'
-      - 'scripts/platform-preview/**'
   workflow_call:
     inputs:
       package_version:

@@ -1,9 +1,7 @@
 name: Linux IME
 
 on:
-  # Informational only. macOS CI remains the sole required merge/release gate
-  # (see PR #31 / RELEASE-REFERENCE.md). Do not add these jobs to the
-  # branch-protection required checks.
+  # Keep branch protection separate from the five-platform stable-release gate.
   pull_request:
     branches:
       - main
@@ -45,41 +43,6 @@ on:
   push:
     branches:
       - main
-    paths:
-      - "platforms/linux/**"
-      - "Shared/SchemeImport/**"
-      - "Shared/CandidateMatrix/**"
-      - "OfficialPlugins"
-      - "plugins.lock.json"
-      - "Catalog/buffer-plugins.json"
-      - "Sources/RimeBuffer/RimeUI.swift"
-      - "Sources/RimeBuffer/SettingsWindow.swift"
-      - "Sources/RimeBuffer/SettingsRouting.swift"
-      - "Sources/RimeBuffer/ShortcutPreferences.swift"
-      - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
-      - "Sources/RimeBuffer/AITextPlugins.swift"
-      - "Sources/RimeBuffer/Typing*.swift"
-      - "Sources/RimeBuffer/Metrics*.swift"
-      - "Sources/RimeBuffer/Statistics*.swift"
-      - "Sources/RimeBuffer/Chord*.swift"
-      - "Sources/RimeBuffer/BuiltInPlugins.swift"
-      - "Sources/RimeBuffer/BufferWindowController.swift"
-      - "Sources/RimeBuffer/BufferInlineView.swift"
-      - "Sources/RimeBuffer/Capsule*.swift"
-      - "Sources/RimeBuffer/Clipboard*.swift"
-      - "Sources/RimeBuffer/Mailbox/**"
-      - "Sources/RimeBuffer/Resources/PluginIcons/**"
-      - "scripts/prepare-official-plugins.py"
-      - "scripts/input-schemes/fetch_fixture.py"
-      - "scripts/input-schemes/repair-rime-table.py"
-      - "platforms/ios/scripts/prepare-lua.py"
-      - "platforms/ios/scripts/lua-sandbox/**"
-      - "platforms/ios/dependencies.lock.json"
-      - "rime-data/**"
-      - "scripts/platform-preview/**"
-      - ".github/workflows/linux-ime.yml"
-      - ".github/workflows/linux-deb.yml"
-      - "VERSION"
   workflow_dispatch:
 
 permissions:

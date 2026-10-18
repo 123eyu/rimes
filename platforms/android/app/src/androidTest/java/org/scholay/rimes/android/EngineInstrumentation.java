@@ -123,16 +123,18 @@ public final class EngineInstrumentation extends Instrumentation {
                 }).get(10,java.util.concurrent.TimeUnit.SECONDS);
             }
             AppUpdateContract.validateManifest();
+            // Offscreen pixel sweeps and the 1,000-draw benchmark must finish
+            // before the attached touch fixture owns an input channel. Otherwise
+            // its pending focus-loss event can time out behind the benchmark.
+            renderOnMain("icons", () -> iconChecks=KeyboardIconContract.run(getTargetContext()));
+            renderOnMain("keycaps", this::keycapRendering);
+            renderOnMain("chords", () -> chordChecks=ChordSurfaceContract.run(getTargetContext()));
+            renderOnMain("chord-readout", this::chordReadoutRetirement);
+            renderOnMain("buffer-rail", this::renderBufferRail);
+            renderOnMain("candidate-matrix", () -> bufferRenderingResult+="CANDIDATE_MATRIX checks="+CandidateMatrixContract.run(getTargetContext())+"\n");
+            renderOnMain("keyboard-height", () -> bufferRenderingResult+="HEIGHT_FIT checks="+KeyboardHeightContract.run(getTargetContext())+"\n");
+            renderOnMain("appearance", () -> bufferRenderingResult+="PET_APPEARANCE checks="+KeyboardAppearanceContract.run(getTargetContext())+"\n");
             touchChecks=NativeTouchContract.run(this);
-            java.util.concurrent.atomic.AtomicReference<Throwable> renderingError=new java.util.concurrent.atomic.AtomicReference<>();
-            runOnMainSync(() -> {
-                try { iconChecks=KeyboardIconContract.run(getTargetContext()); keycapRendering(); chordChecks=ChordSurfaceContract.run(getTargetContext()); chordReadoutRetirement(); renderBufferRail();
-                    bufferRenderingResult+="CANDIDATE_MATRIX checks="+CandidateMatrixContract.run(getTargetContext())+"\n";
-                    bufferRenderingResult+="HEIGHT_FIT checks="+KeyboardHeightContract.run(getTargetContext())+"\n";
-                    bufferRenderingResult+="PET_APPEARANCE checks="+KeyboardAppearanceContract.run(getTargetContext())+"\n"; }
-                catch(Throwable error) { renderingError.set(error); }
-            });
-            if(renderingError.get()!=null) throw renderingError.get();
             Bundle rendering=new Bundle(); rendering.putString("stream","NATIVE_TOUCH checks="+touchChecks+"\nVECTOR_ICONS checks="+iconChecks+"\nCHORD_SURFACE checks="+chordChecks+"\n"+bufferRenderingResult); sendStatus(0,rendering);
             if(renderingOnly) {
                 result.putString("stream","PASS native keycaps, chord and Buffer rail rendering\n"+bufferRenderingResult); finish(-1,result); return;
@@ -198,6 +200,14 @@ public final class EngineInstrumentation extends Instrumentation {
                 bitmap.recycle();
             }
         }
+    }
+    private void renderOnMain(String phase,Runnable contract) {
+        Bundle started=new Bundle(); started.putString("stream","RENDER_PHASE "+phase+" started\n"); sendStatus(0,started);
+        java.util.concurrent.atomic.AtomicReference<Throwable> failure=new java.util.concurrent.atomic.AtomicReference<>();
+        runOnMainSync(() -> { try { contract.run(); } catch(Throwable error) { failure.set(error); } });
+        if(failure.get()!=null) throw new AssertionError("Rendering phase "+phase+" failed",failure.get());
+        waitForIdleSync();
+        Bundle finished=new Bundle(); finished.putString("stream","RENDER_PHASE "+phase+" passed\n"); sendStatus(0,finished);
     }
     private void chordReadoutRetirement() {
         org.scholay.rimes.core.ChordGesture gesture=new org.scholay.rimes.core.ChordGesture(org.scholay.rimes.core.ChordProfile.builtIn());
