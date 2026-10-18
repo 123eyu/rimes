@@ -9,6 +9,7 @@ Linux 现在有两层，互相独立：
    规格见 [buffer/SPEC.md](buffer/SPEC.md) 与 [capsule/SPEC.md](capsule/SPEC.md)，
    真机清单见各自 `MANUAL-TEST.md` 与 [ime/MANUAL-TEST.md](ime/MANUAL-TEST.md)。
    **[Mailbox](mailbox/README.md)** 已有独立 GTK 窗口、三模块导航、兼容会话存储、AI 对话、真实 PTY 终端与手动成果收取；像素和真实桌面验收继续按路线图完成。
+   **[普通并击](chord/README.md)** 支持飞耀跨批配对、自定义键位、学习进度，以及呦呦音形的折梅、寒梅预设；意识流输入暂缓。
 2. **下面的 Data / Input-Schemes Preview** — 仍把同一批 57 个审核文件装进用户已有的
    Fcitx5 Rime 或 IBus Rime。数据包保持原样，不依赖上面的 addon。
 

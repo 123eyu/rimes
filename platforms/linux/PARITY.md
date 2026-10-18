@@ -37,7 +37,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 23 | P1 | [#173 Mailbox AI 对话工作区](https://github.com/scholay/xsime/issues/173) | 三渠道续聊、固定路由、流式预览、取消/重试和 GTK 交互已实现；双端截图与桌面验收继续跟进 |
 | 24 | P1 | [#174 Mailbox PTY 终端与手动成果收取](https://github.com/scholay/xsime/issues/174) | 已实现；[终端验证](mailbox/TERMINAL-VALIDATION.md)，实际桌面 / 像素仍待验收 |
 | 25 | P1 | [#175 意识流输入插件与独立 AI 渠道候选](https://github.com/scholay/xsime/issues/175) | 暂缓（维护者要求，不计完成） |
-| 26 | P1 | [#176 并击扩展与自定义键位](https://github.com/scholay/xsime/issues/176) | 待开发 |
+| 26 | P1 | [#176 并击扩展与自定义键位](https://github.com/scholay/xsime/issues/176) | 实现及回归已补齐：普通输入、草稿/应用分离、失败回退和本地课程；20 组双端截图的页面/卡片尺寸匹配，字体、控件细节及桌面验收待完成；意识流联动暂缓 |
 | 27 | P1 | [#177 日常输入统计与隐私聚合](https://github.com/scholay/xsime/issues/177) | 待开发 |
 | 28 | P1 | [#178 打字测速与文章练习](https://github.com/scholay/xsime/issues/178) | 待开发 |
 | 29 | P2 | [#179 Linux 桌面、宿主和跨模块验收](https://github.com/scholay/xsime/issues/179) | 待开发 |

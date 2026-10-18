@@ -544,6 +544,15 @@ private:
             } else {
                 output->caret_utf8 =
                     static_cast<std::size_t>(context.composition.cursor_pos);
+                if (context.composition.sel_start < 0 || context.composition.sel_end < 0 ||
+                    static_cast<std::size_t>(context.composition.sel_start) > output->preedit.size() ||
+                    static_cast<std::size_t>(context.composition.sel_end) > output->preedit.size()) {
+                    SetError(error, "librime selection is outside the preedit");
+                    ok = false;
+                } else {
+                    output->selection_start_utf8 = context.composition.sel_start;
+                    output->selection_end_utf8 = context.composition.sel_end;
+                }
             }
         }
 
@@ -604,6 +613,13 @@ private:
                     return false;
                 }
             }
+        }
+        output->raw_caret_utf8 = api_->get_caret_pos != nullptr ? api_->get_caret_pos(session)
+                                                               : output->raw_input.size();
+        if (output->raw_caret_utf8 > output->raw_input.size()) {
+            SetError(error, "librime caret is outside the raw input");
+            *output = EngineSnapshot{};
+            return false;
         }
         if (!output->preedit.empty()) {
             output->composing = true;

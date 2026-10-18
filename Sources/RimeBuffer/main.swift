@@ -645,6 +645,19 @@ if let index = CommandLine.arguments.firstIndex(of: "mailbox-chat-linux-contract
     } catch { fputs("Mailbox conversation export failed\n", stderr); exit(1) }
 }
 
+if let index = CommandLine.arguments.firstIndex(of: "chord-linux-ui-smoke"), index + 1 < CommandLine.arguments.count {
+    exit(runChordLinuxUISmoke(output: URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "chord-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        let fixture = try ChordLinuxFixtures.value()
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Chord fixture export failed: \(error.localizedDescription)\n", stderr); exit(1) }
+}
+
 if let index = CommandLine.arguments.firstIndex(of: "claude-linux-fixtures"), index + 1 < CommandLine.arguments.count {
     do {
         var fixture = try AITextClaudeLinuxContract.value()

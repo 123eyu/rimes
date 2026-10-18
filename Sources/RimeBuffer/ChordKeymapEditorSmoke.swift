@@ -143,6 +143,7 @@ func runChordKeymapEditorSmokeTest(outputURL: URL? = nil) -> Bool {
         }
         if let outputURL {
             try png.write(to: outputURL, options: .atomic)
+            try ChordLinuxRenderGeometry.save(pane, beside: outputURL)
             print("chord-keymap-ui-smoke: rendered \(outputURL.path)")
         }
         print("chord-keymap-ui-smoke: PASS editor actions, isolated storage, local tryout, \(Int(pane.bounds.width))×\(Int(pane.bounds.height)) render")

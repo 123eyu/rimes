@@ -118,3 +118,5 @@ platforms/linux/ime/.engine/
 /platforms/windows/translation/translate.py
 /platforms/linux/translation/
 /platforms/linux/ai/
+/platforms/linux/chord/core/chord_core.cpp
+/platforms/linux/chord/core/chord_core.hpp

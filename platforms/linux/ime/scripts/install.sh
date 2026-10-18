@@ -67,7 +67,7 @@ trap 'rm -rf "$WORK_DIR"' EXIT
 
 if [[ -z "$STAGE_DIR" ]]; then
     STAGE_DIR="$WORK_DIR/data"
-    python3 "$REPO_ROOT/scripts/platform-preview/preview.py" stage \
+    python3 "$SCRIPT_DIR/stage-data.py" \
         --repo-root "$REPO_ROOT" \
         --output-dir "$STAGE_DIR"
 fi

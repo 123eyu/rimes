@@ -114,6 +114,26 @@ void Theme(const std::string &name, GdkScreen *screen) {
       "px; } .shortcut-title { font-size: " + std::to_string(Visuals().at("metrics").at("shortcutTitleFont").get<int>()) +
       "px; font-weight: 600; } .shortcut-recorder { font-family: monospace; font-size: " +
       std::to_string(Visuals().at("metrics").at("shortcutRecorderFont").get<int>()) + "px; font-weight: 500; }"
+      ".chord-card { background: " + c("surfaceSecondary") + "; border: 0; box-shadow: inset 0 0 0 0.5px " + c("border") + "; border-radius: 8px; padding: 10px 12px; }"
+      ".chord-capture { background: " + c("surfaceTertiary") + "; border: 1px solid " + c("border") + "; border-radius: 6px; }"
+      ".chord-capture:focus { border-color: " + c("accentGreen") + "; }"
+      ".chord-key { padding: 0; font-size: 10px; } .chord-key.selected { background: " + c("accentGreen") + "; }"
+      ".chord-mappings treeview { background: " + c("surfaceTertiary") + "; color: " + c("textPrimary") + "; }"
+      ".chord-target { font-size: 34px; font-weight: 600; } .chord-hint { font-family: monospace; font-size: 14px; font-weight: 500; color: " + c("textSecondary") + "; }"
+      ".chord-feedback { font-size: 12px; font-weight: 500; }"
+      ".chord-surface { background: " + c("surface") + "; }"
+      "@define-color xsime_chord_row_even " + std::string(theme == "day" ? "#FFFFFF" : "#2B2E35") + ";"
+      "@define-color xsime_chord_row_odd " + std::string(theme == "day" ? "#F5F5F5" : "#1F1F1F") + ";"
+      ".chord-page entry { min-height: 14px; padding: 0 2px; border-radius: 0; color: " + c("textPrimary") + "; background: " + (theme == "day" ? "#FFFFFF" : "#34373D") + "; border-color: " + c("border") + "; }"
+      ".chord-page combobox { min-height: 16px; } .chord-page combobox button { min-height: 16px; padding: 0 7px; border: 0; background: #5B5E62; color: white; }"
+      ".chord-page button { min-height: 16px; padding: 0 8px; } .chord-page button label { font-size: 11px; }"
+      ".chord-page .chord-profiles button { min-height: 20px; } .chord-page .chord-profiles label { font-size: 13px; }"
+      ".chord-page .chord-key { min-height: 20px; padding: 0; } .chord-page .chord-key label { font-size: 13px; }"
+      ".chord-page .chord-key.selected { background: #96979B; color: #101010; }"
+      ".chord-page .chord-mode button { padding: 0 5px; }"
+      ".chord-page .caption { color: " + c("textSecondary") + "; }"
+      ".chord-editor label.chord-label { color: " + c("textSecondary") + "; } .chord-editor label.chord-preview { color: " + c("textPrimary") + "; }"
+      ".chord-page spinbutton { min-height: 20px; padding: 0; border: 0; } .chord-page spinbutton entry { min-height: 18px; }"
       ".panel { background: " +
       c("surfaceSecondary") + "; border: 1px solid " + c("border") +
       "; border-radius: 10px; padding: 11px; }"

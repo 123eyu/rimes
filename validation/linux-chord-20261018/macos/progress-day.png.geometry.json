@@ -1,0 +1,181 @@
+[
+  {
+    "height" : 246,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4524FlyChordProgressPageView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 246,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "全部 427 项 · 已练 0 · 已掌握 0",
+    "type" : "NSTextField",
+    "width" : 144.5,
+    "x" : 22,
+    "y" : 0
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 144.5,
+    "x" : 22,
+    "y" : 0
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 21
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "双键基础",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 616,
+    "y" : 31
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 616,
+    "y" : 31
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "掌握 0\/127 · 尝试 0 次 · 正确率 0%",
+    "type" : "NSTextField",
+    "width" : 162,
+    "x" : 502,
+    "y" : 51
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 162,
+    "x" : 502,
+    "y" : 51
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 82
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "三键进阶",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 616,
+    "y" : 92
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 616,
+    "y" : 92
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "掌握 0\/204 · 尝试 0 次 · 正确率 0%",
+    "type" : "NSTextField",
+    "width" : 164.5,
+    "x" : 499.5,
+    "y" : 112
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 164.5,
+    "x" : 499.5,
+    "y" : 112
+  },
+  {
+    "height" : 53,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 143
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "四键强化",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 616,
+    "y" : 153
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 616,
+    "y" : 153
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "掌握 0\/96 · 尝试 0 次 · 正确率 0%",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 506,
+    "y" : 173
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 506,
+    "y" : 173
+  },
+  {
+    "fontSize" : 13,
+    "height" : 32,
+    "text" : "清空学习进度…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 122,
+    "x" : 17,
+    "y" : 199
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 122,
+    "x" : 17,
+    "y" : 199
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "清空学习进度…",
+    "type" : "NSButtonTextField",
+    "width" : 100,
+    "x" : 28,
+    "y" : 205
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 100,
+    "x" : 28,
+    "y" : 205
+  }
+]

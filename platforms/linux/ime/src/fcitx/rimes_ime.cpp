@@ -1,4 +1,5 @@
 #include "session/protected_input.hpp"
+#include "chord/chord_service.hpp"
 #include "rimes_ime.hpp"
 #include <glib.h>
 
@@ -67,6 +68,12 @@ RimesIme::RimesIme(Instance* instance)
             << "librime background deploy started; keys pass through until ready";
     }
 
+    try {
+        chord_ = std::make_unique<ChordService>(*this, options, !imported_schema_.empty());
+    } catch (const std::exception&) {
+        FCITX_LOGC(rimes_log, Error) << "Chord settings unavailable; ordinary input remains enabled";
+    }
+
     auto post = [this, alive = alive_](std::function<void()> work) {
         if (!alive->load()) return;
         dispatcher_.schedule([this, alive, work = std::move(work)]() {
@@ -126,8 +133,12 @@ RimesIme::RimesIme(Instance* instance)
                 {[this] { gateway_->SetModuleEnabled(true); }, [this] { gateway_->SetModuleEnabled(false); codex_images_.Cancel(); }});
         else plugins_.Register(rimes::plugins::CompiledAdapters().at(id), {[] {}, [] {}});
     }
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.fly-chord-learning"),
+        {[this] { if (chord_) chord_->Enable(true); },
+         [this] { if (chord_) chord_->Enable(false); }});
     WatchPluginPackages();
     WatchConfiguration();
+    if (chord_ && engine_.IsHealthy() && !engine_.IsDeploying()) chord_->EngineReady();
     capsule_->BindModuleValidation([this](auto module) {
         const auto lease = plugins_.Authorize(rimes::capsule::ModulePlugin(module), "capsule.navigate");
         return lease && acceptsPluginResult(*lease);
@@ -275,6 +286,7 @@ RimesIme::RimesIme(Instance* instance)
     focus_watch_ = instance_->watchEvent(EventType::InputContextFocusIn, EventWatcherPhase::Default,
         [this](Event& event) {
             auto* ic = static_cast<InputContextEvent&>(event).inputContext();
+            if (auto* state = ic->propertyFor(&factory_)) state->cancelChord(false);
             const bool protected_field = ProtectedInput(ic->capabilityFlags());
             gateway_->SetInputProtected(protected_field);
             buffer_->OnPasswordField(ic, protected_field);
@@ -323,6 +335,7 @@ RimesIme::~RimesIme() {
     plugin_watch_.reset();
     if (plugin_watch_fd_ >= 0) close(plugin_watch_fd_);
     plugin_binding_.reset();
+    chord_.reset();
     plugins_.Shutdown();
     gateway_.reset();
     if (alive_) {
@@ -436,6 +449,7 @@ void RimesIme::ApplyConfiguration() {
         configuration_revision_ = revision;
         if (gateway_) gateway_->Configure(config);
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
+        if (chord_) chord_->Configure(config);
         buffer_->ConfigurePluginOptions(config);
         buffer_->ConfigureImageSkill(rimes::runtime::ConfigurationStore::NormalizePlugin("builtin.codex-cli",
             config.at("plugins").value("builtin.codex-cli", rimes::runtime::Json::object())).at("skill") == "imagegen");
@@ -512,6 +526,7 @@ void RimesIme::HandleDeployReady() {
 }
 
 void RimesIme::OnDeployReady() {
+    if (chord_) chord_->EngineReady();
     if (deploy_announced_) {
         return;
     }
@@ -534,6 +549,7 @@ void RimesIme::keyEvent(const InputMethodEntry& entry, KeyEvent& keyEvent) {
     if (state == nullptr) {
         return;
     }
+    if (state->prepareChord(keyEvent)) return;
     if (buffer_ && buffer_->HandleEarlyKey(keyEvent, state->composing())) {
         return;
     }

@@ -32,6 +32,7 @@
 #include "desktop/desktop_shortcuts.hpp"
 
 namespace fcitx {
+class ChordService;
 
 FCITX_CONFIGURATION(RimesConfiguration,
     Option<bool> verticalCandidates{this, "VerticalCandidates", "竖向排列候选", true};
@@ -64,6 +65,7 @@ public:
     CapsuleService& capsule() { return *capsule_; }
     rimes::plugins::Registry& plugins() { return plugins_; }
     bool acceptsPluginResult(const rimes::plugins::Lease& lease);
+    ChordService* chord() { return chord_.get(); }
 
     // Single commit path. Buffer intercepts here the way macOS intercepts
     // before Delivery.insert (see rime_hooks.hpp).
@@ -88,6 +90,7 @@ private:
     std::shared_ptr<std::atomic<bool>> alive_;
     std::unique_ptr<BufferService> buffer_;
     std::unique_ptr<CapsuleService> capsule_;
+    std::unique_ptr<ChordService> chord_;
     std::unique_ptr<rimes::mailbox::GatewayServer> gateway_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> destroy_watch_;
     std::unique_ptr<HandlerTableEntry<EventHandler>> capability_watch_;

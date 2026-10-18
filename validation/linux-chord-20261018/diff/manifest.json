@@ -1,0 +1,262 @@
+[
+  {
+    "page": "keymap-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1752
+    ],
+    "changed_pixel_fraction": 0.26410177153249337,
+    "mean_absolute_channel_error": 15.590305035478623,
+    "pair": "keymap-day-pair.png",
+    "difference_4x": "keymap-day-diff.png"
+  },
+  {
+    "page": "keymap-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1752
+    ],
+    "changed_pixel_fraction": 0.95563563868064,
+    "mean_absolute_channel_error": 8.609940938013807,
+    "pair": "keymap-night-pair.png",
+    "difference_4x": "keymap-night-diff.png"
+  },
+  {
+    "page": "keymap-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1752
+    ],
+    "changed_pixel_fraction": 0.8109050156350172,
+    "mean_absolute_channel_error": 9.1395436188632,
+    "pair": "keymap-quiet-pair.png",
+    "difference_4x": "keymap-quiet-diff.png"
+  },
+  {
+    "page": "keymap-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      1752
+    ],
+    "changed_pixel_fraction": 0.9556274613703863,
+    "mean_absolute_channel_error": 8.957509605613778,
+    "pair": "keymap-rasta-pair.png",
+    "difference_4x": "keymap-rasta-diff.png"
+  },
+  {
+    "page": "lessons-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      394
+    ],
+    "changed_pixel_fraction": 0.04860878798016086,
+    "mean_absolute_channel_error": 5.15319876950824,
+    "pair": "lessons-day-pair.png",
+    "difference_4x": "lessons-day-diff.png"
+  },
+  {
+    "page": "lessons-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      394
+    ],
+    "changed_pixel_fraction": 0.9836152604249996,
+    "mean_absolute_channel_error": 4.894644597326662,
+    "pair": "lessons-night-pair.png",
+    "difference_4x": "lessons-night-diff.png"
+  },
+  {
+    "page": "lessons-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      394
+    ],
+    "changed_pixel_fraction": 0.7340716041481826,
+    "mean_absolute_channel_error": 6.169263523046266,
+    "pair": "lessons-quiet-pair.png",
+    "difference_4x": "lessons-quiet-diff.png"
+  },
+  {
+    "page": "lessons-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      394
+    ],
+    "changed_pixel_fraction": 0.9982818931537533,
+    "mean_absolute_channel_error": 5.549938426929249,
+    "pair": "lessons-rasta-pair.png",
+    "difference_4x": "lessons-rasta-diff.png"
+  },
+  {
+    "page": "practice-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      472
+    ],
+    "changed_pixel_fraction": 0.09388658880093245,
+    "mean_absolute_channel_error": 7.024507066193968,
+    "pair": "practice-day-pair.png",
+    "difference_4x": "practice-day-diff.png"
+  },
+  {
+    "page": "practice-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      472
+    ],
+    "changed_pixel_fraction": 0.994413518041863,
+    "mean_absolute_channel_error": 4.588627414080585,
+    "pair": "practice-night-pair.png",
+    "difference_4x": "practice-night-diff.png"
+  },
+  {
+    "page": "practice-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      472
+    ],
+    "changed_pixel_fraction": 0.5216751250546355,
+    "mean_absolute_channel_error": 5.257499736940088,
+    "pair": "practice-quiet-pair.png",
+    "difference_4x": "practice-quiet-diff.png"
+  },
+  {
+    "page": "practice-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      472
+    ],
+    "changed_pixel_fraction": 0.7558778714001263,
+    "mean_absolute_channel_error": 4.83020292036974,
+    "pair": "practice-rasta-pair.png",
+    "difference_4x": "practice-rasta-diff.png"
+  },
+  {
+    "page": "progress-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      492
+    ],
+    "changed_pixel_fraction": 0.11571971020569805,
+    "mean_absolute_channel_error": 15.31470189701897,
+    "pair": "progress-day-pair.png",
+    "difference_4x": "progress-day-diff.png"
+  },
+  {
+    "page": "progress-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      492
+    ],
+    "changed_pixel_fraction": 0.9879461061802595,
+    "mean_absolute_channel_error": 10.340482582834424,
+    "pair": "progress-night-pair.png",
+    "difference_4x": "progress-night-diff.png"
+  },
+  {
+    "page": "progress-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      492
+    ],
+    "changed_pixel_fraction": 0.6695800428634658,
+    "mean_absolute_channel_error": 11.067090156933086,
+    "pair": "progress-quiet-pair.png",
+    "difference_4x": "progress-quiet-diff.png"
+  },
+  {
+    "page": "progress-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      492
+    ],
+    "changed_pixel_fraction": 0.9996505695715983,
+    "mean_absolute_channel_error": 10.681876111382891,
+    "pair": "progress-rasta-pair.png",
+    "difference_4x": "progress-rasta-diff.png"
+  },
+  {
+    "page": "settings-day",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      366
+    ],
+    "changed_pixel_fraction": 0.0736393599198334,
+    "mean_absolute_channel_error": 6.060451145870846,
+    "pair": "settings-day-pair.png",
+    "difference_4x": "settings-day-diff.png"
+  },
+  {
+    "page": "settings-night",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      366
+    ],
+    "changed_pixel_fraction": 0.9822952385425964,
+    "mean_absolute_channel_error": 4.528026993596067,
+    "pair": "settings-night-pair.png",
+    "difference_4x": "settings-night-diff.png"
+  },
+  {
+    "page": "settings-quiet",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      366
+    ],
+    "changed_pixel_fraction": 0.7189648018538526,
+    "mean_absolute_channel_error": 4.850996341355212,
+    "pair": "settings-quiet-pair.png",
+    "difference_4x": "settings-quiet-diff.png"
+  },
+  {
+    "page": "settings-rasta",
+    "status": "requires_review",
+    "comparison_color_space": "sRGB (embedded ICC profiles converted)",
+    "size": [
+      1396,
+      366
+    ],
+    "changed_pixel_fraction": 0.9979508196721312,
+    "mean_absolute_channel_error": 4.365812286992239,
+    "pair": "settings-rasta-pair.png",
+    "difference_4x": "settings-rasta-diff.png"
+  }
+]

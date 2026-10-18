@@ -533,9 +533,10 @@
         "提供复制/编辑/导入/导出键位、草稿与应用分离；部署验证失败恢复旧配置和方案。",
         "验证普通输入的键位类型、焦点/编辑/方案变化取消及单键不吞字；意识流联动随第 25 项暂缓，不作为本轮依赖。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 176,
-      "url": "https://github.com/scholay/xsime/issues/176"
+      "url": "https://github.com/scholay/xsime/issues/176",
+      "visual_status": "requires_review"
     },
     {
       "order": 27,

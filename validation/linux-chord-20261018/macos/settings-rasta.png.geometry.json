@@ -1,0 +1,253 @@
+[
+  {
+    "height" : 183,
+    "type" : "RimeBuffer.FlyChordConfigurationPageView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 183,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 51,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 0
+  },
+  {
+    "height" : 31,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 10
+  },
+  {
+    "height" : 31,
+    "type" : "NSStackView",
+    "width" : 166,
+    "x" : 36,
+    "y" : 10
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "已停用",
+    "type" : "NSTextField",
+    "width" : 37,
+    "x" : 34,
+    "y" : 10
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 37,
+    "x" : 34,
+    "y" : 10
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "请先在“插件 · 内置扩展”中启用并击。",
+    "type" : "NSTextField",
+    "width" : 170,
+    "x" : 34,
+    "y" : 28
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 170,
+    "x" : 34,
+    "y" : 28
+  },
+  {
+    "height" : 31,
+    "type" : "NSView",
+    "width" : 340,
+    "x" : 210,
+    "y" : 10
+  },
+  {
+    "fontSize" : 13,
+    "height" : 27,
+    "text" : "设为当前输入方案",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 116,
+    "x" : 552,
+    "y" : 13.5
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 116,
+    "x" : 552,
+    "y" : 13.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "设为当前输入方案",
+    "type" : "NSButtonTextField",
+    "width" : 100,
+    "x" : 560,
+    "y" : 18.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 100,
+    "x" : 560,
+    "y" : 18.5
+  },
+  {
+    "height" : 34,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 59
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "当前键位方案：飞耀输入 · 并击",
+    "type" : "NSTextField",
+    "width" : 630,
+    "x" : 34,
+    "y" : 69
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 630,
+    "x" : 34,
+    "y" : 69
+  },
+  {
+    "height" : 60,
+    "type" : "_TtC10RimeBufferP33_2CBE4697F5820CEAF22737668BF97B4521FlyChordCardStackView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 101
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "组键间隔",
+    "type" : "NSTextField",
+    "width" : 630,
+    "x" : 34,
+    "y" : 111
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 630,
+    "x" : 34,
+    "y" : 111
+  },
+  {
+    "height" : 20,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 131
+  },
+  {
+    "fontSize" : 12,
+    "height" : 20,
+    "text" : "0.10",
+    "type" : "NSTextField",
+    "width" : 64,
+    "x" : 36,
+    "y" : 131
+  },
+  {
+    "height" : 20,
+    "type" : "NSTextFieldBezelView",
+    "width" : 64,
+    "x" : 36,
+    "y" : 131
+  },
+  {
+    "height" : 15,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 60,
+    "x" : 38,
+    "y" : 134
+  },
+  {
+    "height" : 28,
+    "type" : "NSStepper",
+    "width" : 19,
+    "x" : 105,
+    "y" : 127
+  },
+  {
+    "height" : 28,
+    "type" : "NSWidgetView",
+    "width" : 19,
+    "x" : 105,
+    "y" : 127
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "秒",
+    "type" : "NSTextField",
+    "width" : 14,
+    "x" : 127,
+    "y" : 134.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 14,
+    "x" : 127,
+    "y" : 134.5
+  },
+  {
+    "fontSize" : 13,
+    "height" : 27,
+    "text" : "恢复默认",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 141,
+    "y" : 129
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 141,
+    "y" : 129
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "恢复默认",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 149,
+    "y" : 134
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 149,
+    "y" : 134
+  },
+  {
+    "height" : 20,
+    "type" : "NSView",
+    "width" : 447,
+    "x" : 215,
+    "y" : 131
+  }
+]

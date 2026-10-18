@@ -32,6 +32,10 @@ The [Mailbox host](../mailbox/README.md) now provides independent navigation, pe
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in
 `src/engine/rime_hooks.hpp`.
+The [ordinary chord extension](../chord/README.md) provides FlyYao timed batches,
+exact-context cross-batch pairing, custom keymaps, local practice and the two
+native Yoyo presets. Saved drafts and applied snapshots are independent;
+deployment verifies real Rime output and rolls back failed changes.
 
 ## What works
 
@@ -49,7 +53,8 @@ The [Mailbox host](../mailbox/README.md) now provides independent navigation, pe
   A replacement reports a locked-directory error until the owner finishes
   exiting. The lock file remains on disk; the OS releases ownership on exit.
 - Isolated user directory: `$XDG_DATA_HOME/rimes` (not `…/fcitx5/rime`)
-- Shared data: `$prefix/share/rimes/data` (policy-staged 57-file closure)
+- Shared data: `$prefix/share/rimes/data` (the 57-file core closure plus 12
+  hash-verified native chord files and their Linux manifest)
 - Default Buffer workbench (configurable, default `Ctrl+Shift+B`): Rime commits
   stage as blocks, Return tap/hold and the paper plane send through the same
   `commitText` → `commitString` path
@@ -64,7 +69,7 @@ The [Mailbox host](../mailbox/README.md) now provides independent navigation, pe
 
 macOS-only behaviour that is **not** reproduced here: custom candidate chrome,
 Capsule iCloud, advanced capture editing and audio,
-Buffer stream/music plugins, cross-batch chord pairing,
+Buffer stream/music plugins,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
 Local Chinese/English translation, incremental units and OpenAI-compatible
@@ -260,6 +265,8 @@ user dictionaries (`*.userdb`), `schemes/learning`, imported schemes, notes,
 runtime configuration and logs. It never recursively removes `share/rimes`
 or `~/.local`, and it does not remove the private engine or restart Fcitx5.
 `DESTDIR` is supported for staged installs and uninstalls.
+The same preservation applies to `chord-keymaps` (drafts, applied snapshot and
+scheme selection) and `learning/*_progress.json` (chord practice records).
 
 For installations made before the persistent manifest was added, keep the
 original build directory and corresponding source checkout, and run:

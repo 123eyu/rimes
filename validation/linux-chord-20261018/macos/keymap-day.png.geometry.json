@@ -1,0 +1,2691 @@
+[
+  {
+    "height" : 876,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 136,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA219ChordKeymapCardView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 0
+  },
+  {
+    "height" : 20,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 10
+  },
+  {
+    "fontSize" : 13,
+    "height" : 25,
+    "text" : "我的飞耀方案",
+    "type" : "NSPopUpButton",
+    "width" : 207,
+    "x" : 33,
+    "y" : 9
+  },
+  {
+    "height" : 25,
+    "type" : "NSButtonBezelView",
+    "width" : 207,
+    "x" : 33,
+    "y" : 9
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "我的飞耀方案",
+    "type" : "NSButtonTextField",
+    "width" : 172,
+    "x" : 42,
+    "y" : 11
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 172,
+    "x" : 42,
+    "y" : 11
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "复制方案",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 237,
+    "y" : 8
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 237,
+    "y" : 8
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "复制方案",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 245,
+    "y" : 13
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 245,
+    "y" : 13
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "新建",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 50,
+    "x" : 304,
+    "y" : 8
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 50,
+    "x" : 304,
+    "y" : 8
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "新建",
+    "type" : "NSButtonTextField",
+    "width" : 34,
+    "x" : 312,
+    "y" : 13
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 34,
+    "x" : 312,
+    "y" : 13
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "导入…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 59,
+    "x" : 349,
+    "y" : 8
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 59,
+    "x" : 349,
+    "y" : 8
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "导入…",
+    "type" : "NSButtonTextField",
+    "width" : 43,
+    "x" : 357,
+    "y" : 13
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 43,
+    "x" : 357,
+    "y" : 13
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "导出…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 59,
+    "x" : 403,
+    "y" : 8
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 59,
+    "x" : 403,
+    "y" : 8
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "导出…",
+    "type" : "NSButtonTextField",
+    "width" : 43,
+    "x" : 411,
+    "y" : 13
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 43,
+    "x" : 411,
+    "y" : 13
+  },
+  {
+    "height" : 20,
+    "type" : "NSView",
+    "width" : 199,
+    "x" : 463,
+    "y" : 10
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "自定义方案 · 427 条映射",
+    "type" : "NSTextField",
+    "width" : 114,
+    "x" : 34,
+    "y" : 38
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 114,
+    "x" : 34,
+    "y" : 38
+  },
+  {
+    "height" : 19,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 59
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "名称",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 34,
+    "y" : 61.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 34,
+    "y" : 61.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "我的飞耀方案",
+    "type" : "NSTextField",
+    "width" : 521,
+    "x" : 65,
+    "y" : 59
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 521,
+    "x" : 65,
+    "y" : 59
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 517,
+    "x" : 67,
+    "y" : 62
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "删除方案…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 81,
+    "x" : 587,
+    "y" : 56.5
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 81,
+    "x" : 587,
+    "y" : 56.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "删除方案…",
+    "type" : "NSButtonTextField",
+    "width" : 65,
+    "x" : 595,
+    "y" : 61.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 65,
+    "x" : 595,
+    "y" : 61.5
+  },
+  {
+    "height" : 16,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 86
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "音节边界",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 87
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 87
+  },
+  {
+    "fontSize" : 13,
+    "height" : 22,
+    "text" : "每个多键批次（兼容飞耀）",
+    "type" : "NSPopUpButton",
+    "width" : 202,
+    "x" : 83,
+    "y" : 84
+  },
+  {
+    "height" : 22,
+    "type" : "NSButtonBezelView",
+    "width" : 202,
+    "x" : 83,
+    "y" : 84
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "每个多键批次（兼容飞耀）",
+    "type" : "NSButtonTextField",
+    "width" : 174,
+    "x" : 91,
+    "y" : 85
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 174,
+    "x" : 91,
+    "y" : 85
+  },
+  {
+    "height" : 16,
+    "type" : "NSView",
+    "width" : 374,
+    "x" : 288,
+    "y" : 86
+  },
+  {
+    "height" : 16,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 110
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "输出编码",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 111
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 111
+  },
+  {
+    "fontSize" : 13,
+    "height" : 22,
+    "text" : "全拼",
+    "type" : "NSPopUpButton",
+    "width" : 97,
+    "x" : 83,
+    "y" : 108
+  },
+  {
+    "height" : 22,
+    "type" : "NSButtonBezelView",
+    "width" : 97,
+    "x" : 83,
+    "y" : 108
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "全拼",
+    "type" : "NSButtonTextField",
+    "width" : 69,
+    "x" : 91,
+    "y" : 109
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 69,
+    "x" : 91,
+    "y" : 109
+  },
+  {
+    "height" : 16,
+    "type" : "NSView",
+    "width" : 479,
+    "x" : 183,
+    "y" : 110
+  },
+  {
+    "height" : 187,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA219ChordKeymapCardView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 146
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "键区与和弦",
+    "type" : "NSTextField",
+    "width" : 59,
+    "x" : 34,
+    "y" : 156
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 59,
+    "x" : 34,
+    "y" : 156
+  },
+  {
+    "height" : 19,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 178
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "左区",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 34,
+    "y" : 180.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 34,
+    "y" : 180.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "qwertasdfgzxcvb",
+    "type" : "NSTextField",
+    "width" : 280.5,
+    "x" : 65,
+    "y" : 178
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 280.5,
+    "x" : 65,
+    "y" : 178
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 276.5,
+    "x" : 67,
+    "y" : 181
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "右区",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 350.5,
+    "y" : 180.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 350.5,
+    "y" : 180.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "yuiophjklnm,.",
+    "type" : "NSTextField",
+    "width" : 280.5,
+    "x" : 381.5,
+    "y" : 178
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 280.5,
+    "x" : 381.5,
+    "y" : 178
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 276.5,
+    "x" : 383.5,
+    "y" : 181
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentedControl",
+    "width" : 255,
+    "x" : 34,
+    "y" : 204
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemView",
+    "width" : 65,
+    "x" : 34,
+    "y" : 204
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemBezelView",
+    "width" : 65,
+    "x" : 34,
+    "y" : 204
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "选择和弦",
+    "type" : "NSSegmentItemLabelView",
+    "width" : 60,
+    "x" : 37,
+    "y" : 205
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 60,
+    "x" : 37,
+    "y" : 205
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemView",
+    "width" : 63,
+    "x" : 99,
+    "y" : 204
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemBezelView",
+    "width" : 63,
+    "x" : 99,
+    "y" : 204
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "设为左区",
+    "type" : "NSSegmentItemLabelView",
+    "width" : 60,
+    "x" : 100,
+    "y" : 205
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 60,
+    "x" : 100,
+    "y" : 205
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemView",
+    "width" : 63,
+    "x" : 162,
+    "y" : 204
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemBezelView",
+    "width" : 63,
+    "x" : 162,
+    "y" : 204
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "设为右区",
+    "type" : "NSSegmentItemLabelView",
+    "width" : 60,
+    "x" : 163,
+    "y" : 205
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 60,
+    "x" : 163,
+    "y" : 205
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemView",
+    "width" : 64,
+    "x" : 225,
+    "y" : 204
+  },
+  {
+    "height" : 21,
+    "type" : "NSSegmentItemBezelView",
+    "width" : 64,
+    "x" : 225,
+    "y" : 204
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "移出键区",
+    "type" : "NSSegmentItemLabelView",
+    "width" : 60,
+    "x" : 226,
+    "y" : 205
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 60,
+    "x" : 226,
+    "y" : 205
+  },
+  {
+    "height" : 92,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 231
+  },
+  {
+    "height" : 28,
+    "type" : "NSStackView",
+    "width" : 470,
+    "x" : 36,
+    "y" : 231
+  },
+  {
+    "height" : 28,
+    "type" : "NSView",
+    "width" : 0,
+    "x" : 36,
+    "y" : 231
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "Q L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 33,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 33,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "Q L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 44,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 44,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "W L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 80,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 80,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "W L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 91,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 91,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "E L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 127,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 127,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "E L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 138,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 138,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "R L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 174,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 174,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "R L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 185,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 185,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "T L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 221,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 221,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "T L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 232,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 232,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "Y R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 268,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 268,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "Y R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 279,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 279,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "U R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 315,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 315,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "U R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 326,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 326,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "I R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 362,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 362,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "I R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 373,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 373,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "O R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 409,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 409,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "O R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 420,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 420,
+    "y" : 236
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "P R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 456,
+    "y" : 226
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 456,
+    "y" : 230
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "P R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 467,
+    "y" : 236
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 467,
+    "y" : 236
+  },
+  {
+    "height" : 28,
+    "type" : "NSStackView",
+    "width" : 435,
+    "x" : 36,
+    "y" : 263
+  },
+  {
+    "height" : 28,
+    "type" : "NSView",
+    "width" : 12,
+    "x" : 36,
+    "y" : 263
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "A L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 45,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 45,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "A L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 56,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 56,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "S L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 92,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 92,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "S L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 103,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 103,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "D L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 139,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 139,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "D L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 150,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 150,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "F L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 186,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 186,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "F L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 197,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 197,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "G L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 233,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 233,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "G L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 244,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 244,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "H R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 280,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 280,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "H R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 291,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 291,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "J R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 327,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 327,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "J R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 338,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 338,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "K R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 374,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 374,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "K R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 385,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 385,
+    "y" : 268
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "L R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 421,
+    "y" : 258
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 421,
+    "y" : 262
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "L R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 432,
+    "y" : 268
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 432,
+    "y" : 268
+  },
+  {
+    "height" : 28,
+    "type" : "NSStackView",
+    "width" : 447,
+    "x" : 36,
+    "y" : 295
+  },
+  {
+    "height" : 28,
+    "type" : "NSView",
+    "width" : 24,
+    "x" : 36,
+    "y" : 295
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "Z L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 57,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 57,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "Z L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 68,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 68,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "X L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 104,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 104,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "X L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 115,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 115,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "C L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 151,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 151,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "C L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 162,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 162,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "V L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 198,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 198,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "V L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 209,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 209,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "B L",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 245,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 245,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "B L",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 256,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 256,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "N R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 292,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 292,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "N R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 303,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 303,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : "M R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 339,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 339,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "M R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 350,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 350,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : ", R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 386,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 386,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : ", R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 397,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 397,
+    "y" : 300
+  },
+  {
+    "fontSize" : 13,
+    "height" : 40,
+    "text" : ". R",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 57,
+    "x" : 433,
+    "y" : 290
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 57,
+    "x" : 433,
+    "y" : 294
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : ". R",
+    "type" : "NSButtonTextField",
+    "width" : 35,
+    "x" : 444,
+    "y" : 300
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 35,
+    "x" : 444,
+    "y" : 300
+  },
+  {
+    "height" : 319,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA219ChordKeymapCardView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 343
+  },
+  {
+    "height" : 19,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 353
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "映射表",
+    "type" : "NSTextField",
+    "width" : 37,
+    "x" : 34,
+    "y" : 355.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 37,
+    "x" : 34,
+    "y" : 355.5
+  },
+  {
+    "height" : 19,
+    "type" : "NSView",
+    "width" : 249,
+    "x" : 76,
+    "y" : 353
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "",
+    "type" : "NSSearchField",
+    "width" : 330,
+    "x" : 332,
+    "y" : 353
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 330,
+    "x" : 332,
+    "y" : 353
+  },
+  {
+    "height" : 19,
+    "text" : "search",
+    "type" : "NSButton",
+    "width" : 24,
+    "x" : 334,
+    "y" : 353
+  },
+  {
+    "height" : 13,
+    "type" : "NSButtonImageView",
+    "width" : 13,
+    "x" : 339.5,
+    "y" : 356
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 284,
+    "x" : 357,
+    "y" : 356
+  },
+  {
+    "height" : 18,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 380
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "和弦键",
+    "type" : "NSTextField",
+    "width" : 164,
+    "x" : 39,
+    "y" : 382
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 164,
+    "x" : 39,
+    "y" : 382
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "输出拼音",
+    "type" : "NSTextField",
+    "width" : 259,
+    "x" : 202,
+    "y" : 382
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 259,
+    "x" : 202,
+    "y" : 382
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "类型",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 460,
+    "y" : 382
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 460,
+    "y" : 382
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 170,
+    "x" : 487,
+    "y" : 382
+  },
+  {
+    "height" : 195,
+    "type" : "NSScrollView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 406
+  },
+  {
+    "height" : 193,
+    "type" : "_NSScrollViewContentBackgroundView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 407
+  },
+  {
+    "height" : 193,
+    "type" : "NSClipView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 407
+  },
+  {
+    "height" : 10675,
+    "type" : "NSTableView",
+    "width" : 624,
+    "x" : 37,
+    "y" : -8718
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 407
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + K + M",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 407
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 407
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "nong",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 407
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 407
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 407
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 407
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 432
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + I + O",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 432
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 432
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "nen",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 432
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 432
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 432
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 432
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 457
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + M + ,",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 457
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 457
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "neng",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 457
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 457
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 457
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 457
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 482
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + O + J",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 482
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 482
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "nei",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 482
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 482
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 482
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 482
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 507
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + I + L",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 507
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 507
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "nie",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 507
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 507
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 507
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 507
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 532
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + L + M",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 532
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 532
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "niao",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 532
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 532
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 532
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 532
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 557
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + U + O",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 557
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 557
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "niang",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 557
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 557
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 557
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 557
+  },
+  {
+    "height" : 25,
+    "type" : "NSTableRowView",
+    "width" : 624,
+    "x" : 37,
+    "y" : 582
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "D + V + K + L",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 45,
+    "y" : 582
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 160,
+    "x" : 45,
+    "y" : 582
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "nou",
+    "type" : "NSTextField",
+    "width" : 255,
+    "x" : 222,
+    "y" : 582
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 255,
+    "x" : 222,
+    "y" : 582
+  },
+  {
+    "fontSize" : 11,
+    "height" : 25,
+    "text" : "完整音节",
+    "type" : "NSTextField",
+    "width" : 158,
+    "x" : 494,
+    "y" : 582
+  },
+  {
+    "height" : 25,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 158,
+    "x" : 494,
+    "y" : 582
+  },
+  {
+    "height" : 193,
+    "type" : "NSScroller",
+    "width" : 16,
+    "x" : 645,
+    "y" : 407
+  },
+  {
+    "height" : 19,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 609
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "和弦",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 34,
+    "y" : 611.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 34,
+    "y" : 611.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "dvkm",
+    "type" : "NSTextField",
+    "width" : 130,
+    "x" : 65,
+    "y" : 609
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 130,
+    "x" : 65,
+    "y" : 609
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 126,
+    "x" : 67,
+    "y" : 612
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "输出",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 200,
+    "y" : 611.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 200,
+    "y" : 611.5
+  },
+  {
+    "fontSize" : 11,
+    "height" : 19,
+    "text" : "nong",
+    "type" : "NSTextField",
+    "width" : 160,
+    "x" : 231,
+    "y" : 609
+  },
+  {
+    "height" : 19,
+    "type" : "NSTextFieldBezelView",
+    "width" : 160,
+    "x" : 231,
+    "y" : 609
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 156,
+    "x" : 233,
+    "y" : 612
+  },
+  {
+    "fontSize" : 13,
+    "height" : 22,
+    "text" : "完整音节",
+    "type" : "NSPopUpButton",
+    "width" : 84,
+    "x" : 394,
+    "y" : 608.5
+  },
+  {
+    "height" : 22,
+    "type" : "NSButtonBezelView",
+    "width" : 84,
+    "x" : 394,
+    "y" : 608.5
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "完整音节",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 402,
+    "y" : 609.5
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 402,
+    "y" : 609.5
+  },
+  {
+    "height" : 19,
+    "type" : "NSView",
+    "width" : 181,
+    "x" : 481,
+    "y" : 609
+  },
+  {
+    "height" : 16,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 636
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "更新映射",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 30,
+    "y" : 632
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 30,
+    "y" : 632
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "更新映射",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 38,
+    "y" : 637
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 38,
+    "y" : 637
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "清空编辑",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 97,
+    "y" : 632
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 97,
+    "y" : 632
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "清空编辑",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 105,
+    "y" : 637
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 105,
+    "y" : 637
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "删除映射",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 164,
+    "y" : 632
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 164,
+    "y" : 632
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "删除映射",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 172,
+    "y" : 637
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 172,
+    "y" : 637
+  },
+  {
+    "height" : 16,
+    "type" : "NSView",
+    "width" : 358,
+    "x" : 237,
+    "y" : 636
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "试译和弦",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 596,
+    "y" : 632
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 596,
+    "y" : 632
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "试译和弦",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 604,
+    "y" : 637
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 604,
+    "y" : 637
+  },
+  {
+    "height" : 113,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA219ChordKeymapCardView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 672
+  },
+  {
+    "height" : 16,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 682
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "本地试打",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 34,
+    "y" : 683
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 34,
+    "y" : 683
+  },
+  {
+    "height" : 16,
+    "type" : "NSView",
+    "width" : 463,
+    "x" : 87,
+    "y" : 682
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "开始试打",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 551,
+    "y" : 678
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 551,
+    "y" : 678
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "开始试打",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 559,
+    "y" : 683
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 559,
+    "y" : 683
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "停止",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 50,
+    "x" : 618,
+    "y" : 678
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 50,
+    "x" : 618,
+    "y" : 678
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "停止",
+    "type" : "NSButtonTextField",
+    "width" : 34,
+    "x" : 626,
+    "y" : 683
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 34,
+    "x" : 626,
+    "y" : 683
+  },
+  {
+    "height" : 48,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA223ChordKeymapRecorderView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 706
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "DVKM → nong  ·  完整音节",
+    "type" : "NSTextField",
+    "width" : 127.5,
+    "x" : 34,
+    "y" : 762
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 127.5,
+    "x" : 34,
+    "y" : 762
+  },
+  {
+    "height" : 57,
+    "type" : "_TtC10RimeBufferP33_2396714946AEAC8A6FA5159119E5CAA219ChordKeymapCardView",
+    "width" : 650,
+    "x" : 24,
+    "y" : 795
+  },
+  {
+    "height" : 16,
+    "type" : "NSStackView",
+    "width" : 626,
+    "x" : 36,
+    "y" : 805
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "保存草稿",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 72,
+    "x" : 30,
+    "y" : 801
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 72,
+    "x" : 30,
+    "y" : 801
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "保存草稿",
+    "type" : "NSButtonTextField",
+    "width" : 56,
+    "x" : 38,
+    "y" : 806
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56,
+    "x" : 38,
+    "y" : 806
+  },
+  {
+    "fontSize" : 11,
+    "height" : 27,
+    "text" : "应用键位方案",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 94,
+    "x" : 97,
+    "y" : 801
+  },
+  {
+    "height" : 27,
+    "type" : "NSButtonBezelView",
+    "width" : 94,
+    "x" : 97,
+    "y" : 801
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "应用键位方案",
+    "type" : "NSButtonTextField",
+    "width" : 78,
+    "x" : 105,
+    "y" : 806
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 78,
+    "x" : 105,
+    "y" : 806
+  },
+  {
+    "height" : 16,
+    "type" : "NSView",
+    "width" : 470,
+    "x" : 192,
+    "y" : 805
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "",
+    "type" : "NSTextField",
+    "width" : 4,
+    "x" : 34,
+    "y" : 829
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 4,
+    "x" : 34,
+    "y" : 829
+  }
+]

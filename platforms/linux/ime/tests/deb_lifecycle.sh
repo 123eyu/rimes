@@ -45,6 +45,11 @@ printf '%s\n' 'keep Mailbox window preferences' > "$DATA/mailbox/window.json"
 printf '%s\n' 'keep private ChatGPT credential' > "$DATA/ai/codex-home/auth.json"
 printf '%s\n' 'keep original generated image' > "$DATA/ai/codex-home/generated_images/fixture.png"
 printf '%s\n' 'keep generation ownership metadata' > "$DATA/mailbox/generations/fixture/.lock"
+mkdir -p "$DATA/chord-keymaps" "$DATA/learning"
+printf '%s\n' 'keep saved keymap draft' > "$DATA/chord-keymaps/00000000-0000-4000-8000-000000000001.json"
+printf '%s\n' 'keep separately applied keymap' > "$DATA/chord-keymaps/active-profile.json"
+printf '%s\n' 'keep ordinary input scheme selection' > "$DATA/chord-keymaps/state.json"
+printf '%s\n' 'keep chord learning counts and mastery' > "$DATA/learning/my_combo_progress.json"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
 sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
@@ -63,6 +68,19 @@ RIMES_USER_DIR="$WORK/gateway-status" /usr/bin/rimes-gateway --status | python3 
 RIMES_USER_DIR="$WORK/resource-status" /usr/bin/rimes-translation --status | python3 -c 'import json,sys; assert json.load(sys.stdin)["state"] == "missing"'
 [[ -f /usr/share/applications/org.scholay.rimes.settings.desktop ]]
 /usr/bin/rimes-settings --help
+RIMES_USER_DIR="$WORK/chord-settings" NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings xvfb-run -a \
+    /usr/bin/rimes-settings --render "$WORK/settings-render"
+python3 - "$WORK/settings-render/manifest.json" <<'PY'
+import json, sys, hashlib
+from pathlib import Path
+pages = json.load(open(sys.argv[1]))
+assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.fly-chord-learning'} == {'settings', 'keymap', 'lessons', 'practice', 'progress'}
+data = Path('/usr/share/rimes/data')
+lock = json.loads((data / 'linux-native-chord-manifest.json').read_text())
+assert lock['schemas'] == ['yoyo-yx', 'yoyo-yx-hm'] and len(lock['files']) == 12
+for name, digest in lock['files'].items():
+    assert hashlib.sha256((data / name).read_bytes()).hexdigest() == digest, name
+PY
 [[ -f /usr/share/rimes/data/default.yaml ]]
 for program in /usr/bin/rimes-gateway /usr/bin/rimes-mailbox /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins /usr/bin/rimes-translation /usr/libexec/rimes/rimes-capsule-preview /usr/libexec/rimes/rimes-capsule-capture /usr/libexec/rimes/rimes-mailbox-file; do
     ldd "$program" > "$WORK/ldd.txt"

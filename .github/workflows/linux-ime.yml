@@ -20,6 +20,8 @@ on:
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
       - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Chord*.swift"
+      - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Capsule*.swift"
@@ -53,6 +55,8 @@ on:
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
       - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Chord*.swift"
+      - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
       - "Sources/RimeBuffer/BufferInlineView.swift"
       - "Sources/RimeBuffer/Capsule*.swift"
@@ -131,7 +135,7 @@ jobs:
 
       - name: Real pinned offline translation engine
         run: |
-          python3 scripts/platform-preview/preview.py stage --repo-root "$PWD" --output-dir "$RUNNER_TEMP/translation-shared"
+          python3 platforms/linux/ime/scripts/stage-data.py --repo-root "$PWD" --output-dir "$RUNNER_TEMP/translation-shared"
           python3 platforms/linux/runtime/tests/translation_engine_smoke.py platforms/linux/ime/build/runtime/rimes-translation \
             --fcitx-build platforms/linux/ime/build --shared-data "$RUNNER_TEMP/translation-shared"
 
@@ -139,6 +143,15 @@ jobs:
         run: |
           RIMES_USER_DIR="$RUNNER_TEMP/settings-profile" xvfb-run -a \
             platforms/linux/ime/build/runtime/rimes-settings --render "$RUNNER_TEMP/settings-render"
+
+      - name: Ordinary chord input, deployment rollback and native page fixtures
+        run: |
+          platforms/linux/ime/build/rimes-chord-engine-tests "$RUNNER_TEMP/translation-shared"
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/rimes-chord-fcitx-e2e platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings GDK_SCALE=2 \
+            xvfb-run -a -s "-screen 0 2560x2000x24" platforms/linux/ime/build/runtime/rimes-chord-ui-tests \
+            "$RUNNER_TEMP/settings-render/chord"
 
       - name: Codex CLI text and persistent Mailbox images through real Fcitx
         run: |

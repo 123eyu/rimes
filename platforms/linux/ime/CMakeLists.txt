@@ -195,6 +195,11 @@ rimes_harden(rimes-deploy)
 install(TARGETS rimes-deploy DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rimes")
 add_dependencies(RimesEngine rimes-deploy)
 
+add_library(RimesChordEngine STATIC src/chord/chord_session.cpp)
+target_link_libraries(RimesChordEngine PUBLIC RimesEngine RimesChordCore)
+set_target_properties(RimesChordEngine PROPERTIES POSITION_INDEPENDENT_CODE ON)
+rimes_harden(RimesChordEngine)
+
 if(RIMES_BUILD_FCITX5)
     find_package(Gettext REQUIRED)
     find_package(Fcitx5Core REQUIRED)
@@ -209,6 +214,7 @@ if(RIMES_BUILD_FCITX5)
         src/fcitx/rimes_candidate.cpp
         src/fcitx/rimes_ime.cpp
         src/fcitx/rimes_state.cpp
+        src/chord/chord_service.cpp
         src/session/session_monitor.cpp
         src/desktop/workspace_launcher.cpp
         src/desktop/desktop_shortcuts.cpp
@@ -219,7 +225,7 @@ if(RIMES_BUILD_FCITX5)
         src/capsule/capsule_history_service.cpp
         src/capsule/capsule_capture_service.cpp
     )
-    target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
+    target_link_libraries(rimes PRIVATE RimesChordEngine yaml-cpp::yaml-cpp Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(RimesXCB REQUIRED IMPORTED_TARGET xcb)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
@@ -452,6 +458,10 @@ if(RIMES_BUILD_TESTS)
     rimes_harden(rimes-deployment-shutdown-tests)
     add_test(NAME RimesDeploymentShutdown COMMAND rimes-deployment-shutdown-tests)
     set_tests_properties(RimesDeploymentShutdown PROPERTIES TIMEOUT 15)
+
+    add_executable(rimes-chord-engine-tests tests/chord_engine_test.cpp)
+    target_link_libraries(rimes-chord-engine-tests PRIVATE RimesChordEngine)
+    rimes_harden(rimes-chord-engine-tests)
 
     add_executable(rimes-engine-smoke tests/rime_engine_smoke.cpp)
     target_link_libraries(rimes-engine-smoke PRIVATE RimesEngine)
@@ -796,6 +806,10 @@ if(RIMES_BUILD_TESTS)
         add_executable(rimes-codex-fcitx-e2e tests/codex_fcitx_e2e.cpp)
         target_link_libraries(rimes-codex-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesEngine RimesMailboxCore)
         rimes_harden(rimes-codex-fcitx-e2e)
+        add_executable(rimes-chord-fcitx-e2e tests/chord_fcitx_e2e.cpp)
+        target_link_libraries(rimes-chord-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesChordCore RimesDesktopUI)
+        target_compile_definitions(rimes-chord-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-chord-fcitx-e2e)
 
         add_executable(rimes-gateway-fcitx-e2e tests/gateway_fcitx_e2e.cpp)
         target_include_directories(rimes-gateway-fcitx-e2e PRIVATE "${RIMES_MAILBOX_ROOT}/tests")

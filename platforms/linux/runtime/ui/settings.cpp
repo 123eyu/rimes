@@ -7,6 +7,8 @@
 #include "gateway_access.hpp"
 #include "codex_channel.hpp"
 #include "claude_channel.hpp"
+#include "chord_editor.hpp"
+#include "chord_core.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -29,6 +31,8 @@ struct Settings {
                         BundledPackages(), CompiledAdapters(),
                         RIMES_PRODUCT_VERSION};
   Json saved = config.Load();
+  Json routes = [] { auto value = Visuals().at("routes"); value.push_back(rimes::chord::Contract().at("route")); return value; }();
+  std::unique_ptr<ChordPane> chord_pane;
   GtkWidget *window = nullptr, *root = nullptr, *content = nullptr,
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
@@ -67,6 +71,7 @@ struct Settings {
       std::make_shared<std::atomic<bool>>(true);
   ~Settings() {
     alive->store(false);
+    chord_pane.reset();
     codex_worker.Shutdown();
     claude_worker.Shutdown();
 #ifdef RIMES_GATEWAY_CLIPBOARD
@@ -120,6 +125,10 @@ struct Settings {
     gtk_window_set_default_size(GTK_WINDOW(window), Metric("settingsWidth"),
                                 Metric("settingsHeight"));
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
+    g_signal_connect(window, "delete-event", G_CALLBACK(+[](GtkWidget*, GdkEvent*, gpointer data) -> gboolean {
+      auto* self = static_cast<Settings*>(data);
+      return self->chord_pane && !self->chord_pane->CanLeave();
+    }), this);
     // GtkOffscreenWindow can allocate its minimum instead of the requested
     // default after a page switch. A render fixture has an exact canvas;
     // interactive windows retain their independent resizable minimum.
@@ -134,6 +143,7 @@ struct Settings {
                      G_CALLBACK(+[](GtkWidget *, gpointer p) {
                        auto *self = static_cast<Settings *>(p);
                        self->alive->store(false);
+                       self->chord_pane.reset();
                        self->window = nullptr;
                        if (!self->rendering && !self->application_window)
                          gtk_main_quit();
@@ -159,7 +169,7 @@ struct Settings {
       gtk_widget_set_margin_start(bar, 10);
       gtk_widget_set_valign(bar, GTK_ALIGN_CENTER);
       Add(bar, IconButton("xmark", "关闭设置",
-                          [this] { gtk_widget_destroy(window); }));
+                          [this] { if (!chord_pane || chord_pane->CanLeave()) gtk_widget_destroy(window); }));
       Add(bar, Label("XSIME 设置", "tiny"), true);
       gtk_container_add(GTK_CONTAINER(titlebar), bar);
     }
@@ -181,7 +191,7 @@ struct Settings {
     gtk_widget_set_margin_start(group, 8);
     gtk_widget_set_size_request(group, -1, 19);
     Add(sidebar, group);
-    for (const auto &r : Visuals().at("routes")) {
+    for (const auto &r : routes) {
       const std::string id = r.at("id"), title = r.at("title"),
                         icon = r.at("icon");
       auto *button = Button("", [this, id] { Select(id); }, "navigation");
@@ -209,12 +219,14 @@ struct Settings {
     }, this);
   }
   const Json &Route() const {
-    for (const auto &r : Visuals().at("routes"))
+    for (const auto &r : routes)
       if (r.at("id") == route)
         return r;
     throw std::runtime_error("Unknown route");
   }
   void Select(std::string next, const std::string &page = "") {
+    if (chord_pane && !chord_pane->CanLeave()) return;
+    chord_pane.reset();
     StopShortcutRecording();
 #ifdef RIMES_GATEWAY_CLIPBOARD
     if (gateway_clipboard) gateway_clipboard->CancelWrites();
@@ -274,7 +286,11 @@ struct Settings {
     gtk_widget_set_margin_end(body, 24);
     gtk_widget_set_margin_bottom(body, 22);
     gtk_container_add(GTK_CONTAINER(scroll), body);
-    if (route == "core.plugins")
+    if (route == "extension.fly-chord-learning") {
+      chord_pane = std::make_unique<ChordPane>(GTK_WINDOW(window), subpage, rendering,
+          [this] { saved = config.Load(); });
+      Add(body, chord_pane->Widget());
+    } else if (route == "core.plugins")
       Plugins(body);
     else if (route == "core.connectors" && subpage == "ai-model")
       Connectors(body);
@@ -1718,7 +1734,7 @@ int main(int argc, char **argv) {
         std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n';
         return 0;
       }
-      for (const auto &route : Visuals().at("routes"))
+      for (const auto &route : app.routes)
         for (const auto &page : route.at("subpages")) {
           app.Select(route.at("id"), page[0]);
           gtk_window_resize(GTK_WINDOW(app.window), 980, 680);

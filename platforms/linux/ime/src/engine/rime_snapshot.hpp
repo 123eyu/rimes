@@ -28,6 +28,11 @@ struct EngineSnapshot {
     std::string raw_input;
     std::string commit_text;
     std::size_t caret_utf8 = 0;
+    // Keep raw-input caret and marked selection distinct from the formatted
+    // preedit cursor. Cross-batch chords may replace only the exact insertion
+    // that this private session still owns.
+    std::size_t raw_caret_utf8 = 0;
+    std::size_t selection_start_utf8 = 0, selection_end_utf8 = 0;
     int page_no = 0;
     int page_size = 0;
     int highlighted = -1;

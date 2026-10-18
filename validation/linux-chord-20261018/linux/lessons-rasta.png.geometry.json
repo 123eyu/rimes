@@ -1,0 +1,207 @@
+[
+  {
+    "classes": [
+      "background",
+      "chord-surface"
+    ],
+    "height": 197,
+    "type": "GtkOffscreenWindow",
+    "width": 698,
+    "x": 0,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-page"
+    ],
+    "height": 175,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 0
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "双键基础",
+    "type": "GtkLabel",
+    "width": 592,
+    "x": 36,
+    "y": 10
+  },
+  {
+    "classes": [
+      "tiny",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "127 项",
+    "type": "GtkLabel",
+    "width": 26,
+    "x": 636,
+    "y": 10
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "已练 0/127 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 30
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 61
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 71
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "三键进阶",
+    "type": "GtkLabel",
+    "width": 589,
+    "x": 36,
+    "y": 71
+  },
+  {
+    "classes": [
+      "tiny",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "204 项",
+    "type": "GtkLabel",
+    "width": 29,
+    "x": 633,
+    "y": 71
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "已练 0/204 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 91
+  },
+  {
+    "classes": [
+      "vertical",
+      "chord-card"
+    ],
+    "height": 53,
+    "type": "GtkBox",
+    "width": 650,
+    "x": 24,
+    "y": 122
+  },
+  {
+    "classes": [
+      "horizontal"
+    ],
+    "height": 14,
+    "type": "GtkBox",
+    "width": 626,
+    "x": 36,
+    "y": 132
+  },
+  {
+    "classes": [
+      "name",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "四键强化",
+    "type": "GtkLabel",
+    "width": 594,
+    "x": 36,
+    "y": 132
+  },
+  {
+    "classes": [
+      "tiny",
+      "chord-label"
+    ],
+    "height": 14,
+    "text": "96 项",
+    "type": "GtkLabel",
+    "width": 24,
+    "x": 638,
+    "y": 132
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 13,
+    "text": "已练 0/96 · 已掌握 0 · 连续正确 3 次即掌握",
+    "type": "GtkLabel",
+    "width": 626,
+    "x": 36,
+    "y": 152
+  },
+  {
+    "classes": [
+      "caption",
+      "chord-label"
+    ],
+    "height": 1,
+    "text": "",
+    "type": "GtkLabel",
+    "width": 1,
+    "x": 0,
+    "y": 0
+  }
+]

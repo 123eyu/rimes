@@ -41,7 +41,7 @@ WORKDIR=$(mktemp -d /tmp/rimes-deb.XXXXXX)
 trap 'rm -rf "$WORKDIR"' EXIT
 
 STAGE="$WORKDIR/data"
-python3 "$REPO_ROOT/scripts/platform-preview/preview.py" stage \
+python3 "$SCRIPT_DIR/stage-data.py" \
     --repo-root "$REPO_ROOT" \
     --output-dir "$STAGE"
 
@@ -54,6 +54,9 @@ cmake -S "$IME_ROOT" -B "$BUILD_DIR" \
 cmake --build "$BUILD_DIR" -j"$(nproc)"
 ctest --test-dir "$BUILD_DIR" --output-on-failure
 "$BUILD_DIR/rimes-engine-smoke" "$STAGE" "$WORKDIR/smoke-user"
+"$BUILD_DIR/rimes-chord-engine-tests" "$STAGE"
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/rimes-chord-fcitx-e2e" "$BUILD_DIR" . test-data
 
 ROOT="$WORKDIR/root"
 RIMES_IME_STAGE_DIR="$STAGE" DESTDIR="$ROOT" \

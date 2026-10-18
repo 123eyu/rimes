@@ -40,7 +40,7 @@
     "native/macos/ChordOutputEncoding.swift": "b1fefc26673e9ae49eb45400297009e926a9135c7bc7a5a19ffa1187cab7aa8d",
     "native/macos/DailyInputMetrics.swift": "55892e268679a2b9a824f11a97b01126954b7fe88adb283594d11f2643a39ba7",
     "native/macos/FlyChordLearning.swift": "2688cca368c1a7640ba8001e82372a79af0a04641c215b347532bb59e210bb29",
-    "native/macos/FlyChordLearningSettingsViewController.swift": "c1e0455712b056372e60ba53e272e462a16d853492c6d3ce6f97b697186d63b3",
+    "native/macos/FlyChordLearningSettingsViewController.swift": "b9fc9a4eef4ba1f0ef62d91676edef343165954f327ddd45dcef6fe86a261566",
     "native/macos/KeyFrequencyStore.swift": "7c78593d70230699954cdab3df55f93cbbff0601bc2289ea610d0072c7b0c724",
     "native/macos/KeyboardHeatmapView.swift": "2184969c9436ce04ef97b9672fe404ce5f1a5cd810adce14b98e94c44f8b4b87",
     "native/macos/Mailbox/MailboxModules.swift": "9d03fa00da11812b5aa31d8dcbcc0aeba13087c348cfc2ebc25d3b54f4b8b77f",
@@ -72,6 +72,8 @@
     "native/shared/Chord.swift": "2f241f8c8d9e0320992596665f5662445cf1a7acbcb37e561c2c69c463b7087c",
     "native/shared/ChordEncoding.swift": "b7d16dbd81ed70ea4c005afa62a38f427e97aa7988c5e77b50e17885ecfad0b1",
     "native/shared/TextArt.swift": "b394e467999379d875f7d8e334939ebbbfb8cc319b46bb93c18c51ad1de6e115",
+    "native/shared/chord/chord_core.cpp": "c8ff70a59475f9e50673e4e6dd1e87fdba281ed62a0b43191d9a71eb666d00ac",
+    "native/shared/chord/chord_core.hpp": "3b9bf94a4ef8e23a4a7c40079cc80d1b12fbccc72cd5849b34f09c12616e0102",
     "native/shared/openai/chat_codec.cpp": "f10cb221b9c194834a361c42913c8bfde784582414d9923960229fc0d150388c",
     "native/shared/openai/chat_codec.hpp": "17c9a09980c920a4e5b77416e040d3311eca603c2a0e4b80fe6e05ef545b7a52",
     "native/shared/openai/chat_codec_tests.cpp": "7d0970676a1bcb5112b8b3fa05aa557d2697e0075e9ba7cd4c2089ef54c6a1b4",
@@ -87,7 +89,7 @@
     "plugins/capsule.temporary/plugin.json": "364e9db20a95bfcf53f9059aeb54e4e481ef86b9895985000d8e5bb955cee57f",
     "plugins/claude-code-cli/plugin.json": "959b0381d2e786e95052caac877c148fffdc8150b17037108d3b503f2dbc4bec",
     "plugins/codex-cli/plugin.json": "58f6be64bf0977eebbd400b214f18d1b31ff4c8157752f04dbdef43ea5ee6b84",
-    "plugins/fly-chord-learning/plugin.json": "1c36b6fd323617ae85e159d76e9a1ade41e77c8163320fc882cd1571a257a031",
+    "plugins/fly-chord-learning/plugin.json": "356d3ffa4ec9409da5cf4d32a49a7fb674e31bd6619a7e6b66d08d9ec2ed8869",
     "plugins/latex/plugin.json": "8ef6044b827f00dbe876d2c351002804ee5d05603af59d5a8181b99bb69fd8f4",
     "plugins/mailbox.chat/plugin.json": "6f3f9391c59d6edb8251494b098638335a68f60a467e7ff843a7bf705217e1e5",
     "plugins/mailbox.inbox/plugin.json": "91801be8a90c5e39657e807b5220c518998e4c8ad774da240857b604582fbd9d",
@@ -101,9 +103,9 @@
     "plugins/statistics/plugin.json": "199d67d2df5aec4fb240595345efeb568d5a8913b0f3a86f63ce63fdc4600361",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "eb2f031f4488628e3aa90900d0eadcea4ddd8d7faa0f782b01b8655e051a5f44",
-    "source-map.json": "aa2e4792f45a52e1ba78d42af7ac362cc12e44a6e308908d50edea377597ae84"
+    "source-map.json": "18402344bf6584ecb3efb8998ca125a6619eb3cd8a2e692576a40f194c1d3d58"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "873ebe997b4102b3b0933968ae4a54fb4fe8af9d",
+  "revision": "5de220697deeae2c87eba7cc05eb7398affa6370",
   "schemaVersion": 1
 }
