@@ -224,6 +224,12 @@ int X11Test() {
     auto* error = xcb_request_check(other, xcb_grab_key_checked(other, false, root,
         XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_SHIFT, code, XCB_GRAB_MODE_ASYNC, XCB_GRAB_MODE_ASYNC));
     Check(!error, "fixture conflict grab"); std::free(error);
+    const auto window = xcb_generate_id(other);
+    xcb_create_window(other, XCB_COPY_FROM_PARENT, window, root, 0, 0, 200, 100, 0,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT, XCB_COPY_FROM_PARENT, 0, nullptr);
+    xcb_map_window(other, window);
+    xcb_set_input_focus(other, XCB_INPUT_FOCUS_PARENT, window, XCB_CURRENT_TIME);
+    xcb_flush(other);
     EventLoop loop; std::vector<std::string> opened;
     DesktopShortcuts host(loop, [&](const std::string& id) { opened.push_back(id); return Json{{"ok", true}}; }, [] { return Json::object(); });
     const auto config = rimes::runtime::DefaultShortcuts(); host.Configure(config, true);
@@ -236,12 +242,15 @@ int X11Test() {
                 Check(now(CLOCK_MONOTONIC) - started < 5000000, "X11 deadline");
                 if (step == 0) Check(std::system("xdotool keydown ctrl keydown shift keydown b") == 0, "XTest press");
                 else if (step == 1) {
-                    Check(opened == std::vector<std::string>{"buffer"}, "first X11 key not delivered");
+                    Check(opened.empty(), "X11 action ran while keyboard was grabbed");
                     Check(std::system("xdotool keydown b keydown b") == 0, "XTest held press");
                 } else if (step == 2) {
-                    Check(opened.size() == 1, "held shortcut repeated");
+                    Check(opened.empty(), "held shortcut ran before release");
                     Check(std::system("xdotool keyup b keyup shift keyup ctrl") == 0, "XTest release");
-                } else if (step == 3) Check(std::system("xdotool key ctrl+shift+b") == 0, "XTest fresh press");
+                } else if (step == 3) {
+                    Check(opened == std::vector<std::string>{"buffer"}, "released X11 key not delivered");
+                    Check(std::system("xdotool key ctrl+shift+b") == 0, "XTest fresh press");
+                }
                 else if (step == 4) {
                     Check(opened.size() == 2, "key release did not rearm");
                     xcb_ungrab_key(other, code, root, XCB_MOD_MASK_CONTROL | XCB_MOD_MASK_SHIFT); xcb_flush(other);
@@ -256,14 +265,30 @@ int X11Test() {
                     Check(std::system("xdotool key ctrl+shift+b") == 0, "disabled XTest press");
                 } else if (step == 6) {
                     Check(opened.size() == 3, "disabled X11 grab remained active");
+                    host.Configure(config, true);
+                    Check(std::system("xdotool keydown ctrl keydown shift keydown b") == 0, "focus-change press");
+                } else if (step == 7) {
+                    Check(opened.size() == 3, "held focus-change action ran early");
+                    xcb_set_input_focus(other, XCB_INPUT_FOCUS_PARENT, root, XCB_CURRENT_TIME);
+                    xcb_flush(other);
+                    std::free(xcb_get_input_focus_reply(other, xcb_get_input_focus(other), nullptr));
+                    Check(std::system("xdotool keyup b keyup shift keyup ctrl") == 0, "focus-change release");
+                } else if (step == 8) {
+                    Check(opened.size() == 3, "shortcut opened in a different window after release");
+                    Check(std::system("xdotool keydown ctrl keydown shift keydown b") == 0, "disable-during-hold press");
+                } else if (step == 9) {
+                    host.Configure(config, false);
+                    Check(std::system("xdotool keyup b keyup shift keyup ctrl") == 0, "disable-during-hold release");
+                } else if (step == 10) {
+                    Check(opened.size() == 3, "disabled pending X11 action ran");
                     result = 0; loop.exit(); return true;
                 }
                 ++step; timer->setTime(now(CLOCK_MONOTONIC) + 150000); timer->setOneShot();
             } catch (const std::exception& error) { std::cerr << "X11 step " << step << ": " << error.what() << '\n'; loop.exit(); }
             return true;
         });
-    loop.exec(); xcb_disconnect(other);
-    if (!result) std::cout << "X11: checked conflicts, real key events, held/released keys, Caps Lock and disable passed\n";
+    loop.exec(); xcb_destroy_window(other, window); xcb_disconnect(other);
+    if (!result) std::cout << "X11: checked conflicts, release-only activation, held keys, Caps Lock, focus-change cancellation and disable passed\n";
     return result;
 }
 int main(int argc, char** argv) {

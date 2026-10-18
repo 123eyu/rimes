@@ -245,23 +245,28 @@ fcitx5 --disable=wayland,kimpanel,notificationitem --verbose=*=4 \
 FCITX_PID=$!
 
 echo "==> waiting for fcitx5 DBus"
-python3 - <<'PY'
-import time
+python3 - "$STAGE_DIR/fcitx5.log" <<'PY'
+import sys, time
+from pathlib import Path
 import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib
 
-deadline = time.monotonic() + 40
+deadline = time.monotonic() + 150
 while time.monotonic() < deadline:
     try:
         bus = Gio.bus_get_sync(Gio.BusType.SESSION, None)
         Gio.DBusProxy.new_sync(
-            bus, Gio.DBusProxyFlags.NONE, None,
+            bus, Gio.DBusProxyFlags.DO_NOT_AUTO_START, None,
             "org.fcitx.Fcitx5", "/controller",
             "org.fcitx.Fcitx.Controller1", None,
         ).call_sync("CurrentInputMethod", None,
                     Gio.DBusCallFlags.NO_AUTO_START, 1000, None)
-        raise SystemExit(0)
+        # Readiness must not auto-launch a second Fcitx with the wrong profile.
+        # The D-Bus service can be up while the isolated Rime deployment runs.
+        if 'librime deploy finished' in Path(sys.argv[1]).read_text():
+            raise SystemExit(0)
+        time.sleep(0.25)
     except GLib.Error:
         time.sleep(0.25)
 raise SystemExit("fcitx5 DBus did not become ready")

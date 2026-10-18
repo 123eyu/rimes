@@ -737,7 +737,8 @@ void RunCapsuleSuite(fcitx::Instance& instance, fcitx::AddonInstance* frontend,
                            fcitx::CapabilityFlag::ClientUnfocusCommit);
 
     SendKey(frontend, uuid, "Control+Shift+V");
-    for (int i=0;i<5 && ReadDump(dump_path).find("\"module\":\"notes\"")==std::string::npos;++i) SendKey(frontend,uuid,"Tab");
+    ExpectContains(ReadDump(dump_path), "\"module\":\"notes\"",
+                   "fresh Capsule did not start on the Notes page");
     auto snapshot = ReadDump(dump_path);
     ExpectContains(snapshot, "\"visible\":true", "Ctrl+Shift+V did not show the rail");
     ExpectContains(snapshot, "\"armed\":true", "Ctrl+Shift+V did not arm the session");

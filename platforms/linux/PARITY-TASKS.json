@@ -625,9 +625,12 @@
         "验证输入、双轨翻译、AI、剪贴板、捕获、密码、Mailbox、快捷键、锁屏和跨屏完整流程。",
         "记录确切提交、构建、桌面、通过项与不支持项；源码测试、容器测试与真实桌面结果分别呈现。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 179,
-      "url": "https://github.com/scholay/xsime/issues/179"
+      "url": "https://github.com/scholay/xsime/issues/179",
+      "implementation_status": "partial",
+      "visual_status": "requires_review",
+      "validation": "validation/desktop-acceptance.md"
     },
     {
       "order": 30,

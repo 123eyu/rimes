@@ -1,0 +1,52 @@
+{
+  "schemaVersion": 1,
+  "environment": "private Xvfb/X11 + Xfwm4; not GNOME/KDE or Wayland acceptance",
+  "hosts": [
+    {
+      "host": "gtk3",
+      "status": "passed",
+      "checks": [
+        "preedit/backspace/native commit",
+        "Buffer capture/Return delivery"
+      ],
+      "text": "commit\t你好你好"
+    },
+    {
+      "host": "qt5",
+      "status": "passed",
+      "checks": [
+        "preedit/backspace/native commit",
+        "Buffer capture/Return delivery"
+      ],
+      "text": "commit\t你好你好"
+    },
+    {
+      "host": "fcitx-dbus",
+      "status": "passed",
+      "checks": [
+        "ordinary composition/Escape",
+        "Buffer native delivery",
+        "Capsule seed loading/native delivery"
+      ]
+    },
+    {
+      "host": "xterm",
+      "status": "passed",
+      "checks": [
+        "XIM native commit into PTY"
+      ],
+      "text": "你好",
+      "version": "XTerm(390)"
+    },
+    {
+      "host": "firefox",
+      "status": "passed",
+      "checks": [
+        "DOM native commit",
+        "Buffer capture/Return DOM delivery",
+        "password disabled-IME bypass after Buffer shortcut"
+      ],
+      "version": "Mozilla Firefox 158.0"
+    }
+  ]
+}

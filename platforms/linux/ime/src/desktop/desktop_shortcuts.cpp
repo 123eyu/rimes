@@ -42,6 +42,10 @@ struct DesktopShortcuts::Impl {
     std::vector<Grab> grabs;
     std::set<uint8_t> pressed;
     std::map<uint8_t, uint32_t> releases;
+    std::unique_ptr<EventSourceTime> x11Release;
+    std::string x11Action;
+    uint8_t x11Code = 0;
+    xcb_window_t x11Focus = XCB_WINDOW_NONE;
     uint16_t ignoredLocks = XCB_MOD_MASK_LOCK;
     std::string portalOwner, portalSession, portalRequest;
     uint64_t portalEpoch = 0, ownerRevision = 0;
@@ -147,8 +151,32 @@ struct DesktopShortcuts::Impl {
         OpenX11();
     }
     void CloseX11() {
+        CancelX11Action();
         xcbEvents.reset(); grabs.clear(); pressed.clear(); releases.clear();
         if (xcb) { xcb_disconnect(xcb); xcb = nullptr; }
+    }
+    void CancelX11Action() {
+        if (x11Release) x11Release->setEnabled(false);
+        x11Action.clear(); x11Code = 0; x11Focus = XCB_WINDOW_NONE;
+    }
+    void ReleaseX11Action(uint8_t code) {
+        if (code != x11Code || x11Action.empty()) return;
+        // A passive XGrabKey generates temporary GTK/Qt focus-out/in events.
+        // Wait until release ends the grab, then let those events drain before
+        // requesting a fresh Fcitx target. Never restore an old Buffer lease.
+        const auto deadline = now(CLOCK_MONOTONIC) + 30000;
+        if (!x11Release) x11Release = loop.addTimeEvent(CLOCK_MONOTONIC, deadline, 1000,
+            [this](EventSourceTime*, uint64_t) {
+                if (!xcb || x11Action.empty() || !releases.count(x11Code)) return true;
+                auto* focus = xcb_get_input_focus_reply(xcb, xcb_get_input_focus(xcb), nullptr);
+                const bool same = focus && focus->focus == x11Focus;
+                std::free(focus);
+                const auto action = x11Action;
+                CancelX11Action();
+                if (same) open(action);
+                return true;
+            });
+        else { x11Release->setTime(deadline); x11Release->setOneShot(); }
     }
     void PortalState(const char* state, const char* message) {
         detail = message;
@@ -340,13 +368,21 @@ struct DesktopShortcuts::Impl {
                 else if (kind == XCB_KEY_RELEASE) {
                     const auto* key = reinterpret_cast<xcb_key_release_event_t*>(event);
                     releases[key->detail] = key->time;
+                    ReleaseX11Action(key->detail);
                 } else if (kind == XCB_KEY_PRESS) {
                     const auto* key = reinterpret_cast<xcb_key_press_event_t*>(event);
+                    if (key->detail == x11Code && x11Release) x11Release->setEnabled(false);
                     const auto release = releases.find(key->detail);
                     const bool repeated = pressed.count(key->detail) && (release == releases.end() || release->second == key->time);
                     pressed.insert(key->detail); releases.erase(key->detail);
                     if (!repeated) for (const auto& binding : grabs)
-                        if (key->detail == binding.code && (key->state & 0xffU & ~ignoredLocks) == binding.mask) { open(binding.id); break; }
+                        if (key->detail == binding.code && (key->state & 0xffU & ~ignoredLocks) == binding.mask) {
+                            CancelX11Action();
+                            auto* focus = xcb_get_input_focus_reply(xcb, xcb_get_input_focus(xcb), nullptr);
+                            if (focus) { x11Focus = focus->focus; x11Code = key->detail; x11Action = binding.id; }
+                            std::free(focus);
+                            break;
+                        }
                 }
                 std::free(event);
             }
@@ -358,6 +394,7 @@ struct DesktopShortcuts::Impl {
         });
     }
     void GrabX11() {
+        CancelX11Action();
         grabs.clear(); pressed.clear(); releases.clear();
         const auto* setup = xcb_get_setup(xcb);
         std::vector<xcb_window_t> roots;

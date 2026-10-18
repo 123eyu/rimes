@@ -1,0 +1,3333 @@
+{
+  "schemaVersion": 1,
+  "scope": "Existing comparison manifests only; this is not complete state coverage or visual acceptance.",
+  "deferredTask": 25,
+  "manifestCount": 19,
+  "pairCount": 229,
+  "statusCounts": {
+    "requires_review": 229
+  },
+  "acceptance": "pending: review each discrepancy and cover missing interaction states on the target desktops",
+  "reports": [
+    {
+      "manifest": "validation/linux-capsule-capture-20261018/comparison/manifest.json",
+      "sha256": "295edd91670416b28f323176a7e90857b5dc1b580719a8d3fd89fc54515d5ac8",
+      "pages": [
+        {
+          "page": "day-image",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/day-image-pair.png",
+              "sha256": "6e7ddb18302731b1ae2ed3f758a8592d3d4083a40b076bf9da742980e0488852"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/day-image-diff.png",
+              "sha256": "b1497227d2328c313a34926defae59481796c5c329047bc9beec3fadb7eecbf2"
+            }
+          }
+        },
+        {
+          "page": "day-video",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/day-video-pair.png",
+              "sha256": "8a6dadd76e38f46cd43bfa52813de2322c75d3e9729163cde22ed321c559f2c7"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/day-video-diff.png",
+              "sha256": "f52211352f19592cf6ab13409882a54cb1a298f912e4a8f33ad2729b2c2260ad"
+            }
+          }
+        },
+        {
+          "page": "night-image",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/night-image-pair.png",
+              "sha256": "f2ff9df37bae4270e88cea60cc506ded95837156924d6dd2f691c37309cfe733"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/night-image-diff.png",
+              "sha256": "c2b5c7c3b17d6b3b5a356e5196856a5148b230e01a2baf8b2de55b7cd0538d09"
+            }
+          }
+        },
+        {
+          "page": "night-video",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/night-video-pair.png",
+              "sha256": "2b1efa8e3817cd23433591ae00a7243261cabeb1c28b435af705abe05a27befd"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/night-video-diff.png",
+              "sha256": "67c29b155c443dbf781a3b2fb34cfb4927e71f204e3bec1b7d6350fbbd494625"
+            }
+          }
+        },
+        {
+          "page": "quiet-image",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/quiet-image-pair.png",
+              "sha256": "c5fb9550cd345f16a27decd43f0f410011aa571608de68ac0951098b22d12430"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/quiet-image-diff.png",
+              "sha256": "7b8d8274adcc3ec9a64a6bc5f78ef9329e5f33d280b388db80349a4868d65048"
+            }
+          }
+        },
+        {
+          "page": "quiet-video",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/quiet-video-pair.png",
+              "sha256": "8ed338566e08d9b874ad3d035e54d88ea176be84f157da4835ac9463de586ddd"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/quiet-video-diff.png",
+              "sha256": "66e5ed37f98ea14a1fa6cf63a5e2462c39430b519af28ac02b6fa36960ff14f4"
+            }
+          }
+        },
+        {
+          "page": "rasta-image",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/rasta-image-pair.png",
+              "sha256": "852e82faf69d45207ffcca05589571d847e06fb1dcb29c647b9862ba3ae5ac13"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/rasta-image-diff.png",
+              "sha256": "bc01597915fda7755085e795714654b9ff7ab94083cf8eab8d2a6a9ee44be1df"
+            }
+          }
+        },
+        {
+          "page": "rasta-video",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/rasta-video-pair.png",
+              "sha256": "665a1b4b7d9a485760ac5ffb1045f65fc8b871d7a172b4334212e7a4d9c4ea31"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-capture-20261018/comparison/rasta-video-diff.png",
+              "sha256": "c062d598bd4dc4ba7bb7b4660279a71ffec18cd627ca0dfd9c484c2e18796812"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-capsule-clipboard-20261018/comparison/manifest.json",
+      "sha256": "c85759e7b4292602380d80d4b842ea0626581ed9f17c71f5f7e996807083cac5",
+      "pages": [
+        {
+          "page": "day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/day-pair.png",
+              "sha256": "8844cbfc93413adf1f6dd584c1c2b0a25e9a2f9a356d398b1e230e7397505739"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/day-diff.png",
+              "sha256": "3fb0ba4085b58690047a8392ceb88eaf8b3894bfe7a4cf5b8341cfb5666e0e29"
+            }
+          }
+        },
+        {
+          "page": "night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/night-pair.png",
+              "sha256": "8591151702279d1b8c9f16970fff77d76ae946c4dc410a7759cbab1af63dea2d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/night-diff.png",
+              "sha256": "fb6f650e31bf2b66aac24cd0c9fdebf5cddfa8176ad69d55a9b131a75f5c12a1"
+            }
+          }
+        },
+        {
+          "page": "quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/quiet-pair.png",
+              "sha256": "8d6f25e9f146da4c74eb00650c13ce1b246896d3dbd70b04839f8c808615480b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/quiet-diff.png",
+              "sha256": "3ee2841a09812c68bad8c47c454de8afd3267b1f02d24674c2797f43d2291148"
+            }
+          }
+        },
+        {
+          "page": "rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/rasta-pair.png",
+              "sha256": "03e0e96776349685f4c32c4b3c3bd7b7a3cd58ccaecbd0994e1b8494481dde7a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-clipboard-20261018/comparison/rasta-diff.png",
+              "sha256": "8103c6d75bf9e289c0ad04cb4dbd2a1689969b4b1e18198fedb1c4e476a22c2a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-capsule-host-20261018/compare/manifest.json",
+      "sha256": "2849e0369fe28fa7d8cd87857e9785c72e86b29d13cb0f1f2ea02f75a358c856",
+      "pages": [
+        {
+          "page": "day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-host-20261018/compare/day-pair.png",
+              "sha256": "8777fd0f7333f5641275e5d071a06e1ffb20cf391725373e0c04ad799c5ef41b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-host-20261018/compare/day-diff.png",
+              "sha256": "08d033fd05b00c2de4d89f5db23f9e4664db9cd9935dcbeba7f6ab496a18062e"
+            }
+          }
+        },
+        {
+          "page": "night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-host-20261018/compare/night-pair.png",
+              "sha256": "c4b28135bd280158aba1eb775de40a0444d5dc797c38d061acebe92fa5999902"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-host-20261018/compare/night-diff.png",
+              "sha256": "13cf4613218aed80bce7e83c70ea5b37300dddf8600d671ed8c2e4f96da3a71c"
+            }
+          }
+        },
+        {
+          "page": "quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-host-20261018/compare/quiet-pair.png",
+              "sha256": "d1c353dad1e0de235dec5c0d5c77564a80d44068a31cfca7085e52a57f358b79"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-host-20261018/compare/quiet-diff.png",
+              "sha256": "e08e2366543ac45aca664f82d3637629872af5537a5eabb18ff6035cde221186"
+            }
+          }
+        },
+        {
+          "page": "rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-host-20261018/compare/rasta-pair.png",
+              "sha256": "871e1a9dcf89aa3ee07d32768845c0d512c51216452d18475deb68378c3f8192"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-host-20261018/compare/rasta-diff.png",
+              "sha256": "59bc10e47031b33edc3e746108ce73e5f11797c9f40cbf1ec58502f1f3489ffe"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-capsule-notes-20261018/compare/manifest.json",
+      "sha256": "e654a05b35ec752aed24834af0f3416d1b55b19317a4c53b024ba221fbc45546",
+      "pages": [
+        {
+          "page": "note-detail",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-notes-20261018/compare/note-detail-pair.png",
+              "sha256": "38d2ad01d59c8d6570fb8a69b799653f12b05f6966ae6551f7eac5403c94a794"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-notes-20261018/compare/note-detail-diff.png",
+              "sha256": "ea44be8ea3f0a5e41f57ddbc6724ea06df65b96697d9836627be8f15ac94cfc8"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-capsule-password-20261018/comparison/manifest.json",
+      "sha256": "5e5b5b48d872834b3ab731f8b6020b7fe0f6bbb28c88f95ee8aaf26e02558f14",
+      "pages": [
+        {
+          "page": "day-locked",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-password-20261018/comparison/day-locked-pair.png",
+              "sha256": "ec017af8d653a2a3c75ed8af59e34b0c2e1b2d4a9661e01203d65c895496508d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-password-20261018/comparison/day-locked-diff.png",
+              "sha256": "bafaebbd9424853e46c4502186c238150ef184504910dfd842df1646abfbad2b"
+            }
+          }
+        },
+        {
+          "page": "night-locked",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-password-20261018/comparison/night-locked-pair.png",
+              "sha256": "ec4df4339d2d89dfb70852de77f55b51cec5b3b8dd73d02ba76ab5a09676ba5d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-password-20261018/comparison/night-locked-diff.png",
+              "sha256": "b5f8e5f29a4fd5ef0eb67eb7075d7a64b57f3089ee9acbea0074c4f9e54914ab"
+            }
+          }
+        },
+        {
+          "page": "quiet-locked",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-password-20261018/comparison/quiet-locked-pair.png",
+              "sha256": "080ec3b471f75505b087a478371b678f6a16a97f2f3ad8c19fcc19aa95b8577a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-password-20261018/comparison/quiet-locked-diff.png",
+              "sha256": "d6b8e0daeb1d538ebd9c000001b6c53a22ce3b3bd0a5cffd27908522249f93f8"
+            }
+          }
+        },
+        {
+          "page": "rasta-locked",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-password-20261018/comparison/rasta-locked-pair.png",
+              "sha256": "f2928458df9a5e7d8bf9072fd122a68b89982ca0fc067429cea498b0b8024c75"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-password-20261018/comparison/rasta-locked-diff.png",
+              "sha256": "ca1ab825e9bbca6f9bc3b7c87e2c4252330f01d461bb2f5b6701f62ae8dcd425"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-capsule-resources-20261018/comparison/manifest.json",
+      "sha256": "702d033722a34ac8ecc1088c90cd163e27e8987e3eeec3131f92cadde9cb0c02",
+      "pages": [
+        {
+          "page": "day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/day-pair.png",
+              "sha256": "696f477ca0dd27cb3a670c802581235320d50a6478232bfbcf9c9322dc5c65bb"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/day-diff.png",
+              "sha256": "ef545ab2ca296be4e74e1af74d292eaa1faf8b697f00cae2c4974de08902e4c5"
+            }
+          }
+        },
+        {
+          "page": "night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/night-pair.png",
+              "sha256": "544cde27d40fb079bd5ec9eacb452d7056e36e601e86eab239d542b7e8ee194d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/night-diff.png",
+              "sha256": "483e0cb5ec764986d839301d6af418a54d44a6fcdbfd1a18bd682b86f28ed27d"
+            }
+          }
+        },
+        {
+          "page": "quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/quiet-pair.png",
+              "sha256": "4e5bbaeb59be20000c4d191a41b13daf876dff3967ed3650b27959a1d349a742"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/quiet-diff.png",
+              "sha256": "682cd65f40c23ce5d55a143b14fb3fcf8dc4b11e1edc3cd2829fd08fab39c822"
+            }
+          }
+        },
+        {
+          "page": "rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/rasta-pair.png",
+              "sha256": "260c5f208d424378abe3ca052285230b5bafeeb1cb48e9b87ee0e3a3cca86994"
+            },
+            "difference_4x": {
+              "path": "validation/linux-capsule-resources-20261018/comparison/rasta-diff.png",
+              "sha256": "268cc8124d5c5f273700f8dbce1c65002f3fa038d8fa9abe45510b8cd6b9e9cc"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-chord-20261018/diff/manifest.json",
+      "sha256": "a6a264c464f1b9667bc412009b28ad6cd3f807756f24624cb4e40e1f69acbcd1",
+      "pages": [
+        {
+          "page": "keymap-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/keymap-day-pair.png",
+              "sha256": "2862851329409cea80ae0c3ab4eb5d7f0eb2387e7d9f92529c5d432207fa2cfe"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/keymap-day-diff.png",
+              "sha256": "21dd5cdd3ae184520fc517d3c7d1a7bc911ac538a8326616507c7ee4735fa4af"
+            }
+          }
+        },
+        {
+          "page": "keymap-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/keymap-night-pair.png",
+              "sha256": "976be28ebe33258b6102e7cd9cf8c6a2235e14e8e86fd450cfa245a51d93f157"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/keymap-night-diff.png",
+              "sha256": "34e3b6bf8e2b24179df464429934d77ca15fc29d71c529506ed1b3dd12959958"
+            }
+          }
+        },
+        {
+          "page": "keymap-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/keymap-quiet-pair.png",
+              "sha256": "e0bb8a41e006b706a3acf8244f6c484889245061b99caa3fde8d5671f7cbf284"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/keymap-quiet-diff.png",
+              "sha256": "b8b3b9cdf18b71fea5e0817f4564f3f5d867e7984a146e52b6feeedd36fb0894"
+            }
+          }
+        },
+        {
+          "page": "keymap-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/keymap-rasta-pair.png",
+              "sha256": "0d3bd05a1d24b11d80fca3f20b7af0f41c0c1b1622f2eefb55f617e07a8950b8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/keymap-rasta-diff.png",
+              "sha256": "26f9adb51ac67d768e02547d046ab25eb1b26d2b3b440830b1a3a06a7407a359"
+            }
+          }
+        },
+        {
+          "page": "lessons-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/lessons-day-pair.png",
+              "sha256": "4b29a93cfbf013814fff2910e5e4561f1dcedeab1094aa20fd998c8be86c422e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/lessons-day-diff.png",
+              "sha256": "cb7a32780caaad468043dda93dbd1ac3e5b3be22aada98897060536a3b69ef55"
+            }
+          }
+        },
+        {
+          "page": "lessons-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/lessons-night-pair.png",
+              "sha256": "64a1905ac73fefbad1bafc5e78e38aadd9faebadf81b0d5eac31ce7822481cf4"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/lessons-night-diff.png",
+              "sha256": "3c975bce1e71bc564474abd661526b86e13b8a723bffe93c0a5b1945362436b3"
+            }
+          }
+        },
+        {
+          "page": "lessons-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/lessons-quiet-pair.png",
+              "sha256": "633addf0a3156566e495dd1fb0a3ad28958ce6ac26e424551b7d0d34ef4fc021"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/lessons-quiet-diff.png",
+              "sha256": "7d9433c5f963f4208b17a3eb554d1ec8b2b05d8edb44c61c7e8b844278d470a2"
+            }
+          }
+        },
+        {
+          "page": "lessons-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/lessons-rasta-pair.png",
+              "sha256": "e448a6c208495ebbc6b995bbe3a0d6f3bd3e80409849af1a3266f63dd43cd8f8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/lessons-rasta-diff.png",
+              "sha256": "c485b88dab6899eec7ff07a53e521c7f52deaa7b1b5d380a8444f68e10af4b69"
+            }
+          }
+        },
+        {
+          "page": "practice-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/practice-day-pair.png",
+              "sha256": "6f5b6a2aecb7d4f95e4a32459e7680be38d5d6f6d38ddadfe0ad82596fa98f61"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/practice-day-diff.png",
+              "sha256": "d6fdeb3d17af51aca7d47d16f2f2b4d170156621d55595aa827dd5a8e25f760d"
+            }
+          }
+        },
+        {
+          "page": "practice-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/practice-night-pair.png",
+              "sha256": "8ef5cddcc12826ffc27dd1f4a24cf333a982410bcf72c76a20f8621d4cd842da"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/practice-night-diff.png",
+              "sha256": "f987336db0132294bb89bf17eaeba8b91e177637b38f75dc5f7e1e17b61d7d9d"
+            }
+          }
+        },
+        {
+          "page": "practice-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/practice-quiet-pair.png",
+              "sha256": "02558efea0b3c8e9841ee445de0adf4214fe8c82050ab7c281ee0625f2a943c6"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/practice-quiet-diff.png",
+              "sha256": "d943e7beff3ab3b188ff0e39f52005f2ff2264991d4547a063085ad06d47e076"
+            }
+          }
+        },
+        {
+          "page": "practice-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/practice-rasta-pair.png",
+              "sha256": "23627614ac30b8a5a296ba1c07d2ba07c25359f838d658f95a605bbdda153775"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/practice-rasta-diff.png",
+              "sha256": "8db5e7784e9da186921bed99a1cb9a2cf1efec8be202d3aa44ed710338aee60a"
+            }
+          }
+        },
+        {
+          "page": "progress-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/progress-day-pair.png",
+              "sha256": "2e1a21571556d9309fd17d2040b67f5bdfbc31ede7187e0ca560b6f6a1daa81d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/progress-day-diff.png",
+              "sha256": "facfba82fec079a338809df97603526fb7c3d4d9cbd82adbf48cfad1eb2af66d"
+            }
+          }
+        },
+        {
+          "page": "progress-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/progress-night-pair.png",
+              "sha256": "2d3c1d2333506ae0dd7db79b8fc743d801dcedaf0a5c43067fcd83679d01f34b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/progress-night-diff.png",
+              "sha256": "71109ba4d3a7ad10b511e85c849e64df7c1c3f537b156da350ff1271324ae469"
+            }
+          }
+        },
+        {
+          "page": "progress-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/progress-quiet-pair.png",
+              "sha256": "e9c73494bf9d2c70d9e1d2876809136c7908eeb18412fe74f7fb99ffd9092f6d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/progress-quiet-diff.png",
+              "sha256": "542231baf017f3c73ea1185de1bedf083ce57f310d12fb749bf9e67a94282a9f"
+            }
+          }
+        },
+        {
+          "page": "progress-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/progress-rasta-pair.png",
+              "sha256": "7b0e5e6a0d5f5a011cacb14781a32f925b65c172cbfc99cb85c518f5c51f5fc0"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/progress-rasta-diff.png",
+              "sha256": "8496d8f15ac2b63fd1c6741f3714f3c7de89465000b3f68496935b23e0cb0d10"
+            }
+          }
+        },
+        {
+          "page": "settings-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/settings-day-pair.png",
+              "sha256": "fc85f6996737c55eec09676fa8cfceccd1aeb90d4f65c30a3f54c06db9fbe107"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/settings-day-diff.png",
+              "sha256": "e4907402ee478e2dd23ba00a4b3cee9d11c3d80ab9c7d4cdf9d1725da2929d76"
+            }
+          }
+        },
+        {
+          "page": "settings-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/settings-night-pair.png",
+              "sha256": "743df727915e054cc193368d0f006125cf708c5cb2af326a01189c49aaff7f3a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/settings-night-diff.png",
+              "sha256": "7827cc63a932f648fbcde91da1001ce53dd67f2f138df7f2870cd4e03ebbd3ac"
+            }
+          }
+        },
+        {
+          "page": "settings-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/settings-quiet-pair.png",
+              "sha256": "e22454ffdbcbb8aac617ad38d04d54323e2542d7f852b25d461b899437f87275"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/settings-quiet-diff.png",
+              "sha256": "f3c39b15607e833d157f8ea6cdc773f26b9a99bf982547e3bb6324bfceaa3221"
+            }
+          }
+        },
+        {
+          "page": "settings-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-chord-20261018/diff/settings-rasta-pair.png",
+              "sha256": "811f4ed201d9b884217f6ea2e2f98e3cd09dd88a94570d317f9293d2b3f7fb9c"
+            },
+            "difference_4x": {
+              "path": "validation/linux-chord-20261018/diff/settings-rasta-diff.png",
+              "sha256": "3c5c554d3ab0fca8d5ac8c3fd0dace76a4dbb1197bf5e8f4f68eabbc2e45331b"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-claude-channel-20261018/comparison/day/manifest.json",
+      "sha256": "062ccd819bdeef5825588b471d70a2199fe74939cb714e172bb9cc36c4765308",
+      "pages": [
+        {
+          "page": "claude-failed",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-failed-pair.png",
+              "sha256": "fbf53ab44be18ad22d34905f3d8ef6edc475ee2dfd80e752709f4446a6db4f4c"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-failed-diff.png",
+              "sha256": "47ff41aeb16451069b5ae4af7d86452a35e25b1717d26b2aedf530e418d8bf79"
+            }
+          }
+        },
+        {
+          "page": "claude-missing",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-missing-pair.png",
+              "sha256": "5d1b62b5c414892d208a05fb11ed4a88ffaf957f64d26a3ab73dbf7f1578b598"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-missing-diff.png",
+              "sha256": "6038d8c419662c67f6a0ba7c6fb5e5796d4701ba5594a713082944a60a0efdd1"
+            }
+          }
+        },
+        {
+          "page": "claude-ready",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-ready-pair.png",
+              "sha256": "984abe270445b0011c8f5ada200cbffb7333890d37f764bd2b18d1d8d5793022"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-ready-diff.png",
+              "sha256": "9d54e18663fb9617cdf7bd5643b43cf286dd564aa567ef3d00b939ed6c1fa2b6"
+            }
+          }
+        },
+        {
+          "page": "claude-signed-out",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-signed-out-pair.png",
+              "sha256": "e8ded71db4ebee5a7622b0da8c32654c8feee7d39660dec7b845e949ee9c2281"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-signed-out-diff.png",
+              "sha256": "03a719ae5abdb07d91e65b2bfcfa9a0bfac9089b82a9c27e0efadbb911c78b41"
+            }
+          }
+        },
+        {
+          "page": "claude-waiting",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-waiting-pair.png",
+              "sha256": "3a6f2f3a4b6023ace96ab82a853f96dede90b479edf612040e534943b7d018f2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/day/claude-waiting-diff.png",
+              "sha256": "8e4343f799c2094abf50c330b340d122112276d54462c2e27bd2a2ac31747835"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-claude-channel-20261018/comparison/night/manifest.json",
+      "sha256": "f03d390d0787630666245b2eb0e55dd588168b6874b486a3ddc61173044c14d3",
+      "pages": [
+        {
+          "page": "claude-failed",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-failed-pair.png",
+              "sha256": "c5b4e8bb5b7cb89ffd95f5e03336e6f5e195367db9fad5469dddab28fafa9dc7"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-failed-diff.png",
+              "sha256": "d78b37615f42f44182ff183d109baaaa96463fab71584d16c22ae1dfff68ff64"
+            }
+          }
+        },
+        {
+          "page": "claude-missing",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-missing-pair.png",
+              "sha256": "d18dafdd388718557dcd10a444c343df4286977ed9f8c734984e02d549525395"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-missing-diff.png",
+              "sha256": "d8fcbc123a338a623d087288bcdd85615de3ab7e3343e023d0fdcea398c3be84"
+            }
+          }
+        },
+        {
+          "page": "claude-ready",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-ready-pair.png",
+              "sha256": "5dcf32d70482662012271d180cdfbcd64a69cfccc971aa548b03e8dd3b4fa53a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-ready-diff.png",
+              "sha256": "a974849315cbffd9ee8269ab6b94c036ab89ebf6f1efb3c3e42ed26a58058526"
+            }
+          }
+        },
+        {
+          "page": "claude-signed-out",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-signed-out-pair.png",
+              "sha256": "d54680c4581da6ee8b659b846fb911f2fb8bc847c354b00beb950307ddc06d6e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-signed-out-diff.png",
+              "sha256": "4d1b078fe9b9fec9009492988f13f25af83d8ad87a90d7f38b5105508bbfc072"
+            }
+          }
+        },
+        {
+          "page": "claude-waiting",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-waiting-pair.png",
+              "sha256": "fa150b5c5c8cb06fa86bb210b4cf593fdac2d095f363d4ba2907160c20cfaeed"
+            },
+            "difference_4x": {
+              "path": "validation/linux-claude-channel-20261018/comparison/night/claude-waiting-diff.png",
+              "sha256": "d9277388f7ffe74662f1af6924b064379f7cbb8270f6f4a3d34f84582ae8ee3a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-codex-channel-20261018/comparison/day/manifest.json",
+      "sha256": "ff137c1c942eb049df30548588f63098b8dbdd7fde335494b242faffee08fd96",
+      "pages": [
+        {
+          "page": "codex-failed",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-failed-pair.png",
+              "sha256": "b51e307d25d94143ae558fef4747fac6a01e5b007bec97736c589e26b30dca17"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-failed-diff.png",
+              "sha256": "77047beaf373643b14cd14fb80e1e3934d6f764ab82f8477717bc0fd1c92e8a3"
+            }
+          }
+        },
+        {
+          "page": "codex-missing",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-missing-pair.png",
+              "sha256": "0c8a4eb8531192c63d7751e72238eef02f11a853549d3191a515525cf82e5d61"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-missing-diff.png",
+              "sha256": "ec9dd283a2182582bb50ca3979f80bbb7494f63632e8bc03418127bed33f813c"
+            }
+          }
+        },
+        {
+          "page": "codex-ready",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-ready-pair.png",
+              "sha256": "a1b7f1986c90c4f4ec84f18c5d0b724642fcd955743401f0ee23e974fd87c31d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-ready-diff.png",
+              "sha256": "9e3b126478fec149a90dddd0e8b87476aeebcf48860fbf8bd2b6f7a4475a9080"
+            }
+          }
+        },
+        {
+          "page": "codex-signed-out",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-signed-out-pair.png",
+              "sha256": "0c8a4eb8531192c63d7751e72238eef02f11a853549d3191a515525cf82e5d61"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-signed-out-diff.png",
+              "sha256": "ec9dd283a2182582bb50ca3979f80bbb7494f63632e8bc03418127bed33f813c"
+            }
+          }
+        },
+        {
+          "page": "codex-waiting",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-waiting-pair.png",
+              "sha256": "00b4ecefc9a4d582de39e5f7c72b7e91d95c2333affb7bf062656bcbc3f45c23"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/day/codex-waiting-diff.png",
+              "sha256": "27f8f7de9acdd1361dde7755156881dc3166bb6745d7a3805371ed71ddff4b72"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-codex-channel-20261018/comparison/night/manifest.json",
+      "sha256": "e6d6281c32d0f4f90713c656f8ffb4d0673596e41c98129db39cb18fffaf6a34",
+      "pages": [
+        {
+          "page": "codex-failed",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-failed-pair.png",
+              "sha256": "cac11652f5f0309bc96d866097394ddc2249872346e3da47c1157bb5a32222f7"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-failed-diff.png",
+              "sha256": "da464e116e63efe9162dcf6d7ca4de89c5f306811ee0f85207954c84030ee1ca"
+            }
+          }
+        },
+        {
+          "page": "codex-missing",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-missing-pair.png",
+              "sha256": "f8ad14be140a41f1914cc16742aea95a486ffaf2c969e1afcbe11e6873ded947"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-missing-diff.png",
+              "sha256": "fb78a990d177181f837def1839cbee8491f0adffa280881fd10bf7930c6d8282"
+            }
+          }
+        },
+        {
+          "page": "codex-ready",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-ready-pair.png",
+              "sha256": "4a487fc76c5b8bde46b8897869b6c934d96ee1596db9c2e8f89e00c26c495412"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-ready-diff.png",
+              "sha256": "14b981f9e3fda85d95d82e87f7e314fc2052db56d15c3eb9748fcd6639c89ec2"
+            }
+          }
+        },
+        {
+          "page": "codex-signed-out",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-signed-out-pair.png",
+              "sha256": "f8ad14be140a41f1914cc16742aea95a486ffaf2c969e1afcbe11e6873ded947"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-signed-out-diff.png",
+              "sha256": "fb78a990d177181f837def1839cbee8491f0adffa280881fd10bf7930c6d8282"
+            }
+          }
+        },
+        {
+          "page": "codex-waiting",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-waiting-pair.png",
+              "sha256": "64a2c6dbcd6d51084749bf86ce4e23bf3aab98f357787f182fba268b988dfb1b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-codex-channel-20261018/comparison/night/codex-waiting-diff.png",
+              "sha256": "7af83b8dbf9d80677f70d449945ae2dd305bfe7a05c7866ac3f87f2e1fa45dbf"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-chat-20261018/comparison/manifest.json",
+      "sha256": "1ccf8cb999c72f5264f9df5382e66422c365e30e222306884af9214e1e46743b",
+      "pages": [
+        {
+          "page": "day-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-compact-pair.png",
+              "sha256": "c769b0e796fcacac627eb667d9f649e47746ba8d827ce24949d564174621664e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-compact-diff.png",
+              "sha256": "c13d8b08b27db0e3eb6dff2a083abc10379c12def6606545cdf6917484f966b8"
+            }
+          }
+        },
+        {
+          "page": "day-chat-failed-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-failed-compact-pair.png",
+              "sha256": "1325c55054e306cf2747a76efdf5bdced22125f6163bc0c78e003aad2db4d4e8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-failed-compact-diff.png",
+              "sha256": "e0c3bb3cbe49778e2b5a9dd2c1f5a9f67dbe563925c3017fefcadc883e73abb5"
+            }
+          }
+        },
+        {
+          "page": "day-chat-failed-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-failed-wide-pair.png",
+              "sha256": "416e9909ee8e0a7f5f3d790d0109b61a5ef2109260cd62ccc892b27a88936e95"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-failed-wide-diff.png",
+              "sha256": "8bb71bcbd8f3390182501450c7853b472d15ccbd680f5e930b4add7ed5a952a4"
+            }
+          }
+        },
+        {
+          "page": "day-chat-new-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-new-compact-pair.png",
+              "sha256": "28ee006befe8d56f1c120c1203e1240d24c61a1ad3c7c156d15de96e3f7c47fa"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-new-compact-diff.png",
+              "sha256": "1c066104d2c11bdd164bdf23e6a769924c993858341222bc0746db37eb793358"
+            }
+          }
+        },
+        {
+          "page": "day-chat-new-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-new-wide-pair.png",
+              "sha256": "36c12974ae4659e274b9b6db3adedb7431862950bff2a206e0136ca9fcf39194"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-new-wide-diff.png",
+              "sha256": "660867f64ffc1b7eca6867889ca1768c456b21424dcadb907bf0801b21b6e4ea"
+            }
+          }
+        },
+        {
+          "page": "day-chat-running-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-running-compact-pair.png",
+              "sha256": "ce9fcb6e464790efbd9dd7198941fb641314331b67b4f6838656cc45f5c3bc72"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-running-compact-diff.png",
+              "sha256": "15c9b038c8c66eeb8e43f9a04cbf668d167cbd66821d0134d8a137450d8e46af"
+            }
+          }
+        },
+        {
+          "page": "day-chat-running-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-running-wide-pair.png",
+              "sha256": "7fb201c029c40a3638ff26c580c09fc81aa260fa983853c3058a2033896173a1"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-running-wide-diff.png",
+              "sha256": "4790055f250f43043aa257072d17902540d3ace5ad9c21de446b391d2ca66bd3"
+            }
+          }
+        },
+        {
+          "page": "day-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-wide-pair.png",
+              "sha256": "ae1bc8670ac354fb9c711f656829e2c13c40f999068b3020e2b496680d82330a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/day-chat-wide-diff.png",
+              "sha256": "0471295cc9c4cfb0720f54d1f1afc8751600cf2bce07c62769ccfaca55b82b9d"
+            }
+          }
+        },
+        {
+          "page": "night-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-compact-pair.png",
+              "sha256": "fb9656ca3911397caa804928e044201ef091bf1abd6b1fb83f9c7b3b0787ae4a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-compact-diff.png",
+              "sha256": "e24f6d428ada27ba05f452e96a0731d7e69b8a52c82a04abe11e209f608a7381"
+            }
+          }
+        },
+        {
+          "page": "night-chat-failed-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-failed-compact-pair.png",
+              "sha256": "4a855ae72272e7703c7e3ca42aa8557959c8718bd6302faef4da4b4c7cd67671"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-failed-compact-diff.png",
+              "sha256": "9fa900eb9c3956d72a3967b7dca9ea0afe96d386124d02687e5568ad7c519d38"
+            }
+          }
+        },
+        {
+          "page": "night-chat-failed-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-failed-wide-pair.png",
+              "sha256": "39a845fd79905bded93dd0719d0a4a428252199648dfbdb7551e013e8c7e67e5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-failed-wide-diff.png",
+              "sha256": "62da86f25e3338989abac8c84ca3a4db4535fa08c5d71aa92ede8382bfce949e"
+            }
+          }
+        },
+        {
+          "page": "night-chat-new-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-new-compact-pair.png",
+              "sha256": "2d81d2373fff324d32651b03fa0730ea6602f83fe2dd661ada442ca1a5ef2975"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-new-compact-diff.png",
+              "sha256": "d3f0073c2639c90a587ab6f231679ef400db708137172d6b0ca328b71898ced7"
+            }
+          }
+        },
+        {
+          "page": "night-chat-new-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-new-wide-pair.png",
+              "sha256": "1639a66cecd4a34494d9f25353eed0e227be6a12f164d6758fc17f72378a0988"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-new-wide-diff.png",
+              "sha256": "ab18d5bc394ac9110482342afe87d82d6fa61db19320b2529abe697cefce89de"
+            }
+          }
+        },
+        {
+          "page": "night-chat-running-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-running-compact-pair.png",
+              "sha256": "64de0d8f094e0d8f39d86dd7b9029c0dc8c0159e660324897550873946ac3be2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-running-compact-diff.png",
+              "sha256": "70918ab86b1c0bf32c82c7c6134372ab81a7a48e8bdbddf3eabed75cb14593d2"
+            }
+          }
+        },
+        {
+          "page": "night-chat-running-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-running-wide-pair.png",
+              "sha256": "ecde27563c591f4f0203a84fff20d13b4d5e4ee415997f53ef0c9a90a9fa15b2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-running-wide-diff.png",
+              "sha256": "c86daad09cd9fbe0e9c2d1d42bb701d54de738c91a4ccea334341bfbaff51347"
+            }
+          }
+        },
+        {
+          "page": "night-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-wide-pair.png",
+              "sha256": "117ef4ab6c03ce67fa9b55b38486631cc4f17f5d65faf898b5b41e14e0b69447"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-chat-20261018/comparison/night-chat-wide-diff.png",
+              "sha256": "5e4da01557669524cd5468573d28499d66c885d963b1c4de4190de561ff8dc2b"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-gateway-20261018/comparison/day/manifest.json",
+      "sha256": "8ef0a4d298562c2ec8ba5a93b0bc4deb93b33d00b6154c8c7714cee291f6730b",
+      "pages": [
+        {
+          "page": "gateway-claudeCode-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-claudeCode-disabled-pair.png",
+              "sha256": "5ef58313a9a6b469d6da996dcb44c4913c1c3312fce24023634035aa018bd233"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-claudeCode-disabled-diff.png",
+              "sha256": "39929e0c08fd4e6c76100f890779e82cf48783dc44c2fdb07840f6f1a407d5b3"
+            }
+          }
+        },
+        {
+          "page": "gateway-claudeCode-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-claudeCode-enabled-pair.png",
+              "sha256": "3fa676bafd16db380cd5d0e96acaf431e83ba170f80e66e20442cad7dca02bd8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-claudeCode-enabled-diff.png",
+              "sha256": "8f0aeeb67c996169e43aef0320ec807d7e2e0e54dd0a68a46eee58cc17544f93"
+            }
+          }
+        },
+        {
+          "page": "gateway-codex-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-codex-disabled-pair.png",
+              "sha256": "ab2934b06c8396342391b7723508e996897aeeb41c566c878856529e9158e566"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-codex-disabled-diff.png",
+              "sha256": "2bc4fa9cf9bddadc3ec13448cf68e0b0241f59dafe4f654680d642cbbf32b4e5"
+            }
+          }
+        },
+        {
+          "page": "gateway-codex-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-codex-enabled-pair.png",
+              "sha256": "811b85001ec53893aa7e40371000aa1cda41cf5f011070eb46fd73e6367927d8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-codex-enabled-diff.png",
+              "sha256": "70c6383f24e0ab388afcb24fa08e5cad7ecf50057a04cb93493e79fb997eac83"
+            }
+          }
+        },
+        {
+          "page": "gateway-cursor-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-cursor-disabled-pair.png",
+              "sha256": "993c9ba61e55388a4f8c74063d973fc064c63182d0b3f07186bc270bcfb7648b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-cursor-disabled-diff.png",
+              "sha256": "adaf529868e6da88e82f7c8f43c83ade52a45977a60e357f2d252c34f4bc7d2e"
+            }
+          }
+        },
+        {
+          "page": "gateway-cursor-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-cursor-enabled-pair.png",
+              "sha256": "a6d03160531e07c04c78244994ff41b915edbbfd6968214ef27579cc0d514dab"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-cursor-enabled-diff.png",
+              "sha256": "345e1f87ac343e32c5f9e7e3b40fd2935825e3e737c0ca1c5f0d45623a095423"
+            }
+          }
+        },
+        {
+          "page": "gateway-genericMCP-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-genericMCP-disabled-pair.png",
+              "sha256": "a13447a079d65cce6ef9fd3859113b054c5d624a9e54159543bce105c24b558e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-genericMCP-disabled-diff.png",
+              "sha256": "4930347d0d9348e51a0faf458721106136ed0c4d392c500c7022e8c313bdeb31"
+            }
+          }
+        },
+        {
+          "page": "gateway-genericMCP-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-genericMCP-enabled-pair.png",
+              "sha256": "16a64a2df3fa90c67365df9948882047b2b7c5c22f0d0f87b20d522adc25393c"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/day/gateway-genericMCP-enabled-diff.png",
+              "sha256": "62db31f295327ded611246f2f8c3a73c76c4dd7d8fcc36675d5a625ce5691c2a"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-gateway-20261018/comparison/night/manifest.json",
+      "sha256": "fee4ef68cdcea92eb83336299db204a4c535ec45dbfe68054741a44c17964ebc",
+      "pages": [
+        {
+          "page": "gateway-claudeCode-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-claudeCode-disabled-pair.png",
+              "sha256": "9c990707707725e5695f23a805a4cb23264642a29e3abc6881dbfe31cf7c47f6"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-claudeCode-disabled-diff.png",
+              "sha256": "2aa7bb8718d57912dc3ae4a4fc725914a63524906b45f096c1509f7e5f0dbe70"
+            }
+          }
+        },
+        {
+          "page": "gateway-claudeCode-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-claudeCode-enabled-pair.png",
+              "sha256": "200c18b4f78be4cc0ec267c12205185afb9c313ea90f15eeb85b686fd968611e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-claudeCode-enabled-diff.png",
+              "sha256": "380781a5aca0af0b0dd00ffdcc18ed463dc9cf5a1df660bde8027b97789e56cc"
+            }
+          }
+        },
+        {
+          "page": "gateway-codex-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-codex-disabled-pair.png",
+              "sha256": "2e10f9e918e1a5b317896490b32d6979f9b5e44c9c54508e137fbe1d216e0a44"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-codex-disabled-diff.png",
+              "sha256": "ef63ba3146b19f09563b30ec84d045833106f328527ca150d74d8ec3596d9285"
+            }
+          }
+        },
+        {
+          "page": "gateway-codex-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-codex-enabled-pair.png",
+              "sha256": "62070fb1e736c146319ad0ad385ce384c6e8a0b7bcec155bc550683ba4088d3f"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-codex-enabled-diff.png",
+              "sha256": "609925487c1ac3fdaaa4ca532ff5598f9cb0be4c0b9b210a5dcd75a053503156"
+            }
+          }
+        },
+        {
+          "page": "gateway-cursor-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-cursor-disabled-pair.png",
+              "sha256": "013783f08f9df97b06be07949865f256e8c4884b6b4b7bb39638795b3fc4a8ac"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-cursor-disabled-diff.png",
+              "sha256": "3b051c5af9db2fdac88e410c6815cfe9c640f34277a4bf596cc739105cab996e"
+            }
+          }
+        },
+        {
+          "page": "gateway-cursor-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-cursor-enabled-pair.png",
+              "sha256": "97a232c0fc976eea8fe6291c7faf5126e27d9c5225eaa457b0670904ce61c5bf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-cursor-enabled-diff.png",
+              "sha256": "9210129e6f46e8bc9f0a6916851e55e608829a963d697a47f6f5d5d5ee5b41f3"
+            }
+          }
+        },
+        {
+          "page": "gateway-genericMCP-disabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-genericMCP-disabled-pair.png",
+              "sha256": "6dab78bc652f22370172c8b57fe74efcd66dc7cfa1888b22bc4d7a2d3b1e0990"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-genericMCP-disabled-diff.png",
+              "sha256": "0895f939ca29cfdf2c291bebad6e998fd7e8f81c74b0a25671f832b0b1e642e1"
+            }
+          }
+        },
+        {
+          "page": "gateway-genericMCP-enabled",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-genericMCP-enabled-pair.png",
+              "sha256": "76cdbf1f987d0d0b3643731b8a47bbbb1a43b303940c80029e6757bc4f395d72"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-gateway-20261018/comparison/night/gateway-genericMCP-enabled-diff.png",
+              "sha256": "f10d3a3340b24390fa60a93e6c33858992e4a9c47afea41867cbbf75e95d81fe"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-host-20261018/comparison/manifest.json",
+      "sha256": "27cae50da0290be3ad2b78614482c758460cf5aecba8405c680736e3c578bf92",
+      "pages": [
+        {
+          "page": "day-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-chat-compact-pair.png",
+              "sha256": "ecee57879f1baa5a223fce61b03b3ec50b37541652bc4fd957744d17b7d6a9e8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-chat-compact-diff.png",
+              "sha256": "b06bdf8ed08e6a84a68ff68ca19d0b6b525d6a9c6f376fd07bae6fc3415e07d5"
+            }
+          }
+        },
+        {
+          "page": "day-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-chat-wide-pair.png",
+              "sha256": "ce50daffcd04432d64af3a43a9bd3f0f485f2970186b220dc604e878d94d780e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-chat-wide-diff.png",
+              "sha256": "2b989498f9a2c85ff10535dc38fb9f6aabd040910f058cb4b7b0e63634a0af28"
+            }
+          }
+        },
+        {
+          "page": "day-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-inbox-compact-pair.png",
+              "sha256": "2d34cbd081d1f94fc7ed395729b8e93d3948f3f9d9394fc627a1faa9309cf494"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-inbox-compact-diff.png",
+              "sha256": "3d048c9f0b8351e7bdcc8c9567b9f8a7db4bcfa7922be7ed05205c0ebdb70e80"
+            }
+          }
+        },
+        {
+          "page": "day-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-inbox-wide-pair.png",
+              "sha256": "72bf2e9437e2db5caab9b4d2dc2dc5fffaacadd2384a20d782a0580823f0eb51"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-inbox-wide-diff.png",
+              "sha256": "0017466c5db42c001a095de435de5477e5f58a9b8767c97472d1acd7eae59da9"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-terminal-compact-pair.png",
+              "sha256": "5804fb6d624fabdfe8277d5fd785631522d63acf420d34e9f9058da8000bb035"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-terminal-compact-diff.png",
+              "sha256": "a574289475a25b5a563bb072ca8a2461982dbbc003b7461c238e6854ad939d50"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-terminal-wide-pair.png",
+              "sha256": "9ad13be5214c0ac59c40a371eb70da30e50e720c812aa3d407011e2f4d63a29a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/day-terminal-wide-diff.png",
+              "sha256": "fc4da9ceab168e73259324be868e3fa5fd66229ca0eceb2358758d2bea47fa1e"
+            }
+          }
+        },
+        {
+          "page": "night-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-chat-compact-pair.png",
+              "sha256": "8bf34013b264d3c5ac8b887b1ffa2c7a76f5431ac4f5a0e63d06ad4de2a1c17b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-chat-compact-diff.png",
+              "sha256": "51fed006b233fd90b357fd74905e428b3faea24f02d105d6af6d0b4341a5358c"
+            }
+          }
+        },
+        {
+          "page": "night-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-chat-wide-pair.png",
+              "sha256": "b2d99c073bf25f13ff06f9ed5a4a97269d8c0891336406ed26a3675b0a923067"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-chat-wide-diff.png",
+              "sha256": "105987411e8e3d3fe696677be8ec84881a1990ecd7c906b7aabb51862aa89ae9"
+            }
+          }
+        },
+        {
+          "page": "night-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-inbox-compact-pair.png",
+              "sha256": "0253bb0beaa630b48de09ac04f3cfe41de251fed7ee4d2aaab401585c7f62941"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-inbox-compact-diff.png",
+              "sha256": "f82b7dfd96fec87c719c50a46ce4fd9099bb74fbd80dfcf6a472cd0cd59ed1f3"
+            }
+          }
+        },
+        {
+          "page": "night-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-inbox-wide-pair.png",
+              "sha256": "d751c7a45df4876014962ba6a9afdfaa821c5f199e420a0974194d42cb8ec933"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-inbox-wide-diff.png",
+              "sha256": "78414d72bd572903ca08eec15490e23d52fb0ef2c138a3f631c5ec29143d22f0"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-terminal-compact-pair.png",
+              "sha256": "45bc0c883a1490a3811ca3db919bcf5c2c660d5c090141a9ac4035b3a8a31bab"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-terminal-compact-diff.png",
+              "sha256": "6d69610370f0af7c394f17f5f8bf4a821b10d013206430a24a3e808d554114a7"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-terminal-wide-pair.png",
+              "sha256": "e5b30f0386529e86d57a42dbe444a945e5490a380c0c91813c5e5a45d6e0e078"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/night-terminal-wide-diff.png",
+              "sha256": "599072e10ba5efc59e2e3100a81a70f22ff8a0858759d30c40b02ae41fd45e9e"
+            }
+          }
+        },
+        {
+          "page": "quiet-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-chat-compact-pair.png",
+              "sha256": "8c06302ec7290bd3d28620e71215a92fb8aedf043c2409d7335237e739f148c6"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-chat-compact-diff.png",
+              "sha256": "494c093225a9331c845159ad9199aad36c86724cc9b8968f245f057270ce60d9"
+            }
+          }
+        },
+        {
+          "page": "quiet-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-chat-wide-pair.png",
+              "sha256": "8e5b32e75b77a4bb656756613830a36adaa6d4d83038dc5febbbdd2e84b72022"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-chat-wide-diff.png",
+              "sha256": "538f302acb9babfa62bd5b949fa9af6b579266e258dbf97a48eb2cbb8505d88b"
+            }
+          }
+        },
+        {
+          "page": "quiet-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-inbox-compact-pair.png",
+              "sha256": "76123000ef58b167262dbd02f33060dcb44a87f558617daef1c6aed29b6d99a0"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-inbox-compact-diff.png",
+              "sha256": "8612e59163d4c4bdc41fd393dda65e43c16aceb18c0680e943f09795c248ad2f"
+            }
+          }
+        },
+        {
+          "page": "quiet-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-inbox-wide-pair.png",
+              "sha256": "a0628a731d5946e5d6f81fb5b2ba75578fc147c858352d8651f5dc4fc637c55a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-inbox-wide-diff.png",
+              "sha256": "c06de504a181c1c468df387edadde92071c398e88196f612ad3f3d01d325748e"
+            }
+          }
+        },
+        {
+          "page": "quiet-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-terminal-compact-pair.png",
+              "sha256": "31f0fe09f82918612d3661f97ae6e54fc67c793ab3414e6e7502a028d3b9c06e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-terminal-compact-diff.png",
+              "sha256": "0f56f4916795625d5dc5c3ba952b10d7848b3990b3efe81c6c3af781a382c851"
+            }
+          }
+        },
+        {
+          "page": "quiet-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-terminal-wide-pair.png",
+              "sha256": "3b0f5c47ccb46ab805f09966763792214475c55e17b2c9b621f54066a4182f01"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/quiet-terminal-wide-diff.png",
+              "sha256": "d03eed1ce2b9518b181765d206eabaa9d7b6efe558992637785956270b4af03e"
+            }
+          }
+        },
+        {
+          "page": "rasta-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-chat-compact-pair.png",
+              "sha256": "54b79e4b11033f63c69bc41aaf78f5a3455c4404a2d202d4c4307d34c15c395a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-chat-compact-diff.png",
+              "sha256": "a743e77e95c1c622a1bf02e07c7158e6275b3b2ad10051f805e59554852353f7"
+            }
+          }
+        },
+        {
+          "page": "rasta-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-chat-wide-pair.png",
+              "sha256": "43ab557b1abf1666c1919ba30ecde4bc4096677da41d6961ed3a8aeafefcd251"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-chat-wide-diff.png",
+              "sha256": "3f60ef8a5793db244992b4e4583e362ddd73327a39f9a4795d2ed20e418579b4"
+            }
+          }
+        },
+        {
+          "page": "rasta-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-inbox-compact-pair.png",
+              "sha256": "cebac7a864065e5455d275006e5b4889aee5b96cf362d8d84337fd766821ae37"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-inbox-compact-diff.png",
+              "sha256": "6997a1f5492539879bbbe5c3dfcb3fca3e1effbc227a61a59b403afdc4c4cbb4"
+            }
+          }
+        },
+        {
+          "page": "rasta-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-inbox-wide-pair.png",
+              "sha256": "df2755ccdb8388c5a15b6b660ece54a0ef20b8c342e565929cf27c5d80dc2993"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-inbox-wide-diff.png",
+              "sha256": "32b7f5557f95262b4be84171159ef7a67cf9d52d36bbde2e4d606dedb1723a0b"
+            }
+          }
+        },
+        {
+          "page": "rasta-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-terminal-compact-pair.png",
+              "sha256": "800b3cece38469e85b109a3e8e4b088a67907e232d23a216ae1a4a2bbc757f16"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-terminal-compact-diff.png",
+              "sha256": "34d6cab8fce732473cedd47b819aebe6305fff3a146c2683cc4dddab71acf79e"
+            }
+          }
+        },
+        {
+          "page": "rasta-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-terminal-wide-pair.png",
+              "sha256": "aa0da3160fa0be2bb75b7f0450ceb71ffb7af8e8d735dcb689ff0b1ebc55c8bf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-host-20261018/comparison/rasta-terminal-wide-diff.png",
+              "sha256": "e1fc2032c2e17ee842bde74536baea134cea12903488192434885e72c994941c"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-inbox-20261018/comparison/manifest.json",
+      "sha256": "95a05cd38a8a7840572d9fac79b5c2fec112affa17ebdb6a52f45e1806ff4ce3",
+      "pages": [
+        {
+          "page": "day-accepted-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-accepted-compact-pair.png",
+              "sha256": "261a978cc947d70f190a948765805f7decab32acb1e81be6e7d0565d024d3e00"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-accepted-compact-diff.png",
+              "sha256": "0a01d405324d89e844a0ebfaac2cff3dfd875ef9454162b7b2baccaf8ca9adb6"
+            }
+          }
+        },
+        {
+          "page": "day-accepted-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-accepted-wide-pair.png",
+              "sha256": "0613bf6ad3955bb9e121ac177d5cb20aa75e4551863c210f894560a9d9d73420"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-accepted-wide-diff.png",
+              "sha256": "2926cdcd9eddc63cdbf6c5784f206ed8595cbd5b41d0c6c1ea167b48cfdfca5c"
+            }
+          }
+        },
+        {
+          "page": "day-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-chat-compact-pair.png",
+              "sha256": "2ae6200c379d19bf6a99965c65c4fa2f4010f2c1d21486f0d0ba991fc7333530"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-chat-compact-diff.png",
+              "sha256": "41ff87003ca082dfd9aa47ab342f1accccc852a9354fb065cda34eb6cb2640a9"
+            }
+          }
+        },
+        {
+          "page": "day-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-chat-wide-pair.png",
+              "sha256": "8d5719e59f4655ad94b666c996b611199a3e9ac0c476edf34768b1cf60f36ee5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-chat-wide-diff.png",
+              "sha256": "23ea54c4e2e72abecec47ee1bfb5c12aa1b9c079a3c01beeac8ab64afc1903b1"
+            }
+          }
+        },
+        {
+          "page": "day-image-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-image-compact-pair.png",
+              "sha256": "5b882818640190e368430d3ee93c6f05519a850a91db623c19d7c7d945f2b7a2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-image-compact-diff.png",
+              "sha256": "9a5f980930150eac6c18f1a1a61dfd09672c6f79c70851a7d62c52cb92b8385d"
+            }
+          }
+        },
+        {
+          "page": "day-image-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-image-wide-pair.png",
+              "sha256": "3025af5cd87f7124b149a439f9623ee18f92fd0f1adc0b4ddb506a915ff99b70"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-image-wide-diff.png",
+              "sha256": "b606e157c63f6125b05c91478667ee125339de067ea0db7a133d5b89fabc1de3"
+            }
+          }
+        },
+        {
+          "page": "day-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-inbox-compact-pair.png",
+              "sha256": "94fe4850625c0d4a85c6baff5a45d84b1a42bdd7ac03922f071e97c8bdf09db7"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-inbox-compact-diff.png",
+              "sha256": "bd9edd47ac9b66913ead2c756492d869147407f9ca98389ac161e15cf7b6a7b5"
+            }
+          }
+        },
+        {
+          "page": "day-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-inbox-wide-pair.png",
+              "sha256": "3a683d9358d149548c90e377d8f8dd79676f1c92bddcab4b9ae733f6988d44ce"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-inbox-wide-diff.png",
+              "sha256": "d08f773a6d70e95f47e83dcabd055929d6e2f21ed449568874efdcc4c8d2cd5c"
+            }
+          }
+        },
+        {
+          "page": "day-rejected-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-rejected-compact-pair.png",
+              "sha256": "7309eff87c0099c2d135077cdbf9a5a682dd54a68a2cbd410bf951f3fa51cb5c"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-rejected-compact-diff.png",
+              "sha256": "dd11723c971303006af73fe478644c479e91116085240d2000bbab43f621691e"
+            }
+          }
+        },
+        {
+          "page": "day-rejected-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-rejected-wide-pair.png",
+              "sha256": "585331835c80a79b7e6936834f8931b4c1c2cf6eb6ba5c23cc034e52e84540a0"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-rejected-wide-diff.png",
+              "sha256": "3a8a9a72fd2147b86659bcf0e7b424ba9f365c7d9954d8d05a8be25abc38219b"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-terminal-compact-pair.png",
+              "sha256": "6d3d6f020dd50e15966f2f82d686122802a9d47935fdffaed9d74a372b1cb0d9"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-terminal-compact-diff.png",
+              "sha256": "1617109e7d622b8f702c2d6204bd02bce79608f63f4b049d6785be69295906c7"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-terminal-wide-pair.png",
+              "sha256": "9586b778d59378bd43b486999fe79450d05363363428e9576ef59b517eaa0400"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/day-terminal-wide-diff.png",
+              "sha256": "0a2421c425c3dffe0d98423ffe1d0fb7b947865b0f8c058f05333054594ec403"
+            }
+          }
+        },
+        {
+          "page": "night-accepted-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-accepted-compact-pair.png",
+              "sha256": "9fb9047945aefb251d299cd92e68a809a19f93f9d49739d3ead085517be5503e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-accepted-compact-diff.png",
+              "sha256": "2dc0aa9bf6a81b2dbfad38f78423aa338a106df41aa667988791b39f3891ddd4"
+            }
+          }
+        },
+        {
+          "page": "night-accepted-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-accepted-wide-pair.png",
+              "sha256": "29ab888157f47e67a4c4a379d76922e1a98d8e2bdadb456ca05331073c68df2d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-accepted-wide-diff.png",
+              "sha256": "f2e971c0b85e335522e74bf159124a4bfdaa7646e03778b67ed8ad26e9ca6e97"
+            }
+          }
+        },
+        {
+          "page": "night-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-chat-compact-pair.png",
+              "sha256": "efe2ee3928d7dec7d5e365f45c82b170cb1be62288d2e07d812ceb9d67970fe1"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-chat-compact-diff.png",
+              "sha256": "95c37cc05a0622852338dd9121435205208d8ec1f1839491e59851c08def6c2a"
+            }
+          }
+        },
+        {
+          "page": "night-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-chat-wide-pair.png",
+              "sha256": "7293f0de4d7a045207b2fdfea837e75ee1c4b27cbd7dea8bb720c87359a6472b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-chat-wide-diff.png",
+              "sha256": "285bdb8ef030a8da81447cd3f36eb8fc4f80c2c129d9c3378a7400f81decfa0a"
+            }
+          }
+        },
+        {
+          "page": "night-image-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-image-compact-pair.png",
+              "sha256": "da888fc897bcf14684350ac113b3331c62a55fbb88c9ce4f99bae0a7eb1d8b75"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-image-compact-diff.png",
+              "sha256": "3a95753a09c0503a9d063644e9895da72ccb5baeb3c8cfe6ba15c12a8da03cdf"
+            }
+          }
+        },
+        {
+          "page": "night-image-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-image-wide-pair.png",
+              "sha256": "c201fea052ef9ff8be13de4b58f38c23f45517b25fe14de9be3512ab1887976b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-image-wide-diff.png",
+              "sha256": "4f3931589da419b4e7fd81042b75541ea015c3a52cd19ceca002b7cfac3141ff"
+            }
+          }
+        },
+        {
+          "page": "night-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-inbox-compact-pair.png",
+              "sha256": "c2256ced2df290605ecb7e2861c95680a36eb183f076275cc8abe6d4fbd96903"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-inbox-compact-diff.png",
+              "sha256": "19c76f1c42bd6ad392d0588ec9ff0c33d28f565d2b53072f0ee042e708b73008"
+            }
+          }
+        },
+        {
+          "page": "night-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-inbox-wide-pair.png",
+              "sha256": "1baafa55258c793415e0bc9c9385bb1cdd1a6c33f1ce2870a0fcda63ee985122"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-inbox-wide-diff.png",
+              "sha256": "04823404ddc8c2000ea6d2103b2a380b541187ef8ebc431dfa315c7bac58c4a8"
+            }
+          }
+        },
+        {
+          "page": "night-rejected-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-rejected-compact-pair.png",
+              "sha256": "fe177675f3ba570f37b53fa9a0a92481ed2bf3221b784f968a8d355813d5bcb9"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-rejected-compact-diff.png",
+              "sha256": "55f41783b766aa7361040197dd7c0e7d991d971a94c921100ada281ca6ee8788"
+            }
+          }
+        },
+        {
+          "page": "night-rejected-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-rejected-wide-pair.png",
+              "sha256": "43d951f81dff1b9836fd4f5c0acd52fae5914329c2f1bab1d0fcac0b164f7bf5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-rejected-wide-diff.png",
+              "sha256": "b387d52d575698c8a0b4ba980935af3b9534ed40d1abb82e82a9b4d14b3f4482"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-terminal-compact-pair.png",
+              "sha256": "12de98f45c5563c2da22be085c8fe698cec7639776a536106a67095fbaf8d0bc"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-terminal-compact-diff.png",
+              "sha256": "1dd5613fced12b03c167a712359ad4cb186e8fea1a7daf59957a11d31a6118bb"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-terminal-wide-pair.png",
+              "sha256": "4f08ef74417f010c72e72a5f2cf70ac0f193bede71ea1fd289a844a3c75d1e2d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/night-terminal-wide-diff.png",
+              "sha256": "421953ff071a6cb48d3b211120d82dad51b234b17de715edf7074612b99a2040"
+            }
+          }
+        },
+        {
+          "page": "quiet-accepted-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-accepted-compact-pair.png",
+              "sha256": "5dddfcbc20c9958d7073487fe0e3ce774a1f21e2cd884988fda7bd7ce2a8a74d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-accepted-compact-diff.png",
+              "sha256": "7f94accb3db205e629e328c758942aad3bc55aff221bda486858dcd2c5f9678f"
+            }
+          }
+        },
+        {
+          "page": "quiet-accepted-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-accepted-wide-pair.png",
+              "sha256": "41f0d6520b8716d705efb300a81d7d8862e141c1976f29a71af537ff87cecae5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-accepted-wide-diff.png",
+              "sha256": "701ef840611f16ab9bada389abc4deb3ca0d3b01fc506c9b79ad322975de6735"
+            }
+          }
+        },
+        {
+          "page": "quiet-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-chat-compact-pair.png",
+              "sha256": "ccc8a60f8707e7d2af3f1ee4ca4c3f3958b1f8f5cf9899e57b602a2271da6c32"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-chat-compact-diff.png",
+              "sha256": "df8fb84580f908504ac21ca539b27eddabf1a854a6bd472b4d0ddc26648353e7"
+            }
+          }
+        },
+        {
+          "page": "quiet-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-chat-wide-pair.png",
+              "sha256": "f3390731feb39e9b9d37d480c3aa471085f1993ce401dfa02004d62149455852"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-chat-wide-diff.png",
+              "sha256": "d1ad5ba7a0023ae7168686441fd52a8cc3daf8fae279e956f052c987f9eafbce"
+            }
+          }
+        },
+        {
+          "page": "quiet-image-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-image-compact-pair.png",
+              "sha256": "7b83814cf5852f2456075404d0df7f981a9f29b4ba6f8235ef202b251e496299"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-image-compact-diff.png",
+              "sha256": "18c127c4a4196d3f3330165b2360aaff02462d2c4675ac78bee0f05e4cd77d92"
+            }
+          }
+        },
+        {
+          "page": "quiet-image-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-image-wide-pair.png",
+              "sha256": "f50ab142915153f3b7c8735b4c26a09ac3ff4314a0f199ee81ad9d3d90345705"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-image-wide-diff.png",
+              "sha256": "fc47be4071e461c399abebb367ce385ecc5ad3ccb101ea9dcf1eac1fd0102ee4"
+            }
+          }
+        },
+        {
+          "page": "quiet-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-inbox-compact-pair.png",
+              "sha256": "e0224f0d9240190f7cf9e9e66120b7764b29aec3e37fa838eb78edf4cf7db48a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-inbox-compact-diff.png",
+              "sha256": "c16817dd7b2e5fc31877be64bf1c1d0c272ff36ddd749fc5362f02ca1c1eabfa"
+            }
+          }
+        },
+        {
+          "page": "quiet-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-inbox-wide-pair.png",
+              "sha256": "9dfda1ac6d053b549db131d41386ba7c61be04521ae47f87df1aa70bb6882d4b"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-inbox-wide-diff.png",
+              "sha256": "01530ebf94ab91d0c77f0a6571621d4ca59dbd5746e043a69b3f0cb8f7a9a518"
+            }
+          }
+        },
+        {
+          "page": "quiet-rejected-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-rejected-compact-pair.png",
+              "sha256": "790197208e9a281441238859a3853f73dad1a0ce08efd46e757d11ff6722efdc"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-rejected-compact-diff.png",
+              "sha256": "35dbe9b17dd74d6fdf6048bb2fb3ae3698dab54abea14c22a76c2a895e84d4b6"
+            }
+          }
+        },
+        {
+          "page": "quiet-rejected-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-rejected-wide-pair.png",
+              "sha256": "b925dcbf5e93697a7fc251049051f8979a2ae0d5faabbe3c7d4ee1fd22ea0d4a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-rejected-wide-diff.png",
+              "sha256": "e9c5f63ea8473bafaa92e8f5c39eb033f41c02fa8673e8cb1fe5439dade8bfac"
+            }
+          }
+        },
+        {
+          "page": "quiet-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-terminal-compact-pair.png",
+              "sha256": "a210f779cd9e16e19afbc2f2dcf0a67247356baa8b37b56c85732df348f316e6"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-terminal-compact-diff.png",
+              "sha256": "d4ce49c4a7b655e680121084a36e605527f9eb0dcf157773d9e7cf38515977ee"
+            }
+          }
+        },
+        {
+          "page": "quiet-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-terminal-wide-pair.png",
+              "sha256": "9eadd0990d60d65c2da7cd63c503da12284625fde6106aa5bd7f2e3b6ff8c0d4"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/quiet-terminal-wide-diff.png",
+              "sha256": "5dbe9cd22cc6c4472e74b756ce74d736e7634736860abb40f111f855922934f6"
+            }
+          }
+        },
+        {
+          "page": "rasta-accepted-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-accepted-compact-pair.png",
+              "sha256": "cb6982769c44fdb7ac066eaecda894481c93e56b18f39155ea230c990708da70"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-accepted-compact-diff.png",
+              "sha256": "0a75e151d567cf5aed796fc255c77095e5e677928b48516da8725201e6ae9a51"
+            }
+          }
+        },
+        {
+          "page": "rasta-accepted-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-accepted-wide-pair.png",
+              "sha256": "54f137e353d62de1368acad5848030ea8491864afc33998e98c671b5930f34d9"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-accepted-wide-diff.png",
+              "sha256": "16f18f08ae34d8178b1c4c6250917fa200b8d2468f9b56c8e4890add1d862c9f"
+            }
+          }
+        },
+        {
+          "page": "rasta-chat-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-chat-compact-pair.png",
+              "sha256": "966f865666c9ad54a4c113af669310406a6e83fa2d4c88344a8148cd8167e5d2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-chat-compact-diff.png",
+              "sha256": "4d36ab2b830acd01a3daafe8e0ab31870d669426320fb4ceab0c5f0e5d78cba5"
+            }
+          }
+        },
+        {
+          "page": "rasta-chat-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-chat-wide-pair.png",
+              "sha256": "03963992818c26ec76d74fcdab7307e2a4dd14b01003034505723d379c8b6f1a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-chat-wide-diff.png",
+              "sha256": "6bb9cd34ab28f178601656e2c45283b469fa1f1bc4091b5f9397bbd044716a2d"
+            }
+          }
+        },
+        {
+          "page": "rasta-image-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-image-compact-pair.png",
+              "sha256": "36758520bee9c440667943335df34a31f49d49cb0898244b9e079ceec5f05451"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-image-compact-diff.png",
+              "sha256": "134142e1720b86050d7fc229198bc38d87bac77e57623263711511360f028f6a"
+            }
+          }
+        },
+        {
+          "page": "rasta-image-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-image-wide-pair.png",
+              "sha256": "1bcedd6b7ae4384b0a6b95ad2609d48dd0b6057c4e44bc0752c60b986f5dff49"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-image-wide-diff.png",
+              "sha256": "297c8ca416edee730a3e561e24dd4741de7f9bd0ace3baab41f43c0ad2ef122d"
+            }
+          }
+        },
+        {
+          "page": "rasta-inbox-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-inbox-compact-pair.png",
+              "sha256": "d023c77a685d4c3904e82244b562f74ad0e9747b0a461f6c74d49758bb8b489d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-inbox-compact-diff.png",
+              "sha256": "a645f678080484a9ecaec92d17445395b10b3f501ce23792d6e75850463c5892"
+            }
+          }
+        },
+        {
+          "page": "rasta-inbox-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-inbox-wide-pair.png",
+              "sha256": "b09e8a52b7929b0ef7423efb553e6dcfdb734d11ffbfa0618790703d5a174204"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-inbox-wide-diff.png",
+              "sha256": "8696f389faebe9ea40cb8f22db286a7a9d61869ad8ae036553a9643b2cff5c9e"
+            }
+          }
+        },
+        {
+          "page": "rasta-rejected-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-rejected-compact-pair.png",
+              "sha256": "c9ac6c3c7ccea60774182c259f605cc993a231e4bb332495464d9cc3003b683d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-rejected-compact-diff.png",
+              "sha256": "9bbf40826adbfe1d999c971ba3505392c2051b6815fbd6e0d2265b184a945bc8"
+            }
+          }
+        },
+        {
+          "page": "rasta-rejected-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-rejected-wide-pair.png",
+              "sha256": "26eab973737781c3e3cc8e206867cb39e832a899acb3360378f2792fa007870d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-rejected-wide-diff.png",
+              "sha256": "955377f6c86b0f7dac1f6b3b941ca7798cb79009318f353a845f9fb4753fcb12"
+            }
+          }
+        },
+        {
+          "page": "rasta-terminal-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-terminal-compact-pair.png",
+              "sha256": "6995f9300c11f694aa5fd832135ea306a1687d415347d69c177b7db8b8551c05"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-terminal-compact-diff.png",
+              "sha256": "1d8fd0add8b65a39a3ad357844b99bfe1b2a7f63df1a3e78f0d04e8c1f85fed9"
+            }
+          }
+        },
+        {
+          "page": "rasta-terminal-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-terminal-wide-pair.png",
+              "sha256": "6b2d90eab03d4baa4cfbbadb99c4f08b46a3a2c76b5107eb322a9edd394c4dd7"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-inbox-20261018/comparison/rasta-terminal-wide-diff.png",
+              "sha256": "fed14649327a08d8dee38b6c588c45c78a9bfbc62376804d596b0ff0c64f31aa"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-mailbox-terminal-20261018/diff/manifest.json",
+      "sha256": "5c81f43fcc43473f40ca9c5f7eb69eb214507d53016e0e99bbe0bca438d697a3",
+      "pages": [
+        {
+          "page": "day-terminal-empty-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-empty-compact-pair.png",
+              "sha256": "067fadaa9bc564c22d343301bf6d8808e2436cd85d89f5be88818fdf1b8e7ada"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-empty-compact-diff.png",
+              "sha256": "15fd6e4ffdbb52a78df246b9d3ce89f6bc3ab2f3bf8d0618b443c31a234f939a"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-empty-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-empty-wide-pair.png",
+              "sha256": "0aabb5aa5f4db3f012841175bb87b08680d117cbb59b208073002cd07990ff70"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-empty-wide-diff.png",
+              "sha256": "e3ffc40e3f53ed359615cdb5cae67a050c9242e1fe9f3584d510c122c6cccc1f"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-exited-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-exited-compact-pair.png",
+              "sha256": "a989d7cffdb42e7c2b40231ab665e8360463b9bcf0df94daf2b35fd762ca3842"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-exited-compact-diff.png",
+              "sha256": "09872d2466171f187118f1a54a4452ef87c5b9735dd7f66137e9c896d0f72dc0"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-exited-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-exited-wide-pair.png",
+              "sha256": "c2efc0cb5f19b8d63ce0dc70d0e9989c555d9e5088447bf2b63f2cf4025f7453"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-exited-wide-diff.png",
+              "sha256": "d02a1cecc2c54c0c2001f3b5f58dcf4e4c9b30b52872f50c78926c9a09e92304"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-file-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-file-compact-pair.png",
+              "sha256": "97841cd8dbe6af0d05bc505d55b56c404ffa23cabd6a5d1174e5c288f6242ae1"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-file-compact-diff.png",
+              "sha256": "b4d4f76737953d80f5755bf7d87732a31c6d64118ef34969aa1635a25bbe587b"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-file-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-file-wide-pair.png",
+              "sha256": "53eddf6bae0567c9c3e3a6f8b99396827a275b07569905507cd00f5d6be485b5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-file-wide-diff.png",
+              "sha256": "d302e76fe5533bd1f7207c3a7e005ee21ca0d3ba1455ec4ca0b5645476fe211d"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-receipt-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-receipt-compact-pair.png",
+              "sha256": "f04e880f7d7b0f0cd8109662515f93b94a4ac9bdc2ebe75126db8823e25735bf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-receipt-compact-diff.png",
+              "sha256": "4b289386188dc9995f70d59736a78cd63b223d780a0c78b68671a803cdcdd028"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-receipt-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-receipt-wide-pair.png",
+              "sha256": "abefc92cd91a87e94d0a467480f1748f6e7b75068b26ccb06923845c35c91395"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-receipt-wide-diff.png",
+              "sha256": "3548567c92a538a9ea88c48ee7a08a91c62f7a5bb4cbb8c6402841987b4343e2"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-running-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-running-compact-pair.png",
+              "sha256": "97841cd8dbe6af0d05bc505d55b56c404ffa23cabd6a5d1174e5c288f6242ae1"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-running-compact-diff.png",
+              "sha256": "88befa8af05cf0105794f30e46a5b36c8da8dfb1cb613505cc4e1b261ea5c72b"
+            }
+          }
+        },
+        {
+          "page": "day-terminal-running-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-running-wide-pair.png",
+              "sha256": "d4b8068ae62ce617dc03a01e89614a582d792b9afd5c0d015f531225092cdcdf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/day-terminal-running-wide-diff.png",
+              "sha256": "0e09f1187e85800498630d1c2084403c5b3f57abbe425a81337e50dfa3686654"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-empty-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-empty-compact-pair.png",
+              "sha256": "94faff7327cf22883e892cad31f55d93a060efe7b6a018cbebf31492e29ccddf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-empty-compact-diff.png",
+              "sha256": "3a469d0f257e733c341c1a5dc0ccf57469b5c372082334f83a7223345290f101"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-empty-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-empty-wide-pair.png",
+              "sha256": "162963a63fd859deb00e3fa50ca29668137c032acf3a5fd33ea01b9ab04bc000"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-empty-wide-diff.png",
+              "sha256": "6bae84553213022d06247010246bc29f16a6de9bd119c249d506cbb595b6606f"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-exited-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-exited-compact-pair.png",
+              "sha256": "591a4f09874aa7fc86aa9c9908146eba2acc2691d7df99c0419df3e1a0cd9659"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-exited-compact-diff.png",
+              "sha256": "7551a8f2e1ff47393ac942810b31263706e5baf662ca6dbdc7b9134b683259e9"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-exited-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-exited-wide-pair.png",
+              "sha256": "748bd6ea4ea6e2d7c19703f000b6a2f71c2215b50bfc6bd4c8e8bdb03a083076"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-exited-wide-diff.png",
+              "sha256": "c62f6075f3445c4f73f847b06eafa1baa52eef9b8ddea09f7bcc76570733f94a"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-file-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-file-compact-pair.png",
+              "sha256": "77a11add0951801a972718aeed502be7f7abe7d7996a47944fe4369b69aeba1e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-file-compact-diff.png",
+              "sha256": "1b55d784e6d5574fd372defd2a33e3665ca214306de04c169f5df8c2cc922f0f"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-file-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-file-wide-pair.png",
+              "sha256": "ed95f76f2f36289473e0a93f474af83eabd1e1b3cd3be55778c9c54ce61aaf95"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-file-wide-diff.png",
+              "sha256": "ad291a176d1606b8fc1cc7aa05e707de75690dec45f40c382ff00d6897da9ef9"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-receipt-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-receipt-compact-pair.png",
+              "sha256": "3b650ef931b17fc3f9fc67697bb6c1ee2d677d3b979fa167bba360a2f669b8da"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-receipt-compact-diff.png",
+              "sha256": "61d157789f1e9727ec97c1af33028173080c93085248173a4e9f3c6d4bb80e85"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-receipt-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-receipt-wide-pair.png",
+              "sha256": "fb2efddf66677e2d03dc9c815f669c6d94458863c62aa2d5f81d7e903912c4a6"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-receipt-wide-diff.png",
+              "sha256": "e4b76f4212fffe8ca0c8ac053702cb0a220f812b711c5b234062753d30511ec9"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-running-compact",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-running-compact-pair.png",
+              "sha256": "77a11add0951801a972718aeed502be7f7abe7d7996a47944fe4369b69aeba1e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-running-compact-diff.png",
+              "sha256": "30503bcdeae4d082a8e34ae516c5a37b6f2e02a2f59e7aaad03d3bec2dbe18cb"
+            }
+          }
+        },
+        {
+          "page": "night-terminal-running-wide",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-running-wide-pair.png",
+              "sha256": "2f8b1226a419ce050c72317ece5520b32ab793dccb9cc50982476a317b4d3644"
+            },
+            "difference_4x": {
+              "path": "validation/linux-mailbox-terminal-20261018/diff/night-terminal-running-wide-diff.png",
+              "sha256": "e6f80683891fb69e744375504da05ff4f6af7d1ea968e43e0d52dc782861b8ac"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-statistics-20261018/comparison/manifest.json",
+      "sha256": "459c59c3fd787a77877abf848508a7fdb12a9a0add031cf838c3f20c18889118",
+      "pages": [
+        {
+          "page": "daily-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-day-pair.png",
+              "sha256": "789f33e2cfa6182411f3e4025cf41a5b95b5c5877d2b8f99fa8ed87a4401b382"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-day-diff.png",
+              "sha256": "ed93e9068541ee8d944cf0e561f0f5bd1a46e3411c6cabe2edf37fa429fbf604"
+            }
+          }
+        },
+        {
+          "page": "daily-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-night-pair.png",
+              "sha256": "0ba66662ebd32a751963434c64203c2cf889ed71d13424696767aa2741673f3f"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-night-diff.png",
+              "sha256": "4fe1f26a69a46d444822ce13ce0e8fa8aefa62625f4d403ad0db0de0e7b8ccc9"
+            }
+          }
+        },
+        {
+          "page": "daily-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-quiet-pair.png",
+              "sha256": "e01301c31cee2b3258fd2ac82e70178b2880bdd97ef05ea23d4bb221ad2048b8"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-quiet-diff.png",
+              "sha256": "5d32f9212d88d4583665e254341bb47ab14748bf99ce47b5af6952cb5d282914"
+            }
+          }
+        },
+        {
+          "page": "daily-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-rasta-pair.png",
+              "sha256": "665e605f6fabf4bc86bae1474ca4763b2699034ce76a152cb2391e281f065242"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/daily-rasta-diff.png",
+              "sha256": "b39de98339f289c8cc7c0a0cdec2bb37244db00593e997cf28c023b1f9d46c86"
+            }
+          }
+        },
+        {
+          "page": "history-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/history-day-pair.png",
+              "sha256": "cad498d8f9fa23faf0256f4d18bf1902df8104411096c89faa80c729d65b15f2"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/history-day-diff.png",
+              "sha256": "ec0dfb5259559bc08ecf9dfd539385d055f96af83296b4e877cdeaecf4ff8235"
+            }
+          }
+        },
+        {
+          "page": "history-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/history-night-pair.png",
+              "sha256": "926f8bc4cd5db49cfbef96dbe0e75fb7833ffc054fa0b69f71b68dace558effe"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/history-night-diff.png",
+              "sha256": "7348f54b46dab02f51f63935f59a57a7b744dd6a93c8268369118aaac9833216"
+            }
+          }
+        },
+        {
+          "page": "history-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/history-quiet-pair.png",
+              "sha256": "977424bbc97f258e4f0c64baa21e3b7798f6826db01e25fb6251225cf7aaea0a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/history-quiet-diff.png",
+              "sha256": "7d0d0d19775b9eca3e470cb3487767274dedc938af6fef774525b023d1ec9ecb"
+            }
+          }
+        },
+        {
+          "page": "history-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-statistics-20261018/comparison/history-rasta-pair.png",
+              "sha256": "4cee39035cb63aa8483b2748e34fb49ae2b92da2789a22df5f74ce3b669f3f0a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-statistics-20261018/comparison/history-rasta-diff.png",
+              "sha256": "9345ae9810f6014903038e2f6e00660a6db0db6aa269dfb79dfe325f3d779853"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "manifest": "validation/linux-typing-practice-20261018/comparison/manifest.json",
+      "sha256": "63b3ab02c83112e1c7cd5412247291acea253a020f445e4585feb798d1b9bca4",
+      "pages": [
+        {
+          "page": "chinese-complete-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-day-pair.png",
+              "sha256": "fd96611f0f401d81c020fba58dc2bb0786746d0130daf9af433f91e38dda56be"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-day-diff.png",
+              "sha256": "14e74fd620ae149b6eea9a5ea6028e956c455829b6f89b39046bffafb6f99760"
+            }
+          }
+        },
+        {
+          "page": "chinese-complete-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-night-pair.png",
+              "sha256": "b2113554faa10ef8bea0e81989137a50222165cad4c59a77d2ea53087818fd6e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-night-diff.png",
+              "sha256": "b132279ce0c9dbd892b0a157bc05f2b461bb4fa6e9038faefc1fb94ac6b00297"
+            }
+          }
+        },
+        {
+          "page": "chinese-complete-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-quiet-pair.png",
+              "sha256": "caf696931224eeeda49e4dccd4e663336429f2f8ea25987ee727100663e3615e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-quiet-diff.png",
+              "sha256": "5084a6e17db583f8d2f3dd079d02c10663e4fa10786f09f45866885783160a65"
+            }
+          }
+        },
+        {
+          "page": "chinese-complete-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-rasta-pair.png",
+              "sha256": "f465c22ef8d0936cbae85c965db3002866af98028239222f8463c6ecb1fe0e31"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-complete-rasta-diff.png",
+              "sha256": "64bdf5cf4ecffb841266f14e7d9459b268425610a21cf641be9788eb6e059223"
+            }
+          }
+        },
+        {
+          "page": "chinese-history-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-day-pair.png",
+              "sha256": "8c2c76ab3b8c41ed71939ee7e69c381861f21675615db9ad86a34630c3f4b544"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-day-diff.png",
+              "sha256": "44329e33a081595880fa3db17668656be7dda0b1f8c3459706bd96db69cc2f35"
+            }
+          }
+        },
+        {
+          "page": "chinese-history-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-night-pair.png",
+              "sha256": "8b3978525d7dc01bb2d67d85a268b64a0e71d873c22cd677041a30077c50b7cf"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-night-diff.png",
+              "sha256": "c00751eee297773214c942146f24e25de33268e8f0512a9f2c6a45dc9a11fe1b"
+            }
+          }
+        },
+        {
+          "page": "chinese-history-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-quiet-pair.png",
+              "sha256": "c973f13fbdc28ec74fcb41377d31229cfa5d20b0cbeca0948145494ccab85c30"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-quiet-diff.png",
+              "sha256": "47b90df923b24bf9b0a632e006d1ce87c43456a3ae733eb3bb5d1ab927975138"
+            }
+          }
+        },
+        {
+          "page": "chinese-history-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-rasta-pair.png",
+              "sha256": "3f71561366f55e6a6ad15f46e908467f704fb93d0dcc2832f7ee9c90dffce465"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-history-rasta-diff.png",
+              "sha256": "d543307142668324abb31cede32e40e3e20fbcab7e6691fe670d3eef5ba95b42"
+            }
+          }
+        },
+        {
+          "page": "chinese-live-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-day-pair.png",
+              "sha256": "a2ee239d458545695f4bd1d8f64c43c3760ed6f882311dca7e2d691adcc33c43"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-day-diff.png",
+              "sha256": "da3f194fc39b424cc001a03bfdc632e926658ee91f5d52201ea6fdebb3275689"
+            }
+          }
+        },
+        {
+          "page": "chinese-live-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-night-pair.png",
+              "sha256": "c90bdd74a13130e1a8164dad894e2873395abddfcd2e501a19aa87fbf261864a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-night-diff.png",
+              "sha256": "b3a09b60836a88977733702a502915ca159ae5233e79d3601e3ccce3af38b160"
+            }
+          }
+        },
+        {
+          "page": "chinese-live-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-quiet-pair.png",
+              "sha256": "784a17f35db4d4937950401e6526224eac873ed6fec82eeba6ce4c24f35760f9"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-quiet-diff.png",
+              "sha256": "3ab8bd17ba61a6f58e5fdd95ef18bc0787f9f80914ba1a319233f805cbe85f49"
+            }
+          }
+        },
+        {
+          "page": "chinese-live-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-rasta-pair.png",
+              "sha256": "658d6faca607beead04bac0ff31be45130b034d9bddaf46545f84a255427b303"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-live-rasta-diff.png",
+              "sha256": "8c5b087a5d346c6e6d3ac085cc8001c6797d24eae47ededfac936f7cbaadb2d5"
+            }
+          }
+        },
+        {
+          "page": "chinese-ready-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-day-pair.png",
+              "sha256": "c40b4b606c46073c657163060366416e8a7a78087f4182b77d56b7c6ff119071"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-day-diff.png",
+              "sha256": "460e84e48be9692d707f0b07de968a69fd2c49b86c281c2a885a4fe25d2171a8"
+            }
+          }
+        },
+        {
+          "page": "chinese-ready-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-night-pair.png",
+              "sha256": "8d26ddfbf999251308744d7756b06000f4e3428d5e43a43d4e7edb31a29da0f4"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-night-diff.png",
+              "sha256": "b2e4e5314cc4b1d3552c79837672a71f35230e186af7d1684fed485be5c18049"
+            }
+          }
+        },
+        {
+          "page": "chinese-ready-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-quiet-pair.png",
+              "sha256": "3fbcac25771f98477ad1ad8010d52f1191a90a35c4f7c3518bd00553ddd3d582"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-quiet-diff.png",
+              "sha256": "39904b89de6075289ca55724e2fa085d2445a6782e779f9e0d7c1b184e4be87a"
+            }
+          }
+        },
+        {
+          "page": "chinese-ready-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-rasta-pair.png",
+              "sha256": "e6055cdfa68fce4d9532107b4d91bb647a323c57e701dfa42b2caa6908c21b26"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/chinese-ready-rasta-diff.png",
+              "sha256": "9297043c9db7692c9fa1f18437ed92430ffcb87a47135b90b29ff49433fe5b84"
+            }
+          }
+        },
+        {
+          "page": "english-complete-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-day-pair.png",
+              "sha256": "82db8a61db57813b0dec2aefa00528376e5eea9829010285df59775d0e9614c5"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-day-diff.png",
+              "sha256": "892d40435af6dd384b52674748510955b983f496d56ed26351ccb0dd2dec0b24"
+            }
+          }
+        },
+        {
+          "page": "english-complete-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-night-pair.png",
+              "sha256": "17fb9d39d7ec322116a65bf2e5d914015a5021d9c821097fce91043382c30a3d"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-night-diff.png",
+              "sha256": "2ae8a4624df3c2741ff7156d718085d71c80b8a11d72f3c2187f26acf56ecadb"
+            }
+          }
+        },
+        {
+          "page": "english-complete-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-quiet-pair.png",
+              "sha256": "c0d37b093a074f28e10f8d70421d844a86ab8a3bb9f92ce6326256a681a072e0"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-quiet-diff.png",
+              "sha256": "680c386d1e867fa0c32903c3052d717b7207ed6e29cbec537e0dd2d9bf85d098"
+            }
+          }
+        },
+        {
+          "page": "english-complete-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-rasta-pair.png",
+              "sha256": "dffc6bd174ca88f6d76ffd7a82cbde424dcf3bfdbb57094f25c929ed5a66c85a"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-complete-rasta-diff.png",
+              "sha256": "bbc59549a0642ed24d0fa92217314689121c0860080cdab5ad0a41c15a8228f7"
+            }
+          }
+        },
+        {
+          "page": "english-history-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-day-pair.png",
+              "sha256": "0e09fe87c744589c924e77327389323b0ba6f61ecfb1fd938e3e3b68aec56a38"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-day-diff.png",
+              "sha256": "99d794a98b45c0fcb4b29744c8375d1cbb4757b9bd2b4a901a872a7f99cc574c"
+            }
+          }
+        },
+        {
+          "page": "english-history-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-night-pair.png",
+              "sha256": "eb474e58488609b8f43d102d314faaad60ffa7ea7ca1dd0271d2cc9119025eff"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-night-diff.png",
+              "sha256": "e44fb149609724afc16df663797e2d1b991ef3ca1a36a32e84b224f70fa08ded"
+            }
+          }
+        },
+        {
+          "page": "english-history-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-quiet-pair.png",
+              "sha256": "680f17e843198488f8e67e59be12831c28b12f5d97d539a9e897e294b842844e"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-quiet-diff.png",
+              "sha256": "757ff5d3e762eb4c478dac701222fc62d29aab839b5a42c45b90b76e5fd2bbe6"
+            }
+          }
+        },
+        {
+          "page": "english-history-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-rasta-pair.png",
+              "sha256": "19bd87ff287903c502711bfe766eec17fd2415f190f991a01fb8daa6e21b42d9"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-history-rasta-diff.png",
+              "sha256": "6185a00ad8f2e85fae644d3f0e8c3c844e8e423c1c300849dab956a69a3a735a"
+            }
+          }
+        },
+        {
+          "page": "english-live-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-day-pair.png",
+              "sha256": "9dbf80deb3b8234639edc1ba8fe4ba21f22754f0aeb20d17d276db65693e34aa"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-day-diff.png",
+              "sha256": "28d9daf018e155020185370ab4fb888df2d0667f156c0c2013a34dc748379a3d"
+            }
+          }
+        },
+        {
+          "page": "english-live-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-night-pair.png",
+              "sha256": "19745f3f4d499ce3ee394188e0fc27f98bfc4a6b2425a19de2bdd13d31959876"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-night-diff.png",
+              "sha256": "3bc918299c557b08997930bf0cae6814cd324ae9b722bdeb74a8a3398d98b877"
+            }
+          }
+        },
+        {
+          "page": "english-live-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-quiet-pair.png",
+              "sha256": "8288442f5e8974e3390fefac8585643a5f119ac99b78ca09db7389925828bb87"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-quiet-diff.png",
+              "sha256": "53839326c6d7ccae9056274277299a81e7e8e01387377bcd0d06173f0f7c7488"
+            }
+          }
+        },
+        {
+          "page": "english-live-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-rasta-pair.png",
+              "sha256": "02a4802e2e78f1a6152636c773c2fa6ab7fb1736e55430d8dd8d6a2a0ff4bb45"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-live-rasta-diff.png",
+              "sha256": "4c982c60c5ff0338ed821ae3f81ce0b90cb380340be8af07ddb0ef1eb5afe9f5"
+            }
+          }
+        },
+        {
+          "page": "english-ready-day",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-day-pair.png",
+              "sha256": "bd2596c2d0c5d2ad1cfaaec06499db8b3bf6d238c0070baa1c5b1a99722d17fb"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-day-diff.png",
+              "sha256": "d389587e0644d2c6cf8a5bd02dd57e6d4f6f22b2700e616954da9acf9c036e96"
+            }
+          }
+        },
+        {
+          "page": "english-ready-night",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-night-pair.png",
+              "sha256": "dc6aa20679810ea62935066f67986c25d1435d6bac7393d9a54be957ac74ebfb"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-night-diff.png",
+              "sha256": "56b4a02cc370bbb06be4379eb816eb824c937c8aac28c07084386db18dc9178f"
+            }
+          }
+        },
+        {
+          "page": "english-ready-quiet",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-quiet-pair.png",
+              "sha256": "a065d5282e3a78f40daffb1a78da4e02db671e826a4ca58ce74eafa7909b33fd"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-quiet-diff.png",
+              "sha256": "ee5f9a7923157da5ee419a100f48c31aa413f8bd8060b2b4d1ee82375289ef63"
+            }
+          }
+        },
+        {
+          "page": "english-ready-rasta",
+          "status": "requires_review",
+          "files": {
+            "pair": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-rasta-pair.png",
+              "sha256": "b95a68f2d38df2ee1fb8473451e1064f40c722a57a867e813c6c10ca9a4eebac"
+            },
+            "difference_4x": {
+              "path": "validation/linux-typing-practice-20261018/comparison/english-ready-rasta-diff.png",
+              "sha256": "ccd0635f8699a563452a461f4ab979a5928df1e242fa2051edd1a6e89a16c682"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

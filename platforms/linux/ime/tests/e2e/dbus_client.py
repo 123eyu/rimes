@@ -51,7 +51,7 @@ class Probe:
     def controller(self) -> Gio.DBusProxy:
         return Gio.DBusProxy.new_sync(
             self.connection,
-            Gio.DBusProxyFlags.NONE,
+            Gio.DBusProxyFlags.DO_NOT_AUTO_START,
             None,
             FCITX_NAME,
             CONTROLLER_PATH,
@@ -78,7 +78,7 @@ class Probe:
     def create_ic(self) -> tuple[str, Gio.DBusProxy]:
         im = Gio.DBusProxy.new_sync(
             self.connection,
-            Gio.DBusProxyFlags.NONE,
+            Gio.DBusProxyFlags.DO_NOT_AUTO_START,
             None,
             FCITX_NAME,
             IM_PATH,
@@ -95,7 +95,7 @@ class Probe:
         path, _uuid = result.unpack()
         ic = Gio.DBusProxy.new_sync(
             self.connection,
-            Gio.DBusProxyFlags.NONE,
+            Gio.DBusProxyFlags.DO_NOT_AUTO_START,
             None,
             FCITX_NAME,
             path,

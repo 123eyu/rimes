@@ -40,7 +40,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 26 | P1 | [#176 并击扩展与自定义键位](https://github.com/scholay/xsime/issues/176) | 实现及回归已补齐：普通输入、草稿/应用分离、失败回退和本地课程；20 组双端截图的页面/卡片尺寸匹配，字体、控件细节及桌面验收待完成；意识流联动暂缓 |
 | 27 | P1 | [#177 日常输入统计与隐私聚合](https://github.com/scholay/xsime/issues/177) | 聚合、实际 Fcitx 采集、独立开关、私有存储及 GTK 交互回归通过；8 组双端截图的整页和图表布局匹配，字体、控件细节及实际桌面仍待验收 |
 | 28 | P1 | [#178 打字测速与文章练习](https://github.com/scholay/xsime/issues/178) | 文章练习、独立成绩及实际 GTK/Fcitx 输入链路已实现；46 组原生计分、945 次观测匹配；32 组双端截图的布局匹配，字体、控件和实际桌面仍待验收 |
-| 29 | P2 | [#179 Linux 桌面、宿主和跨模块验收](https://github.com/scholay/xsime/issues/179) | 待开发 |
+| 29 | P2 | [#179 Linux 桌面、宿主和跨模块验收](https://github.com/scholay/xsime/issues/179) | X11 原生宿主、快捷键与隔离测试修复中；229 组双端对照仍待像素验收，真实 GNOME/KDE、锁屏和多屏另行验收 |
 | 30 | P2 | [#180 deb 生命周期、同版本发布集成与文档](https://github.com/scholay/xsime/issues/180) | 待开发 |
 
 本轮不包含五个额外选装插件（Polisher、LaTeX、Reference、摩斯、电音）和跨设备内容同步。已有 #43 桌面退出验收继续独立跟踪；#44 已关闭。Linux deb 沿用项目 v* 标签与同一个 Release，新增持久化数据必须在升级与卸载中保留。

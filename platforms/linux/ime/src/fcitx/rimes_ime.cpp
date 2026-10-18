@@ -152,6 +152,10 @@ RimesIme::RimesIme(Instance* instance)
         {[this] { if (practice_) practice_->Enable(true); },
          [this] { if (practice_) practice_->Enable(false); }});
     WatchPluginPackages();
+    // Package activation order is alphabetical, not the user's initial page.
+    // Match macOS's Notes default once, after all enabled modules are known.
+    // set_module retains the available fallback when Notes is disabled.
+    capsule_->model().set_module(rimes::capsule::Module::Notes);
     WatchConfiguration();
     if (chord_ && engine_.IsHealthy() && !engine_.IsDeploying()) chord_->EngineReady();
     capsule_->BindModuleValidation([this](auto module) {
