@@ -16,4 +16,4 @@
 
 #179 保持开放：完整桌面矩阵、真实账号、锁屏/睡眠、多屏、硬件录屏与像素验收未完成。未创建 Release 或安装到本机 macOS 输入法。
 
-后续 CI 另暴露 Buffer/Capsule 的失焦宽限计时器使用默认 250ms 调度容差，会让 200ms 撤权与 400ms 检查合并触发。修复明确使用 1ms 精度，保留检查时限；该修复的复验另见 `focus-grace-e2e.log`，初次 `e2e.log` 和 `provenance.json` 仍对应前一轮，不覆盖既有证据。
+后续 CI 另暴露 Buffer/Capsule 的失焦宽限计时器使用默认 250ms 调度容差，会让 200ms 撤权与 400ms 检查合并触发。修复明确使用 1ms 精度，保留检查时限；本地完整引擎/Fcitx、Buffer 四模式、进程恢复、Capsule 与网关复验通过；测试客户端另改为持续连接并读取快照，避免发送即断开与初始快照竞争。复验见 `focus-grace-e2e.log` 与 `focus-grace-provenance.json`，初次 `e2e.log` 和 `provenance.json` 仍对应前一轮，不覆盖既有证据。
