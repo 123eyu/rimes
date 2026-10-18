@@ -119,7 +119,9 @@ int main(int argc, char** argv) {
                     const auto geometry = pane.Geometry();
                 Check(gtk_widget_get_allocated_width(window) == 698 &&
                           gtk_widget_get_allocated_height(window) == (std::string(page) == "daily" ? 738 : 1162),
-                      "native statistics page bounds differ");
+                      "native statistics page bounds differ: " + std::string(page) + " " + theme + " " +
+                          std::to_string(gtk_widget_get_allocated_width(window)) + "x" +
+                          std::to_string(gtk_widget_get_allocated_height(window)));
                     Check(geometry.at("trend").at("height") == 190 &&
                               geometry.at("keyboard").at("height") == 260,
                           "native chart heights differ");
@@ -225,23 +227,42 @@ int main(int argc, char** argv) {
             Check(files.Read("key_frequency.json", mt::kMaximumFileBytes) == key_bytes,
                   "clearing activity changed key file");
             const auto exported = (root / "XSIME-statistics.json").string();
-            g_timeout_add(
-                30,
+            struct SaveDialog {
+                std::filesystem::path file;
+                bool initialized = false;
+                gint64 deadline = g_get_monotonic_time() + 8000000;
+            } save{exported};
+            const auto save_timer = g_timeout_add(
+                100,
                 +[](gpointer data) -> gboolean {
+                    auto* save = static_cast<SaveDialog*>(data);
                     auto* list = gtk_window_list_toplevels();
-                    bool found = false;
                     for (auto* item = list; item; item = item->next)
                         if (GTK_IS_FILE_CHOOSER(item->data)) {
                             auto* chooser = GTK_FILE_CHOOSER(item->data);
-                            gtk_file_chooser_set_filename(chooser, static_cast<const char*>(data));
-                            gtk_dialog_response(GTK_DIALOG(item->data), GTK_RESPONSE_ACCEPT);
-                            found = true;
+                            if (g_get_monotonic_time() >= save->deadline) {
+                                gtk_dialog_response(GTK_DIALOG(item->data), GTK_RESPONSE_CANCEL);
+                            } else if (!save->initialized) {
+                                // Folder selection is asynchronous. Do not send Accept while
+                                // GTK is still validating the first selection; it can discard
+                                // that response on a clean runner with an uncached file system.
+                                gtk_file_chooser_set_current_folder(chooser, save->file.parent_path().c_str());
+                                gtk_file_chooser_set_current_name(chooser, save->file.filename().c_str());
+                                save->initialized = true;
+                            } else {
+                                auto* selected = gtk_file_chooser_get_filename(chooser);
+                                const bool ready = selected && save->file == selected;
+                                g_free(selected);
+                                if (ready) gtk_dialog_response(GTK_DIALOG(item->data), GTK_RESPONSE_ACCEPT);
+                            }
                         }
                     g_list_free(list);
-                    return found ? G_SOURCE_REMOVE : G_SOURCE_CONTINUE;
+                    return G_SOURCE_CONTINUE;
                 },
-                const_cast<char*>(exported.c_str()));
+                &save);
             gtk_button_clicked(GTK_BUTTON(Find(pane.Widget(), "导出统计聚合")));
+            g_source_remove(save_timer);
+            Check(std::filesystem::exists(exported), "save chooser did not accept the selected path within eight seconds");
             const auto export_value = Read(exported);
             struct stat st {};
             stat(exported.c_str(), &st);
