@@ -401,6 +401,8 @@ private struct StoreUpdateView: View {
                             message = accepted ? L("请在 App Store 完成下载与安装，然后重新打开应用。", "Download and install in App Store, then reopen the app.") : L("无法打开 App Store，请重试。", "Could not open App Store. Try again.")
                         }
                     }.accessibilityIdentifier("update.install")
+                } else {
+                    Link(L("在 App Store 查看", "View in App Store"), destination: URL(string: "https://apps.apple.com/app/id6814620242")!)
                 }
                 if testFlight {
                     Button(L("打开 TestFlight", "Open TestFlight")) { openURL(URL(string: "https://testflight.apple.com/join/Kdj9RB4q")!) }

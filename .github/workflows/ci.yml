@@ -190,7 +190,7 @@ jobs:
           assert release_workflow.count('must disallow administrator bypass') == 2
           assert release_workflow.count('must allow the formal tag pattern v*') == 2
           assert 'Could not destroy the temporary signing keychain; refusing to stage release assets.' in release_workflow
-          publish_job = release_workflow.split('  publish_staged_release:', 1)[1]
+          publish_job = release_workflow.split('  publish_staged_release:', 1)[1].split('\n  attach_linux_deb:', 1)[0]
           assert 'actions/checkout@' not in publish_job
           assert 'scripts/rehearse-release-pkg.sh' not in publish_job
 
@@ -604,6 +604,19 @@ jobs:
       # link-time dependency on Squirrel — a stock runner compiles it cleanly.
       - name: Build (debug)
         run: swift build
+
+      - name: Export native gateway settings for Linux contract review
+        run: |
+          BIN="$(swift build --show-bin-path)/RimeBuffer"
+          "$BIN" gateway-settings-render "$RUNNER_TEMP/native-gateway-settings"
+
+      - name: Save native gateway settings contract and renderings
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: native-gateway-settings-${{ github.sha }}
+          path: ${{ runner.temp }}/native-gateway-settings
+          if-no-files-found: error
+          retention-days: 7
 
       # Candidate pagination also verifies real librime page/commit routing.
       # Stage the checksum-verified product runtime without installing an IME.

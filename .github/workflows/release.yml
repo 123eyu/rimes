@@ -2287,4 +2287,7 @@ jobs:
             cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
           else
             gh release upload "$GITHUB_REF_NAME" "$readback/update-manifest.json"
+            mkdir "$RUNNER_TEMP/feed-readback"
+            gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
+            cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
           fi

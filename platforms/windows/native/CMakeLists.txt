@@ -142,6 +142,7 @@ add_library(RimesWorkbench STATIC
     src/peripherals/messages.cpp
 )
 target_link_libraries(RimesWorkbench PUBLIC RimesCore RimesSchemeImport comdlg32 winhttp ws2_32 bcrypt crypt32 advapi32 user32 d2d1 dwrite shell32 wtsapi32 ole32 oleaut32 uuid comctl32 gdi32 msimg32 dwmapi windowscodecs icu normaliz imm32)
+target_include_directories(RimesWorkbench SYSTEM PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}/third_party")
 rimes_harden_target(RimesWorkbench)
 
 add_executable(RimesBroker

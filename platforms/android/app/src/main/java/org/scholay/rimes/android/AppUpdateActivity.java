@@ -156,6 +156,9 @@ public final class AppUpdateActivity extends Activity {
                     if (percent != last) { last = percent; ui(() -> progress.setProgress(percent)); }
                 }
                 if (total != expected || !hex(digest.digest()).equals(asset.getString("sha256"))) throw new Exception("Package integrity check failed");
+            } catch (Exception error) {
+                if (temporary.exists()) temporary.delete();
+                throw error;
             } finally { connection.disconnect(); }
             try {
                 verifyPackage(temporary, asset);
