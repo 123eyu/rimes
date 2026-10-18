@@ -30,3 +30,5 @@ NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings dbus-run-session -- xvfb-run -a \
 [首次 amd64 CI](https://github.com/scholay/xsime/actions/runs/39107396318) 的 90 项回归、实际练习输入和 Sway PNG 已通过，两个 job 随后都因文档 portal 的 FUSE 挂载无法清理临时目录而失败。练习输入测试改用不自动启动 portal 的隔离总线；真正 Wayland 捕获仍启动真实 portal，其清理根据 `/proc/self/mountinfo` 检查挂载，避免断开的 FUSE 根目录让 `Path.is_mount()` 返回假阴性。未忽略清理错误或把未验证录屏改成通过。
 
 修复后本地 Ubuntu 24.04 非 root 用户的实际 GTK/Fcitx 练习及真实 Sway PNG 回归通过；具有 FUSE 的 GitHub runner 结果继续单独记录。
+
+[amd64 重试](https://github.com/scholay/xsime/actions/runs/39108628489) 的 deb job、90 项 CTest、实际练习和 portal 清理通过，但最终 Buffer 回归在 `focus-out grace must drop capture` 失败，因此 CI 总状态仍为失败。原因是失焦计时器使用 sd-event 默认 250ms 调度容差，200ms 宽限与 400ms 检查可能同时触发；后续桌面验收将 Buffer/Capsule 撤权计时精度统一设为 1ms，保留原检查时限。结果继续由 PR #212 的复验单独记录。

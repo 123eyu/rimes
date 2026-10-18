@@ -15,3 +15,5 @@
 另修复三个测试问题：GTK 的空预编辑通知不再覆盖已提交值；D-Bus 就绪探测不再自动启动另一份 Fcitx，并等待 Rime 部署；Capsule 检查等待异步加载结束。浏览器初始失败来自首次启动欢迎弹窗，使用 Mozilla 提供的[测试安装政策](https://mozilla.github.io/policy-templates/#skiptermsofuse)准备独立下载目录，未改动宿主浏览器。
 
 #179 保持开放：完整桌面矩阵、真实账号、锁屏/睡眠、多屏、硬件录屏与像素验收未完成。未创建 Release 或安装到本机 macOS 输入法。
+
+后续 CI 另暴露 Buffer/Capsule 的失焦宽限计时器使用默认 250ms 调度容差，会让 200ms 撤权与 400ms 检查合并触发。修复明确使用 1ms 精度，保留检查时限；该修复的复验另见 `focus-grace-e2e.log`，初次 `e2e.log` 和 `provenance.json` 仍对应前一轮，不覆盖既有证据。

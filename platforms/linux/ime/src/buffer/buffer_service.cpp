@@ -919,8 +919,10 @@ void BufferService::ArmFocusGraceTimer() {
         return;
     }
     const uint64_t delay_us = static_cast<uint64_t>(focus_grace_ms_) * 1000;
+    // Zero selects sd-event's 250 ms coalescing window. Revocation must use
+    // the configured grace deadline, not an additional scheduling grace.
     focus_grace_timer_ = instance_->eventLoop().addTimeEvent(
-        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + delay_us, 0,
+        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + delay_us, 1000,
         [this](EventSourceTime*, uint64_t) {
             if (!pending_unfocus_token_.empty()) {
                 DropCaptureForSwitch("focus-out");

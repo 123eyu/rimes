@@ -720,7 +720,9 @@ void CapsuleService::ArmFocusGraceTimer() {
         return;
     }
     focus_grace_timer_ = instance_->eventLoop().addTimeEvent(
-        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + focus_grace_ms_ * 1000, 0,
+        // Match Buffer's explicit revocation precision, without sd-event's
+        // default 250 ms coalescing window.
+        CLOCK_MONOTONIC, now(CLOCK_MONOTONIC) + focus_grace_ms_ * 1000, 1000,
         [this](EventSourceTime*, uint64_t) {
             if (!pending_unfocus_token_.empty()) {
                 DropSession("focus-grace");
