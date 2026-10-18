@@ -3,6 +3,20 @@ import SwiftTerm
 import ImageIO
 import UniformTypeIdentifiers
 
+enum MailboxTerminalRules {
+    static let maximumFileBytes = 24 * 1_048_576
+    static let maximumTextBytes = 1_048_576
+    static let maximumImageDimension = 16000
+    static let maximumImagePixels = 32_000_000
+    static let maximumFiles = 60
+    static let previewCharacters = 360
+    static let fontSize: CGFloat = 13
+    static let terminalInset: CGFloat = 9
+    static let sidebarWidth: CGFloat = 200
+    static let sidebarBreakpoint: CGFloat = 720
+    static let imageHeight: CGFloat = 168
+}
+
 enum MailboxTerminalKind: String, CaseIterable {
     case codex = "Codex", claude = "Claude Code", shell = "Shell"
     func executable() -> URL? {
@@ -30,7 +44,7 @@ final class MailboxTerminalSession: NSObject, LocalProcessTerminalViewDelegate {
         self.kind = kind; self.workspace = workspace; title = workspace.lastPathComponent
         terminal = LocalProcessTerminalView(frame: NSRect(x: 0, y: 0, width: 640, height: 560))
         super.init()
-        terminal.font = .monospacedSystemFont(ofSize: 13, weight: .regular)
+        terminal.font = .monospacedSystemFont(ofSize: MailboxTerminalRules.fontSize, weight: .regular)
         terminal.nativeBackgroundColor = NSColor(srgbRed: 0.09, green: 0.11, blue: 0.13, alpha: 1)
         terminal.nativeForegroundColor = NSColor(srgbRed: 0.87, green: 0.90, blue: 0.90, alpha: 1)
         terminal.processDelegate = self
@@ -54,7 +68,13 @@ final class MailboxTerminalSession: NSObject, LocalProcessTerminalViewDelegate {
     }
     func hostCurrentDirectoryUpdate(source: TerminalView, directory: String?) {}
     func processTerminated(source: TerminalView, exitCode: Int32?) {
-        running = false; self.exitCode = exitCode; onChange?()
+        running = false
+        // SwiftTerm's Darwin LocalProcess forwards waitpid's packed status.
+        self.exitCode = exitCode.map { status in
+            let signal = status & 0x7f
+            return signal == 0 ? (status >> 8) & 0xff : 128 + signal
+        }
+        onChange?()
     }
 }
 
@@ -66,25 +86,25 @@ struct MailboxCollectedFile {
     let pngData: Data?
     static func read(_ url: URL) throws -> MailboxCollectedFile {
         let values = try url.resourceValues(forKeys: [.isRegularFileKey, .fileSizeKey])
-        guard values.isRegularFile == true, let size = values.fileSize, size <= 24 * 1_048_576 else {
+        guard values.isRegularFile == true, let size = values.fileSize, size <= MailboxTerminalRules.maximumFileBytes else {
             throw MailboxCollectionError.unsupported("请选择不超过 24 MB 的普通图片或文本文件。")
         }
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }
-        let data = try file.read(upToCount: 24 * 1_048_576 + 1) ?? Data()
-        guard data.count <= 24 * 1_048_576 else { throw MailboxStoreError.oversized }
-        if let imageSource = CGImageSourceCreateWithData(data as CFData, nil) {
+        let data = try file.read(upToCount: MailboxTerminalRules.maximumFileBytes + 1) ?? Data()
+        guard data.count <= MailboxTerminalRules.maximumFileBytes else { throw MailboxStoreError.oversized }
+        if let imageSource = CGImageSourceCreateWithData(data as CFData, nil), CGImageSourceGetType(imageSource) != nil {
             let props = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil) as? [CFString: Any]
             let width = (props?[kCGImagePropertyPixelWidth] as? NSNumber)?.intValue ?? 0
             let height = (props?[kCGImagePropertyPixelHeight] as? NSNumber)?.intValue ?? 0
-            guard width > 0, height > 0, width <= 16000, height <= 16000, width * height <= 32_000_000,
+            guard width > 0, height > 0, width <= MailboxTerminalRules.maximumImageDimension, height <= MailboxTerminalRules.maximumImageDimension, width * height <= MailboxTerminalRules.maximumImagePixels,
                   let image = CGImageSourceCreateImageAtIndex(imageSource, 0, nil),
                   let png = NSBitmapImageRep(cgImage: image).representation(using: .png, properties: [:]) else {
                 throw MailboxCollectionError.unsupported("这张图片过大或无法读取。")
             }
             return MailboxCollectedFile(url: url, body: "\(url.lastPathComponent)\n\(width) × \(height)", pngData: png)
         }
-        guard data.count <= 1_048_576, let text = String(data: data, encoding: .utf8),
+        guard data.count <= MailboxTerminalRules.maximumTextBytes, let text = String(data: data, encoding: .utf8),
               !text.contains("\0"), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             throw MailboxCollectionError.unsupported("暂时支持图片和不超过 1 MB 的 UTF-8 文本。")
         }
@@ -152,7 +172,7 @@ final class MailboxTerminalWorkspace: NSViewController {
         let tools = MailboxUI.stack([inspectorTop, tabs], spacing: 12)
         let right = MailboxUI.stack([MailboxUI.padded(tools, inset: 16), MailboxUI.scroll(inspectorBody)], spacing: 0)
         MailboxUI.pin(right, to: inspector)
-        split = MailboxAdaptiveSplitView(sidebar: sidebar, main: main, inspector: inspector, sidebarWidth: 200, sidebarBreakpoint: 720)
+        split = MailboxAdaptiveSplitView(sidebar: sidebar, main: main, inspector: inspector, sidebarWidth: MailboxTerminalRules.sidebarWidth, sidebarBreakpoint: MailboxTerminalRules.sidebarBreakpoint)
         split.visibilityChanged = { [weak self] list, inspector in
             self?.toggleList.contentTintColor = list ? MailboxUI.accent : .secondaryLabelColor
             self?.toggleInspector.contentTintColor = inspector ? MailboxUI.accent : .secondaryLabelColor
@@ -197,7 +217,7 @@ final class MailboxTerminalWorkspace: NSViewController {
         terminalHost.subviews.forEach { $0.removeFromSuperview() }
         selection = nil; selectionSessionID = nil; files = []
         if let session = selectedSession {
-            MailboxUI.pin(session.terminal, to: terminalHost, inset: 9)
+            MailboxUI.pin(session.terminal, to: terminalHost, inset: MailboxTerminalRules.terminalInset)
         } else {
             let title = MailboxUI.label("你的终端，也有一个工作台", size: 24, weight: .medium)
             title.textColor = NSColor(white: 0.86, alpha: 1)
@@ -238,7 +258,7 @@ final class MailboxTerminalWorkspace: NSViewController {
                 includingPropertiesForKeys: [.isRegularFileKey], options: [.skipsHiddenFiles])
                 .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
                 .sorted { $0.lastPathComponent.localizedStandardCompare($1.lastPathComponent) == .orderedAscending }
-            files = Array(files.prefix(60))
+            files = Array(files.prefix(MailboxTerminalRules.maximumFiles))
         } catch { status.stringValue = error.localizedDescription; files = [] }
     }
     private func renderInspector() {
@@ -249,9 +269,9 @@ final class MailboxTerminalWorkspace: NSViewController {
             if let data = selection.pngData, let image = NSImage(data: data) {
                 let preview = NSImageView(); preview.image = image; preview.imageScaling = .scaleProportionallyUpOrDown
                 preview.translatesAutoresizingMaskIntoConstraints = false
-                preview.heightAnchor.constraint(equalToConstant: 168).isActive = true
+                preview.heightAnchor.constraint(equalToConstant: MailboxTerminalRules.imageHeight).isActive = true
                 body.addArrangedSubview(preview)
-            } else { body.addArrangedSubview(MailboxUI.paragraph(String(selection.body.prefix(360)), size: 12)) }
+            } else { body.addArrangedSubview(MailboxUI.paragraph(String(selection.body.prefix(MailboxTerminalRules.previewCharacters)), size: 12)) }
             body.addArrangedSubview(MailboxActionButton("收入收件箱", symbol: "tray.and.arrow.down") { [weak self] in self?.collectSelection() })
             body.addArrangedSubview(MailboxUI.line())
         }
@@ -301,12 +321,12 @@ final class MailboxTerminalWorkspace: NSViewController {
             self?.preview(url)
         }
     }
-    private func preview(_ url: URL) {
+    func preview(_ url: URL) {
         guard selectedSession != nil else { return }
         do { selection = try MailboxCollectedFile.read(url); selectionSessionID = selectedID; tabs.selectedSegment = 0; renderInspector() }
         catch { status.stringValue = error.localizedDescription }
     }
-    private func collectSelection() {
+    func collectSelection() {
         guard let session = selectedSession, let selection, selectionSessionID == session.id else { return }
         do {
             let receipt = try store.importTerminalResult(sessionID: session.id, sourceName: "\(session.kind.rawValue) · \(session.workspace.lastPathComponent)",

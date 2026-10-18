@@ -490,9 +490,10 @@
         "切页或关窗保留正在运行的进程；显式结束才终止，应用重启不伪造重建旧进程。",
         "文件列表/预览有界，按会话 UUID 手动收取至 Mailbox；覆盖退出、取消、并行会话和附件原子性。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 174,
-      "url": "https://github.com/scholay/xsime/issues/174"
+      "url": "https://github.com/scholay/xsime/issues/174",
+      "visual_status": "requires_review"
     },
     {
       "order": 25,

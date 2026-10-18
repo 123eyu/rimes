@@ -1,5 +1,6 @@
 #pragma once
 #include "mailbox_store.hpp"
+#include "terminal_workspace.hpp"
 #include <gtk/gtk.h>
 #include <memory>
 namespace rimes::mailbox {
@@ -18,6 +19,7 @@ class Workspace {
     void Fixture(Snapshot state, const std::string& theme, const std::string& module,
                  const std::string& thread, const Json& previews = Json::object());
     Json Inspect() const;
+    TerminalWorkspace& Terminal();
 
   private:
     struct Impl;

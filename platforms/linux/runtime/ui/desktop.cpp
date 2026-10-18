@@ -337,9 +337,28 @@ GtkWidget *Icon(const std::string &name, int size) {
           line(4, 3, 20, 3); cairo_line_to(cr, 21, 4); cairo_line_to(cr, 21, 16);
           cairo_line_to(cr, 10, 16); cairo_line_to(cr, 5, 21); cairo_line_to(cr, 5, 16);
           cairo_line_to(cr, 3, 16); cairo_line_to(cr, 3, 4); cairo_close_path(cr);
-        } else if (icon == "sidebar.left") {
-          cairo_rectangle(cr, 3, 5, 18, 14); line(9, 5, 9, 19);
-          line(5, 8, 7, 8); line(5, 11, 7, 11);
+        } else if (icon == "sidebar.left" || icon == "sidebar.right") {
+          const auto x = icon == "sidebar.left" ? 9 : 15;
+          cairo_rectangle(cr, 3, 5, 18, 14); line(x, 5, x, 19);
+          const auto a = icon == "sidebar.left" ? 5 : 17;
+          line(a, 8, a + 2, 8); line(a, 11, a + 2, 11);
+        } else if (icon == "stop") {
+          cairo_rectangle(cr, 5, 5, 14, 14);
+        } else if (icon == "plus") {
+          line(12, 4, 12, 20); line(4, 12, 20, 12);
+        } else if (icon == "doc") {
+          line(5, 3, 14, 3); cairo_line_to(cr, 20, 9); cairo_line_to(cr, 20, 21);
+          cairo_line_to(cr, 5, 21); cairo_close_path(cr);
+          line(14, 3, 14, 9); cairo_line_to(cr, 20, 9);
+        } else if (icon == "folder") {
+          line(3, 5, 10, 5); cairo_line_to(cr, 12, 8); cairo_line_to(cr, 21, 8);
+          cairo_line_to(cr, 21, 20); cairo_line_to(cr, 3, 20); cairo_close_path(cr);
+        } else if (icon == "arrow.clockwise") {
+          cairo_arc(cr, 12, 12, 8, -M_PI * 0.4, M_PI * 1.4);
+          line(18, 3, 19, 9); cairo_line_to(cr, 13, 8);
+        } else if (icon == "tray.and.arrow.down") {
+          line(4, 12, 2, 19); cairo_line_to(cr, 22, 19); cairo_line_to(cr, 20, 12);
+          line(12, 2, 12, 14); line(8, 10, 12, 14); cairo_line_to(cr, 16, 10);
         } else if (icon == "pencil" || icon == "square.and.pencil") {
           line(5, 17, 17, 5); cairo_line_to(cr, 20, 8); cairo_line_to(cr, 8, 20);
           cairo_line_to(cr, 4, 21); cairo_close_path(cr); line(14, 8, 17, 11);

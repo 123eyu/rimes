@@ -695,6 +695,17 @@ if let index = CommandLine.arguments.firstIndex(of: "gateway-linux-fixtures"),
     } catch { fputs("gateway contract export failed: \(error)\n", stderr); exit(1) }
 }
 
+if let index = CommandLine.arguments.firstIndex(of: "mailbox-terminal-linux-fixtures"),
+   CommandLine.arguments.indices.contains(index + 1) {
+    _ = NSApplication.shared
+    exit(MainActor.assumeIsolated {
+        do {
+            try MailboxTerminalLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))
+            return 0
+        } catch { fputs("Public terminal fixture operation failed: \(error)\n", stderr); return 1 }
+    })
+}
+
 if let index = CommandLine.arguments.firstIndex(where: { $0 == "mailbox-linux-fixtures" || $0 == "mailbox-linux-verify" }),
    CommandLine.arguments.indices.contains(index + 1) {
     _ = NSApplication.shared

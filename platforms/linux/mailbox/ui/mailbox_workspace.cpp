@@ -313,6 +313,7 @@ struct Workspace::Impl {
         *send, *feedback, *scrim, *placeholder;
     GtkWidget* badge = nullptr;
     std::unique_ptr<CompletionToast> toast;
+    std::unique_ptr<TerminalWorkspace> terminal;
     std::map<std::string, std::string> notified;
     std::map<std::string, GtkWidget*> nav;
     std::map<std::string, std::string> grants, selections, drafts, queries, filter_values;
@@ -371,6 +372,12 @@ struct Workspace::Impl {
         content = Column(0);
         Add(root_view, content, true);
         BuildMessages();
+        gtk_widget_show_all(overlay);
+        gtk_widget_set_no_show_all(overlay, TRUE);
+        terminal = std::make_unique<TerminalWorkspace>(GTK_WINDOW(window), [this](const std::string& id) {
+            SelectModule("inbox", false); SelectThread(id);
+        }, [this] { Refresh(); });
+        Add(content, terminal->Widget(), true);
         ApplyTheme(theme, root_view);
         g_signal_connect(window, "delete-event",
                          G_CALLBACK(+[](GtkWidget*, GdkEvent*, gpointer p) -> gboolean {
@@ -387,6 +394,10 @@ struct Workspace::Impl {
         g_signal_connect(window, "key-press-event",
                          G_CALLBACK(+[](GtkWidget*, GdkEventKey* event, gpointer p) -> gboolean {
                              auto* self = static_cast<Impl*>(p);
+                             // Escape and Ctrl+W belong to the shell/editor while a PTY is focused.
+                             auto* focus = gtk_window_get_focus(GTK_WINDOW(self->window));
+                             if (self->module == "terminal" && focus && VTE_IS_TERMINAL(focus))
+                                 return FALSE;
                              if (event->keyval == GDK_KEY_Escape) {
                                  if (self->overlay_sidebar)
                                      self->Dismiss();
@@ -445,6 +456,7 @@ struct Workspace::Impl {
         preview_jobs.Shutdown();
         clipboard.reset();
         toast.reset();
+        terminal.reset();
         if (dialog)
             gtk_widget_destroy(dialog);
         if (auto* provider =
@@ -645,6 +657,7 @@ struct Workspace::Impl {
         return nullptr;
     }
     void Revoke() {
+        if (terminal) terminal->Suspend();
         {
             std::lock_guard<std::mutex> lock(access->mutex);
             ++access->epoch;
@@ -674,6 +687,7 @@ struct Workspace::Impl {
                 gtk_widget_destroy(dialog);
             gtk_widget_hide(window);
         }
+        terminal->SetEnabled(!value && grants.count("terminal") && storage_available);
         ComposerState();
     }
     void RenderNavigation() {
@@ -738,6 +752,10 @@ struct Workspace::Impl {
             return;
         Revoke();
         module = requested;
+        gtk_widget_set_visible(overlay, module != "terminal");
+        gtk_widget_set_visible(terminal->Widget(), module == "terminal");
+        terminal->SetEnabled(!Protected() && grants.count("terminal") && storage_available);
+        terminal->Refresh(state);
         selected = selections[module];
         rendered_revision.clear();
         gtk_entry_set_text(GTK_ENTRY(search), queries[module].c_str());
@@ -862,6 +880,7 @@ struct Workspace::Impl {
         return button;
     }
     void RenderDetail() {
+        if (module == "terminal") { terminal->Refresh(state); return; }
         const auto* thread = Selected();
         const auto revision = module + ":" + (thread ? Revision(*thread) : "empty");
         if (revision == rendered_revision) {
@@ -906,6 +925,15 @@ struct Workspace::Impl {
                 detail += " · " + thread->at("source").at("model").get<std::string>();
             detail += " · " + Status(*thread);
             gtk_label_set_text(GTK_LABEL(source), detail.c_str());
+            if (thread->contains("terminalSessionID") && thread->at("terminalSessionID").is_string()) {
+                const std::string session = thread->at("terminalSessionID");
+                Add(toolbar, Tool("terminal", "返回终端", [this, session] {
+                    if (!grants.count("terminal") || !terminal->Select(session)) {
+                        Notice("终端会话已不在本次运行中；收件仍保留在本地。"); return;
+                    }
+                    SelectModule("terminal");
+                }));
+            }
             Add(toolbar, Tool("pencil", "重命名", [this] { Rename(); }));
             const bool archived =
                 thread->contains("archivedAt") && !thread->at("archivedAt").is_null();
@@ -1799,6 +1827,8 @@ struct Workspace::Impl {
                         (!enabled.count("chat") || grants.at("chat") != enabled.at("chat")))
                         chat_jobs.CancelAll();
                     grants = enabled;
+                    terminal->SetEnabled(!Protected() && grants.count("terminal") && storage_available);
+                    terminal->Refresh(state);
                     if (!configuration.is_null())
                         LoadChatModels(configuration);
                     if (!pending_chat_selection.empty()) {
@@ -1837,6 +1867,7 @@ struct Workspace::Impl {
                     if (changed || first)
                         RenderNavigation();
                     if (grants.empty()) {
+                        gtk_widget_hide(terminal->Widget()); gtk_widget_show(overlay);
                         selected.clear();
                         Clear(index);
                         streaming = cancel_chat = retry_chat = nullptr;
@@ -2017,11 +2048,14 @@ void Workspace::Fixture(Snapshot state, const std::string& theme, const std::str
     if (!thread.empty() || module == "chat")
         impl_->SelectThread(thread);
     gtk_widget_show_all(impl_->root_view);
+    gtk_widget_set_visible(impl_->overlay, module != "terminal");
+    gtk_widget_set_visible(impl_->terminal->Widget(), module == "terminal");
     impl_->Layout(gtk_widget_get_allocated_width(impl_->overlay));
     impl_->UpdateNavigation();
 }
+TerminalWorkspace& Workspace::Terminal() { return *impl_->terminal; }
 Json Workspace::Inspect() const {
-    return {{"module", impl_->module},
+    return {{"terminal", impl_->terminal->Inspect()}, {"module", impl_->module},
             {"thread", impl_->selected},
             {"revision", impl_->state.revision},
             {"busy", impl_->busy},

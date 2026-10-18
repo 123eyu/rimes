@@ -37,6 +37,9 @@ class Store {
     Json ReceiveGateway(const Json& source, const std::string& title, const std::string& body,
                         const std::string& format, const std::string& nonce = "",
                         const std::string& digest = "");
+    Json ImportTerminalResult(const std::string& session, const std::string& source,
+                              const std::string& title, const std::string& body,
+                              const std::string& png = "");
     std::optional<std::string> Image(const std::string& filename) const;
     // The caller holds generations/<generation>/.lock until its worker exits.
     // This lets a separately opened Mailbox distinguish live tasks from crashes.
@@ -74,7 +77,7 @@ class Store {
   private:
     Json CreateReceipt(const Json& source, const std::string& title, const std::string& body,
                        const std::string& module, const std::string& png, const std::string& format,
-                       const Json& gateway);
+                       const Json& gateway, const std::string& terminal_session = "");
     Snapshot Load() const;
     void Save(Json document) const;
     Json Change(const std::string& id, const std::string& expected,

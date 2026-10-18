@@ -33,7 +33,7 @@ P0 优先完成插件基础、实时翻译和 AI API；P1 补齐其余核心模�
 | 21 | P1 | [#171 ChatGPT/Codex CLI 渠道插件](https://github.com/scholay/xsime/issues/171) | 实际 Fcitx 文本/图片、CLI 探测、通知和 deb 测试通过；10 组设置对照及真实账号/桌面待验收 |
 | 22 | P1 | [#172 Claude Code CLI 渠道插件](https://github.com/scholay/xsime/issues/172) | 实际 Fcitx、登录控件、原生协议及 CLI 探测通过；10 组双端设置对照及真实账号/桌面待验收 |
 | 23 | P1 | [#173 Mailbox AI 对话工作区](https://github.com/scholay/xsime/issues/173) | 三渠道续聊、固定路由、流式预览、取消/重试和 GTK 交互已实现；双端截图与桌面验收继续跟进 |
-| 24 | P1 | [#174 Mailbox PTY 终端与手动成果收取](https://github.com/scholay/xsime/issues/174) | 待开发 |
+| 24 | P1 | [#174 Mailbox PTY 终端与手动成果收取](https://github.com/scholay/xsime/issues/174) | 已实现；[终端验证](mailbox/TERMINAL-VALIDATION.md)，实际桌面 / 像素仍待验收 |
 | 25 | P1 | [#175 意识流输入插件与本地/AI 候选](https://github.com/scholay/xsime/issues/175) | 待开发 |
 | 26 | P1 | [#176 并击扩展与自定义键位](https://github.com/scholay/xsime/issues/176) | 待开发 |
 | 27 | P1 | [#177 日常输入统计与隐私聚合](https://github.com/scholay/xsime/issues/177) | 待开发 |

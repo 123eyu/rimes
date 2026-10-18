@@ -37,7 +37,7 @@ printf '%s\n' 'keep salted reveal credential' > "$DATA/capsule/reveal-credential
 printf '%s\n' 'keep encrypted password record' > "$DATA/capsule/passwords/fixture.md"
 printf '%s\n' 'keep Provider identities and models' > "$DATA/configuration/preferences.json"
 printf '%s\n' 'keep separate Provider credential' > "$DATA/configuration/credentials/provider.fixture"
-printf '%s\n' 'keep Mailbox threads and messages' > "$DATA/mailbox/mailbox.json"
+printf '%s\n' 'keep Mailbox threads, terminal session UUID receipts and messages' > "$DATA/mailbox/mailbox.json"
 printf '%s\n' 'keep Mailbox original attachment' > "$DATA/mailbox/images/fixture.png"
 printf '%s\n' 'keep independent Capsule receipt image' > "$DATA/capsule/assets/mailbox-copy.png"
 printf '%s\n' 'keep existing private gateway token' > "$DATA/gateway/token"
@@ -52,6 +52,9 @@ sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$D
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
 [[ -x /usr/bin/rimes-settings && -x /usr/bin/rimes-plugins && -x /usr/bin/rimes-mailbox ]]
+[[ -x /usr/libexec/rimes/rimes-mailbox-file ]]
+printf '%s\n' 'public terminal receipt' > "$WORK/terminal.txt"
+/usr/libexec/rimes/rimes-mailbox-file "$WORK/terminal.txt" | python3 -c 'import json,sys; v=json.load(sys.stdin); assert v["body"] == "public terminal receipt\n" and v["png"] == ""'
 [[ -x /usr/bin/rimes-gateway && -f /usr/share/rimes/skills/imagegen/SKILL.md ]]
 RIMES_USER_DIR="$WORK/gateway-status" /usr/bin/rimes-gateway --status | python3 -c 'import json,sys; assert json.load(sys.stdin)["state"] == "not-started"'
 [[ -f /usr/share/applications/org.scholay.rimes.mailbox.desktop ]]
@@ -61,7 +64,7 @@ RIMES_USER_DIR="$WORK/resource-status" /usr/bin/rimes-translation --status | pyt
 [[ -f /usr/share/applications/org.scholay.rimes.settings.desktop ]]
 /usr/bin/rimes-settings --help
 [[ -f /usr/share/rimes/data/default.yaml ]]
-for program in /usr/bin/rimes-gateway /usr/bin/rimes-mailbox /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins /usr/bin/rimes-translation /usr/libexec/rimes/rimes-capsule-preview /usr/libexec/rimes/rimes-capsule-capture; do
+for program in /usr/bin/rimes-gateway /usr/bin/rimes-mailbox /usr/bin/rimes-schemes /usr/bin/rimes-buffer /usr/bin/rimes-capsule /usr/bin/rimes-settings /usr/bin/rimes-plugins /usr/bin/rimes-translation /usr/libexec/rimes/rimes-capsule-preview /usr/libexec/rimes/rimes-capsule-capture /usr/libexec/rimes/rimes-mailbox-file; do
     ldd "$program" > "$WORK/ldd.txt"
     if grep -q 'not found' "$WORK/ldd.txt"; then
         cat "$WORK/ldd.txt" >&2
@@ -70,6 +73,15 @@ for program in /usr/bin/rimes-gateway /usr/bin/rimes-mailbox /usr/bin/rimes-sche
 done
 # Exercise the installed ELF and its resolved shared libraries, not only a build-tree binary.
 SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
+G_DEBUG=fatal-warnings TZ=Asia/Tokyo xvfb-run -a /usr/bin/rimes-mailbox \
+    --render-terminal "$WORK/terminal-render"
+python3 - "$WORK/terminal-render/renders.json" <<'PY'
+import json, sys
+rows = json.load(open(sys.argv[1]))
+assert len(rows) == 20
+assert all(row['logicalWidth'] == (680 if '-compact' in row['image'] else 1000) for row in rows)
+assert all(row['logicalHeight'] == (500 if '-compact' in row['image'] else 700) for row in rows)
+PY
 dbus-run-session -- xvfb-run -a python3 "$SCRIPT_DIR/../../capsule/tests/password_ui_test.py" \
     python3 "$SCRIPT_DIR/../../mailbox/tests/mailbox_process_test.py" /usr/bin/rimes-mailbox \
     "$SCRIPT_DIR/../../mailbox/tests/fixtures/native-mailbox.json"

@@ -202,3 +202,7 @@ The Linux Capsule resource preview helper links the distribution's Poppler GLib 
 ## Linux screen capture and media preview
 
 The Linux capture and preview helpers dynamically use the distribution's GStreamer libraries and plugins (including PNG, VP8/WebM and PipeWire) and libportal for interactive screenshots. GStreamer source and component licenses are published at <https://gstreamer.freedesktop.org/>; libportal source and its LGPL-3.0 / LGPL-2.1 notices are at <https://github.com/flatpak/libportal>. The deb declares system package dependencies, including the runtime plugins that are loaded dynamically. No GStreamer, libportal or PipeWire binary is vendored in this repository. The test-only virtual-pointer XML retains its upstream MIT license and pinned provenance under `platforms/linux/capsule/protocols/README.md`.
+
+## Linux Mailbox terminal
+
+The interactive terminal dynamically links the distribution's GTK VTE library (0.76 or later). VTE source and component notices are at <https://github.com/GNOME/vte/tree/0.76.0>, including `COPYING.LGPL3`, `COPYING.GPL3`, and `COPYING.XTERM`; the distribution package supplies its copyright and corresponding source information. The deb resolves VTE through system package dependencies. The bounded file-preview helper uses the distribution's GdkPixbuf raster decoders. No VTE or GdkPixbuf binary is vendored in this repository.

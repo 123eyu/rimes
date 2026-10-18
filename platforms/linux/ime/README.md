@@ -28,7 +28,7 @@ Its Python 3.12 runtime is included in deb dependencies. Downloaded resources
 remain in the user directory when either source or deb installation is removed.
 The [ChatGPT/Codex connector](../runtime/README.md#chatgpt--codex-cli) adds explicit text generation, browser login and persistent Mailbox image tasks.
 The optional [Claude Code connector](../runtime/README.md#claude-code-cli) provides explicit streaming text requests with native login, model and effort controls.
-The [Mailbox host](../mailbox/README.md) now provides independent navigation, persistent threads, local notes, reviewed Buffer/Capsule transfers and a loopback HTTP/MCP gateway. AI conversation and PTY adapters are tracked separately. Buffer and Capsule behavior are specified in
+The [Mailbox host](../mailbox/README.md) now provides independent navigation, persistent threads, local notes, reviewed Buffer/Capsule transfers and a loopback HTTP/MCP gateway. It also supports persistent AI conversations, real PTY Shell/Codex/Claude sessions and explicit UUID-associated file collection. Buffer and Capsule behavior are specified in
 [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md). Hooks live in
 `src/engine/rime_hooks.hpp`.
@@ -63,7 +63,7 @@ The [Mailbox host](../mailbox/README.md) now provides independent navigation, pe
   See [Capsule usage](../capsule/README.md).
 
 macOS-only behaviour that is **not** reproduced here: custom candidate chrome,
-Mailbox AI/PTY adapters, Capsule iCloud, advanced capture editing and audio,
+Capsule iCloud, advanced capture editing and audio,
 Buffer stream/music plugins, cross-batch chord pairing,
 IMK `Delivery.insert`. See [`../buffer/SPEC.md`](../buffer/SPEC.md) and
 [`../capsule/SPEC.md`](../capsule/SPEC.md) for the explicit gap lists.
@@ -213,7 +213,7 @@ uninstall it with the instructions below before switching to the deb.
 ## Build and install from source (development)
 
 All commands below run from the repository root. Source installation needs
-Python 3 in addition to the build dependencies.
+Python 3 and GTK VTE 0.76 or later (`libvte-2.91-dev` on Ubuntu 24.04) in addition to the build dependencies.
 
 ```bash
 platforms/linux/ime/scripts/build.sh

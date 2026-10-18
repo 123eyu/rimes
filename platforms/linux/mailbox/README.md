@@ -1,10 +1,22 @@
 # Linux Mailbox
 
-`rimes-mailbox --show` 打开独立 GTK 工作区。应用菜单的 **XSIME Mailbox**、已启用的 `Ctrl+Shift+M` 和 `rimes-launch mailbox` 复用同一用户目录的窗口。后两者经 Fcitx 快捷键宿主检查；Mailbox 自身监听桌面会话保护。关闭窗口或 `Ctrl+W` 隐藏窗口，`rimes-mailbox --quit` 退出进程。不会结束其他模块的任务或删除会话。
+`rimes-mailbox --show` 打开独立 GTK 工作区。应用菜单的 **XSIME Mailbox**、已启用的 `Ctrl+Shift+M` 和 `rimes-launch mailbox` 复用同一用户目录的窗口。后两者经 Fcitx 快捷键宿主检查；Mailbox 自身监听桌面会话保护。关闭窗口或在非终端输入区按 `Ctrl+W` 隐藏窗口；终端获得焦点时 `Ctrl+W` 和 Escape 交给终端。`rimes-mailbox --quit` 退出进程并结束本次 Mailbox 的 PTY，保留已保存收件。
 
 窗口包含终端、对话、收件三个官方模块入口、收件未读角标、列表搜索和筛选。支持查看已有对话/收件、重命名、归档/恢复和本地备注；备注只保存在本机。窗口正常大小为 1000×700，最小 680×500；窄窗口通过顶部侧栏按钮展开列表，点击正文外侧或 Escape 收起。显示并激活的收件才标记已读。窗口尺寸与最后模块自动保存；未发送草稿按模块/会话保留在当前进程，退出进程不持久化草稿，与当前 macOS 行为一致。
 
-宿主与收件流转分别对应 [#168](https://github.com/scholay/xsime/issues/168)、[#169](https://github.com/scholay/xsime/issues/169)。本地 HTTP/MCP 来源接入对应 [#170](https://github.com/scholay/xsime/issues/170)，CLI 渠道在 #171/#172，AI 对话在 [#173](https://github.com/scholay/xsime/issues/173)；PTY 终端在 #174。当前终端运行组件仍待实现。
+宿主与收件流转分别对应 [#168](https://github.com/scholay/xsime/issues/168)、[#169](https://github.com/scholay/xsime/issues/169)。本地 HTTP/MCP 来源接入对应 [#170](https://github.com/scholay/xsime/issues/170)，CLI 渠道在 #171/#172，AI 对话在 [#173](https://github.com/scholay/xsime/issues/173)；PTY 终端见 [#174](https://github.com/scholay/xsime/issues/174) 和 [终端验证](TERMINAL-VALIDATION.md)。
+
+## PTY 终端
+
+打开 **终端 → 选择 Shell / Codex / Claude Code → 新建会话**，选择这个会话的工作目录。Shell 使用当前用户的 `$SHELL`（不可用时用 Bash）；Codex 和 Claude Code 需要先安装对应 CLI。终端是交互式 PTY，支持中文、ANSI、滚动回看、键盘控制和随窗口调整行列。`Ctrl+C` 发送终端中断；`Ctrl+Shift+C/V` 明确复制选区或粘贴剪贴板。
+
+每个会话有自己的进程、工作目录和 UUID。切页、隐藏窗口、暂时停用插件或锁屏保留进程；锁屏和插件不可用时不能操作终端或收取文件。**结束当前终端进程**会终止该 PTY 会话中的进程组，必要时强制结束；退出 Mailbox 也会清理它持有的会话。主动脱离 PTY、另建系统会话的后台服务由用户自行管理。应用重启后不会伪造恢复旧进程，已收取的成果仍在收件箱。
+
+交互式 CLI 使用用户自己的 HOME 和 CLI 登录/授权流程，不沿用 Buffer 后台任务的只读文本参数；Codex 的普通终端登录与后台受管 Codex HOME 分开。终端启动不会读取 Buffer 或自动把输出发到输入框。每次 Mailbox 运行最多保留 16 个终端会话，滚动缓冲最多 10,000 行。
+
+右侧 **文件** 列出工作目录中最多 60 个普通文件，按自然顺序排序，不递归、不跟随链接、不显示隐藏文件；为避免大目录阻塞，最多扫描 10,000 项。也可以用右上角 **选择文件** 打开子目录中的成果。支持 UTF-8 文本（最多 1 MiB）和已安装解码器支持的 PNG/JPEG/GIF/WebP/BMP/TIFF/ICO 图片（原文件最多 24 MiB，单边最多 16,000 像素、总计最多 3,200 万像素）。图片独立解码为 PNG；损坏、特殊文件、链接、超限或超时会报错并保留原件。
+
+预览后点 **收入收件箱**，保存当时预览的文字或图片副本，按会话 UUID 关联。文件名、终端标题、工作目录相同也不会混淆会话；不推断某个文件一定由 CLI 生成。切换会话、隐藏、锁屏或取消时，未提交的预览/收取作废。附件和消息一起提交，失败清理本次临时附件；重复点击不会重复提交。收件中的 **返回终端** 仅返回本次运行仍存在的会话。
 
 ## AI 对话
 
@@ -53,7 +65,7 @@ rimes-gateway --rotate-token
 
 ## 安装、更新与保留数据
 
-Debian/Ubuntu 推荐从项目同一个 `v*` Release 安装完整版 deb；开发源码安装/卸载方法见 [IME 安装说明](../ime/README.md)。deb 和 `install.sh` 同时安装 `rimes-mailbox`、`rimes-gateway` 与桌面菜单入口。卸载 deb 使用 `apt remove fcitx5-rimes`；源码安装使用相同 prefix 的 `uninstall.sh`。不要直接删除共享安装目录。
+Debian/Ubuntu 推荐从项目同一个 `v*` Release 安装完整版 deb；开发源码安装/卸载方法见 [IME 安装说明](../ime/README.md)。deb 和 `install.sh` 同时安装 `rimes-mailbox`、`rimes-gateway`、隔离的文件预览程序与桌面菜单入口。GTK VTE 终端运行库由 deb 依赖声明；源码依赖用 `platforms/linux/ime/scripts/deps.sh --install` 安装。卸载 deb 使用 `apt remove fcitx5-rimes`；源码安装使用相同 prefix 的 `uninstall.sh`。不要直接删除共享安装目录。
 
 用户根目录为 `RIMES_USER_DIR` 或 `$XDG_DATA_HOME/rimes`（默认 `~/.local/share/rimes`），其下 `mailbox/` 包含：
 

@@ -345,6 +345,14 @@ Json Store::Create(const Json& source, const std::string& title, const std::stri
                    const std::string& module, const std::string& png) {
     return CreateReceipt(source, title, body, module, png, "plain", nullptr);
 }
+Json Store::ImportTerminalResult(const std::string& session, const std::string& source,
+                                 const std::string& title, const std::string& body,
+                                 const std::string& png) {
+    Need(capsule::LooksLikeUuid(session), "无效的终端会话");
+    return CreateReceipt(Json{{"kind", "other"}, {"displayName", source},
+                              {"replyCapability", "localNotesOnly"}}, title, body,
+                          "inbox", png, "plain", nullptr, session);
+}
 Json Store::ReceiveGateway(const Json& source, const std::string& title, const std::string& body,
                            const std::string& format, const std::string& nonce,
                            const std::string& digest) {
@@ -363,7 +371,7 @@ Json Store::ReceiveGateway(const Json& source, const std::string& title, const s
 }
 Json Store::CreateReceipt(const Json& source, const std::string& title, const std::string& body,
                           const std::string& module, const std::string& png,
-                          const std::string& format, const Json& gateway) {
+                          const std::string& format, const Json& gateway, const std::string& terminal_session) {
     auto lock = files_.Lock(false);
     auto state = Load();
     auto& document = state.document;
@@ -401,6 +409,7 @@ Json Store::CreateReceipt(const Json& source, const std::string& title, const st
                 {"updatedAt", date}};
     thread["messages"][0]["author"] = source.at("displayName");
     thread["messages"][0]["format"] = format;
+    if (!terminal_session.empty()) thread["terminalSessionID"] = terminal_session;
     if (!gateway.is_null())
         thread["linuxGateway"] = gateway;
     thread["review"] = {{"messageID", thread.at("messages").at(0).at("id")}, {"state", "pending"}};

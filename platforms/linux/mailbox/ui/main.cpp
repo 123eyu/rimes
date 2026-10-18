@@ -4,6 +4,7 @@
 #include "desktop.hpp"
 #include "mailbox_session.hpp"
 #include "mailbox_workspace.hpp"
+#include "terminal_fixtures.hpp"
 #include <chrono>
 #include <filesystem>
 #include <fstream>
@@ -166,6 +167,8 @@ int main(int argc, char** argv) {
         if (argc == 5 && std::string(argv[1]) == "--render-fixture" &&
             std::string(argv[3]) == "--render-dir")
             return RenderFixture(argv[2], argv[4]);
+        if (argc == 3 && std::string(argv[1]) == "--render-terminal")
+            return RenderTerminalFixture(argv[2]);
         // A profile has one primary application and one lock/sleep monitor. A
         // notification or second launch forwards options over the same bus name.
         const auto identity =

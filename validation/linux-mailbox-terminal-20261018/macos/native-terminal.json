@@ -1,0 +1,138 @@
+{
+  "capture" : "AppKit cacheDisplay; actual SwiftTerm child cache composed at its native frame with its layer background",
+  "command" : "printf '\\033]0;公开终端\\007公开终端 · PTY ready\\n\\n输入会直接进入当前会话。\\n'; read line; printf '终端已退出。\\n'; exit 7",
+  "directory" : "/tmp/xsime-terminal-public-workspace",
+  "fileBody" : "这是一份公开的终端成果。\n\n选择文件、预览内容，再手动收入收件箱。",
+  "fileName" : "公开成果.txt",
+  "kinds" : [
+    "Codex",
+    "Claude Code",
+    "Shell"
+  ],
+  "limits" : {
+    "maximumFileBytes" : 25165824,
+    "maximumFiles" : 60,
+    "maximumImageDimension" : 16000,
+    "maximumImagePixels" : 32000000,
+    "maximumTextBytes" : 1048576,
+    "previewCharacters" : 360
+  },
+  "metrics" : {
+    "fontSize" : 13,
+    "imageHeight" : 168,
+    "sidebarBreakpoint" : 720,
+    "sidebarWidth" : 200,
+    "terminalInset" : 9
+  },
+  "purpose" : "public-mailbox-terminal-contract",
+  "renders" : [
+    {
+      "image" : "night-terminal-empty-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "night-terminal-empty-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "night-terminal-running-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "night-terminal-running-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "night-terminal-file-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "night-terminal-file-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "night-terminal-receipt-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "night-terminal-receipt-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "night-terminal-exited-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "night-terminal-exited-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "day-terminal-empty-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "day-terminal-empty-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "day-terminal-running-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "day-terminal-running-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "day-terminal-file-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "day-terminal-file-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "day-terminal-receipt-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "day-terminal-receipt-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    },
+    {
+      "image" : "day-terminal-exited-wide.png",
+      "logicalHeight" : 700,
+      "logicalWidth" : 1000
+    },
+    {
+      "image" : "day-terminal-exited-compact.png",
+      "logicalHeight" : 500,
+      "logicalWidth" : 680
+    }
+  ],
+  "schemaVersion" : 1,
+  "sources" : {
+    "Sources/RimeBuffer/CodexSession/CodexProcessEnvironment.swift" : "817ef334ee18e396b207c4698e67d94d5a47abfc78c2cea90b0d313de7129347",
+    "Sources/RimeBuffer/Mailbox/MailboxAdaptiveSplitView.swift" : "8e3eeb75fe185faaac1ce19f410c1a3e4cdc0b428c79e1c4c92e632fee571f45",
+    "Sources/RimeBuffer/Mailbox/MailboxTerminalLinuxFixtures.swift" : "7d784b8f7754fe47a6a67d73b128b3342963c929792cbd1c29798e37f671f973",
+    "Sources/RimeBuffer/Mailbox/MailboxTerminalWorkspace.swift" : "5c84507a57784addb5d300f1b86c12eb97cbf2e51779196e08323b937102d6ab",
+    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceUI.swift" : "9ee7f32da00695c4a0bcdb23cee36f709810982e21ed937e961cd8a520764558"
+  }
+}

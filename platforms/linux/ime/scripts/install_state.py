@@ -28,7 +28,7 @@ def managed_path(raw):
     allowed = (
         (path.parent == PurePosixPath("bin") and path.name in PROGRAMS)
         or (path.parent == PurePosixPath("libexec/rimes")
-            and path.name in {"rimes-buffer", "rimes-capsule", "rimes-deploy", "rimes-capsule-preview", "rimes-capsule-capture"})
+            and path.name in {"rimes-buffer", "rimes-capsule", "rimes-deploy", "rimes-capsule-preview", "rimes-capsule-capture", "rimes-mailbox-file"})
         or (path.parent == PurePosixPath("libexec/rimes/translation")
             and path.name in {"runtime.py", "translation_core.py", "resources.lock.json", "NOTICE.md"})
         or re.fullmatch(r"lib(?:64)?/(?:[^/]+/)?fcitx5/rimes\.so", raw)
