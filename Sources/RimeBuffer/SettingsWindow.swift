@@ -839,6 +839,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     )
     private let claudeLoginSpinner = NSProgressIndicator()
     private let claudeLoginStatusLabel = NSTextField(wrappingLabelWithString: "")
+    private var claudePreview: (availability: AITextProviderAvailability, authenticated: Bool?, running: Bool)?
     private var claudeLoginOperation: AITextClaudeLoginOperation?
     private var claudeLoginSessionID: UUID?
     private var claudeLoginCancelling = false
@@ -1116,6 +1117,45 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
                 .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
             try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-codex-settings", "states": contract,
+                "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
+        } catch { return false }
+        return success
+    }
+
+    /// Actual native Claude controls with public states; never starts login.
+    func renderClaudeForPreview(to directory: String) -> Bool {
+        let root = URL(fileURLWithPath: directory, isDirectory: true)
+        defer { claudePreview = nil; claudeLoginFeedback = nil }
+        do { try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true) }
+        catch { return false }
+        let states: [(String, AITextProviderAvailability, Bool?, Bool, String?)] = [
+            ("missing", .unavailable("未找到具备所需流式生成能力的 Claude Code CLI"), nil, false, nil),
+            ("signed-out", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, false, nil),
+            ("ready", .ready, true, false, nil),
+            ("waiting", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, true, AITextClaudeLoginStatus.waitingForBrowser.displayText),
+            ("failed", .unavailable("Claude 尚未登录，请点击“登录 Claude”完成 CLI 授权"), false, false, claudeLoginErrorMessage(.timedOut)),
+        ]
+        var manifest: [[String: Any]] = [], contract: [[String: Any]] = []
+        var success = true
+        for (name, availability, authenticated, running, feedback) in states {
+            claudePreview = (availability, authenticated, running)
+            if window == nil { build() }
+            reload()
+            claudeLoginFeedback = feedback
+            claudeLoginFeedbackIsError = name == "failed"
+            selectPreviewTarget(routeID: SettingsCoreRoute.connectors.id, subpageID: SettingsSubpageID(rawValue: "ai-model"))
+            let file = "claude-" + name + ".png"
+            success = renderCurrentView(to: root.appendingPathComponent(file).path) && success
+            manifest.append(["file": file, "state": name, "theme": RimeUI.appearance.rawValue, "width": 980, "height": 680])
+            contract.append(["state": name, "ready": availability == .ready, "authenticated": authenticated.map { $0 as Any } ?? NSNull(),
+                "running": running, "button": claudeLoginButton.title,
+                "feedback": claudeLoginStatusLabel.isHidden ? "" : claudeLoginStatusLabel.stringValue])
+        }
+        do {
+            try JSONSerialization.data(withJSONObject: manifest, options: [.prettyPrinted, .sortedKeys])
+                .write(to: root.appendingPathComponent("manifest.json"), options: .atomic)
+            try JSONSerialization.data(withJSONObject: ["schemaVersion": 1, "purpose": "public-claude-settings", "states": contract,
                 "sources": ["Sources/RimeBuffer/SettingsWindow.swift": SHA256.hash(data: try Data(contentsOf: URL(fileURLWithPath: #filePath))).map { String(format: "%02x", $0) }.joined()]], options: [.prettyPrinted, .sortedKeys])
                 .write(to: root.appendingPathComponent("settings-contract.json"), options: .atomic)
         } catch { return false }
@@ -3569,7 +3609,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
 
     private func aiModelConnectionsPage() -> NSView {
         let connectors = AITextConnectorRegistry.shared
-        let selected = codexPreview == nil ? AITextConnectorSelectionStore.shared.selectedKind : .codexCLI
+        let selected = codexPreview != nil ? AITextProviderKind.codexCLI : claudePreview != nil ? .claudeCodeCLI : AITextConnectorSelectionStore.shared.selectedKind
         let detailPanel: NSView
 
         switch selected {
@@ -3614,7 +3654,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             ])
 
         case .claudeCodeCLI:
-            let availability = connectors.availability(for: .claudeCodeCLI)
+            let availability = claudePreview?.availability ?? connectors.availability(for: .claudeCodeCLI)
             let ready = availability == .ready
             let detail: String
             switch availability {
@@ -3624,7 +3664,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 detail = message
             }
             refreshClaudeLoginControls(
-                authenticationStatus: connectors.claudeAuthenticationStatus
+                authenticationStatus: claudePreview != nil ? claudePreview!.authenticated : connectors.claudeAuthenticationStatus
             )
             claudeLoginButton.removeFromSuperview()
             claudeLoginSpinner.removeFromSuperview()
@@ -4982,7 +5022,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshAIConnectorSelection() {
-        let selected = codexPreview == nil ? AITextConnectorSelectionStore.shared.selectedKind : .codexCLI
+        let selected = codexPreview != nil ? AITextProviderKind.codexCLI : claudePreview != nil ? .claudeCodeCLI : AITextConnectorSelectionStore.shared.selectedKind
         for kind in AITextProviderKind.allCases {
             aiConnectorRadios[kind]?.state = kind == selected ? .on : .off
         }
@@ -5033,9 +5073,9 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     private func refreshClaudeLoginControls(authenticationStatus: Bool? = nil) {
-        let status = authenticationStatus
+        let status = claudePreview != nil ? claudePreview!.authenticated : authenticationStatus
             ?? AITextConnectorRegistry.shared.claudeAuthenticationStatus
-        let isRunning = claudeLoginOperation != nil
+        let isRunning = claudePreview?.running ?? (claudeLoginOperation != nil)
         claudeLoginButton.title = AITextClaudeLoginPresentation.buttonTitle(
             isRunning: isRunning,
             authenticationStatus: status

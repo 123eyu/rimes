@@ -5,7 +5,8 @@ namespace rimes::plugins {
 std::map<std::string, Descriptor> CompiledAdapters() {
     // An entry is added only with its native implementation and acceptance
     // tests. Platform declarations are a separate required gate in PackageStore.
-    return {{"builtin.codex-cli", {"builtin.codex-cli", "ChatGPT", "1.2.0", Kind::Buffer, {"buffer.read", "ai.generate"}}},
+    return {{"builtin.claude-code-cli", {"builtin.claude-code-cli", "Claude", "1.2.0", Kind::Buffer, {"buffer.read", "ai.generate"}}},
+        {"builtin.codex-cli", {"builtin.codex-cli", "ChatGPT", "1.2.0", Kind::Buffer, {"buffer.read", "ai.generate"}}},
         {"builtin.mailbox.inbox", {"builtin.mailbox.inbox", "收件", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},
         {"builtin.mailbox.chat", {"builtin.mailbox.chat", "对话", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},
         {"builtin.mailbox.terminal", {"builtin.mailbox.terminal", "终端", "1.1.0", Kind::Mailbox, {"mailbox.navigate"}}},

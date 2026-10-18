@@ -1931,7 +1931,7 @@ enum AITextClaudeCompatibility {
         let checkedAt: TimeInterval
     }
 
-    private static let requiredHelpOptions = [
+    static let requiredHelpOptions = [
         "--print",
         "--verbose",
         "--output-format",
@@ -3015,6 +3015,16 @@ final class CodexCLITextProvider: AITextProvider {
 }
 
 enum AITextClaudeInferenceArguments {
+    static var linuxFixturePrompt: String { AITextPrompt.request(for: "RIMES_SOURCE_TEXT") }
+    static func request(model: String?, effort: String?, images: Bool = false) -> [String] {
+        // --json-schema suppresses partial deltas; validate the final JSON in the host.
+        ["--print", "--verbose", "--output-format", "stream-json"]
+        + (images ? ["--input-format", "stream-json"] : [])
+        + ["--include-partial-messages", "--tools", "", "--disable-slash-commands", "--safe-mode",
+           "--strict-mcp-config", "--no-session-persistence", "--permission-mode", "dontAsk", "--no-chrome"]
+        + make(model: model, effort: effort)
+    }
+
     static func make(model: String?, effort: String?) -> [String] {
         var arguments: [String] = []
         if let model, ["claude-opus-5-5", "opus", "sonnet", "haiku"].contains(model) {
@@ -3325,21 +3335,9 @@ final class ClaudeCodeCLITextProvider: AITextProvider {
         }
         let spec = AITextCLIProcessSpec(
             executableURL: verifiedExecutable.url,
-            arguments: [
-                "--print", "--verbose", "--output-format", "stream-json",
-                ] + (request.imageInputs.isEmpty
-                    ? [] : ["--input-format", "stream-json"]) + [
-                // Claude only streams free-form text; `--json-schema` moves the
-                // structured body to the terminal result and suppresses these
-                // partial message deltas. Rime still validates the final JSON.
-                "--include-partial-messages",
-                "--tools", "", "--disable-slash-commands", "--safe-mode",
-                "--strict-mcp-config", "--no-session-persistence",
-                "--permission-mode", "dontAsk", "--no-chrome",
-            ] + AITextClaudeInferenceArguments.make(
-                model: request.modelID,
-                effort: request.reasoningEffort
-            ),
+            arguments: AITextClaudeInferenceArguments.request(
+                model: request.modelID, effort: request.reasoningEffort,
+                images: !request.imageInputs.isEmpty),
             standardInput: stdin,
             currentDirectoryURL: temporary.directoryURL,
             environment: processEnvironment,

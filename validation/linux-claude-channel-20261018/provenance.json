@@ -1,0 +1,36 @@
+{
+  "task": 22,
+  "issue": "https://github.com/scholay/xsime/issues/172",
+  "parentCommit": "aa8d20a13e372922ca7c4df98e32fc1f061186f4",
+  "sourceSha256": {
+    "Sources/RimeBuffer/AITextPlugins.swift": "798996c9faa15d2a19325a14fab8cb4fd7605d6eb87704a935104e574401d62d",
+    "Sources/RimeBuffer/AITextClaudeLogin.swift": "6015ee01601d6c31fc2be8a8cf2794b859e252b8e586dd206426e9de945cb56a",
+    "Sources/RimeBuffer/AITextClaudeLinuxFixtures.swift": "084141e95d7dd605ccb4bf9d91abd16a9c86b9c53da6961754e5bde8369438c9",
+    "Sources/RimeBuffer/SettingsWindow.swift": "a7aaba41cd929906bb1e73a69cebead04040262b523cbb07d129e61f87d3415b",
+    "platforms/linux/runtime/ui/settings.cpp": "59e140f825f78f0c6c36832182d1e201f2545f59e629ab16ba09119453f1a129",
+    "platforms/linux/runtime/core/claude_channel.cpp": "ddf5e0e94e71d1172726b8897aa4155ea7a614fa964500fdfd4e8d2ad815e81d",
+    "platforms/linux/runtime/core/claude_protocol.cpp": "0aefad00b9957ebe1ed28128b4cc70c4be28dd879b18c372a2c09075676378a9",
+    "platforms/linux/runtime/core/cli_session.cpp": "41b1f959040fb87a79f8521c9b0b4a4208df80dc7f38470ce9d83c01829f3021",
+    "platforms/linux/ime/src/fcitx/rimes_ime.cpp": "905e6bcb457291aadfaa2f755bfda8b02a0e0414c9c58196ec8eb721e2d3bda2",
+    "platforms/linux/ime/src/buffer/buffer_service.cpp": "eef4ea158bf126728cde818bdc939b1b50c96660712839377be3eb36e6cb8471"
+  },
+  "environment": {
+    "linux": "Ubuntu 24.04 arm64 container",
+    "gtk": "3.24.41",
+    "fcitx": "5.1.7",
+    "render": "actual AppKit/GTK widgets; 980x680 logical, scale 2, public fixture states",
+    "officialClaude": "2.1.302",
+    "officialClaudeSha256": "2bd4f4e5ed5cb09955b490098f745321cb5491e7ea8c752ba1e3bb010cdadb10"
+  },
+  "visualStatus": "requires_review",
+  "liveAccountGeneration": "not tested",
+  "release": "not published",
+  "verification": {
+    "ctest": "77/77 passed in clean deb build (95.50 seconds)",
+    "native": "Swift debug build and AI plugin smoke passed",
+    "sourceLifecycle": "13 tests passed",
+    "fcitx": "Claude text/cancellation/revocation and Codex text/image passed",
+    "debLifecycle": "install/reinstall/remove; 20 XSIME and 2 Claude-owned sentinels preserved",
+    "packageSha256": "c78c42e6fb0edb34994b711a9d5a6e36cab2dca14cda78a6439e1c17418f3a00"
+  }
+}

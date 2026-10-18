@@ -146,6 +146,15 @@ jobs:
             platforms/linux/ime/build/rimes-codex-fcitx-e2e platforms/linux/ime/build . test-data \
             "$GITHUB_WORKSPACE/platforms/linux/runtime/tests/codex_fixture.py"
 
+      - name: Claude CLI text through real Fcitx
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" \
+            platforms/linux/ime/build/rimes-claude-fcitx-e2e platforms/linux/ime/build . test-data \
+            "$GITHUB_WORKSPACE/platforms/linux/runtime/tests/claude_fixture.py"
+          RIMES_USER_DIR="$RUNNER_TEMP/claude-settings-profile" GDK_SCALE=2 \
+            xvfb-run -a -s "-screen 0 2560x1600x24" platforms/linux/ime/build/runtime/rimes-settings \
+            --render-claude "$RUNNER_TEMP/settings-render/claude"
+
       - name: Real AI API transport and Fcitx derived delivery
         run: |
           RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" python3 platforms/linux/runtime/tests/ai_http_fixture.py \

@@ -17,6 +17,11 @@ VERSION=$(dpkg-deb -f "$DEB" Version)
 WORK=$(mktemp -d)
 trap 'rm -rf "$WORK"' EXIT
 DATA="$WORK/user-data/rimes"
+CLI_HOME="$WORK/home"
+mkdir -p "$CLI_HOME/.claude"
+printf '%s\n' 'keep CLI-owned Claude authentication' > "$CLI_HOME/.claude/.credentials.json"
+printf '%s\n' 'keep CLI-owned Claude preferences' > "$CLI_HOME/.claude.json"
+(cd "$CLI_HOME" && find . -type f -exec sha256sum {} +) > "$WORK/cli-home.sha256"
 mkdir -p "$DATA/rime_ice.userdb" "$DATA/schemes/learning/custom.userdb" "$DATA/capsule/clipboard" "$DATA/capsule/passwords" "$DATA/capsule/assets" "$DATA/capsule/captures/fixture" "$DATA/translation/cache" "$DATA/mailbox/images" "$DATA/gateway" "$DATA/ai/codex-home/generated_images" "$DATA/mailbox/generations/fixture"
 printf '%s\n' 'keep learned dictionary' > "$DATA/rime_ice.userdb/CURRENT"
 printf '%s\n' 'keep imported learning' > "$DATA/schemes/learning/custom.userdb/CURRENT"
@@ -40,7 +45,7 @@ printf '%s\n' 'keep original generated image' > "$DATA/ai/codex-home/generated_i
 printf '%s\n' 'keep generation ownership metadata' > "$DATA/mailbox/generations/fixture/.lock"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
-sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
+sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$DEB"
 [[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
@@ -66,10 +71,11 @@ SCRIPT_DIR=$(CDPATH= cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)
 dbus-run-session -- xvfb-run -a python3 "$SCRIPT_DIR/../../capsule/tests/password_ui_test.py" \
     python3 "$SCRIPT_DIR/../../mailbox/tests/mailbox_process_test.py" /usr/bin/rimes-mailbox \
     "$SCRIPT_DIR/../../mailbox/tests/fixtures/native-mailbox.json"
-sudo env XDG_DATA_HOME="$WORK/user-data" apt-get install --reinstall -y "$DEB"
-sudo env XDG_DATA_HOME="$WORK/user-data" apt-get remove -y fcitx5-rimes
+sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install --reinstall -y "$DEB"
+sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get remove -y fcitx5-rimes
 for file in "${FILES[@]}"; do
     [[ ! -f "$file" && ! -L "$file" ]] || { echo "Package file survived removal: $file" >&2; exit 1; }
 done
 (cd "$DATA" && sha256sum -c "$WORK/user-data.sha256")
+(cd "$CLI_HOME" && sha256sum -c "$WORK/cli-home.sha256")
 echo "deb install/reinstall/remove passed; user dictionaries, learning and notes preserved."

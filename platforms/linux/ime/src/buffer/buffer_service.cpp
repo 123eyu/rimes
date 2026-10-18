@@ -566,13 +566,14 @@ void BufferService::SynchronizeDerived() {
     CancelTranslation(true);
     if (derived_request_ && !derived_.Owns(*derived_request_, grant)) CancelDerived();
     SynchronizeResultDelivery();
-    if (derived_.Phase() != rimes::buffer::DerivedPhase::Failed) derived_error_.clear();
+    if (derived_.Phase() != rimes::buffer::DerivedPhase::Failed &&
+        derived_.Phase() != rimes::buffer::DerivedPhase::Running) derived_error_.clear();
     synchronizing_derived_ = false;
 }
 
 void BufferService::ConfigurePluginOptions(const rimes::runtime::Json& configuration) {
     plugin_options_.clear();
-    for (const auto* id : {"builtin.codex-cli"}) {
+    for (const auto* id : {"builtin.codex-cli", "builtin.claude-code-cli"}) {
         const auto settings = rimes::runtime::ConfigurationStore::NormalizePlugin(id,
             configuration.at("plugins").value(id, rimes::runtime::Json::object()));
         for (const auto& field : rimes::runtime::PluginFields(id)) {
@@ -627,6 +628,9 @@ bool BufferService::Generate() {
                 bool grant = false;
                 try { grant = validate_ && validate_(request.lease); } catch (const std::exception&) {}
                 if (!derived_.Accepts(request, grant)) { Publish(); return; }
+                if (!finished && !message.empty() && message.size() <= 512 && message.find('\0') == message.npos)
+                    derived_error_ = message;
+                if (finished && success) derived_error_.clear();
                 const bool valid = text.empty() || derived_.Update(request, grant, alternative, text);
                 if (finished && success && !blocks.empty()) {
                     std::string joined;

@@ -40,12 +40,27 @@ void Key(fcitx::AddonInstance* frontend, const fcitx::ICUUID& uuid, const char* 
 }
 void Command(const std::filesystem::path& root, const std::string& op, const std::string& text = "",
              const std::string& field = "") {
-    const int fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
-    Check(fd >= 0, "Buffer socket missing");
-    sockaddr_un address{};
-    address.sun_family = AF_UNIX;
-    const auto path = (root / "buffer.sock").string();
-    std::copy(path.begin(), path.end(), address.sun_path);
+    // Match the real UI's persistent transport. Closing immediately after send
+    // races the host's initial snapshot and can discard an unread command.
+    struct Connection {
+        int fd = -1;
+        ~Connection() { if (fd >= 0) close(fd); }
+    };
+    static thread_local Connection connection;
+    if (connection.fd < 0) {
+        connection.fd = socket(AF_UNIX, SOCK_STREAM | SOCK_CLOEXEC, 0);
+        Check(connection.fd >= 0, "Buffer socket missing");
+        sockaddr_un address{};
+        address.sun_family = AF_UNIX;
+        const auto path = (root / "buffer.sock").string();
+        Check(path.size() < sizeof(address.sun_path), "Buffer path too long");
+        std::copy(path.begin(), path.end(), address.sun_path);
+        Check(connect(connection.fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0,
+              "Buffer connection failed");
+    }
+    const auto fd = connection.fd;
+    char pending[16384];
+    while (recv(fd, pending, sizeof(pending), MSG_DONTWAIT) > 0) {}
     rt::Json command{{"v", 1}, {"op", op}};
     if (!text.empty())
         command[op == "select_plugin" ? "id" : "text"] = text;
@@ -56,11 +71,9 @@ void Command(const std::filesystem::path& root, const std::string& op, const std
         command.erase("text");
     }
     std::string frame;
-    const bool connected = connect(fd, reinterpret_cast<sockaddr*>(&address), sizeof(address)) == 0;
     const bool written =
-        connected && rimes::buffer::EncodeFrame(command.dump(), &frame) &&
+        rimes::buffer::EncodeFrame(command.dump(), &frame) &&
         send(fd, frame.data(), frame.size(), MSG_NOSIGNAL) == static_cast<ssize_t>(frame.size());
-    close(fd);
     Check(written, "Buffer command failed");
 }
 rimes::buffer::Snapshot Snapshot(const std::filesystem::path& root) {

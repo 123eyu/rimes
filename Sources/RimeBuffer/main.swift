@@ -79,6 +79,7 @@ private enum StandaloneRimeCommandRules {
         "settings-render",
         "gateway-settings-render",
         "codex-settings-render",
+        "claude-settings-render",
         "codex-buffer-render",
     ]
 
@@ -628,6 +629,20 @@ if let index = CommandLine.arguments.firstIndex(where: { $0 == "capsule-password
         }
         exit(0)
     } catch { fputs("Public password fixture operation failed\n", stderr); exit(1) }
+}
+
+if let index = CommandLine.arguments.firstIndex(of: "claude-linux-fixtures"), index + 1 < CommandLine.arguments.count {
+    do {
+        var fixture = try AITextClaudeLinuxContract.value()
+        let sourceRoot = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let sources = ["AITextPlugins.swift", "AITextClaudeLogin.swift", "AITextClaudeLinuxFixtures.swift"]
+        fixture["sources"] = try Dictionary(uniqueKeysWithValues: sources.map { name in
+            ("Sources/RimeBuffer/" + name, SHA256.hash(data: try Data(contentsOf: sourceRoot.appendingPathComponent(name))).map { String(format: "%02x", $0) }.joined())
+        })
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Claude fixture export failed\n", stderr); exit(1) }
 }
 
 if let index = CommandLine.arguments.firstIndex(of: "codex-linux-fixtures"),
@@ -1357,6 +1372,13 @@ if let i = CommandLine.arguments.firstIndex(of: "codex-buffer-render"), i + 1 < 
     let controller = BufferWindowController.shared
     guard controller.renderForPreview(to: CommandLine.arguments[i + 1], scale: 2, panelWidth: 760) else { exit(1) }
     exit(controller.imageResultMailboxButtonForSmoke(outputPath: CommandLine.arguments[i + 1]) ? 0 : 1)
+}
+if let i = CommandLine.arguments.firstIndex(of: "claude-settings-render"), i + 1 < CommandLine.arguments.count {
+    isolatePreviewUserDir()
+    let app = NSApplication.shared
+    app.setActivationPolicy(.accessory)
+    app.finishLaunching()
+    exit(SettingsWindowController.shared.renderClaudeForPreview(to: CommandLine.arguments[i + 1]) ? 0 : 1)
 }
 if let i = CommandLine.arguments.firstIndex(of: "codex-settings-render"), i + 1 < CommandLine.arguments.count {
     isolatePreviewUserDir()

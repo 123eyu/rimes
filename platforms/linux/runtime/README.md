@@ -176,3 +176,36 @@ removal. Keep this directory private when making backups.
 [Codex validation and remaining desktop checks](CODEX-VALIDATION.md) distinguish
 protocol tests, the actual official Linux CLI probe, native UI screenshots and
 live authenticated generation.
+
+
+## Claude Code CLI
+
+Install the official Claude Code CLI separately. In **设置 → 连接器 → AI 模型 →
+Claude**, XSIME checks its required flags and login status without submitting a
+prompt. Use **授权 Claude** / **登录 Claude** to open the CLI's browser login;
+**取消登录** stops a pending operation. A successful account can be reauthorized
+with **重新授权 Claude**. Incompatible or missing CLIs remain unavailable.
+
+Install and enable the optional **Claude** Buffer plugin. Select its model and
+reasoning effort, enter the complete request, then click generate. Typing alone
+does not send a request. Public progress and semantic previews appear while it
+runs; final text is delivered only after validation and a successful CLI exit.
+Editing the source, switching input fields, closing Buffer or disabling the
+plugin cancels its text request and rejects late replies. Normal delivery uses
+Fcitx `commitString`.
+
+The text channel uses the same fixed print/stream flags as macOS: tools, slash
+commands, Chrome integration, extra MCP configuration and session persistence
+are disabled. XSIME does not copy API keys or OAuth tokens into this channel.
+Claude manages its own credentials in the user's normal HOME. A private request
+workspace is removed when the operation finishes; uninstalling XSIME preserves
+both CLI authentication and all XSIME user data.
+
+Discovery checks common user/system installations and absolute PATH entries,
+skipping incompatible candidates. To pin one installation, set
+`RIMES_CLAUDE_PATH=/absolute/path/to/claude` in the Fcitx desktop environment; a
+missing or incompatible pin fails without choosing another installation.
+
+[Claude validation and remaining desktop checks](CLAUDE-VALIDATION.md) separate
+protocol tests, the official prompt-free CLI check, actual native widget renders
+and still-pending authenticated generation.

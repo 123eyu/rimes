@@ -1,6 +1,7 @@
 #include "cli_session.hpp"
 #include <array>
 #include <cerrno>
+#include <cstdlib>
 #include <fcntl.h>
 #include <poll.h>
 #include <pthread.h>
@@ -11,6 +12,55 @@
 #include <unistd.h>
 
 namespace rimes::runtime {
+VerifiedCLIExecutable::VerifiedCLIExecutable(const std::filesystem::path& candidate) {
+    std::error_code error;
+    path = std::filesystem::canonical(candidate, error);
+    if (error || !path.is_absolute() || lstat(path.c_str(), &identity) || !S_ISREG(identity.st_mode) ||
+        (identity.st_uid != geteuid() && identity.st_uid != 0) || (identity.st_mode & 0022) || access(path.c_str(), X_OK))
+        throw ExecutableUnavailable("CLI executable unavailable");
+}
+bool VerifiedCLIExecutable::Matches() const {
+    struct stat now {};
+    return !lstat(path.c_str(), &now) && now.st_dev == identity.st_dev && now.st_ino == identity.st_ino &&
+        now.st_size == identity.st_size && now.st_mtim.tv_sec == identity.st_mtim.tv_sec &&
+        now.st_mtim.tv_nsec == identity.st_mtim.tv_nsec && now.st_ctim.tv_sec == identity.st_ctim.tv_sec &&
+        now.st_ctim.tv_nsec == identity.st_ctim.tv_nsec && now.st_mode == identity.st_mode && now.st_uid == identity.st_uid;
+}
+std::map<std::string, std::string> CLIEnvironment(const std::filesystem::path& executable,
+                                                const std::filesystem::path& temporary) {
+    std::map<std::string, std::string> environment;
+    for (const auto* name :
+         {"HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR"})
+        if (const auto* value = std::getenv(name))
+            environment[name] = value;
+    std::vector<std::string> paths{executable.parent_path().string()};
+    const auto path = executable.string();
+    for (const auto* marker : {"/.nvm/versions/node/", "/.local/share/fnm/node-versions/"}) {
+        const auto at = path.find(marker);
+        if (at != path.npos) {
+            const auto end = path.find('/', at + std::string(marker).size());
+            if (end != path.npos)
+                paths.push_back(path.substr(0, end) +
+                                (std::string(marker).find("fnm") == std::string::npos
+                                     ? "/bin"
+                                     : "/installation/bin"));
+        }
+    }
+    if (const auto* user = std::getenv("HOME"))
+        for (const auto* marker : {".volta", ".bun"})
+            if (path.find(std::string("/") + marker + "/") != path.npos)
+                paths.push_back(std::string(user) + "/" + marker + "/bin");
+    paths.insert(paths.end(), {"/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"});
+    std::string search;
+    for (const auto& item : paths) {
+        if (!search.empty())
+            search += ':';
+        search += item;
+    }
+    environment["PATH"] = search;
+    environment["TMPDIR"] = temporary.string();
+    return environment;
+}
 namespace {
 struct FD {
     int value = -1;
@@ -126,6 +176,7 @@ CLIExit RunCLISession(const CLISessionOptions& options, const std::atomic<bool>&
             return CLIExit::Unavailable;
     const auto deadline = std::chrono::steady_clock::now() + options.timeout;
     std::size_t received = 0;
+    bool output_closed = false;
     for (;;) {
         if (cancelled.load() || std::chrono::steady_clock::now() >= deadline) {
             // Best effort protocol cancellation. Never wait for an unresponsive
@@ -144,6 +195,16 @@ CLIExit RunCLISession(const CLISessionOptions& options, const std::atomic<bool>&
         }
         if (input.size() > options.maximum_pending_input)
             return CLIExit::TooLarge;
+        if (options.close_stdin && input.empty()) writer.Reset();
+        if (output_closed) {
+            siginfo_t status{};
+            if (waitid(P_PID, child.pid, &status, WEXITED | WNOHANG | WNOWAIT) < 0 && errno != EINTR)
+                return CLIExit::Protocol;
+            if (status.si_pid == child.pid)
+                return status.si_code == CLD_EXITED && status.si_status == 0 ? CLIExit::Completed : CLIExit::Protocol;
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+            continue;
+        }
         pollfd fds[] = {{reader.value, POLLIN, 0},
                         {writer.value, static_cast<short>(input.empty() ? 0 : POLLOUT), 0}};
         if (poll(fds, 2, 20) < 0 && errno != EINTR)
@@ -160,8 +221,15 @@ CLIExit RunCLISession(const CLISessionOptions& options, const std::atomic<bool>&
             // Bound each drain so a flooding producer cannot starve cancellation.
             for (int batch = 0; batch < 16; ++batch) {
                 const auto count = read(reader.value, buffer.data(), buffer.size());
-                if (!count)
-                    return CLIExit::Protocol; // EOF without protocol completion.
+                if (!count) {
+                    if (!options.finish_at_eof) return CLIExit::Protocol;
+                    try {
+                        if (receive({}, input) != CLIAction::Complete) return CLIExit::Protocol;
+                    } catch (...) { return CLIExit::Protocol; }
+                    output_closed = true;
+                    reader.Reset();
+                    break;
+                }
                 if (count < 0) {
                     if (errno == EINTR)
                         continue;
@@ -183,7 +251,7 @@ CLIExit RunCLISession(const CLISessionOptions& options, const std::atomic<bool>&
                 }
                 if (cancelled.load())
                     return CLIExit::Cancelled;
-                if (action == CLIAction::Complete)
+                if (action == CLIAction::Complete && !options.finish_at_eof)
                     return CLIExit::Completed;
                 if (action == CLIAction::Fail)
                     return CLIExit::Protocol;

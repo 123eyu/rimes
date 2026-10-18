@@ -9,31 +9,7 @@
 
 namespace rimes::runtime {
 namespace {
-struct ExecutableUnavailable : std::runtime_error {
-    using std::runtime_error::runtime_error;
-};
-struct Executable {
-    std::filesystem::path path;
-    struct stat identity {};
-    explicit Executable(const std::filesystem::path& candidate) {
-        std::error_code error;
-        path = std::filesystem::canonical(candidate, error);
-        if (error || !path.is_absolute() || lstat(path.c_str(), &identity) ||
-            !S_ISREG(identity.st_mode) || (identity.st_uid != geteuid() && identity.st_uid != 0) ||
-            (identity.st_mode & 0022) || access(path.c_str(), X_OK))
-            throw ExecutableUnavailable("Codex executable unavailable");
-    }
-    bool Matches() const {
-        struct stat now {};
-        return !lstat(path.c_str(), &now) && now.st_dev == identity.st_dev &&
-               now.st_ino == identity.st_ino && now.st_size == identity.st_size &&
-               now.st_mtim.tv_sec == identity.st_mtim.tv_sec &&
-               now.st_mtim.tv_nsec == identity.st_mtim.tv_nsec &&
-               now.st_ctim.tv_sec == identity.st_ctim.tv_sec &&
-               now.st_ctim.tv_nsec == identity.st_ctim.tv_nsec && now.st_mode == identity.st_mode &&
-               now.st_uid == identity.st_uid;
-    }
-};
+using Executable = VerifiedCLIExecutable;
 struct Workspace {
     std::filesystem::path root;
     explicit Workspace(const std::filesystem::path& state)
@@ -164,38 +140,8 @@ std::vector<std::string> CodexArguments(const std::filesystem::path& workspace, 
 std::map<std::string, std::string> CodexEnvironment(const std::filesystem::path& executable,
                                                     const std::filesystem::path& home,
                                                     const std::filesystem::path& temporary) {
-    std::map<std::string, std::string> environment;
-    for (const auto* name :
-         {"HOME", "USER", "LOGNAME", "LANG", "LC_ALL", "SSL_CERT_FILE", "SSL_CERT_DIR"})
-        if (const auto* value = std::getenv(name))
-            environment[name] = value;
-    std::vector<std::string> paths{executable.parent_path().string()};
-    const auto path = executable.string();
-    for (const auto* marker : {"/.nvm/versions/node/", "/.local/share/fnm/node-versions/"}) {
-        const auto at = path.find(marker);
-        if (at != path.npos) {
-            const auto end = path.find('/', at + std::string(marker).size());
-            if (end != path.npos)
-                paths.push_back(path.substr(0, end) +
-                                (std::string(marker).find("fnm") == std::string::npos
-                                     ? "/bin"
-                                     : "/installation/bin"));
-        }
-    }
-    if (const auto* user = std::getenv("HOME"))
-        for (const auto* marker : {".volta", ".bun"})
-            if (path.find(std::string("/") + marker + "/") != path.npos)
-                paths.push_back(std::string(user) + "/" + marker + "/bin");
-    paths.insert(paths.end(), {"/usr/local/bin", "/usr/bin", "/bin", "/usr/sbin", "/sbin"});
-    std::string search;
-    for (const auto& item : paths) {
-        if (!search.empty())
-            search += ':';
-        search += item;
-    }
-    environment["PATH"] = search;
+    auto environment = CLIEnvironment(executable, temporary);
     environment["CODEX_HOME"] = home.string();
-    environment["TMPDIR"] = temporary.string();
     return environment;
 }
 void RunCodex(CodexRequest request, std::atomic<bool>& cancelled, CodexReceive receive) {

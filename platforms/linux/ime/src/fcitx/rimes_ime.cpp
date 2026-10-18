@@ -115,6 +115,8 @@ RimesIme::RimesIme(Instance* instance)
         {[] {}, [this] { translation_worker_.CancelAll(); }});
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.openai-compatible"),
         {[] {}, [this] { ai_worker_.CancelAll(); }});
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.claude-code-cli"),
+        {[] {}, [this] { claude_worker_.CancelAll(); }});
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.codex-cli"),
         {[] {}, [this] { codex_worker_.CancelAll(); codex_images_.Cancel(); }});
     for (const auto* module : {"terminal", "chat", "inbox"}) {
@@ -191,6 +193,21 @@ RimesIme::RimesIme(Instance* instance)
                     receive({0, std::move(event.text), event.finished,
                         event.error == rimes::runtime::CodexError::None,
                         rimes::runtime::CodexErrorMessage(event.error), std::move(event.blocks)});
+                });
+        }, false);
+    buffer_->RegisterDerivedAdapter("builtin.claude-code-cli", "ai.generate",
+        [this](auto request, auto configuration, auto cancelled, auto receive) {
+            rimes::runtime::ClaudeRequest operation;
+            operation.mode = rimes::runtime::ClaudeMode::Text;
+            operation.text = std::move(request.text);
+            operation.model = configuration.plugin.at("model");
+            operation.effort = configuration.plugin.at("effort");
+            claude_worker_.Run(std::move(operation), std::move(cancelled),
+                [receive = std::move(receive)](rimes::runtime::ClaudeEvent event) {
+                    receive({0, std::move(event.text), event.finished,
+                        event.error == rimes::runtime::ClaudeError::None,
+                        event.finished ? rimes::runtime::ClaudeErrorMessage(event.error) : event.activity,
+                        std::move(event.blocks)});
                 });
         }, false);
     buffer_->BindImages([this, post](auto request, auto configuration) {
@@ -316,6 +333,7 @@ RimesIme::~RimesIme() {
     translation_worker_.Shutdown();
     ai_worker_.Shutdown();
     codex_worker_.Shutdown();
+    claude_worker_.Shutdown();
     codex_images_.Shutdown();
     image_progress_timer_.reset();
     engine_.SetDeployReadyCallback(nullptr);

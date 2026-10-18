@@ -21,6 +21,7 @@ enum AITextClaudeLoginStatus: Equatable {
 /// Verifies the installed CLI's own login state without reading credential
 /// files or retaining any account metadata returned by the command.
 enum AITextClaudeAuthentication {
+    static let statusArguments = ["auth", "status", "--json"]
     static func isLoggedIn(executableURL: URL,
                            environment: [String: String]) -> Bool {
         let runner = AITextFoundationCLIProcessRunner()
@@ -28,7 +29,7 @@ enum AITextClaudeAuthentication {
         var processResult: AITextCLIProcessResult?
         let spec = AITextCLIProcessSpec(
             executableURL: executableURL,
-            arguments: ["auth", "status", "--json"],
+            arguments: statusArguments,
             standardInput: Data(),
             currentDirectoryURL: FileManager.default.temporaryDirectory,
             environment: AITextCLIExecutableLocator.sanitizedEnvironment(
@@ -70,6 +71,7 @@ enum AITextClaudeAuthentication {
 /// Output is drained only to prevent pipe backpressure; it is never decoded,
 /// logged, retained, or surfaced to the settings UI.
 final class AITextClaudeLoginOperation: AITextCancellable {
+    static let loginArguments = ["auth", "login", "--claudeai"]
     typealias StatusHandler = (AITextClaudeLoginStatus) -> Void
     typealias Completion = (Result<Void, AITextProviderError>) -> Void
 
@@ -209,7 +211,7 @@ final class AITextClaudeLoginOperation: AITextCancellable {
         let stdoutPipe = Pipe()
         let stderrPipe = Pipe()
         child.executableURL = executableURL
-        child.arguments = ["auth", "login", "--claudeai"]
+        child.arguments = Self.loginArguments
         child.currentDirectoryURL = workspaceURL
         var processEnvironment = AITextCLIExecutableLocator.sanitizedEnvironment(
             for: .claudeCodeCLI,

@@ -539,7 +539,7 @@
   "sources": {
     "Sources/RimeBuffer/AITextCodexAppServer.swift": "1749e161fa64bc4cde85f4b2908685520abce8aab382180a765d0424816f65fa",
     "Sources/RimeBuffer/AITextCodexLogin.swift": "abf351e413e44dca0199fb49ad5994a5a56e2c65b11b39c5db66a088eee60415",
-    "Sources/RimeBuffer/AITextPlugins.swift": "b67b106542a1f06a69909e9d2c52af4797879908c7101bbcd7feb53b866edd4d",
+    "Sources/RimeBuffer/AITextPlugins.swift": "798996c9faa15d2a19325a14fab8cb4fd7605d6eb87704a935104e574401d62d",
     "Sources/RimeBuffer/AITextSkills.swift": "1a2edcaac6f23b9d6861e1b3257e0c6585747fa3fae632960b9d193d9b09ffdb"
   },
   "textArguments": [

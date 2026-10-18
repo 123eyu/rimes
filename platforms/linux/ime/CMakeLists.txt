@@ -186,7 +186,7 @@ if(RIMES_BUILD_FCITX5)
         src/capsule/capsule_history_service.cpp
         src/capsule/capsule_capture_service.cpp
     )
-    target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI)
+    target_link_libraries(rimes PRIVATE Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(RimesXCB REQUIRED IMPORTED_TARGET xcb)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
@@ -739,6 +739,11 @@ if(RIMES_BUILD_TESTS)
             RimesBufferCore
         )
         rimes_harden(rimes-buffer-respawn-e2e)
+
+        add_executable(rimes-claude-fcitx-e2e tests/claude_fcitx_e2e.cpp)
+        target_link_libraries(rimes-claude-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesEngine RimesBufferCore)
+        target_compile_definitions(rimes-claude-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        rimes_harden(rimes-claude-fcitx-e2e)
 
         add_executable(rimes-codex-fcitx-e2e tests/codex_fcitx_e2e.cpp)
         target_link_libraries(rimes-codex-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesEngine RimesMailboxCore)

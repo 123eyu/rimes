@@ -108,6 +108,13 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ma
             "bin/another-program", ".engine/install/lib/librime.so",
             "share/rimes/translation/current.json", "share/rimes/translation/cache/model.argosmodel",
         )]
+        cli_home = self.root / "home"
+        (cli_home / ".claude").mkdir(parents=True)
+        for name in (".claude/.credentials.json", ".claude.json"):
+            path = cli_home / name
+            path.write_bytes(b"CLI-owned public fixture - preserve exactly\n")
+            personal.append(path)
+        self.env["HOME"] = str(cli_home)
         before = {p: p.read_bytes() for p in personal}
         self.install()
         installed = list(self.receipt()["files"])

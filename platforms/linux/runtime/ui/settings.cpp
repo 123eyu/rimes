@@ -6,6 +6,7 @@
 #include "launcher_client.hpp"
 #include "gateway_access.hpp"
 #include "codex_channel.hpp"
+#include "claude_channel.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -32,6 +33,14 @@ struct Settings {
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
   std::string gateway_client = "cursor";
+  ClaudeWorker claude_worker;
+  std::shared_ptr<std::atomic<bool>> claude_cancel;
+  bool claude_busy = false, claude_login_running = false, claude_checked = false, claude_feedback_error = false;
+  std::optional<bool> claude_authenticated;
+  ClaudeError claude_error = ClaudeError::Missing;
+  std::filesystem::path claude_test_executable;
+  std::uint64_t claude_generation = 0;
+  std::string claude_feedback;
   CodexWorker codex_worker;
   std::shared_ptr<std::atomic<bool>> codex_cancel;
   bool codex_busy = false, codex_login_running = false, codex_checked = false, codex_credential = false;
@@ -59,6 +68,7 @@ struct Settings {
   ~Settings() {
     alive->store(false);
     codex_worker.Shutdown();
+    claude_worker.Shutdown();
 #ifdef RIMES_GATEWAY_CLIPBOARD
     gateway_clipboard.reset();
 #endif
@@ -800,6 +810,69 @@ struct Settings {
     if (gateway_client == "claudeCode") section("终端命令（可选，当前预览已脱敏）", "复制终端命令", true);
     Add(body, panel);
   }
+  void StartClaude(bool login) {
+    if (rendering) return;
+    if (claude_cancel) claude_cancel->store(true);
+    if (login && claude_login_running) {
+      claude_feedback = "正在取消 Claude 登录…";
+      if (route == "core.connectors") Select(route, subpage);
+      return;
+    }
+    claude_cancel = std::make_shared<std::atomic<bool>>(false);
+    claude_busy = true; claude_login_running = login;
+    claude_feedback = login ? "正在启动 Claude Code 登录" : ""; claude_feedback_error = false;
+    const auto generation = ++claude_generation;
+    ClaudeRequest request; request.mode = login ? ClaudeMode::Login : ClaudeMode::Probe;
+    request.timeout = login ? std::chrono::minutes(5) : std::chrono::seconds(4);
+    request.executable = claude_test_executable;
+    claude_worker.Run(request, claude_cancel, [this, life = alive, generation, login](ClaudeEvent event) {
+      auto* callback = new std::function<void()>([this, life, generation, login, event = std::move(event)] {
+        if (!life->load() || generation != claude_generation) return;
+        if (login && !event.activity.empty()) claude_feedback = event.activity;
+        if (event.finished) {
+          claude_busy = claude_login_running = false; claude_checked = true;
+          if (!login || event.error == ClaudeError::None || event.error == ClaudeError::LoginRequired) {
+            claude_error = event.error;
+            claude_authenticated = event.error == ClaudeError::None ? std::optional<bool>(true) :
+              event.error == ClaudeError::LoginRequired ? std::optional<bool>(false) : std::nullopt;
+          }
+          if (login) {
+            claude_feedback = event.error == ClaudeError::None ? "Claude 登录成功。" :
+              event.error == ClaudeError::Timeout ? "等待 Claude 登录超时，请重新发起授权。" :
+              event.error == ClaudeError::Cancelled ? "已取消 Claude 登录。" : ClaudeErrorMessage(event.error);
+            claude_feedback_error = event.error != ClaudeError::None;
+          }
+        }
+        if (route == "core.connectors" && subpage == "ai-model") Select(route, subpage);
+      });
+      g_idle_add_full(G_PRIORITY_DEFAULT, +[](gpointer value)->gboolean {
+        (*static_cast<std::function<void()>*>(value))(); return G_SOURCE_REMOVE;
+      }, callback, +[](gpointer value) { delete static_cast<std::function<void()>*>(value); });
+    });
+  }
+  void ClaudePanel(GtkWidget* body) {
+    auto* panel = Class(Column(10), "panel"); gtk_widget_set_size_request(panel, 650, -1);
+    auto* top = Class(Row(10), "shortcut-row"); gtk_widget_set_size_request(top, 626, 46);
+    auto* icon = Class(gtk_event_box_new(), "gateway-icon-tile");
+    gtk_widget_set_size_request(icon, 30, 30); gtk_widget_set_valign(icon, GTK_ALIGN_CENTER);
+    gtk_widget_set_margin_start(icon, 11);
+    gtk_container_add(GTK_CONTAINER(icon), Icon("rimes.brand.claude", 19)); Add(top, icon);
+    auto* title = Label("Claude Code CLI", "name");
+    const bool ready = claude_checked && claude_error == ClaudeError::None;
+    const std::string detail = ready ? "使用本机已登录的 claude 命令行；工具调用与会话持久化被关闭。" :
+      !claude_checked && claude_busy ? "正在检查 Claude Code CLI 与登录状态…" : ClaudeErrorMessage(claude_error);
+    gtk_widget_set_tooltip_text(title, detail.c_str()); Add(top, title, true);
+    auto* badge = Label(ready ? "可用" : "不可用", ready ? "connector-ready" : "connector-unavailable");
+    gtk_widget_set_margin_end(badge, 10); Add(top, badge); Add(panel, top);
+    auto* actions = Row(8);
+    const auto title_text = claude_login_running ? "取消登录" : !claude_authenticated ? "授权 Claude" : *claude_authenticated ? "重新授权 Claude" : "登录 Claude";
+    Add(actions, Button(title_text, [this] { StartClaude(true); Select(route, subpage); }, "connector-action"));
+    if (claude_busy) { auto* spinner = gtk_spinner_new(); gtk_widget_set_size_request(spinner, 16, 16); gtk_spinner_start(GTK_SPINNER(spinner)); Add(actions, spinner); }
+    Add(panel, actions);
+    if (!claude_feedback.empty()) { auto* label = Label(claude_feedback, "connector-feedback"); if (claude_feedback_error) Class(label, "error"); Add(panel, label); }
+    Add(body, panel);
+    if (!rendering && !claude_checked && !claude_busy) StartClaude(false);
+  }
   void StartCodex(bool login) {
     if (rendering) return;
     if (codex_cancel) codex_cancel->store(true);
@@ -896,6 +969,7 @@ struct Settings {
               next["activeConnector"] = id;
               Save(next);
               if (id == "codex-cli" && !codex_busy) codex_checked = false;
+              if (id == "claude-code-cli" && !claude_busy) claude_checked = false;
               Select(route, subpage);
             });
           },
@@ -934,16 +1008,7 @@ struct Settings {
     if (saved.at("activeConnector") == "openai-compatible")
       ProviderEditor(body);
     else if (saved.at("activeConnector") == "codex-cli") CodexPanel(body);
-    else {
-      auto *panel = Class(Column(10), "panel");
-      gtk_widget_set_size_request(panel, 650, -1);
-      Add(panel,
-          Label(saved.at("activeConnector") == "codex-cli" ? "Codex CLI"
-                                                           : "Claude Code CLI",
-                "name"));
-      Add(panel, Label("登录与会话入口随对应 CLI 插件接入。", "caption"));
-      Add(body, panel);
-    }
+    else ClaudePanel(body);
   }
   void Appearance(GtkWidget *body) {
     if (subpage == "size") {
@@ -1320,6 +1385,73 @@ int CodexSettingsSmoke(const std::filesystem::path& executable) {
   return success ? 0 : 1;
 }
 
+int ClaudeSettingsSmoke(const std::filesystem::path& executable) {
+  char pattern[] = "/tmp/xsime-claude-settings-XXXXXX";
+  if (!mkdtemp(pattern)) return 1;
+  const auto root = std::filesystem::path(pattern);
+  setenv("RIMES_USER_DIR", root.c_str(), 1);
+  PrivateDirectory home(root / "home");
+  setenv("HOME", home.Path().c_str(), 1);
+  bool success = false;
+  std::string phase = "window";
+  try {
+    Settings app;
+    app.claude_test_executable = std::filesystem::absolute(executable);
+    app.Build(true); app.rendering = false; app.application_window = true;
+    gtk_widget_show_all(app.window);
+    auto check = [](bool condition) { if (!condition) throw std::runtime_error("Claude settings state mismatch"); };
+    auto wait = [&](const auto& condition) {
+      const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+      while (!condition()) {
+        check(std::chrono::steady_clock::now() < deadline);
+        while (gtk_events_pending()) gtk_main_iteration();
+        g_usleep(10000);
+      }
+    };
+    auto control = [&](const char* name) {
+      auto* widget = FindControl(app.root, name);
+      if (!widget || !GTK_IS_BUTTON(widget)) throw std::runtime_error(std::string("Missing Claude control: ") + name);
+      return widget;
+    };
+    auto click = [&](const char* name) { gtk_button_clicked(GTK_BUTTON(control(name))); };
+    phase = "account probe";
+    home.Write("fixture-mode", "logged-out");
+    app.Select("core.connectors", "ai-model"); click("Claude");
+    wait([&] { return app.claude_checked && !app.claude_busy; });
+    check(app.claude_error == ClaudeError::LoginRequired && app.claude_authenticated == false);
+    check(app.config.Load().at("activeConnector") == "claude-code-cli");
+    check(!home.Read("login-started", 128));
+    phase = "login";
+    home.Write("fixture-mode", "login-hold"); click("登录 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    check(app.claude_login_running && app.claude_feedback.find("PRIVATE-") == std::string::npos);
+    SettleLayout(); click("取消登录");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_authenticated == false && app.claude_feedback == "已取消 Claude 登录。");
+    phase = "successful retry";
+    home.Write("fixture-mode", "login"); click("登录 Claude");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_error == ClaudeError::None && app.claude_authenticated == true && app.claude_feedback == "Claude 登录成功。");
+    check(home.Read("logged-in", 128).has_value());
+    phase = "reauthorize and page lifecycle";
+    home.Remove("login-started"); home.Write("fixture-mode", "login-hold"); click("重新授权 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    click("AI Provider"); check(app.saved.at("activeConnector") == "openai-compatible");
+    click("Claude"); check(app.claude_login_running); click("取消登录");
+    wait([&] { return !app.claude_busy; });
+    check(app.claude_authenticated == true);
+    phase = "close during login";
+    home.Remove("login-started"); click("重新授权 Claude");
+    wait([&] { return home.Read("login-started", 128).has_value(); });
+    gtk_widget_destroy(app.window);
+    success = true;
+  } catch (const std::exception& error) { std::cerr << "FAILED: Claude settings " << phase << ": " << error.what() << "\n"; }
+  while (gtk_events_pending()) gtk_main_iteration();
+  std::filesystem::remove_all(root);
+  if (success) std::cout << "Claude GTK settings: prompt-free probe, explicit login, secret output suppression, cancel, retry, reauthorize and page/window lifecycle passed\n";
+  return success ? 0 : 1;
+}
+
 int SettingsSmoke() {
   char pattern[] = "/tmp/xsime-settings-smoke-XXXXXX";
   if (!mkdtemp(pattern))
@@ -1477,16 +1609,18 @@ int SettingsSmoke() {
 } // namespace
 int main(int argc, char **argv) {
   if (argc == 2 && std::string_view(argv[1]) == "--help") {
-    std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --render-codex DIRECTORY | --smoke]\n";
+    std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --render-codex DIRECTORY | --render-claude DIRECTORY | --smoke]\n";
     return 0;
   }
   try {
     const bool smoke = argc == 2 && std::string_view(argv[1]) == "--smoke";
+    const bool claude_smoke = argc == 3 && std::string_view(argv[1]) == "--claude-smoke";
     const bool codex_smoke = argc == 3 && std::string_view(argv[1]) == "--codex-smoke";
     const bool gateway_render = argc == 3 && std::string_view(argv[1]) == "--render-gateway";
+    const bool claude_render = argc == 3 && std::string_view(argv[1]) == "--render-claude";
     const bool codex_render = argc == 3 && std::string_view(argv[1]) == "--render-codex";
-    const bool render = gateway_render || codex_render || (argc == 3 && std::string_view(argv[1]) == "--render");
-    if (argc != 1 && !render && !smoke && !codex_smoke)
+    const bool render = gateway_render || codex_render || claude_render || (argc == 3 && std::string_view(argv[1]) == "--render");
+    if (argc != 1 && !render && !smoke && !codex_smoke && !claude_smoke)
       return 2;
     const std::filesystem::path output = render ? argv[2] : "";
     if (render && !std::getenv("RIMES_USER_DIR")) {
@@ -1499,6 +1633,8 @@ int main(int argc, char **argv) {
     }
     if (smoke)
       return SettingsSmoke();
+    if (claude_smoke)
+      return ClaudeSettingsSmoke(argv[2]);
     if (codex_smoke)
       return CodexSettingsSmoke(argv[2]);
     if (!render) {
@@ -1533,6 +1669,23 @@ int main(int argc, char **argv) {
       std::filesystem::create_directories(output);
       gtk_widget_show_all(app.window);
       Json manifest = Json::array();
+      if (claude_render) {
+        for (const auto& state : ClaudeContract().at("settings").at("states")) {
+          app.saved["activeConnector"] = "claude-code-cli";
+          app.claude_checked = true; app.claude_busy = state.at("running");
+          app.claude_login_running = state.at("running");
+          app.claude_authenticated = state.at("authenticated").is_null() ? std::nullopt : std::optional<bool>(state.at("authenticated").get<bool>());
+          app.claude_error = state.at("ready") == true ? ClaudeError::None : state.at("state") == "missing" ? ClaudeError::Missing : ClaudeError::LoginRequired;
+          app.claude_feedback = state.at("feedback"); app.claude_feedback_error = state.at("state") == "failed";
+          app.Select("core.connectors", "ai-model");
+          gtk_window_resize(GTK_WINDOW(app.window), 980, 680); SettleLayout();
+          const auto name = "claude-" + state.at("state").get<std::string>() + ".png";
+          if (!FindControl(app.root, state.at("button"))) return 1;
+          if (!Render(app.root, (output / name).string())) return 1;
+          manifest.push_back({{"file", name}, {"state", state.at("state")}, {"theme", app.saved.at("theme")}, {"width", 980}, {"height", 680}});
+        }
+        std::ofstream(output / "manifest.json") << manifest.dump(2) << '\n'; return 0;
+      }
       if (codex_render) {
         const auto contract = CodexContract();
         for (const auto& state : contract.at("settings").at("states")) {

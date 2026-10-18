@@ -25,6 +25,7 @@
 #include "ai_api.hpp"
 #include "codex_channel.hpp"
 #include "codex_image_jobs.hpp"
+#include "claude_channel.hpp"
 #include "gateway_server.hpp"
 #include "session/session_monitor.hpp"
 #include "desktop/workspace_launcher.hpp"
@@ -107,6 +108,7 @@ private:
     rimes::runtime::LocalTranslationWorker translation_worker_;
     rimes::runtime::AIWorker ai_worker_;
     rimes::runtime::CodexWorker codex_worker_;
+    rimes::runtime::ClaudeWorker claude_worker_;
     rimes::mailbox::CodexImageJobs codex_images_;
     std::unique_ptr<EventSourceTime> image_progress_timer_;
     std::string notified_image_;
