@@ -188,28 +188,48 @@ int main(int argc, char** argv) {
                        !terminal.Inspect().at("listVisible").get<bool>() &&
                        !terminal.Inspect().at("inspectorVisible").get<bool>();
             });
-            stage = "PTY keyboard Escape/Ctrl+W/Ctrl+C";
+            stage = "PTY keyboard focus after resize";
             gtk_widget_grab_focus(view);
-            Pump(50);
+            // Allocation can settle before X11 has delivered the focus events.
+            // Do not send real keys until the terminal owns the active window.
+            Wait([&] {
+                return gtk_window_is_active(GTK_WINDOW(workspace.Window())) &&
+                       gtk_window_get_focus(GTK_WINDOW(workspace.Window())) == view &&
+                       gtk_widget_has_focus(view);
+            });
+            stage = "PTY keyboard Escape/Ctrl+W/Ctrl+C";
             // Actual GTK key events must reach the terminal, including window-shortcut keys.
             const char* keys[] = {"xdotool", "key", "--clearmodifiers", "Escape", "ctrl+w",
                                   "ctrl+c",  "a",   "Return",           nullptr};
             Check(g_spawn_sync(nullptr, const_cast<char**>(keys), nullptr, G_SPAWN_SEARCH_PATH,
                                nullptr, nullptr, nullptr, nullptr, nullptr, nullptr),
                   "key injection unavailable");
-            Wait([&] {
-                const auto text = Text(view);
-                std::string keys;
-                for (std::size_t offset = 0; (offset = text.find("KEY:", offset)) != text.npos;) {
-                    offset += 4;
-                    const auto end = text.find_first_not_of("0123456789abcdef", offset);
-                    keys += text.substr(offset, end - offset);
-                    offset = end;
-                    if (offset == text.npos)
-                        break;
-                }
-                return keys.find("1b1703610d") != keys.npos;
-            });
+            std::string observed_keys;
+            try {
+                Wait([&] {
+                    const auto text = Text(view);
+                    observed_keys.clear();
+                    for (std::size_t offset = 0; (offset = text.find("KEY:", offset)) != text.npos;) {
+                        offset += 4;
+                        const auto end = text.find_first_not_of("0123456789abcdef", offset);
+                        observed_keys += text.substr(offset, end - offset);
+                        offset = end;
+                        if (offset == text.npos)
+                            break;
+                    }
+                    return observed_keys.find("1b1703610d") != observed_keys.npos;
+                });
+            } catch (...) {
+                // This process uses only the isolated public fixture, never user sessions.
+                std::cerr << "PTY keyboard diagnostics: "
+                          << Json{{"observedKeys", observed_keys},
+                                  {"windowActive", bool(gtk_window_is_active(GTK_WINDOW(workspace.Window())))},
+                                  {"terminalFocused", bool(gtk_widget_has_focus(view))},
+                                  {"windowVisible", bool(gtk_widget_get_visible(workspace.Window()))},
+                                  {"fixtureScreen", Text(view)}}.dump()
+                          << '\n';
+                throw;
+            }
             Check(gtk_widget_get_visible(workspace.Window()), "PTY Escape/Ctrl+W closed window");
             stage = "explicit terminal copy and paste";
             auto* clipboard = gtk_clipboard_get(GDK_SELECTION_CLIPBOARD);
