@@ -4,6 +4,9 @@ The Windows work is consolidated on `codex/windows-optimization-20261016`.
 Canonical plugin changes are maintained on
 `scholay/rimes-plugins:codex/windows-metrics-20261017`; the host gitlink and
 `plugins.lock.json` identify the same reviewed plugin revision.
+The plugin integration workflow pins both Windows jobs to the published host
+commit `c6c06dab72eae6032e44ba78ade8c9ea15c99dbe`, which includes the metrics
+adapters and their current host interfaces. Other platform baselines are retained.
 
 The change includes Buffer focus and plugin switching, last-plugin restoration,
 live typing metrics, timed delivery and close-after-send, model/reasoning choices,
