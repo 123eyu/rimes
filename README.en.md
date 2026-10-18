@@ -96,17 +96,17 @@ Bundled plug-ins use the defaults above. Optional plug-ins require installation 
 
 ## Install
 
-The [1.1.4 release](https://github.com/scholay/xsime/releases/tag/v1.1.4) provides macOS PKG, Android APK/AAB, Windows EXE/ZIP, and Linux DEB packages. All five platforms support importing the same standard Rime ZIP or encoded UTF-8 TXT/TSV dictionary; see the [import guide](docs/portable-scheme-import.md).
+The [1.1.6 release](https://github.com/scholay/xsime/releases/tag/v1.1.6) provides macOS PKG, Android APK/AAB, Windows EXE/ZIP, and Linux DEB packages. All five platforms support importing the same standard Rime ZIP or encoded UTF-8 TXT/TSV dictionary; see the [import guide](docs/portable-scheme-import.md).
 
 | Platform | Installation |
 |---|---|
-| macOS | [1.1.4 PKG](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-1.1.4.pkg), Apple Silicon and Intel, signed and notarized |
-| Android | [1.1.4 APK](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Android-1.1.4.apk), version code 18, signed with the existing long-term key |
-| Windows | [1.1.4 EXE](https://github.com/scholay/xsime/releases/download/v1.1.4/RIMES-Windows-1.1.4-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
-| Linux | [1.1.4 DEB](https://github.com/scholay/xsime/releases/download/v1.1.4/fcitx5-rimes_1.1.4_amd64.deb), Ubuntu 24.04 amd64 / Fcitx5 |
+| macOS | [1.1.6 PKG](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-1.1.6.pkg), Apple Silicon and Intel, signed and notarized |
+| Android | [1.1.6 APK](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Android-1.1.6.apk), version code 20, signed with the existing long-term key |
+| Windows | [1.1.6 EXE](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Windows-1.1.6-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
+| Linux | [1.1.6 DEB](https://github.com/scholay/xsime/releases/download/v1.1.6/fcitx5-rimes_1.1.6_amd64.deb), Ubuntu 24.04 amd64 / Fcitx5 |
 | iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q). Apple’s pages show the currently available builds. |
 
-See the [1.1.4 release record](docs/releases/1.1.4.md) for build, import, and installation validation.
+See the [1.1.6 release record](docs/releases/1.1.6.md) for build, import, and installation validation.
 
 A user has reported host-app crashes on macOS 27 when switching to XSIME in the App Store sandboxed versions of WeChat and QQ after installation. If affected, switch to another input method and follow the [per-app input-source cache backup and recovery guide](docs/macos/input-source-cache-recovery.md#english). The installer does not clear other apps' caches; restarting the app or logging out is not a guaranteed fix. Investigation remains open in [#90](https://github.com/scholay/xsime/issues/90).
 
@@ -123,7 +123,7 @@ cd xsime
 | iOS | Keyboard and main app (iOS 17+): offline Pinyin, Natural Code, Wubi, English, and Buffer | Open [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md) in Xcode |
 | Windows | Native TSF input method, Buffer, chording and official plugin settings; x64 / x86 | See [`platforms/windows/native/README.md`](platforms/windows/native/README.md) |
 | Android | Native InputConnection keyboard, Buffer, six official plugins and configurable AI services | See [`platforms/android/README.md`](platforms/android/README.md) |
-| Linux | Fcitx5 input method, Buffer, and Capsule. No Mailbox yet | See [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
+| Linux | Fcitx5 input method, Buffer, Capsule, and Mailbox | See [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
 
 ## Documentation
 
@@ -142,20 +142,22 @@ cd xsime
 | [RELEASE-HISTORY.md](RELEASE-HISTORY.md) | Closed release channels, the old repository move, and the rename |
 | [CHANGELOG.md](CHANGELOG.md) | Per-version changes generated from public GitHub Releases and commit messages |
 
-## Automatic updates
+## Application updates
 
-An installed, formally signed copy of XSIME checks GitHub Releases for [`scholay/xsime`](https://github.com/scholay/xsime). Unsigned `vX.Y.Z-preview.N` builds are not on that channel.
+Starting with 1.1.6, all five platforms offer **Check for updates** in Settings. macOS downloads a signed, notarized PKG, Windows the full EXE, and Android an APK signed with the existing key. Each opens the system installer. On Ubuntu 24.04 amd64, Linux downloads a DEB and asks you to authorize the system package manager. The Windows EXE remains unsigned.
 
-The macOS automated release workflow uses the commands below. Platform-specific procedures are in [RELEASE.md](RELEASE.md), and changes are in [CHANGELOG.md](CHANGELOG.md):
+Completion is shown after reopening the app and verifying the running version. Settings, imported schemes and learned words are preserved. Follow any system request for authorization, sign-out or restart. If your older version lacks this flow, upgrade once using the downloads above.
+
+iOS checks the available store version and opens App Store to download and install. TestFlight manages test builds. A GitHub release does not mean the matching iOS version is available; Apple’s pages show the current status.
+
+The four installers share one `vX.Y.Z` release on [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest). CI uploads and reads back every package before publishing the shared `update-manifest.json`. Preview builds stay outside this stable channel. iOS uses a separate `ios-vX.Y.Z` store workflow.
+
+Maintainers release after all five mainline CI workflows pass. See [RELEASE.md](RELEASE.md) and [CHANGELOG.md](CHANGELOG.md):
 
 ```bash
-./scripts/release.sh --dry-run preview  # preview the plan, CI gates, and release notes
-./scripts/release.sh preview            # unsigned macOS preview vX.Y.Z-preview.N
-./scripts/release.sh stable             # promote the preview line to vX.Y.Z (requires Developer ID)
-./scripts/release.sh platform minor     # explicit Windows/Linux data preview for maintenance (does not block macOS)
+./scripts/release.sh stable --dry-run  # check versions, five-platform CI and release prerequisites
+./scripts/release.sh stable            # create the stable tag for GitHub Actions to build and publish
 ```
-
-Every application release is published on `scholay/xsime`. macOS `vX.Y.Z` is a stable release. `vX.Y.Z-preview.N` is an unsigned pre-release and is not updated automatically. Android and Windows packages use `android-vX.Y.Z` and `windows-vX.Y.Z`, respectively. The legacy Windows/Linux data package `platform-preview-vX.Y.Z` is always a pre-release.
 
 ## Links
 

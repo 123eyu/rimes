@@ -81,7 +81,7 @@
 
 ## 설치
 
-[1.1.4 릴리스](https://github.com/scholay/xsime/releases/tag/v1.1.4)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 amd64 / Fcitx5)를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.1.4 검증 기록](docs/releases/1.1.4.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
+[1.1.6 릴리스](https://github.com/scholay/xsime/releases/tag/v1.1.6)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 amd64 / Fcitx5)를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.1.6 검증 기록](docs/releases/1.1.6.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/xsime.git
@@ -94,7 +94,7 @@ cd xsime
 | iOS | 키보드와 본체 앱(iOS 17+). 오프라인 병음, 자연마, 오필, 영어, 그리고 Buffer | Xcode에서 [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md)를 연다 |
 | Windows | 네이티브 TSF 입력기, Buffer, 병격 및 공식 플러그인 설정; x64 / x86 | [`platforms/windows/native/README.md`](platforms/windows/native/README.md) 참고 |
 | Android | 네이티브 InputConnection 키보드, Buffer, 공식 플러그인 6개 및 설정 가능한 AI 서비스 | [`platforms/android/README.md`](platforms/android/README.md) 참고 |
-| Linux | Fcitx5 입력기, Buffer, Capsule. Mailbox는 아직 없다 | [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) 참고 |
+| Linux | Fcitx5 입력기, Buffer, Capsule, Mailbox | [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) 참고 |
 
 ## 문서
 
@@ -113,20 +113,22 @@ cd xsime
 | [RELEASE-HISTORY.md](RELEASE-HISTORY.md) | 닫힌 릴리스 경로, 옛 저장소 이전, 이름 변경 기록 |
 | [CHANGELOG.md](CHANGELOG.md) | 공개 GitHub Release와 커밋 메시지로 만든 버전별 변경 |
 
-## 자동 업데이트
+## 앱 업데이트
 
-정식으로 서명되어 설치된 XSIME는 [`scholay/xsime`](https://github.com/scholay/xsime)의 GitHub Release를 확인합니다. 서명되지 않은 `vX.Y.Z-preview.N`은 이 경로에 들어가지 않습니다.
+1.1.6부터 다섯 플랫폼의 설정에서 업데이트를 확인할 수 있습니다. macOS는 서명과 공증을 마친 PKG, Windows는 전체 EXE, Android는 기존 키로 서명한 APK를 다운로드하여 시스템 설치 프로그램으로 업데이트합니다. Linux는 Ubuntu 24.04 amd64용 DEB를 내려받아 시스템 패키지 관리자에 설치를 승인합니다. Windows EXE는 현재 서명되지 않았습니다.
 
-릴리스 입구는 하나이고, 버전 번호는 tag에서만 옵니다. 절차는 [RELEASE.md](RELEASE.md), 변경은 [CHANGELOG.md](CHANGELOG.md)를 보십시오.
+앱을 다시 열고 실행 중인 버전을 확인한 뒤 완료를 표시합니다. 설정, 가져온 입력 방안과 학습 기록은 유지됩니다. 시스템에서 권한 승인, 로그아웃 또는 재시작을 요구하면 안내를 따르세요. 구버전에 업데이트 기능이 없다면 위 다운로드 링크로 한 번 수동 업데이트하세요.
+
+iOS는 실제로 제공되는 스토어 버전을 확인한 뒤 App Store에서 다운로드하고 설치합니다. 테스트 버전은 TestFlight에서 업데이트합니다. GitHub에 새 버전이 올라왔다고 같은 iOS 버전이 출시된 것은 아닙니다.
+
+네 플랫폼의 설치 파일은 [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest)의 같은 `vX.Y.Z` Release에 게시됩니다. CI가 모든 파일을 업로드하고 다시 내려받아 확인한 뒤 마지막으로 공통 `update-manifest.json`을 게시합니다. 미리보기 버전은 정식 업데이트에 포함되지 않습니다. iOS는 별도의 `ios-vX.Y.Z` 스토어 배포 절차를 사용합니다.
+
+관리자는 다섯 플랫폼의 main CI가 통과한 뒤 배포합니다. [RELEASE.md](RELEASE.md)와 [CHANGELOG.md](CHANGELOG.md)를 참고하세요.
 
 ```bash
-./scripts/release.sh --dry-run preview  # 계획, CI 관문, 릴리스 노트를 미리 본다
-./scripts/release.sh preview            # 서명되지 않은 macOS 미리보기 vX.Y.Z-preview.N
-./scripts/release.sh stable             # 미리보기 선을 vX.Y.Z로 올린다 (Developer ID 필요)
-./scripts/release.sh platform minor     # 유지보수용 Windows/Linux 데이터 미리보기 (macOS를 막지 않음)
+./scripts/release.sh stable --dry-run  # 버전, 다섯 플랫폼 CI와 배포 조건 확인
+./scripts/release.sh stable            # 정식 태그를 만들고 GitHub Actions에서 빌드·배포
 ```
-
-모든 Release는 `scholay/xsime`에 올라갑니다. macOS `vX.Y.Z`는 정식판입니다. `vX.Y.Z-preview.N`은 서명되지 않은 Pre-release이며 자동 업데이트에 들어가지 않습니다. Windows/Linux `platform-preview-vX.Y.Z`는 항상 Pre-release입니다.
 
 ## 링크
 

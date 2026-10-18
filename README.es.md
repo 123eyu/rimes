@@ -81,7 +81,7 @@ Todos los complementos de la tabla vienen con XSIME y quedan activados en una in
 
 ## Instalación
 
-La [versión 1.1.4](https://github.com/scholay/xsime/releases/tag/v1.1.4) ofrece paquetes PKG para macOS, APK/AAB para Android, EXE/ZIP para Windows y DEB para Linux (Ubuntu 24.04 amd64 / Fcitx5). El paquete de macOS está firmado y notarizado; Android mantiene la clave de firma existente; el EXE de Windows no está firmado. Para iOS, consulta la [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) o la [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); las páginas de Apple muestran las versiones disponibles. Las cinco plataformas permiten importar el mismo ZIP de Rime o diccionario UTF-8 TXT/TSV con códigos de entrada. Consulta la [guía de importación](docs/portable-scheme-import.md) y el [registro de validación de 1.1.4](docs/releases/1.1.4.md). También puedes compilar desde el código fuente.
+La [versión 1.1.6](https://github.com/scholay/xsime/releases/tag/v1.1.6) ofrece paquetes PKG para macOS, APK/AAB para Android, EXE/ZIP para Windows y DEB para Linux (Ubuntu 24.04 amd64 / Fcitx5). El paquete de macOS está firmado y notarizado; Android mantiene la clave de firma existente; el EXE de Windows no está firmado. Para iOS, consulta la [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) o la [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); las páginas de Apple muestran las versiones disponibles. Las cinco plataformas permiten importar el mismo ZIP de Rime o diccionario UTF-8 TXT/TSV con códigos de entrada. Consulta la [guía de importación](docs/portable-scheme-import.md) y el [registro de validación de 1.1.6](docs/releases/1.1.6.md). También puedes compilar desde el código fuente.
 
 ```bash
 git clone --recurse-submodules https://github.com/scholay/xsime.git
@@ -94,7 +94,7 @@ cd xsime
 | iOS | Teclado y app principal (iOS 17+): pinyin, Natural Code, Wubi e inglés sin conexión, y Buffer | Abre [`platforms/ios/RIMES.xcodeproj`](platforms/ios/README.md) en Xcode |
 | Windows | Método de entrada TSF nativo, Buffer, acordes y ajustes de plugins oficiales; x64 / x86 | Véase [`platforms/windows/native/README.md`](platforms/windows/native/README.md) |
 | Android | Teclado InputConnection nativo, Buffer, seis plugins oficiales y servicios de IA configurables | Véase [`platforms/android/README.md`](platforms/android/README.md) |
-| Linux | Método de entrada Fcitx5, Buffer y Capsule. Aún no hay Mailbox | Véase [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
+| Linux | Método de entrada Fcitx5, Buffer, Capsule y Mailbox | Véase [`platforms/linux/ime/README.md`](platforms/linux/ime/README.md) |
 
 ## Documentación
 
@@ -113,20 +113,22 @@ cd xsime
 | [RELEASE-HISTORY.md](RELEASE-HISTORY.md) | Canales de publicación cerrados, la migración del repositorio antiguo y el cambio de nombre |
 | [CHANGELOG.md](CHANGELOG.md) | Cambios por versión, generados a partir de los GitHub Releases públicos y de los mensajes de commit |
 
-## Actualización automática
+## Actualizaciones de la aplicación
 
-Una copia de XSIME instalada y firmada de forma oficial consulta los GitHub Releases de [`scholay/xsime`](https://github.com/scholay/xsime). Las compilaciones sin firmar `vX.Y.Z-preview.N` no entran en ese canal.
+A partir de 1.1.6, las cinco plataformas permiten buscar actualizaciones en Ajustes. macOS descarga un PKG firmado y notarizado; Windows, el EXE completo; Android, un APK firmado con la clave existente. Cada una abre el instalador del sistema. En Ubuntu 24.04 amd64, Linux descarga el DEB y solicita autorización para instalarlo con el gestor de paquetes. El EXE de Windows sigue sin firma.
 
-Hay una sola entrada de publicación, y el número de versión sale solo de la etiqueta. El proceso está en [RELEASE.md](RELEASE.md) y los cambios en [CHANGELOG.md](CHANGELOG.md):
+La aplicación muestra que la actualización ha terminado después de abrirse de nuevo y comprobar la versión en ejecución. Se conservan los ajustes, los esquemas importados y las palabras aprendidas. Si el sistema pide autorización, cerrar sesión o reiniciar, sigue sus indicaciones. Si tu versión anterior no tiene este flujo, actualiza una vez con las descargas indicadas arriba.
+
+iOS comprueba la versión disponible en la tienda y abre App Store para descargarla e instalarla. TestFlight gestiona las versiones de prueba. Publicar en GitHub no significa que la misma versión de iOS esté disponible.
+
+Los cuatro instaladores comparten una publicación `vX.Y.Z` en [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest). CI sube y vuelve a descargar todos los paquetes antes de publicar el archivo común `update-manifest.json`. Las versiones preliminares quedan fuera de este canal estable. iOS utiliza un flujo separado `ios-vX.Y.Z` para la tienda.
+
+Los mantenedores publican cuando pasan los cinco flujos de CI de main. Consulta [RELEASE.md](RELEASE.md) y [CHANGELOG.md](CHANGELOG.md):
 
 ```bash
-./scripts/release.sh --dry-run preview  # anticipa el plan, las puertas de CI y las notas
-./scripts/release.sh preview            # vista previa de macOS sin firmar vX.Y.Z-preview.N
-./scripts/release.sh stable             # convierte la línea de vista previa en vX.Y.Z (hace falta Developer ID)
-./scripts/release.sh platform minor     # vista previa de datos de Windows/Linux para mantenimiento (no bloquea macOS)
+./scripts/release.sh stable --dry-run  # comprobar versiones, CI de cinco plataformas y requisitos
+./scripts/release.sh stable            # crear la etiqueta estable para compilar y publicar en GitHub Actions
 ```
-
-Todas las publicaciones salen en `scholay/xsime`. En macOS, `vX.Y.Z` es la versión estable. `vX.Y.Z-preview.N` es una prepublicación sin firmar y no se actualiza sola. `platform-preview-vX.Y.Z` de Windows/Linux es siempre una prepublicación.
 
 ## Enlaces
 
