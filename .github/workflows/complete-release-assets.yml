@@ -1,0 +1,54 @@
+name: Complete approved release assets
+
+# Recovery only: the original tag workflow must already have passed signing,
+# install checks and protected macOS publication. Never creates a Release.
+on:
+  workflow_dispatch:
+    inputs:
+      source_run:
+        description: 'Original stable tag workflow run ID (already approved and published)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: complete-release-assets-${{ inputs.source_run }}
+  cancel-in-progress: false
+
+jobs:
+  complete:
+    if: github.repository == 'scholay/xsime' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: write
+      actions: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: scholay/xsime
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Authenticate original approvals, source, artifacts and published packages
+        id: source
+        env:
+          SOURCE_RUN: ${{ inputs.source_run }}
+        run: python3 scripts/release/recover_update_assets.py --run-id "$SOURCE_RUN"
+      - name: Complete missing assets and read back the whole update feed
+        env:
+          VERSION: ${{ steps.source.outputs.version }}
+          RELEASE_COMMIT: ${{ steps.source.outputs.commit }}
+          RELEASE_TAG: ${{ steps.source.outputs.tag }}
+        run: bash scripts/release/publish-update-assets.sh
+      - name: Keep completion evidence
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a
+        with:
+          name: release-completion-evidence-${{ github.run_id }}
+          path: |
+            ${{ runner.temp }}/release-completion-evidence.json
+            ${{ runner.temp }}/feed-readback/update-manifest.json
+          if-no-files-found: warn

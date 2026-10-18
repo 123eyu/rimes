@@ -2236,6 +2236,16 @@ jobs:
   publish_update_manifest:
     name: Publish verified Android, Windows and complete update feed
     needs: [build_and_smoke, build_windows_release, build_android_release, publish_staged_release, attach_linux_deb]
+    # The alternate preview publisher is intentionally skipped for stable tags.
+    # Override transitive skip propagation while still requiring every producer.
+    if: >-
+      !cancelled() &&
+      needs.build_and_smoke.result == 'success' &&
+      needs.build_and_smoke.outputs.is_release == 'true' &&
+      needs.build_windows_release.result == 'success' &&
+      needs.build_android_release.result == 'success' &&
+      needs.publish_staged_release.result == 'success' &&
+      needs.attach_linux_deb.result == 'success'
     runs-on: ubuntu-24.04
     permissions:
       contents: write
@@ -2256,54 +2266,11 @@ jobs:
         with:
           name: RIMES-Android-release-${{ github.sha }}
           path: ${{ runner.temp }}/android-release
-      - name: Verify source identities and prepare unique release assets
-        run: |
-          python3 - <<'PY'
-          import json, os, shutil
-          from pathlib import Path
-          root = Path(os.environ['RUNNER_TEMP'])
-          out = root/'application-release'; out.mkdir()
-          version, commit = os.environ['VERSION'], os.environ['GITHUB_SHA']
-          windows = root/'windows-release'; android = root/'android-release'
-          for path in [windows/'BUILD-INFO.json', android/f'RIMES-Android-{version}-BUILD-INFO.json']:
-              info = json.loads(path.read_text(encoding='utf-8-sig'))
-              assert info['sourceCommit'] == commit and info['version'] == version, path.name
-          for name in [f'RIMES-Windows-{version}-Setup.exe', f'RIMES-Windows-{version}.zip']:
-              shutil.copyfile(windows/name, out/name)
-          for name in ['BUILD-INFO.json', 'SOURCE-FILES.json', 'SETUP-VERIFICATION.json', 'SHA256SUMS']:
-              shutil.copyfile(windows/name, out/f'RIMES-Windows-{version}-{name}')
-          for path in android.iterdir():
-              assert path.is_file() and path.name.startswith(f'RIMES-Android-{version}')
-              shutil.copyfile(path, out/path.name)
-          PY
-      - name: Upload and read back each package before activating updates
-        run: |
-          set -euo pipefail
-          assets="$RUNNER_TEMP/application-release"
-          readback="$RUNNER_TEMP/application-readback"
-          mkdir "$readback"
-          for file in "$assets"/*; do
-            name="$(basename "$file")"
-            if ! gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -Fxq "$name"; then
-              gh release upload "$GITHUB_REF_NAME" "$file"
-            fi
-            gh release download "$GITHUB_REF_NAME" --pattern "$name" --dir "$readback"
-            cmp "$file" "$readback/$name"
-          done
-          gh release download "$GITHUB_REF_NAME" --pattern "RIMES-$VERSION.pkg" --pattern "fcitx5-rimes_${VERSION}_amd64.deb" --dir "$readback"
-          code=$(python3 -c 'import json,os; from pathlib import Path; print(json.loads((Path(os.environ["RUNNER_TEMP"])/"android-release"/("RIMES-Android-"+os.environ["VERSION"]+"-BUILD-INFO.json")).read_text())["versionCode"])')
-          python3 scripts/release/update_manifest.py "$readback" --version "$VERSION" --commit "$GITHUB_SHA" --android-build "$code"
-          # This is the final activation step. No partial platform set is advertised.
-          if gh release view "$GITHUB_REF_NAME" --json assets --jq '.assets[].name' | grep -Fxq update-manifest.json; then
-            mkdir "$RUNNER_TEMP/feed-readback"
-            gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
-            cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
-          else
-            gh release upload "$GITHUB_REF_NAME" "$readback/update-manifest.json"
-            mkdir "$RUNNER_TEMP/feed-readback"
-            gh release download "$GITHUB_REF_NAME" --pattern update-manifest.json --dir "$RUNNER_TEMP/feed-readback"
-            cmp "$readback/update-manifest.json" "$RUNNER_TEMP/feed-readback/update-manifest.json"
-          fi
+      - name: Publish and verify packages, then activate the complete update feed
+        env:
+          RELEASE_COMMIT: ${{ github.sha }}
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: bash scripts/release/publish-update-assets.sh
 
   verify_signed_install:
     name: Install the exact signed package on a disposable Mac
