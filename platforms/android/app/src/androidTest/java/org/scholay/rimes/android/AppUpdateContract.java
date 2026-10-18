@@ -1,7 +1,22 @@
 package org.scholay.rimes.android;
 import org.json.JSONObject;
+import android.app.Activity;
+import android.app.Instrumentation;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageInstaller;
+import android.os.SystemClock;
+import android.view.View;
+import android.view.ViewGroup;
+import android.view.accessibility.AccessibilityNodeInfo;
+import android.widget.Button;
+import android.widget.TextView;
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.concurrent.atomic.AtomicBoolean;
 final class AppUpdateContract {
-    static void run() throws Exception {
+    static void run(Instrumentation instrumentation) throws Exception {
         JSONObject asset = new JSONObject().put("version", "1.2.3").put("url", "https://github.com/scholay/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk").put("sha256", new String(new char[64]).replace('\0', 'a')).put("size", 100);
         AppUpdateActivity.validateAsset(asset);
         for (String url : new String[]{"http://github.com/scholay/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk", "https://github.com/attacker/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk", "https://github.com/scholay/xsime/releases/download/v1.2.2/RIMES-Android-1.2.2.apk"}) {
@@ -12,6 +27,99 @@ final class AppUpdateContract {
         for (long size : new long[]{0, -1, 1024L * 1024 * 1024}) {
             boolean rejected = false; try { AppUpdateActivity.validateAsset(new JSONObject(asset.toString()).put("size", size)); } catch (Exception expected) { rejected = true; }
             if (!rejected) throw new AssertionError("Unsafe package size accepted");
+        }
+        systemConfirmation(instrumentation);
+    }
+
+    private static boolean text(View view, String expected) {
+        if (view instanceof TextView && ((TextView) view).getText().toString().contains(expected)) return true;
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) if (text(group.getChildAt(i), expected)) return true;
+        }
+        return false;
+    }
+    private static boolean controlsDisabled(View view) {
+        if (view instanceof Button) {
+            String label = ((Button) view).getText().toString();
+            if ((label.contains("Download") || label.contains("Install")) && view.isEnabled()) return false;
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) if (!controlsDisabled(group.getChildAt(i))) return false;
+        }
+        return true;
+    }
+    private static void awaitText(Instrumentation instrumentation, Activity activity, String expected) throws Exception {
+        long deadline = SystemClock.uptimeMillis() + 15000;
+        AtomicBoolean found = new AtomicBoolean();
+        while (SystemClock.uptimeMillis() < deadline) {
+            instrumentation.runOnMainSync(() -> found.set(text(activity.getWindow().getDecorView(), expected)));
+            if (found.get()) return;
+            SystemClock.sleep(100);
+        }
+        throw new AssertionError("Missing updater state: " + expected);
+    }
+    private static void systemConfirmation(Instrumentation instrumentation) throws Exception {
+        Context context = instrumentation.getTargetContext();
+        if (!BuildConfig.DEBUG) throw new AssertionError("The installer fixture requires a disposable debug app");
+        context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit().clear().commit();
+        Activity activity = instrumentation.startActivitySync(new Intent(context, AppUpdateActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+        PackageInstaller installer = context.getPackageManager().getPackageInstaller();
+        int sessionId = -1;
+        try {
+            instrumentation.waitForIdleSync();
+            awaitText(instrumentation, activity, "Current: " + BuildConfig.VERSION_NAME);
+            AtomicBoolean disabled = new AtomicBoolean();
+            instrumentation.runOnMainSync(() -> disabled.set(controlsDisabled(activity.getWindow().getDecorView())));
+            if (!disabled.get()) throw new AssertionError("Unverified packages must not be downloadable/installable");
+            // Only this disposable CI app receives the install app-op. Exercise
+            // Android's real confirmation callback, then cancel before replacement.
+            try (android.os.ParcelFileDescriptor command = instrumentation.getUiAutomation().executeShellCommand(
+                    "appops set " + context.getPackageName() + " REQUEST_INSTALL_PACKAGES allow");
+                 InputStream output = new android.os.ParcelFileDescriptor.AutoCloseInputStream(command)) {
+                byte[] drain = new byte[1024]; while (output.read(drain) != -1) { }
+            }
+            PackageInstaller.SessionParams params = new PackageInstaller.SessionParams(PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+            params.setAppPackageName(context.getPackageName());
+            if (android.os.Build.VERSION.SDK_INT >= 31) params.setRequireUserAction(PackageInstaller.SessionParams.USER_ACTION_REQUIRED);
+            sessionId = installer.createSession(params);
+            try (PackageInstaller.Session session = installer.openSession(sessionId);
+                 InputStream input = new FileInputStream(context.getApplicationInfo().sourceDir)) {
+                try (OutputStream output = session.openWrite("base.apk", 0, -1)) {
+                    byte[] bytes = new byte[65536]; int n;
+                    while ((n = input.read(bytes)) != -1) output.write(bytes, 0, n);
+                    session.fsync(output);
+                }
+                session.commit(AppUpdateActivity.installationCallback(activity, sessionId).getIntentSender());
+            }
+            boolean cancelled = false;
+            long deadline = SystemClock.uptimeMillis() + 30000;
+            while (!cancelled && SystemClock.uptimeMillis() < deadline) {
+                AccessibilityNodeInfo root = instrumentation.getUiAutomation().getRootInActiveWindow();
+                if (root != null && root.getPackageName() != null &&
+                        root.getPackageName().toString().contains("packageinstaller")) {
+                    for (AccessibilityNodeInfo node : root.findAccessibilityNodeInfosByText("Cancel")) {
+                        if (node.isClickable() && node.performAction(AccessibilityNodeInfo.ACTION_CLICK)) { cancelled = true; break; }
+                    }
+                }
+                if (!cancelled) SystemClock.sleep(100);
+            }
+            if (!cancelled) throw new AssertionError("Android's install confirmation did not appear");
+            awaitText(instrumentation, activity, "Installation did not finish");
+            // Completion is based on the running build, independently of a
+            // successful callback or a browser/installer having been opened.
+            context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit()
+                    .putLong("pendingCode", BuildConfig.VERSION_CODE).commit();
+            instrumentation.runOnMainSync(activity::finish);
+            instrumentation.waitForIdleSync();
+            Activity reopened = instrumentation.startActivitySync(new Intent(context, AppUpdateActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            try { awaitText(instrumentation, reopened, "Updated to " + BuildConfig.VERSION_NAME); }
+            finally { instrumentation.runOnMainSync(reopened::finish); }
+        } finally {
+            if (sessionId >= 0) try { installer.abandonSession(sessionId); } catch (Exception ignored) { }
+            instrumentation.runOnMainSync(activity::finish);
+            context.getSharedPreferences("application-update", Context.MODE_PRIVATE).edit().clear().commit();
         }
     }
 }

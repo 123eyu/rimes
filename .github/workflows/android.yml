@@ -149,6 +149,7 @@ jobs:
             platforms/android/.native/engine-contract.log
             platforms/android/.native/emulator.log
             platforms/android/.native/scheme-import-emulator.log
+            platforms/android/.native/app-update.log
             platforms/android/.native/wubi-emulator.log
             platforms/android/.native/instrumentation-crash.log
             platforms/android/.native/instrumentation-logcat.log

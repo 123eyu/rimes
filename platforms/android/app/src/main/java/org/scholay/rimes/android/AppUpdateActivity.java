@@ -1,7 +1,9 @@
 package org.scholay.rimes.android;
 
 import android.app.Activity;
+import android.app.ActivityOptions;
 import android.app.PendingIntent;
+import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageInstaller;
@@ -14,6 +16,8 @@ import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ScrollView;
+import android.view.WindowInsets;
 import org.json.JSONObject;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -54,7 +58,15 @@ public final class AppUpdateActivity extends Activity {
         check = button(body, "检查更新 / Check for updates", this::check);
         download = button(body, "下载更新 / Download", this::download);
         install = button(body, "安装更新 / Install", this::install);
-        setContentView(body);
+        ScrollView scroll = new ScrollView(this); scroll.addView(body);
+        scroll.setOnApplyWindowInsetsListener((view, insets) -> {
+            if (android.os.Build.VERSION.SDK_INT >= 30) {
+                android.graphics.Insets safe = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                view.setPadding(safe.left, safe.top, safe.right, safe.bottom);
+            } else view.setPadding(insets.getSystemWindowInsetLeft(), insets.getSystemWindowInsetTop(), insets.getSystemWindowInsetRight(), insets.getSystemWindowInsetBottom());
+            return insets;
+        });
+        setContentView(scroll);
         show("当前版本 / Current: " + BuildConfig.VERSION_NAME);
         restore(); handleResult(getIntent());
     }
@@ -187,6 +199,19 @@ public final class AppUpdateActivity extends Activity {
     private static Signature[] signatures(PackageInfo info) {
         return android.os.Build.VERSION.SDK_INT >= 28 ? (info.signingInfo == null ? null : info.signingInfo.getApkContentsSigners()) : info.signatures;
     }
+    static PendingIntent installationCallback(Context context, int sessionId) {
+        Intent result = new Intent(context, AppUpdateActivity.class).setAction(RESULT).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        ActivityOptions options = ActivityOptions.makeBasic();
+        if (android.os.Build.VERSION.SDK_INT >= 35) {
+            // Delegate only to Android's installer, and on newer systems only
+            // while our update page is visible. Reopening verifies completion.
+            options.setPendingIntentCreatorBackgroundActivityStartMode(android.os.Build.VERSION.SDK_INT >= 36
+                    ? ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOW_IF_VISIBLE
+                    : ActivityOptions.MODE_BACKGROUND_ACTIVITY_START_ALLOWED);
+        }
+        return PendingIntent.getActivity(context, sessionId, result,
+                PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE, options.toBundle());
+    }
     private void install() {
         if (!getPackageManager().canRequestPackageInstalls()) {
             show("请允许此应用安装更新，然后返回点击安装 / Allow updates from this app, then return and tap Install.");
@@ -205,9 +230,7 @@ public final class AppUpdateActivity extends Activity {
                     byte[] buffer = new byte[65536]; int n; while ((n = input.read(buffer)) != -1) output.write(buffer, 0, n); session.fsync(output);
                 }
                 getSharedPreferences(PREFS, MODE_PRIVATE).edit().putLong("pendingCode", asset.getLong("build")).commit();
-                Intent result = new Intent(this, AppUpdateActivity.class).setAction(RESULT).addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP);
-                PendingIntent callback = PendingIntent.getActivity(this, id, result, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE);
-                session.commit(callback.getIntentSender());
+                session.commit(installationCallback(this, id).getIntentSender());
             } catch (Exception error) { installer.abandonSession(id); throw error; }
             ui(() -> { busy = false; show("请在系统安装器确认。更新完成后重新打开应用 / Confirm in Android, then reopen the app."); });
         });
