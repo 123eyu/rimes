@@ -195,7 +195,8 @@ derived plugin is selected. No production adapter is fabricated for a screenshot
 | Custom detached `CandidateWindow` | Stock Fcitx5 candidate panel | IME step 1 already uses Fcitx5 UI; a second chrome is a later port |
 | Exact `FocusToken` + PID/bundle/AX box lock | IC pointer + focused-IC recheck | No IMK client identity and no Accessibility tree |
 | `Command+Shift+B` while another IM is active | Only while RIMES is current | No LaunchAgent analogue in this step |
-| AI / translation / stream adapters | Host foundation; adapters pending | Tasks #155–#158 and #171–#175 |
+| AI / translation adapters | Implemented; desktop and visual acceptance tracked separately | Tasks #155–#158 and #171–#172 |
+| Stream input adapter | Deferred by maintainer on 2026-10-18; excluded from this delivery | Task #175 |
 | Secure Input + session lock/sleep | Password capability + snapshot scrub | No Carbon Secure Event Input; lock/sleep hide is manual-test only. **Firefox disables the IM on `<input type=password>`**, so `CapabilityFlag::Password` never reaches the addon and captured chips can stay visible. Scrub cannot run. Escape / Return / preedit must still not touch an uncaptured field. |
 | Command+C generated-result copy | Toolbar copy through host validation; key routing pending | Focus/hotkey tasks |
 | Pin to all Spaces / display recovery | Not implemented | No Spaces |
