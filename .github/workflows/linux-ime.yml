@@ -20,6 +20,9 @@ on:
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
       - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Typing*.swift"
+      - "Sources/RimeBuffer/Metrics*.swift"
+      - "Sources/RimeBuffer/Statistics*.swift"
       - "Sources/RimeBuffer/Chord*.swift"
       - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
@@ -55,6 +58,9 @@ on:
       - "Sources/RimeBuffer/ShortcutPreferences.swift"
       - "Sources/RimeBuffer/RimeFixedAccentSwitch.swift"
       - "Sources/RimeBuffer/AITextPlugins.swift"
+      - "Sources/RimeBuffer/Typing*.swift"
+      - "Sources/RimeBuffer/Metrics*.swift"
+      - "Sources/RimeBuffer/Statistics*.swift"
       - "Sources/RimeBuffer/Chord*.swift"
       - "Sources/RimeBuffer/BuiltInPlugins.swift"
       - "Sources/RimeBuffer/BufferWindowController.swift"
@@ -160,6 +166,16 @@ jobs:
           NO_AT_BRIDGE=1 G_DEBUG=fatal-criticals TZ=Asia/Tokyo dbus-run-session -- \
             xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-metrics-ui-tests \
             "$RUNNER_TEMP/settings-render/statistics"
+
+      - name: Native article practice, private history and focused Fcitx lease
+        run: |
+          RIMES_SHARED_DIR="$RUNNER_TEMP/translation-shared" dbus-run-session -- \
+            platforms/linux/ime/build/practice-probe/rimes-settings platforms/linux/ime/build . test-data
+          NO_AT_BRIDGE=1 G_DEBUG=fatal-warnings dbus-run-session -- \
+            xvfb-run -a -s "-screen 0 2560x2400x24" platforms/linux/ime/build/runtime/rimes-practice-ui-tests \
+            "$RUNNER_TEMP/settings-render/typing-practice"
+          dbus-run-session -- xvfb-run -a python3 platforms/linux/typing-practice/tests/practice_desktop_test.py \
+            platforms/linux/ime/build "$RUNNER_TEMP/translation-shared"
 
       - name: Codex CLI text and persistent Mailbox images through real Fcitx
         run: |

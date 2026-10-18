@@ -6,6 +6,7 @@ namespace rimes::desktop {
 struct MetricSample {
     std::string id, label, detail;
     std::optional<double> value;
+    std::optional<double> position = std::nullopt;
 };
 const Json& MetricsContract();
 class MetricsGraphic {
@@ -21,6 +22,7 @@ class MetricsGraphic {
     void Calendar(const Json& days, const std::string& selected);
     std::function<void(const std::string&)> on_select;
     std::string Selection() const { return selected_; }
+    void Highlight(const std::string& id) { selected_ = id; gtk_widget_queue_draw(widget_); }
 
   private:
     Kind kind_;

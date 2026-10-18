@@ -82,6 +82,11 @@ Local Chinese/English translation, incremental units and OpenAI-compatible
 streaming requests are implemented; their desktop and visual acceptance is
 tracked separately in the parity plan.
 
+### Article practice
+
+The bundled typing-speed extension provides **打字测速 → 文章练习 / 成绩历史** and a **统计 → 跟打成绩** entry. Eight native Chinese/English articles use committed text for scoring; preedit, physical keys, correction, composition backspaces and accepted chord batches are handled separately. Practice stays separate from daily statistics. Aggregate scores in `stats/typing_tests.json` survive both deb and source removal. See [practice usage](../typing-practice/README.md) and [validation boundaries](../typing-practice/VALIDATION.md).
+
+
 ## Desktop launch and global shortcuts
 
 Use **XSIME Buffer**, **XSIME Capsule**, **XSIME Mailbox** or **XSIME Settings** from the application

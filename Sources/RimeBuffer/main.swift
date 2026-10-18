@@ -645,6 +645,16 @@ if let index = CommandLine.arguments.firstIndex(of: "mailbox-chat-linux-contract
     } catch { fputs("Mailbox conversation export failed\n", stderr); exit(1) }
 }
 
+if let index = CommandLine.arguments.firstIndex(of: "typing-practice-linux-fixtures") {
+    guard CommandLine.arguments.indices.contains(index + 1) else {
+        print("Usage: RimeBuffer typing-practice-linux-fixtures OUTPUT.json")
+        exit(2)
+    }
+    exit(runTypingPracticeLinuxFixtures(URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
+if let index = CommandLine.arguments.firstIndex(of: "typing-practice-linux-ui"), index + 1 < CommandLine.arguments.count {
+    exit(runTypingPracticeLinuxUISmoke(URL(fileURLWithPath: CommandLine.arguments[index + 1])) ? 0 : 1)
+}
 if let index = CommandLine.arguments.firstIndex(of: "statistics-linux-fixtures"), index + 1 < CommandLine.arguments.count {
     do {
         try StatisticsLinuxFixtures.export(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]))

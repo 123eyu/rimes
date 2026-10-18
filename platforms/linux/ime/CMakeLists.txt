@@ -21,6 +21,12 @@ install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../../LICENSES/"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes")
 install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../../THIRD_PARTY_NOTICES.md"
         DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes")
+install(DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/../../../OfficialPlugins/LICENSES/"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes/plugins")
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../../../OfficialPlugins/LICENSE"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../../OfficialPlugins/NOTICE"
+              "${CMAKE_CURRENT_SOURCE_DIR}/../../../OfficialPlugins/THIRD_PARTY_NOTICES.md"
+        DESTINATION "${CMAKE_INSTALL_DATADIR}/licenses/rimes/plugins")
 
 find_package(PkgConfig REQUIRED)
 find_package(Threads REQUIRED)
@@ -217,6 +223,7 @@ if(RIMES_BUILD_FCITX5)
         src/chord/chord_service.cpp
         src/statistics/metrics_service.cpp
         src/statistics/metrics_keys.cpp
+        src/typing-practice/practice_service.cpp
         src/session/session_monitor.cpp
         src/desktop/workspace_launcher.cpp
         src/desktop/desktop_shortcuts.cpp
@@ -227,7 +234,7 @@ if(RIMES_BUILD_FCITX5)
         src/capsule/capsule_history_service.cpp
         src/capsule/capsule_capture_service.cpp
     )
-    target_link_libraries(rimes PRIVATE RimesStatisticsCore RimesChordEngine yaml-cpp::yaml-cpp Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
+    target_link_libraries(rimes PRIVATE RimesPracticeCore RimesStatisticsCore RimesChordEngine yaml-cpp::yaml-cpp Fcitx5::Core RimesEngine RimesBufferCore RimesMailboxCore RimesCapsuleCore RimesPluginCore RimesLocalTranslation RimesAI RimesClaude)
     pkg_check_modules(GTK3 REQUIRED IMPORTED_TARGET gtk+-3.0)
     pkg_check_modules(RimesXCB REQUIRED IMPORTED_TARGET xcb)
     pkg_check_modules(GTK_LAYER_SHELL IMPORTED_TARGET gtk-layer-shell-0)
@@ -818,6 +825,14 @@ if(RIMES_BUILD_TESTS)
         target_link_libraries(rimes-metrics-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesStatisticsCore RimesChordCore RimesDesktopUI)
         target_compile_definitions(rimes-metrics-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
         rimes_harden(rimes-metrics-fcitx-e2e)
+
+        add_executable(rimes-practice-fcitx-e2e tests/practice_fcitx_e2e.cpp)
+        target_link_libraries(rimes-practice-fcitx-e2e PRIVATE Fcitx5::Core Fcitx5::Module::TestFrontend RimesPracticeCore RimesChordCore RimesPracticeUI)
+        target_compile_definitions(rimes-practice-fcitx-e2e PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
+        # The service verifies both D-Bus credentials and the settings process
+        # name. Keep the isolated probe in its own directory, never install it.
+        set_target_properties(rimes-practice-fcitx-e2e PROPERTIES OUTPUT_NAME rimes-settings RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/practice-probe")
+        rimes_harden(rimes-practice-fcitx-e2e)
 
         add_executable(rimes-gateway-fcitx-e2e tests/gateway_fcitx_e2e.cpp)
         target_include_directories(rimes-gateway-fcitx-e2e PRIVATE "${RIMES_MAILBOX_ROOT}/tests")

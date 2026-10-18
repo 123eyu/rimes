@@ -1,5 +1,5 @@
-#include "metrics_core.hpp"
 #include "metrics_views.hpp"
+#include "metrics_core.hpp"
 #include "native_metrics_contract.hpp"
 #include <algorithm>
 #include <cmath>
@@ -300,6 +300,7 @@ void MetricsGraphic::Draw(cairo_t* cr) {
     }
     if (kind_ == Kind::Card) {
         // Symbol footprints and text baselines follow MetricsValueCard.
+        const auto accent = Color(theme_, "accentText");
         const auto y = (h - 57) / 2;
         Ink(cr, accent);
         cairo_set_line_width(cr, 1.2);
@@ -313,6 +314,53 @@ void MetricsGraphic::Draw(cairo_t* cr) {
                     cairo_rectangle(cr, 16 + col * 3, y + 5 + row * 3, 1, 1);
                     cairo_fill(cr);
                 }
+        } else if (icon_ == 4) {
+            cairo_move_to(cr, 13, y + 7);
+            cairo_line_to(cr, 18, y + 2);
+            cairo_line_to(cr, 28, y + 2);
+            cairo_line_to(cr, 28, y + 12);
+            cairo_line_to(cr, 18, y + 12);
+            cairo_close_path(cr);
+            cairo_stroke(cr);
+            cairo_move_to(cr, 20, y + 5);
+            cairo_line_to(cr, 24, y + 9);
+            cairo_move_to(cr, 24, y + 5);
+            cairo_line_to(cr, 20, y + 9);
+            cairo_stroke(cr);
+        } else if (icon_ == 5 || icon_ == 6) {
+            cairo_arc(cr, 21, y + 7, 6.5, 0, 2 * M_PI);
+            cairo_stroke(cr);
+            if (icon_ == 5) {
+                cairo_move_to(cr, 21, y - 2);
+                cairo_line_to(cr, 21, y + 3);
+                cairo_move_to(cr, 21, y + 11);
+                cairo_line_to(cr, 21, y + 16);
+                cairo_move_to(cr, 12, y + 7);
+                cairo_line_to(cr, 17, y + 7);
+                cairo_move_to(cr, 25, y + 7);
+                cairo_line_to(cr, 30, y + 7);
+            } else {
+                cairo_move_to(cr, 17, y + 7);
+                cairo_line_to(cr, 20, y + 10);
+                cairo_line_to(cr, 25, y + 4);
+            }
+            cairo_stroke(cr);
+        } else if (icon_ == 7) {
+            cairo_move_to(cr, 15, y + 5);
+            cairo_line_to(cr, 24, y + 5);
+            cairo_curve_to(cr, 30, y + 5, 30, y + 13, 24, y + 13);
+            cairo_move_to(cr, 19, y + 1);
+            cairo_line_to(cr, 15, y + 5);
+            cairo_line_to(cr, 19, y + 9);
+            cairo_stroke(cr);
+        } else if (icon_ == 8) {
+            cairo_move_to(cr, 13, y + 7);
+            cairo_line_to(cr, 17, y + 7);
+            cairo_line_to(cr, 19, y + 1);
+            cairo_line_to(cr, 23, y + 13);
+            cairo_line_to(cr, 26, y + 7);
+            cairo_line_to(cr, 30, y + 7);
+            cairo_stroke(cr);
         } else {
             cairo_arc(cr, 21, y + 7, 7, icon_ == 3 ? M_PI : 0, 2 * M_PI);
             cairo_stroke(cr);
@@ -351,13 +399,37 @@ void MetricsGraphic::Draw(cairo_t* cr) {
         }
         Text(cr, unit_, 16, 10, 10, muted);
         Text(cr, axis_, x, 10, 10, muted, pw, PANGO_ALIGN_RIGHT);
+        bool positioned = !samples_.empty();
+        double first = INFINITY, last = -INFINITY;
+        for (const auto& sample : samples_) {
+            if (!sample.position || !std::isfinite(*sample.position)) {
+                positioned = false;
+                break;
+            }
+            first = std::min(first, *sample.position);
+            last = std::max(last, *sample.position);
+        }
         auto px = [&](std::size_t i) {
+            if (positioned && last > first)
+                return x + pw * (*samples_[i].position - first) / (last - first);
             return samples_.size() <= 1 ? x + pw / 2 : x + pw * i / (samples_.size() - 1);
         };
         if (!samples_.empty()) {
-            for (auto i : std::set<std::size_t>{0, (samples_.size() - 1) / 2, samples_.size() - 1})
+            std::size_t middle = 0;
+            for (std::size_t i = 1; i < samples_.size(); ++i)
+                if (std::abs(px(i) - x - pw / 2) < std::abs(px(middle) - x - pw / 2))
+                    middle = i;
+            std::optional<double> previous_label;
+            for (auto i : std::set<std::size_t>{0, middle, samples_.size() - 1}) {
+                if (i && i + 1 != samples_.size() &&
+                    (px(i) - px(0) < 76 || px(samples_.size() - 1) - px(i) < 76))
+                    continue;
+                if (previous_label && px(i) - *previous_label < 76)
+                    continue;
                 Text(cr, samples_[i].label, std::clamp(px(i) - 35, 4.0, w - 80), y + ph + 9, 9,
                      muted, 70, PANGO_ALIGN_CENTER);
+                previous_label = px(i);
+            }
         }
         bool previous = false;
         for (std::size_t i = 0; i < samples_.size(); ++i) {

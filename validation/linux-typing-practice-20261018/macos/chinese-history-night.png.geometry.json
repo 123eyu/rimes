@@ -1,0 +1,990 @@
+[
+  {
+    "height" : 620,
+    "type" : "_TtC10RimeBufferP33_55C7E92819991EE3D4093EC858B53C9222TypingTestDocumentView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 620,
+    "type" : "NSStackView",
+    "width" : 698,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 20,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 24
+  },
+  {
+    "fontSize" : 13,
+    "height" : 25,
+    "text" : "清晨的街道  ·  452 字",
+    "type" : "NSPopUpButton",
+    "width" : 235,
+    "x" : 23,
+    "y" : 23
+  },
+  {
+    "height" : 25,
+    "type" : "NSButtonBezelView",
+    "width" : 235,
+    "x" : 23,
+    "y" : 23
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "清晨的街道  ·  452 字",
+    "type" : "NSButtonTextField",
+    "width" : 200,
+    "x" : 32,
+    "y" : 25
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 200,
+    "x" : 32,
+    "y" : 25
+  },
+  {
+    "height" : 20,
+    "type" : "NSView",
+    "width" : 316,
+    "x" : 264,
+    "y" : 24
+  },
+  {
+    "fontSize" : 13,
+    "height" : 32,
+    "text" : "备份并重建…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 109,
+    "x" : 19,
+    "y" : 19
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 109,
+    "x" : 19,
+    "y" : 19
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "备份并重建…",
+    "type" : "NSButtonTextField",
+    "width" : 87,
+    "x" : 30,
+    "y" : 25
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 87,
+    "x" : 30,
+    "y" : 25
+  },
+  {
+    "fontSize" : 13,
+    "height" : 32,
+    "text" : "清空成绩…",
+    "type" : "RimeBuffer.RimePointingHandButton",
+    "width" : 96,
+    "x" : 583,
+    "y" : 19
+  },
+  {
+    "height" : 32,
+    "type" : "NSButtonBezelView",
+    "width" : 96,
+    "x" : 583,
+    "y" : 19
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "清空成绩…",
+    "type" : "NSButtonTextField",
+    "width" : 74,
+    "x" : 594,
+    "y" : 25
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 74,
+    "x" : 594,
+    "y" : 25
+  },
+  {
+    "fontSize" : 13,
+    "height" : 25,
+    "text" : "rime_ice · 文章 v1",
+    "type" : "NSPopUpButton",
+    "width" : 653,
+    "x" : 23,
+    "y" : 57
+  },
+  {
+    "height" : 25,
+    "type" : "NSButtonBezelView",
+    "width" : 653,
+    "x" : 23,
+    "y" : 57
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "rime_ice · 文章 v1",
+    "type" : "NSButtonTextField",
+    "width" : 618,
+    "x" : 32,
+    "y" : 59
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 618,
+    "x" : 32,
+    "y" : 59
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "日常生活 · 452 字 · 4 次记录",
+    "type" : "NSTextField",
+    "width" : 650,
+    "x" : 24,
+    "y" : 92
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 650,
+    "x" : 24,
+    "y" : 92
+  },
+  {
+    "height" : 92,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 120
+  },
+  {
+    "height" : 92,
+    "type" : "RimeBuffer.MetricsValueCard",
+    "width" : 154,
+    "x" : 26,
+    "y" : 120
+  },
+  {
+    "height" : 57,
+    "type" : "NSStackView",
+    "width" : 82.5,
+    "x" : 39,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 82.5,
+    "x" : 39,
+    "y" : 137.5
+  },
+  {
+    "height" : 16,
+    "type" : "NSImageView",
+    "width" : 16.5,
+    "x" : 39,
+    "y" : 136
+  },
+  {
+    "height" : 16,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 16,
+    "x" : 39,
+    "y" : 136
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "有效速度",
+    "type" : "NSTextField",
+    "width" : 48,
+    "x" : 60,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 48,
+    "x" : 60,
+    "y" : 137.5
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 82.5,
+    "x" : 39,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 27,
+    "height" : 32,
+    "text" : "301",
+    "type" : "NSTextField",
+    "width" : 56.5,
+    "x" : 37,
+    "y" : 162.5
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56.5,
+    "x" : 37,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "字\/分",
+    "type" : "NSTextField",
+    "width" : 30,
+    "x" : 93.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 30,
+    "x" : 93.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 92,
+    "type" : "RimeBuffer.MetricsValueCard",
+    "width" : 154,
+    "x" : 190,
+    "y" : 120
+  },
+  {
+    "height" : 57,
+    "type" : "NSStackView",
+    "width" : 70,
+    "x" : 203,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 70,
+    "x" : 203,
+    "y" : 137.5
+  },
+  {
+    "height" : 13,
+    "type" : "NSImageView",
+    "width" : 16.5,
+    "x" : 203,
+    "y" : 137.5
+  },
+  {
+    "height" : 10.724999999999994,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 16.5,
+    "x" : 203,
+    "y" : 138.77500000000001
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "击键",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 224,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 224,
+    "y" : 137.5
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 70,
+    "x" : 203,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 27,
+    "height" : 32,
+    "text" : "1",
+    "type" : "NSTextField",
+    "width" : 21.5,
+    "x" : 201,
+    "y" : 162.5
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 21.5,
+    "x" : 201,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "键 · 0.0\/秒",
+    "type" : "NSTextField",
+    "width" : 52.5,
+    "x" : 222.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 52.5,
+    "x" : 222.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 92,
+    "type" : "RimeBuffer.MetricsValueCard",
+    "width" : 154,
+    "x" : 354,
+    "y" : 120
+  },
+  {
+    "height" : 57,
+    "type" : "NSStackView",
+    "width" : 45,
+    "x" : 367,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 45,
+    "x" : 367,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSImageView",
+    "width" : 16,
+    "x" : 367,
+    "y" : 137.5
+  },
+  {
+    "height" : 13.176470588235304,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 16,
+    "x" : 367,
+    "y" : 138.3235294117647
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "回退",
+    "type" : "NSTextField",
+    "width" : 26,
+    "x" : 388,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 26,
+    "x" : 388,
+    "y" : 137.5
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 31.5,
+    "x" : 367,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 27,
+    "height" : 32,
+    "text" : "0",
+    "type" : "NSTextField",
+    "width" : 21.5,
+    "x" : 365,
+    "y" : 162.5
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 21.5,
+    "x" : 365,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "次",
+    "type" : "NSTextField",
+    "width" : 14,
+    "x" : 386.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 14,
+    "x" : 386.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 92,
+    "type" : "RimeBuffer.MetricsValueCard",
+    "width" : 154,
+    "x" : 518,
+    "y" : 120
+  },
+  {
+    "height" : 57,
+    "type" : "NSStackView",
+    "width" : 78,
+    "x" : 531,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSStackView",
+    "width" : 78,
+    "x" : 531,
+    "y" : 137.5
+  },
+  {
+    "height" : 18,
+    "type" : "NSImageView",
+    "width" : 16,
+    "x" : 531,
+    "y" : 135
+  },
+  {
+    "height" : 16,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 16,
+    "x" : 531,
+    "y" : 136
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "过程正确率",
+    "type" : "NSTextField",
+    "width" : 59,
+    "x" : 552,
+    "y" : 137.5
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 59,
+    "x" : 552,
+    "y" : 137.5
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 66,
+    "x" : 531,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 27,
+    "height" : 32,
+    "text" : "100",
+    "type" : "NSTextField",
+    "width" : 56.5,
+    "x" : 529,
+    "y" : 162.5
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 56.5,
+    "x" : 529,
+    "y" : 162.5
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "%",
+    "type" : "NSTextField",
+    "width" : 13.5,
+    "x" : 585.5,
+    "y" : 178.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 13.5,
+    "x" : 585.5,
+    "y" : 178.5
+  },
+  {
+    "fontSize" : 12,
+    "height" : 15,
+    "text" : "最近成绩 · 4 次完成",
+    "type" : "NSTextField",
+    "width" : 650,
+    "x" : 24,
+    "y" : 226
+  },
+  {
+    "height" : 15,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 650,
+    "x" : 24,
+    "y" : 226
+  },
+  {
+    "height" : 165,
+    "type" : "RimeBuffer.MetricsLineChartView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 255
+  },
+  {
+    "height" : 0,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 0,
+    "y" : 0
+  },
+  {
+    "height" : 158,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 434
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC10RimeBufferP33_55C7E92819991EE3D4093EC858B53C9221TypingTestSurfaceView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 434
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 434
+  },
+  {
+    "height" : 15,
+    "type" : "NSImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 442.5
+  },
+  {
+    "height" : 15,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 442.5
+  },
+  {
+    "fontSize" : 22,
+    "height" : 26,
+    "text" : "301",
+    "type" : "NSTextField",
+    "width" : 46,
+    "x" : 61,
+    "y" : 437
+  },
+  {
+    "height" : 26,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 46,
+    "x" : 61,
+    "y" : 437
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "字\/分",
+    "type" : "NSTextField",
+    "width" : 30,
+    "x" : 113,
+    "y" : 443.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 30,
+    "x" : 113,
+    "y" : 443.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 352.5,
+    "x" : 151,
+    "y" : 443
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "05.29 05:51  ·  重练",
+    "type" : "NSTextField",
+    "width" : 105,
+    "x" : 511.5,
+    "y" : 443
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 105,
+    "x" : 511.5,
+    "y" : 443
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "100%",
+    "type" : "NSTextField",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 442
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 442
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC10RimeBufferP33_55C7E92819991EE3D4093EC858B53C9221TypingTestSurfaceView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 476
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 476
+  },
+  {
+    "height" : 15,
+    "type" : "NSImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 484.5
+  },
+  {
+    "height" : 15,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 484.5
+  },
+  {
+    "fontSize" : 22,
+    "height" : 26,
+    "text" : "271",
+    "type" : "NSTextField",
+    "width" : 46,
+    "x" : 61,
+    "y" : 479
+  },
+  {
+    "height" : 26,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 46,
+    "x" : 61,
+    "y" : 479
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "字\/分",
+    "type" : "NSTextField",
+    "width" : 30,
+    "x" : 113,
+    "y" : 485.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 30,
+    "x" : 113,
+    "y" : 485.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 319,
+    "x" : 151,
+    "y" : 485
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "05.29 05:43  ·  重练 · 练习",
+    "type" : "NSTextField",
+    "width" : 138.5,
+    "x" : 478,
+    "y" : 485
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 138.5,
+    "x" : 478,
+    "y" : 485
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "100%",
+    "type" : "NSTextField",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 484
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 484
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC10RimeBufferP33_55C7E92819991EE3D4093EC858B53C9221TypingTestSurfaceView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 518
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 518
+  },
+  {
+    "height" : 15,
+    "type" : "NSImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 526.5
+  },
+  {
+    "height" : 15,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 526.5
+  },
+  {
+    "fontSize" : 22,
+    "height" : 26,
+    "text" : "247",
+    "type" : "NSTextField",
+    "width" : 46,
+    "x" : 61,
+    "y" : 521
+  },
+  {
+    "height" : 26,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 46,
+    "x" : 61,
+    "y" : 521
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "字\/分",
+    "type" : "NSTextField",
+    "width" : 30,
+    "x" : 113,
+    "y" : 527.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 30,
+    "x" : 113,
+    "y" : 527.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 351,
+    "x" : 151,
+    "y" : 527
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "05.29 05:35  ·  重练",
+    "type" : "NSTextField",
+    "width" : 106.5,
+    "x" : 510,
+    "y" : 527
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 106.5,
+    "x" : 510,
+    "y" : 527
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "100%",
+    "type" : "NSTextField",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 526
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 526
+  },
+  {
+    "height" : 32,
+    "type" : "_TtC10RimeBufferP33_55C7E92819991EE3D4093EC858B53C9221TypingTestSurfaceView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 560
+  },
+  {
+    "height" : 32,
+    "type" : "NSStackView",
+    "width" : 646,
+    "x" : 26,
+    "y" : 560
+  },
+  {
+    "height" : 15,
+    "type" : "NSImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 568.5
+  },
+  {
+    "height" : 15,
+    "type" : "_NSImageViewSimpleImageView",
+    "width" : 15,
+    "x" : 38,
+    "y" : 568.5
+  },
+  {
+    "fontSize" : 22,
+    "height" : 26,
+    "text" : "226",
+    "type" : "NSTextField",
+    "width" : 46,
+    "x" : 61,
+    "y" : 563
+  },
+  {
+    "height" : 26,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 46,
+    "x" : 61,
+    "y" : 563
+  },
+  {
+    "fontSize" : 10,
+    "height" : 13,
+    "text" : "字\/分",
+    "type" : "NSTextField",
+    "width" : 30,
+    "x" : 113,
+    "y" : 569.5
+  },
+  {
+    "height" : 13,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 30,
+    "x" : 113,
+    "y" : 569.5
+  },
+  {
+    "height" : 14,
+    "type" : "NSView",
+    "width" : 351,
+    "x" : 151,
+    "y" : 569
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "05.29 05:26  ·  重练",
+    "type" : "NSTextField",
+    "width" : 106.5,
+    "x" : 510,
+    "y" : 569
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 106.5,
+    "x" : 510,
+    "y" : 569
+  },
+  {
+    "fontSize" : 13,
+    "height" : 16,
+    "text" : "100%",
+    "type" : "NSTextField",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 568
+  },
+  {
+    "height" : 16,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 39.5,
+    "x" : 622.5,
+    "y" : 568
+  },
+  {
+    "fontSize" : 11,
+    "height" : 14,
+    "text" : "",
+    "type" : "NSTextField",
+    "width" : 650,
+    "x" : -2,
+    "y" : 0
+  },
+  {
+    "height" : 14,
+    "type" : "_TtC6AppKitP33_72EBFCF981BE77E1C6F26FD717D0893922NSTextFieldSimpleLabel",
+    "width" : 650,
+    "x" : -2,
+    "y" : 0
+  }
+]

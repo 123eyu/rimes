@@ -45,7 +45,8 @@ public:
     // Explicit recovery: preserve an owned file or symlink without following
     // it. The original bytes/path entry remain in this private directory.
     std::string Preserve(std::string_view name) const;
-    FileLock Lock(bool wait = true) const;
+    std::string Identity(std::string_view name) const;
+    FileLock Lock(bool wait = true, std::string_view name = ".lock") const;
     const std::filesystem::path& Path() const { return path_; }
 
 private:

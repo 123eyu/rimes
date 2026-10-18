@@ -1,6 +1,7 @@
 #include "session/protected_input.hpp"
 #include "chord/chord_service.hpp"
 #include "statistics/metrics_service.hpp"
+#include "typing-practice/practice_service.hpp"
 #include "capsule_text.hpp"
 #include "rimes_ime.hpp"
 #include <glib.h>
@@ -90,6 +91,7 @@ RimesIme::RimesIme(Instance* instance)
         FCITX_LOGC(rimes_log, Error) << "Statistics unavailable; ordinary input remains enabled";
     }
     gateway_ = std::make_unique<rimes::mailbox::GatewayServer>();
+    practice_ = std::make_unique<PracticeService>(*this);
     buffer_ = std::make_unique<BufferService>(instance_, post);
     capsule_ = std::make_unique<CapsuleService>(instance_, post);
     launcher_ = std::make_unique<WorkspaceLauncher>(*instance_, *buffer_, *capsule_, [] {
@@ -146,6 +148,9 @@ RimesIme::RimesIme(Instance* instance)
     plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.statistics"),
         {[this] { if (metrics_) metrics_->Enable(true); },
          [this] { if (metrics_) metrics_->Enable(false); }});
+    plugins_.Register(rimes::plugins::CompiledAdapters().at("builtin.typing-speed"),
+        {[this] { if (practice_) practice_->Enable(true); },
+         [this] { if (practice_) practice_->Enable(false); }});
     WatchPluginPackages();
     WatchConfiguration();
     if (chord_ && engine_.IsHealthy() && !engine_.IsDeploying()) chord_->EngineReady();
@@ -307,6 +312,7 @@ RimesIme::RimesIme(Instance* instance)
         });
     session_monitor_ = std::make_unique<SessionMonitor>(instance_->eventLoop(), [this](bool protected_session) {
         if (protected_session && metrics_) metrics_->EndSession();
+        if (protected_session && practice_) practice_->Boundary();
         if (protected_session && launcher_) launcher_->Revoke();
         gateway_->SetSessionProtected(protected_session);
         buffer_->OnSessionProtection(protected_session);
@@ -352,6 +358,7 @@ RimesIme::~RimesIme() {
     chord_.reset();
     plugins_.Shutdown();
     metrics_.reset();
+    practice_.reset();
     gateway_.reset();
     if (alive_) {
         alive_->store(false);
@@ -566,6 +573,7 @@ void RimesIme::keyEvent(const InputMethodEntry& entry, KeyEvent& keyEvent) {
     if (state == nullptr) {
         return;
     }
+    if (practice_) practice_->Key(keyEvent, state->composing());
     if (state->prepareChord(keyEvent)) return;
     if (buffer_ && buffer_->HandleEarlyKey(keyEvent, state->composing())) {
         return;

@@ -98,6 +98,8 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ma
             "share/rimes/chord-keymaps/00000000-0000-4000-8000-000000000001.json",
             "share/rimes/chord-keymaps/active-profile.json", "share/rimes/chord-keymaps/state.json",
             "share/rimes/learning/my_combo_progress.json",
+            "share/rimes/stats/typing_tests.json", "share/rimes/stats/key_frequency.json",
+            "share/rimes/stats/typing_speed.json", "share/rimes/stats/corrupt-practice-backup.json",
             "share/rimes/schemes/packages/custom/source.txt", "share/rimes/capsule/notes.md",
             "share/rimes/capsule/clipboard/history-v1.sqlite3",
             "share/rimes/capsule/master-key", "share/rimes/capsule/reveal-credential-v1",

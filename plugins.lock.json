@@ -2,8 +2,9 @@
   "files": {
     "LICENSE": "cfc7749b96f63bd31c3c42b5c471bf756814053e847c10f3eb003417bc523d30",
     "LICENSES/MIT-legacy.txt": "9f832a6fd82f4f89bd39f4a50848ae4ca24c1945b90ca4b2c3bc0e577a9b3f20",
+    "LICENSES/Swift-Apache-2.0.txt": "770af8291f708538d8ff885a0bbc4e045cd700531741c4f99528d435c14d7f55",
     "NOTICE": "65716b456fd7bc8d3c1ef7d692451c86561f38ef07b0c9f231f91911b7ef8e6c",
-    "THIRD_PARTY_NOTICES.md": "8b9e2c389ae8c43e15c2d26d01e348d32a012dbd82dc3ce2e0301cd50c4e1bd2",
+    "THIRD_PARTY_NOTICES.md": "0c0366f3790ff932345169605a2e0405810316eec86ccccdc3be78ecb928cc58",
     "VERSION": "1575e1af4a95f12f70b4ee6a6adce8160953d93ea17dc2611b90883ccc3ad3b8",
     "native/android-core/ChordData.java": "af151f0d00e62e61ee8ea45fc994d4ad40a3bc29ddd33631ad6e3d3dea1cdd1c",
     "native/android-core/ChordGesture.java": "05b3c674a96feb58859c00b396593928d46267d873bbae2ab14669ef0d9dd875",
@@ -79,6 +80,8 @@
     "native/shared/openai/chat_codec_tests.cpp": "7d0970676a1bcb5112b8b3fa05aa557d2697e0075e9ba7cd4c2089ef54c6a1b4",
     "native/shared/statistics/metrics_core.cpp": "7bbd13728140f2f8f460eec3d013004332ee576c9e5e3ae59a1b23da6a2b5b95",
     "native/shared/statistics/metrics_core.hpp": "cbf3111f7ec501e4d98fa3964b4ed7c0a5a55e4f9466c546c6413ef9a6276c0a",
+    "native/shared/typing-practice/typing_practice_core.cpp": "324a032a1d16ba4b800f24684e5dc5fb408fe319c16ffcf64239bd15db1246b8",
+    "native/shared/typing-practice/typing_practice_core.hpp": "bb402aea22e7bc9e5a4762b04953ee957f9b971b7bc2ed4b2ab65a9bf06b6ed1",
     "native/windows/my_combo.schema.yaml": "d2937f55ac93fe746bf2e854aa523d8488d426392e0e6d8b63f96966c8ec6bc9",
     "native/windows/official_features.hpp": "560de4a57d0b2ab0e6f3724c7cf58884bf8ddb492d4dfd1d39b8ad06dbacc10e",
     "plugins/apple-translation/plugin.json": "220435a67821ddcf739579dddc1a359f5f565ecae266f80c81b4818a1d2f62d7",
@@ -104,10 +107,10 @@
     "plugins/scholay/plugin.json": "03aedfa799807e845f22d4cabfac38f7f0c1a957c24e9e90e937b35be4ceb38a",
     "plugins/statistics/plugin.json": "9735efe480ba589e2429db4f453d840712f6100249cafbd530d70b4db58b98d3",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
-    "plugins/typing-speed/plugin.json": "eb2f031f4488628e3aa90900d0eadcea4ddd8d7faa0f782b01b8655e051a5f44",
-    "source-map.json": "17115910f6c9af156cfa60eab811c5cd8da23d5f3354a63f2a461024d251cba8"
+    "plugins/typing-speed/plugin.json": "1bef3ac640282fdb61965f77e2c8a7353eac18636f451cbaadc211030d495d6e",
+    "source-map.json": "292eaba154ebce7697d5c578bbe3e3db37b30be2a78def5922e5d80665201289"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "01ab4c175f4d827b0e00155514478d58ad44de56",
+  "revision": "5533c261e381dd99f2cd4f4f330359bf84297e6c",
   "schemaVersion": 1
 }

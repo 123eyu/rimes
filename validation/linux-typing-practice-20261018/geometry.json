@@ -1,0 +1,4930 @@
+[
+  {
+    "page": "chinese-complete-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-complete-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-complete-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-complete-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-history-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-history-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-history-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-history-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-live-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-live-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-live-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-live-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-ready-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-ready-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-ready-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "chinese-ready-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-complete-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-complete-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-complete-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-complete-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 961,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 961
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 603,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 603.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-0",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 26,
+          "y": 609
+        },
+        "macos": {
+          "x": 26,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-1",
+        "linux": {
+          "height": 92,
+          "width": 209,
+          "x": 245,
+          "y": 609
+        },
+        "macos": {
+          "x": 244.5,
+          "y": 609,
+          "width": 209,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "result-2",
+        "linux": {
+          "height": 92,
+          "width": 208,
+          "x": 464,
+          "y": 609
+        },
+        "macos": {
+          "x": 463.5,
+          "y": 609,
+          "width": 208.5,
+          "height": 92
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 768
+        },
+        "macos": {
+          "x": 26,
+          "y": 768,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-history-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-history-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-history-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-history-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 120
+        },
+        "macos": {
+          "x": 26,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 120
+        },
+        "macos": {
+          "x": 190,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 120
+        },
+        "macos": {
+          "x": 354,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 120
+        },
+        "macos": {
+          "x": 518,
+          "y": 120,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 620,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 620
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 255
+        },
+        "macos": {
+          "x": 26,
+          "y": 255,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-live-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-live-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-live-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-live-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 610,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 610.5,
+          "height": 12
+        },
+        "maximumDelta": 0.5,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-ready-day",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-ready-night",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-ready-quiet",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  },
+  {
+    "page": "english-ready-rasta",
+    "checks": [
+      {
+        "part": "card-0",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 26,
+          "y": 86
+        },
+        "macos": {
+          "x": 26,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-1",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 190,
+          "y": 86
+        },
+        "macos": {
+          "x": 190,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-2",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 354,
+          "y": 86
+        },
+        "macos": {
+          "x": 354,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "card-3",
+        "linux": {
+          "height": 92,
+          "width": 154,
+          "x": 518,
+          "y": 86
+        },
+        "macos": {
+          "x": 518,
+          "y": 86,
+          "width": 154,
+          "height": 92
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "editor",
+        "linux": {
+          "height": 139,
+          "width": 646,
+          "x": 26,
+          "y": 456
+        },
+        "macos": {
+          "x": 26,
+          "y": 456,
+          "width": 646,
+          "height": 139
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "page",
+        "linux": {
+          "height": 831,
+          "width": 698
+        },
+        "macos": {
+          "width": 698,
+          "height": 831
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "progress",
+        "linux": {
+          "height": 12,
+          "width": 618,
+          "x": 26,
+          "y": 226
+        },
+        "macos": {
+          "x": 26,
+          "y": 226,
+          "width": 618,
+          "height": 12
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "target",
+        "linux": {
+          "height": 189,
+          "width": 646,
+          "x": 26,
+          "y": 253
+        },
+        "macos": {
+          "x": 26,
+          "y": 253,
+          "width": 646,
+          "height": 189
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      },
+      {
+        "part": "trend",
+        "linux": {
+          "height": 165,
+          "width": 646,
+          "x": 26,
+          "y": 638
+        },
+        "macos": {
+          "x": 26,
+          "y": 638,
+          "width": 646,
+          "height": 165
+        },
+        "maximumDelta": 0,
+        "withinHalfLogicalPixel": true
+      }
+    ]
+  }
+]

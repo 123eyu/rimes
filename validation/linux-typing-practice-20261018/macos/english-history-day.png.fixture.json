@@ -1,0 +1,182 @@
+{
+  "articleID" : "rimes.english-morning",
+  "clock" : 10,
+  "context" : {
+    "chordCountingAvailable" : false,
+    "inputSourceID" : "public.source",
+    "mode" : "practice",
+    "schemaID" : "rime_ice"
+  },
+  "editor" : "",
+  "height" : 620,
+  "history" : [
+    {
+      "articleID" : "rimes.english-morning",
+      "articleVersion" : 1,
+      "completedAt" : 1780001500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "F73E97BA-F5E4-44AA-A610-544CC46ADA50",
+      "isComplete" : true,
+      "language" : "english",
+      "metrics" : {
+        "attemptedCharacterCount" : 815,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 815,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 815,
+        "correctCharacterCount" : 815,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 90,
+        "expectedCharacterCount" : 815,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 543.33333333333337,
+            "elapsedSeconds" : 90
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.english-morning",
+      "articleVersion" : 1,
+      "completedAt" : 1780001000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "77F3DDDA-81F4-44B9-895C-D79EA173F30E",
+      "isComplete" : true,
+      "language" : "english",
+      "metrics" : {
+        "attemptedCharacterCount" : 815,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 815,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 815,
+        "correctCharacterCount" : 815,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 100,
+        "expectedCharacterCount" : 815,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 489,
+            "elapsedSeconds" : 100
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+        "focusLost"
+      ]
+    },
+    {
+      "articleID" : "rimes.english-morning",
+      "articleVersion" : 1,
+      "completedAt" : 1780000500,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "CD21B6C0-D830-4228-A915-6877977D49EA",
+      "isComplete" : true,
+      "language" : "english",
+      "metrics" : {
+        "attemptedCharacterCount" : 815,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 815,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 815,
+        "correctCharacterCount" : 815,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 110,
+        "expectedCharacterCount" : 815,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 444.54545454545456,
+            "elapsedSeconds" : 110
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    },
+    {
+      "articleID" : "rimes.english-morning",
+      "articleVersion" : 1,
+      "completedAt" : 1780000000,
+      "context" : {
+        "chordCountingAvailable" : false,
+        "inputSourceID" : "public.source",
+        "mode" : "practice",
+        "schemaID" : "rime_ice"
+      },
+      "id" : "82CE4029-61A0-4ADE-9E0F-F3A28F8FC1E8",
+      "isComplete" : true,
+      "language" : "english",
+      "metrics" : {
+        "attemptedCharacterCount" : 815,
+        "backspaceCount" : 0,
+        "committedBackspaceCount" : 0,
+        "committedCharacterCount" : 815,
+        "compositionBackspaceCount" : 0,
+        "correctAttemptCount" : 815,
+        "correctCharacterCount" : 815,
+        "correctionCount" : 0,
+        "deletedCharacterCount" : 0,
+        "elapsedSeconds" : 120,
+        "expectedCharacterCount" : 815,
+        "extraCharacterCount" : 0,
+        "omissionCount" : 0,
+        "physicalKeyCount" : 1,
+        "repeatKeyCount" : 0,
+        "speedSamples" : [
+          {
+            "effectiveCPM" : 407.5,
+            "elapsedSeconds" : 120
+          }
+        ],
+        "substitutionCount" : 0
+      },
+      "practiceReasons" : [
+
+      ]
+    }
+  ],
+  "phase" : "history",
+  "purpose" : "public-typing-practice-dashboard",
+  "theme" : "day",
+  "width" : 698
+}

@@ -161,6 +161,25 @@ void PrivateDirectory::Remove(std::string_view name) const {
     if (unlinkat(fd_, filename.c_str(), 0) || fsync(fd_)) throw std::runtime_error("Cannot remove private file");
 }
 
+std::string PrivateDirectory::Identity(std::string_view name) const {
+    Verify();
+    const auto filename = Name(name);
+    struct stat entry{};
+    if (fstatat(fd_, filename.c_str(), &entry, AT_SYMLINK_NOFOLLOW)) {
+        if (errno == ENOENT) return "missing";
+        throw std::runtime_error("Cannot inspect private file identity");
+    }
+#ifdef __APPLE__
+    const auto modified = entry.st_mtimespec, changed = entry.st_ctimespec;
+#else
+    const auto modified = entry.st_mtim, changed = entry.st_ctim;
+#endif
+    return std::to_string(entry.st_dev) + ":" + std::to_string(entry.st_ino) + ":" +
+        std::to_string(entry.st_mode) + ":" + std::to_string(entry.st_size) + ":" +
+        std::to_string(modified.tv_sec) + ":" + std::to_string(modified.tv_nsec) + ":" +
+        std::to_string(changed.tv_sec) + ":" + std::to_string(changed.tv_nsec);
+}
+
 std::string PrivateDirectory::Preserve(std::string_view name) const {
     Verify();
     const auto filename = Name(name);
@@ -195,9 +214,10 @@ std::string PrivateDirectory::Preserve(std::string_view name) const {
     return backup;
 }
 
-FileLock PrivateDirectory::Lock(bool wait) const {
+FileLock PrivateDirectory::Lock(bool wait, std::string_view name) const {
     Verify();
-    FD file(openat(fd_, ".lock", O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600));
+    const auto filename = Name(name);
+    FD file(openat(fd_, filename.c_str(), O_RDWR | O_CREAT | O_NOFOLLOW | O_NONBLOCK | O_CLOEXEC, 0600));
     if (file.value < 0) throw std::runtime_error("Cannot open private lock");
     SafeFile(file.value);
     while (flock(file.value, LOCK_EX | (wait ? 0 : LOCK_NB))) {

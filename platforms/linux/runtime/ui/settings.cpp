@@ -10,6 +10,7 @@
 #include "chord_editor.hpp"
 #include "chord_core.hpp"
 #include "statistics_pane.hpp"
+#include "practice_pane.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -34,9 +35,12 @@ struct Settings {
   Json saved = config.Load();
   Json routes = [] { auto value = Visuals().at("routes"); value.push_back(rimes::chord::Contract().at("route"));
     value.push_back({{"id", "extension.statistics"}, {"title", "统计"}, {"icon", "chart.bar.xaxis"}, {"group", "extensions"},
-                    {"subpages", Json::array({{"daily", "每日"}, {"history", "历史"}})}}); return value; }();
+                    {"subpages", Json::array({{"daily", "每日"}, {"history", "历史"}, {"test-results", "测速成绩"}})}});
+    value.push_back({{"id", "extension.typing-speed"}, {"title", "打字测速"}, {"icon", "speedometer"}, {"group", "extensions"},
+                    {"subpages", Json::array({{"overview", "文章跟打"}, {"history", "成绩"}})}}); return value; }();
   std::unique_ptr<ChordPane> chord_pane;
   std::unique_ptr<StatisticsPane> statistics_pane;
+  std::unique_ptr<PracticePane> practice_pane;
   GtkWidget *window = nullptr, *root = nullptr, *content = nullptr,
             *sidebar = nullptr, *feedback = nullptr;
   std::string route = "core.rimes", subpage = "about", message;
@@ -77,6 +81,7 @@ struct Settings {
     alive->store(false);
     chord_pane.reset();
     statistics_pane.reset();
+    practice_pane.reset();
     codex_worker.Shutdown();
     claude_worker.Shutdown();
 #ifdef RIMES_GATEWAY_CLIPBOARD
@@ -132,7 +137,7 @@ struct Settings {
     gtk_window_set_decorated(GTK_WINDOW(window), FALSE);
     g_signal_connect(window, "delete-event", G_CALLBACK(+[](GtkWidget*, GdkEvent*, gpointer data) -> gboolean {
       auto* self = static_cast<Settings*>(data);
-      return self->chord_pane && !self->chord_pane->CanLeave();
+      return (self->chord_pane && !self->chord_pane->CanLeave()) || (self->practice_pane && !self->practice_pane->CanLeave());
     }), this);
     // GtkOffscreenWindow can allocate its minimum instead of the requested
     // default after a page switch. A render fixture has an exact canvas;
@@ -150,6 +155,7 @@ struct Settings {
                        self->alive->store(false);
                        self->chord_pane.reset();
                        self->statistics_pane.reset();
+                       self->practice_pane.reset();
                        self->window = nullptr;
                        if (!self->rendering && !self->application_window)
                          gtk_main_quit();
@@ -175,7 +181,7 @@ struct Settings {
       gtk_widget_set_margin_start(bar, 10);
       gtk_widget_set_valign(bar, GTK_ALIGN_CENTER);
       Add(bar, IconButton("xmark", "关闭设置",
-                          [this] { if (!chord_pane || chord_pane->CanLeave()) gtk_widget_destroy(window); }));
+                          [this] { if ((!chord_pane || chord_pane->CanLeave()) && (!practice_pane || practice_pane->CanLeave())) gtk_widget_destroy(window); }));
       Add(bar, Label("XSIME 设置", "tiny"), true);
       gtk_container_add(GTK_CONTAINER(titlebar), bar);
     }
@@ -232,8 +238,10 @@ struct Settings {
   }
   void Select(std::string next, const std::string &page = "") {
     if (chord_pane && !chord_pane->CanLeave()) return;
+    if (practice_pane && !practice_pane->CanLeave()) return;
     chord_pane.reset();
     statistics_pane.reset();
+    practice_pane.reset();
     StopShortcutRecording();
 #ifdef RIMES_GATEWAY_CLIPBOARD
     if (gateway_clipboard) gateway_clipboard->CancelWrites();
@@ -297,6 +305,11 @@ struct Settings {
       chord_pane = std::make_unique<ChordPane>(GTK_WINDOW(window), subpage, rendering,
           [this] { saved = config.Load(); });
       Add(body, chord_pane->Widget());
+    } else if (route == "extension.typing-speed" || (route == "extension.statistics" && subpage == "test-results")) {
+      gtk_widget_set_margin_start(body, 0); gtk_widget_set_margin_end(body, 0); gtk_widget_set_margin_bottom(body, 0);
+      gtk_widget_set_size_request(body, 698, -1);
+      practice_pane = std::make_unique<PracticePane>(GTK_WINDOW(window), subpage, saved.at("theme"), rendering);
+      Add(body, practice_pane->Widget());
     } else if (route == "extension.statistics") {
       statistics_pane = std::make_unique<StatisticsPane>(GTK_WINDOW(window), subpage, saved.at("theme"), rendering,
           Json::object(), [this] { saved = config.Load(); });
@@ -1513,6 +1526,15 @@ int SettingsSmoke() {
     app.Select("extension.statistics", "history");
     check(app.subpage == "history" && app.statistics_pane != nullptr);
     control("记录日常输入");
+    phase = "article practice navigation";
+    app.Select("extension.typing-speed");
+    check(app.subpage == "overview" && app.practice_pane != nullptr);
+    control("选择测速文章"); control("开始或重新跟打");
+    app.Select("extension.typing-speed", "history");
+    check(app.practice_pane != nullptr); control("筛选输入方案与文章版本");
+    app.Select("extension.statistics", "test-results");
+    check(app.practice_pane != nullptr && app.statistics_pane == nullptr);
+    control("清空文章跟打成绩");
     phase = "buffer";
     app.Select("core.buffer");
     gtk_switch_set_active(GTK_SWITCH(control("最后一块上屏后关闭工作台")),
@@ -1642,6 +1664,7 @@ int SettingsSmoke() {
 }
 } // namespace
 int main(int argc, char **argv) {
+    ConfigurePracticeInput();
   if (argc == 2 && std::string_view(argv[1]) == "--help") {
     std::cout << "Usage: rimes-settings [--render DIRECTORY | --render-gateway DIRECTORY | --render-codex DIRECTORY | --render-claude DIRECTORY | --smoke]\n";
     return 0;

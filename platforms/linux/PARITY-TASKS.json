@@ -578,9 +578,12 @@
         "按连续时间、正确成文、字准、物理键、并击批次和回退独立计分，与日常统计隔离。",
         "只保存本机聚合和文章/配置身份；验证中英文、重启、取消、重试和输入法方案切换。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 178,
-      "url": "https://github.com/scholay/xsime/issues/178"
+      "url": "https://github.com/scholay/xsime/issues/178",
+      "visual_status": "requires_review",
+      "implementation_status": "implemented",
+      "validation": "typing-practice/VALIDATION.md"
     },
     {
       "order": 29,

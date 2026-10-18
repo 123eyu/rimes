@@ -59,6 +59,10 @@ RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
     "$BUILD_DIR/rimes-chord-fcitx-e2e" "$BUILD_DIR" . test-data
 RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
     "$BUILD_DIR/rimes-metrics-fcitx-e2e" "$BUILD_DIR" . test-data
+RIMES_SHARED_DIR="$STAGE" dbus-run-session -- \
+    "$BUILD_DIR/practice-probe/rimes-settings" "$BUILD_DIR" . test-data
+dbus-run-session -- xvfb-run -a python3 \
+    "$REPO_ROOT/platforms/linux/typing-practice/tests/practice_desktop_test.py" "$BUILD_DIR" "$STAGE"
 
 ROOT="$WORKDIR/root"
 RIMES_IME_STAGE_DIR="$STAGE" DESTDIR="$ROOT" \
@@ -122,7 +126,7 @@ Section: utils
 Priority: optional
 Architecture: $ARCH
 Installed-Size: $SIZE
-Depends: fcitx5, python3.12, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-pipewire, xdg-desktop-portal, $DEPS
+Depends: fcitx5, fcitx5-frontend-gtk3, python3.12, gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-pipewire, xdg-desktop-portal, $DEPS
 Recommends: xdg-desktop-portal-gtk, libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk, fonts-noto-color-emoji
 Maintainer: XSIME contributors <https://github.com/scholay/xsime>
 Homepage: https://xsime.com

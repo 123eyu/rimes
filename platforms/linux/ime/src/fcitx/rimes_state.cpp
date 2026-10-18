@@ -2,6 +2,7 @@
 #include "rimes_state.hpp"
 #include "chord/chord_service.hpp"
 #include "statistics/metrics_service.hpp"
+#include "typing-practice/practice_service.hpp"
 
 #include <cstdint>
 #include <string>
@@ -219,9 +220,11 @@ void RimesState::ObserveNativeRelease(bool handled, bool last) {
     if (handled) ++metrics_native_releases_;
     if (!last) return;
     if (metrics_chord_start_ && metrics_native_keys_ > 0 &&
-        metrics_native_releases_ == metrics_native_keys_ && ime_->metrics())
-        ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
-                               metrics_native_releases_);
+        metrics_native_releases_ == metrics_native_keys_) {
+        if (ime_->metrics()) ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
+                                                   metrics_native_releases_);
+        if (ime_->practice()) ime_->practice()->Chord(ic_);
+    }
     metrics_chord_start_ = 0;
     metrics_native_keys_ = metrics_native_releases_ = 0;
 }
@@ -236,9 +239,11 @@ void RimesState::FlushChord() {
         ime_->engine(), session_, ime_->chord()->Profile(),
         [this, lease, epoch, revision] { return ChordAuthority(epoch, revision, lease); });
     if (result && ChordAuthority(epoch, revision, lease)) {
-        if (chord_.LastBatchCount() && metrics_chord_start_ && ime_->metrics())
-            ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
-                                   static_cast<int>(chord_.LastBatchCount()));
+        if (chord_.LastBatchCount() && metrics_chord_start_) {
+            if (ime_->metrics()) ime_->metrics()->Chord(ic_, double(now(CLOCK_MONOTONIC) - metrics_chord_start_) / 1e6,
+                                                       static_cast<int>(chord_.LastBatchCount()));
+            if (ime_->practice()) ime_->practice()->Chord(ic_);
+        }
         metrics_chord_start_ = 0;
         PublishChord(*result);
     } else

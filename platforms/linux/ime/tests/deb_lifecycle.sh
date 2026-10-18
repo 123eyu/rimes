@@ -53,6 +53,7 @@ printf '%s\n' 'keep chord learning counts and mastery' > "$DATA/learning/my_comb
 mkdir -p "$DATA/stats"
 printf '%s\n' 'keep independent physical key history' > "$DATA/stats/key_frequency.json"
 printf '%s\n' 'keep daily character totals, active seconds and sessions' > "$DATA/stats/typing_speed.json"
+printf '%s\n' 'keep article practice aggregate scores and comparison identities' > "$DATA/stats/typing_tests.json"
 printf '%s\n' 'keep explicit corrupt statistics backup' > "$DATA/stats/corrupt-statistics-backup.json"
 (cd "$DATA" && find . -type f -exec sha256sum {} +) > "$WORK/user-data.sha256"
 
@@ -60,6 +61,7 @@ sudo env HOME="$CLI_HOME" XDG_DATA_HOME="$WORK/user-data" apt-get install -y "$D
 [[ "$(dpkg-query -W -f='${Version}' fcitx5-rimes)" == "$VERSION" ]]
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 [[ -x /usr/bin/rimes-schemes && -x /usr/bin/rimes-buffer && -x /usr/bin/rimes-capsule ]]
+[[ -s /usr/share/licenses/rimes/plugins/Swift-Apache-2.0.txt ]]
 [[ -x /usr/bin/rimes-settings && -x /usr/bin/rimes-plugins && -x /usr/bin/rimes-mailbox ]]
 [[ -x /usr/libexec/rimes/rimes-mailbox-file ]]
 printf '%s\n' 'public terminal receipt' > "$WORK/terminal.txt"
@@ -79,7 +81,9 @@ import json, sys, hashlib
 from pathlib import Path
 pages = json.load(open(sys.argv[1]))
 assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.fly-chord-learning'} == {'settings', 'keymap', 'lessons', 'practice', 'progress'}
-assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.statistics'} == {'daily', 'history'}
+assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.typing-speed'} == {'overview', 'history'}
+assert any(row['routeID'] == 'extension.statistics' and row['subpageID'] == 'test-results' for row in pages)
+assert {row['subpageID'] for row in pages if row['routeID'] == 'extension.statistics'} == {'daily', 'history', 'test-results'}
 data = Path('/usr/share/rimes/data')
 lock = json.loads((data / 'linux-native-chord-manifest.json').read_text())
 assert lock['schemas'] == ['yoyo-yx', 'yoyo-yx-hm'] and len(lock['files']) == 12

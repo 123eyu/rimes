@@ -1,0 +1,54 @@
+{
+  "card-0": {
+    "height": 92,
+    "width": 154,
+    "x": 26,
+    "y": 86
+  },
+  "card-1": {
+    "height": 92,
+    "width": 154,
+    "x": 190,
+    "y": 86
+  },
+  "card-2": {
+    "height": 92,
+    "width": 154,
+    "x": 354,
+    "y": 86
+  },
+  "card-3": {
+    "height": 92,
+    "width": 154,
+    "x": 518,
+    "y": 86
+  },
+  "editor": {
+    "height": 139,
+    "width": 646,
+    "x": 26,
+    "y": 456
+  },
+  "page": {
+    "height": 831,
+    "width": 698
+  },
+  "progress": {
+    "height": 12,
+    "width": 618,
+    "x": 26,
+    "y": 226
+  },
+  "target": {
+    "height": 189,
+    "width": 646,
+    "x": 26,
+    "y": 253
+  },
+  "trend": {
+    "height": 165,
+    "width": 646,
+    "x": 26,
+    "y": 638
+  }
+}
