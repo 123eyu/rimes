@@ -87,6 +87,18 @@ class MainlineChannelTests(unittest.TestCase):
         self.assertIn('tests/deb_lifecycle.sh', package)
         self.assertNotIn('contents: write', package)
 
+    def test_complete_feed_ignores_only_the_alternate_preview_skip(self):
+        job = workflow('release.yml').split('  publish_update_manifest:', 1)[1].split(
+            '\n  verify_signed_install:', 1)[0]
+        gate = job.split('    if: >-', 1)[1].split('    runs-on:', 1)[0]
+        self.assertIn('!cancelled()', gate)
+        self.assertIn("needs.build_and_smoke.outputs.is_release == 'true'", gate)
+        for producer in ('build_and_smoke', 'build_windows_release', 'build_android_release',
+                         'publish_staged_release', 'attach_linux_deb'):
+            self.assertIn(f"needs.{producer}.result == 'success'", gate)
+        self.assertNotIn('publish_unsigned_preview', gate)
+        self.assertIn('bash scripts/release/publish-update-assets.sh', job)
+
 
 if __name__ == "__main__":
     unittest.main()

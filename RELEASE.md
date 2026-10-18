@@ -25,6 +25,13 @@ GitHub Release 出现新版本不表示该 iOS 版本已经获批或上架。
 CI 先上传并读回所有安装包，最后才上传并读回清单。失败时不能发布缺少某个平台的清单，也不覆盖
 已有不同字节的资产。旧 macOS 客户端使用的 `RIMES-X.Y.Z.pkg` 文件名保持兼容。
 
+若已通过受保护发布的正式 Release 因后续任务跳过或失败，缺少 Android／Windows 包或完整清单，
+可在 main 手动运行 `Complete approved release assets`，输入原 tag 工作流的 run ID。
+恢复流程逐项要求原签名、同包安装、四端构建及 macOS／Linux 发布任务成功，核验原 tag／commit、
+不可变 Artifact 的来源与压缩包 SHA-256，然后使用同一发布脚本补齐资产、逐个下载比对，最后发布清单。
+它不创建 Release、不重签、不覆盖不同字节的资产、不接受 PR／预览／取消的源流程，也不改变环境保护。
+正常正式发布显式要求所有生产任务成功，避免预览分支的预期跳过向清单任务传播。
+
 2026-10-07 的更新目标为 macOS、iOS、Android **1.1.1**，Windows **1.1.2**，当时未纳入 Linux。
 后续 `v*` 发布增加 Ubuntu 24.04 amd64 deb 与校验文件，Linux 本地默认版本也读取根 `VERSION`。
 目标与验收记录见 [1.1.0 发布计划](docs/releases/1.1.0-plan.md)；[1.0 发布准备](RELEASE-1.0.0.md)保留作历史记录。macOS 的 `VERSION`、`Info.plist` 与正式 tag 必须一致。发布脚本不修改、不提交任何文件，只在 `origin/main` 上创建并推送一个 tag；
