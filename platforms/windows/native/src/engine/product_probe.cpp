@@ -169,6 +169,17 @@ bool TestPausedBufferShift(RimeEngine& engine,
       runtime.Focus(target);
       runtime.Bind(peer);
       if (!runtime.Capturing(target)) return fail("capture binding");
+      if (pending_result) {
+        // Complete translation before composing another word. Switching
+        // plugins with an owned preedit intentionally queues settlement, and
+        // returning to plain input parks the translation rather than sending it.
+        runtime.Paste("Original.");
+        runtime.Generate(true);
+        const auto deadline = GetTickCount64() + 3000;
+        while (runtime.Snapshot()["result"] != "Translated output." && GetTickCount64() < deadline)
+          Sleep(2);
+        if (runtime.Snapshot()["result"] != "Translated output.") return fail("result generation");
+      }
       std::uint64_t sequence = 1;
       auto key = [&](std::uint32_t vk, std::uint32_t flags,
                      std::uint32_t modifiers, core::InputState* state) {
@@ -188,16 +199,11 @@ bool TestPausedBufferShift(RimeEngine& engine,
           state.composition != "ni" || runtime.Snapshot()["preedit"] != "ni")
         return fail("initial real Rime preedit");
       const auto revision = state.revision;
-      runtime.Paste(pending_result ? "Original." : std::string(workbench::Model::kLimit, 'x'));
       if (pending_result) {
-        runtime.Generate(true);
-        const auto deadline = GetTickCount64() + 3000;
-        while (runtime.Snapshot()["result"] != "Translated output." && GetTickCount64() < deadline)
-          Sleep(2);
-        if (runtime.Snapshot()["result"] != "Translated output.") return fail("result generation");
-        runtime.ReturnToInput();
         runtime.Send(false);
         if (runtime.Snapshot()["status"] != "Sending...") return fail("pending result delivery");
+      } else {
+        runtime.Paste(std::string(workbench::Model::kLimit, 'x'));
       }
       const auto before = runtime.Snapshot();
       for (const auto vk : {VK_SHIFT, VK_LSHIFT, VK_RSHIFT}) {

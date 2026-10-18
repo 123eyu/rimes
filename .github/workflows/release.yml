@@ -1834,11 +1834,24 @@ jobs:
 
           notes="$stage/RELEASE-NOTES.md"
           cat >"$notes" <<'EOF'
-          ## RIMES vVERSION_PLACEHOLDER
+          ## 犀术IME / 犀術IME / XSIME VERSION_PLACEHOLDER
 
-          现代 macOS 中文输入法（IMK + librime）。**自包含**：librime 引擎与 Rime
-          词库已打包在 app 内，**无需单独安装 Squirrel**，装一个就能用。通用二进制
-          （Apple Silicon + Intel）。
+          本版补齐五端设置中的应用更新入口，并收敛 Linux、Windows 与官方插件改动。
+
+          ### 下载与更新
+          | 平台 | 安装包 / 渠道 | 更新方式 |
+          |---|---|---|
+          | macOS（Apple Silicon / Intel） | `RIMES-VERSION_PLACEHOLDER.pkg` | 设置内下载，系统安装器授权安装 |
+          | Windows（x64 / x86） | `RIMES-Windows-VERSION_PLACEHOLDER-Setup.exe` | 设置内下载并运行完整安装器，按提示注销或重启 |
+          | Android | `RIMES-Android-VERSION_PLACEHOLDER.apk` | 设置内下载，Android 系统确认安装；使用原长期签名 |
+          | Linux（Ubuntu 24.04 amd64） | `fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` | 设置内下载，授权系统包管理器安装后重新登录 |
+          | iOS | [App Store](https://apps.apple.com/app/id6814620242) | 通过商店更新，可用版本以商店为准 |
+
+          旧版尚无更新入口的客户端，首次请下载本版安装包升级；之后可从设置检查、下载并安装。
+          下载包会验证版本、大小及 SHA-256，打开安装器或商店不会被当作更新完成。
+          Android 的 AAB 用于商店分发，直接安装请选择 APK。Windows EXE 当前未签名。
+
+          macOS 包自带 librime 引擎与 Rime 词库，无需单独安装 Squirrel。
 
           ### 安装（推荐：向导式安装器）
           下载 **`RIMES-VERSION_PLACEHOLDER.pkg`** → 双击 → 按向导安装
@@ -2118,7 +2131,7 @@ jobs:
             "$stage/$PKG" "$stage/SHA256SUMS" \
             --verify-tag \
             --latest \
-            --title "RIMES v$VERSION" \
+            --title "犀术IME / 犀術IME / XSIME $VERSION" \
             --notes-file "$stage/RELEASE-NOTES.md"
 
       - name: Read back the official Release assets
