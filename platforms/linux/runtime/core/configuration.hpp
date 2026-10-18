@@ -16,6 +16,7 @@ std::vector<Field> PluginFields(std::string_view id);
 std::vector<Field> ProviderFields();
 Json FieldDefaults(const std::vector<Field> &fields);
 Json ValidateFields(const std::vector<Field> &fields, const Json &values);
+Json ProviderRoute(const Json& provider);
 bool ValidEndpoint(const std::string &url, bool optional = false);
 
 struct RequestConfiguration {
@@ -37,6 +38,7 @@ public:
             const std::map<std::string, std::string> &credential_changes = {});
   RequestConfiguration Freeze(std::string_view plugin_id) const;
   Json Plugin(std::string_view plugin_id) const;
+  RequestConfiguration FreezeProvider(const Json& route) const;
   void WithGateway(const std::string& revision, const std::function<void()>& action) const;
   const std::filesystem::path &Path() const { return files_.Path(); }
   static Json Defaults();

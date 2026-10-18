@@ -6,6 +6,7 @@ final class MailboxWorkspaceViewController: NSViewController {
     let store: MailboxStore
     private let isEnabled: (MailboxModuleID) -> Bool
     private let remembersModule: Bool
+    private let chatModelOptions: () -> [MailboxNewConversationModelOption]
     private let rail = MailboxSurface(MailboxUI.sidebar)
     private let content = NSView()
     private let navigation = NSStackView()
@@ -13,12 +14,14 @@ final class MailboxWorkspaceViewController: NSViewController {
     private var registryObserver: NSObjectProtocol?
     private(set) var selectedModule: MailboxModuleID
     private var buttons: [MailboxModuleID: MailboxNavigationButton] = [:]
-    private lazy var chat = MailboxMessagesWorkspace(module: .chat, store: store)
+    private lazy var chat = MailboxMessagesWorkspace(module: .chat, store: store, modelOptionsProvider: chatModelOptions)
     private lazy var inbox = MailboxMessagesWorkspace(module: .inbox, store: store)
     private(set) lazy var terminal = MailboxTerminalWorkspace(store: store)
 
     init(store: MailboxStore = .shared, remembersModule: Bool = true,
+         chatModelOptions: @escaping () -> [MailboxNewConversationModelOption] = MailboxNewConversationModelCatalog.liveOptions,
          isEnabled: @escaping (MailboxModuleID) -> Bool = { PluginRegistry.shared.allowsHostModuleAction(.open, for: $0.pluginKey) }) {
+        self.chatModelOptions = chatModelOptions
         self.store = store; self.isEnabled = isEnabled; self.remembersModule = remembersModule
         selectedModule = remembersModule
             ? MailboxModuleID(rawValue: UserDefaults.standard.string(forKey: "mailbox.workspace") ?? "inbox") ?? .inbox

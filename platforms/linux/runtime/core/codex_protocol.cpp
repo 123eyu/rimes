@@ -174,6 +174,11 @@ CLIAction CodexProtocol::Consume(const Json& value, std::string& outbound) {
                     "Skill，调用图片生成工具，按下面的用户描述创作一张图片。\n图片由应用单独保存和"
                     "展示；请勿把本地路径、Markdown 图片或 base64 放入回复。\n\n用户描述：" +
                     request_.text;
+            if (request_.mode != CodexMode::Image && !request_.prepared_prompt.empty()) {
+                if (request_.prepared_prompt.size() > CodexContract().at("maximumWireBytes").get<std::size_t>() ||
+                    request_.prepared_prompt.find('\0') != request_.prepared_prompt.npos) return Fail(CodexError::Protocol);
+                prompt = request_.prepared_prompt;
+            }
             input.push_back({{"type", "text"}, {"text", prompt}});
             Json params{{"threadId", thread_},
                         {"input", input},

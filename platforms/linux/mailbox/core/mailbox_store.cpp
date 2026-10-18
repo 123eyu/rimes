@@ -280,6 +280,17 @@ std::size_t Unread(const Snapshot& state) {
     return rows.size();
 }
 std::string Revision(const Json& thread) { return runtime::Sha256(thread.dump()); }
+std::string ConversationRevision(const Json& thread) {
+    // Viewing, renaming or archiving must not invalidate a prepared reply.
+    // All source, transcript and generation changes still revoke admission.
+    return runtime::Sha256(Json{
+        {"id", thread.at("id")},
+        {"source", thread.at("source")},
+        {"messages", thread.at("messages")},
+        {"generation", thread.value("generation", Json())},
+        {"workspace",
+         Module(thread)}}.dump());
+}
 Store::Store(std::filesystem::path root, Limits limits, Commit commit)
     : files_(root), limits_(limits), commit_(std::move(commit)) {}
 Snapshot Store::Load() const {
@@ -448,6 +459,47 @@ Json Store::BeginGeneration(const Json& source, const std::string& title, const 
     Save(state.document);
     return thread;
 }
+Json Store::BeginReply(const std::string& id, const std::string& expected, const std::string& body,
+                       const std::string& generation, const std::string& format, bool retry,
+                       const std::string& resolved_model) {
+    Need(capsule::LooksLikeUuid(generation) && Is(format, {"plain", "markdown", "json"}));
+    return Change(
+        id, expected,
+        [&](Json& thread) {
+            Need(AI(thread.at("source")) && Module(thread) == "chat", "此会话不能继续向 AI 提问");
+            Need(Optional(thread, "generation") ||
+                     thread.at("generation").at("phase") != "generating",
+                 "该会话正在生成");
+            if (!resolved_model.empty()) {
+                auto& source = thread.at("source");
+                Need(Optional(source, "model") || source.at("model") == resolved_model,
+                     "此会话的模型已变化");
+                source["model"] = resolved_model;
+            }
+            auto& messages = thread.at("messages");
+            Need(messages.size() + (retry ? 1 : 2) <= limits_.messages, "此会话已达到本地容量上限");
+            const auto date = Now();
+            if (retry) {
+                Need(!Optional(thread, "generation") &&
+                         thread.at("generation").at("phase") == "failed" && !messages.empty() &&
+                         messages.back().at("role") == "user" &&
+                         messages.back().at("kind") == "content",
+                     "此请求无法重试，请发送一条新消息");
+            } else {
+                auto message = NewMessage("user", "content", body, date);
+                message["author"] = "你";
+                messages.push_back(message);
+            }
+            thread["generation"] = {{"id", generation},
+                                    {"phase", "generating"},
+                                    {"expectedFormat", format},
+                                    {"startedAt", date},
+                                    {"linuxOwner", true}};
+            thread["unread"] = false;
+            thread["updatedAt"] = date;
+        },
+        true);
+}
 Json Store::CompleteGeneration(const std::string& id, const std::string& generation,
                                const std::string& response, const std::string& png) {
     auto lock = files_.Lock(false);
@@ -455,6 +507,7 @@ Json Store::CompleteGeneration(const std::string& id, const std::string& generat
     Need(!Optional(thread, "generation") && thread.at("generation").at("id") == generation &&
          thread.at("generation").at("phase") == "generating", "生成任务已失效");
     const auto date = Now(); auto message = NewMessage("inbound", "content", response, date);
+    message["format"] = thread.at("generation").value("expectedFormat", "plain");
     message["author"] = thread.at("source").at("displayName");
     std::string attachment;
     if (!png.empty()) {
@@ -489,11 +542,14 @@ void Store::FailGeneration(const std::string& id, const std::string& generation,
 }
 
 Json Store::Change(const std::string& id, const std::string& expected,
-                   const std::function<void(Json&)>& change) {
+                   const std::function<void(Json&)>& change, bool conversation) {
     auto lock = files_.Lock(false);
     auto state = Load();
     auto& thread = Find(state.document, id);
-    Expected(thread, expected);
+    if (conversation)
+        Need(ConversationRevision(thread) == expected, "此会话已变化，请刷新后重试");
+    else
+        Expected(thread, expected);
     change(thread);
     Save(state.document);
     return thread;

@@ -14,7 +14,8 @@ using AIReceive = std::function<void(AIUpdate)>;
 // Called off the Fcitx event loop. No URL, request, credential or server error
 // body is written to logs. Completion messages come from the fixed enum above.
 void RunAIRequest(std::string text, RequestConfiguration configuration, std::atomic<bool>& cancelled,
-                  AIReceive receive, std::chrono::milliseconds timeout = std::chrono::minutes(2));
+                  AIReceive receive, std::chrono::milliseconds timeout = std::chrono::minutes(2),
+                  std::string prepared_prompt = {});
 class AIWorker {
 public:
     ~AIWorker();

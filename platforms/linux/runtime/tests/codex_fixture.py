@@ -11,6 +11,9 @@ import time
 home = Path(os.environ["CODEX_HOME"])
 mode_file = home / "fixture-mode"
 mode = mode_file.read_text() if mode_file.exists() else "text"
+chat = mode.startswith("chat-")
+if chat:
+    mode = mode[5:]
 assert all(name not in os.environ for name in ("OPENAI_API_KEY", "CODEX_API_KEY", "CODEX_BASE_URL", "NODE_OPTIONS", "PYTHONPATH"))
 assert sys.argv[1] == "app-server" and "--strict-config" in sys.argv
 assert sys.argv[-2:] == ["--listen", "stdio://"]
@@ -62,12 +65,16 @@ for line in sys.stdin:
         p = request["params"]
         assert p["approvalPolicy"] == "never" and p["ephemeral"] and p["personality"] == "none"
         assert p["model"] == "gpt-6-sol" and p["allowProviderModelFallback"] is False
-        assert p["config"]["model_reasoning_effort"] == "high"
+        assert p["config"]["model_reasoning_effort"] == ("medium" if chat else "high")
         result(request, {"thread": {"id": "fixture-thread"}, "model": "other" if mode == "model-mismatch" else "gpt-6-sol"})
     elif method == "turn/start":
         p = request["params"]
-        assert p["threadId"] == "fixture-thread" and p["model"] == "gpt-6-sol" and p["effort"] == "high"
+        assert p["threadId"] == "fixture-thread" and p["model"] == "gpt-6-sol" and p["effort"] == ("medium" if chat else "high")
         assert p["outputSchema"]["properties"]["blocks"]["maxItems"] == 20
+        if chat:
+            prompt = p["input"][0]["text"]
+            assert "USER_PAYLOAD_JSON:\n" in prompt or "CONVERSATION_JSON:\n" in prompt
+            save("last-chat-prompt", prompt)
         save("last-input.json", json.dumps(p, ensure_ascii=False))
         if mode == "malformed":
             os.write(1, b'{"id":4,"id":4,"result":{}}\n')

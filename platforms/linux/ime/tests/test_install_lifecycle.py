@@ -98,6 +98,7 @@ install(FILES program DESTINATION share/applications RENAME org.scholay.rimes.ma
             "share/rimes/capsule/clipboard/history-v1.sqlite3",
             "share/rimes/capsule/master-key", "share/rimes/capsule/reveal-credential-v1",
             "share/rimes/capsule/passwords/fixture.md",
+            "share/rimes/configuration/preferences.json", "share/rimes/configuration/credentials/provider.fixture",
             "share/rimes/gateway/token", "share/rimes/gateway/status.json",
             "share/rimes/ai/codex-home/auth.json", "share/rimes/ai/codex-home/generated_images/fixture.png",
             "share/rimes/mailbox/generations/fixture/.lock",

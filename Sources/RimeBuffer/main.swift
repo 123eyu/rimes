@@ -631,6 +631,20 @@ if let index = CommandLine.arguments.firstIndex(where: { $0 == "capsule-password
     } catch { fputs("Public password fixture operation failed\n", stderr); exit(1) }
 }
 
+if let index = CommandLine.arguments.firstIndex(of: "mailbox-chat-linux-contract"), index + 1 < CommandLine.arguments.count {
+    do {
+        var fixture = try MailboxChatLinuxFixtures.value()
+        let root = URL(fileURLWithPath: #filePath).deletingLastPathComponent()
+        let sources = ["AITextGenerationOptions.swift", "AITextPlugins.swift", "Mailbox/AITextMailboxGenerationCoordinator.swift", "Mailbox/MailboxChatLinuxFixtures.swift"]
+        fixture["sources"] = try Dictionary(uniqueKeysWithValues: sources.map { name in
+            ("Sources/RimeBuffer/" + name, SHA256.hash(data: try Data(contentsOf: root.appendingPathComponent(name))).map { String(format: "%02x", $0) }.joined())
+        })
+        try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
+            .write(to: URL(fileURLWithPath: CommandLine.arguments[index + 1]), options: .atomic)
+        exit(0)
+    } catch { fputs("Mailbox conversation export failed\n", stderr); exit(1) }
+}
+
 if let index = CommandLine.arguments.firstIndex(of: "claude-linux-fixtures"), index + 1 < CommandLine.arguments.count {
     do {
         var fixture = try AITextClaudeLinuxContract.value()

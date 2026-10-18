@@ -321,6 +321,10 @@ GtkWidget *Icon(const std::string &name, int size) {
           cairo_arc(cr, 12, 12, 9, 0, 2 * M_PI);
           line(12, 11, 12, 17);
           line(12, 7, 12, 7.2);
+        } else if (icon == "arrow.up") {
+          line(12, 21, 12, 3);
+          line(5, 10, 12, 3);
+          cairo_line_to(cr, 19, 10);
         } else if (icon == "arrow.down.circle") {
           cairo_arc(cr, 12, 12, 9, 0, 2 * M_PI);
           line(12, 6, 12, 17);

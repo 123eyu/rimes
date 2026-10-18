@@ -21,6 +21,7 @@ std::vector<Json> Filter(const Snapshot& state, const std::string& module,
                          const std::string& query = "", const std::string& filter = "all");
 std::size_t Unread(const Snapshot& state);
 std::string Revision(const Json& thread);
+std::string ConversationRevision(const Json& thread);
 double Now(); // Foundation Date's seconds since 2001-01-01, not Unix seconds.
 void Validate(Json& document, const Limits& limits = {});
 class Store {
@@ -41,6 +42,9 @@ class Store {
     // This lets a separately opened Mailbox distinguish live tasks from crashes.
     Json BeginGeneration(const Json& source, const std::string& title, const std::string& prompt,
                          const std::string& generation, const std::string& workspace);
+    Json BeginReply(const std::string& thread, const std::string& expected, const std::string& body,
+                    const std::string& generation, const std::string& format = "plain",
+                    bool retry = false, const std::string& resolved_model = "");
     Json CompleteGeneration(const std::string& thread, const std::string& generation,
                             const std::string& response, const std::string& png = "");
     void FailGeneration(const std::string& thread, const std::string& generation,
@@ -74,7 +78,7 @@ class Store {
     Snapshot Load() const;
     void Save(Json document) const;
     Json Change(const std::string& id, const std::string& expected,
-                const std::function<void(Json&)>& change);
+                const std::function<void(Json&)>& change, bool conversation = false);
     runtime::PrivateDirectory files_;
     Limits limits_;
     Commit commit_;

@@ -1,9 +1,10 @@
-#include "native_buffer_metrics.hpp"
 #include "configuration.hpp"
+#include "native_buffer_metrics.hpp"
 #include "shortcuts.hpp"
 #include <algorithm>
 #include <cmath>
 #include <curl/curl.h>
+#include <limits>
 #include <memory>
 
 namespace rimes::runtime {
@@ -313,6 +314,9 @@ void ConfigurationStore::Validate(const Json &value) {
             Identity(provider.at("id")));
     Require(ids.insert(provider.at("id")).second);
     provider.erase("id");
+    Require(provider.contains("revision") && provider.at("revision").is_number_unsigned() &&
+            provider.at("revision").get<std::uint64_t>() > 0);
+    provider.erase("revision");
     if (provider.contains("credential")) {
       Require(Identity(provider.at("credential")));
       provider.erase("credential");
@@ -341,6 +345,9 @@ Json ConfigurationStore::Load() const {
   if (value.is_object() && !value.contains("gatewayEnabled")) value["gatewayEnabled"] = true;
   if (value.is_object() && !value.contains("gatewayPort")) value["gatewayPort"] = 47700;
   if (value.is_object() && !value.contains("gatewayBlockedSources")) value["gatewayBlockedSources"] = Json::array();
+  for (auto& provider : value.at("providers"))
+      if (!provider.contains("revision"))
+          provider["revision"] = std::uint64_t(1);
   Validate(value);
   return value;
 }
@@ -365,15 +372,17 @@ bool ConfigurationStore::Save(
   if (current.at("revision") != expected)
     throw std::runtime_error("设置已在其他窗口更新，请重新加载后再保存。");
   // UI callers cannot bind a provider to someone else's saved credential.
-  for (const auto &provider : next.at("providers")) {
-    const auto id = provider.at("id").get<std::string>();
-    const auto old = std::find_if(
-        current.at("providers").begin(), current.at("providers").end(),
-        [&](const Json &p) { return p.at("id") == id; });
-    const auto old_ref = old == current.at("providers").end()
-                             ? ""
-                             : old->value("credential", "");
-    Require(provider.value("credential", "") == old_ref);
+  for (auto& provider : next.at("providers")) {
+      const auto id = provider.at("id").get<std::string>();
+      const auto old = std::find_if(current.at("providers").begin(), current.at("providers").end(),
+                                    [&](const Json& p) { return p.at("id") == id; });
+      const auto old_ref = old == current.at("providers").end() ? "" : old->value("credential", "");
+      Require(provider.value("credential", "") == old_ref);
+      const auto old_revision = old == current.at("providers").end()
+                                    ? std::uint64_t(1)
+                                    : old->at("revision").get<std::uint64_t>();
+      Require(!provider.contains("revision") || provider.at("revision") == old_revision);
+      provider["revision"] = old_revision;
   }
   for (auto it = next.at("plugins").begin(); it != next.at("plugins").end();
        ++it)
@@ -392,6 +401,16 @@ bool ConfigurationStore::Save(
       credentials_.Write(id + "." + reference, secret);
       (*provider)["credential"] = reference;
     }
+  }
+  for (auto& provider : next.at("providers")) {
+      const auto old =
+          std::find_if(current.at("providers").begin(), current.at("providers").end(),
+                       [&](const Json& value) { return value.at("id") == provider.at("id"); });
+      if (old != current.at("providers").end() && *old != provider) {
+          const auto revision = old->at("revision").get<std::uint64_t>();
+          Require(revision < std::numeric_limits<std::uint64_t>::max());
+          provider["revision"] = revision + 1;
+      }
   }
   next["revision"] = RandomID();
   files_.Write("preferences.json", next.dump());
@@ -451,5 +470,43 @@ RequestConfiguration ConfigurationStore::Freeze(std::string_view id) const {
         result.provider.erase("credential");
       }
   return result;
+}
+// Linux currently stores one text model per profile. Both UUIDs identify that
+// stable slot; profile revision changes on edits/credential rotation, not on
+// unrelated UI settings or the globally selected provider.
+Json ProviderRoute(const Json& provider) {
+    const auto id = provider.at("id").get<std::string>();
+    Require(Identity(id));
+    const auto uuid = id.substr(0, 8) + "-" + id.substr(8, 4) + "-" + id.substr(12, 4) + "-" +
+                      id.substr(16, 4) + "-" + id.substr(20);
+    return {{"profileID", uuid}, {"routeID", uuid}, {"profileRevision", provider.at("revision")}};
+}
+RequestConfiguration ConfigurationStore::FreezeProvider(const Json& route) const {
+    auto lock = files_.Lock();
+    const auto value = Load();
+    for (const auto& provider : value.at("providers")) {
+        auto expected = ProviderRoute(provider);
+        auto normalized = route;
+        for (const auto* key : {"profileID", "routeID"}) {
+            auto id = normalized.at(key).get<std::string>();
+            std::transform(id.begin(), id.end(), id.begin(),
+                           [](unsigned char c) { return std::tolower(c); });
+            normalized[key] = id;
+        }
+        if (expected != normalized)
+            continue;
+        Require(!provider.at("model").get<std::string>().empty());
+        RequestConfiguration result{value.at("revision"), Json::object(), provider, {}};
+        if (provider.contains("credential")) {
+            const auto bytes = credentials_.Read(provider.at("id").get<std::string>() + "." +
+                                                     provider.at("credential").get<std::string>(),
+                                                 8192);
+            Require(bytes.has_value() && Plain(*bytes, 8192));
+            result.credential = *bytes;
+        }
+        result.provider.erase("credential");
+        return result;
+    }
+    throw std::runtime_error("已保存的 Provider 模型路由不可用，请新建会话后重新选择模型");
 }
 } // namespace rimes::runtime

@@ -1,13 +1,14 @@
 #include "background_jobs.hpp"
 #include "capsule_text.hpp"
+#include "chat_jobs.hpp"
 #include "clipboard_desktop.hpp"
 #include "desktop.hpp"
 #include "inbox_actions.hpp"
 #include "launcher_client.hpp"
 #include "mailbox_buffer_client.hpp"
+#include "mailbox_toast.hpp"
 #include "mailbox_tokens.hpp"
 #include "mailbox_workspace.hpp"
-#include "mailbox_toast.hpp"
 #include "official_catalog.hpp"
 #include <algorithm>
 #include <atomic>
@@ -72,6 +73,7 @@ GtkWidget* LineLabel(const std::string& text, const char* style, int line_height
     auto* attributes = pango_attr_list_new();
     pango_attr_list_insert(attributes,
                            pango_attr_line_height_new_absolute(line_height * PANGO_SCALE));
+    gtk_label_set_single_line_mode(GTK_LABEL(label), TRUE);
     gtk_label_set_attributes(GTK_LABEL(label), attributes);
     pango_attr_list_unref(attributes);
     return label;
@@ -224,6 +226,8 @@ void ApplyTheme(const std::string& requested, GtkWidget* root) {
         "button.mailbox-tool:hover { background: " +
         c("selection") +
         "; }"
+        ".mailbox #mailbox-model-picker button, .mailbox #mailbox-model-picker cellview { "
+        "font-size: 11px; min-height: 0; padding: 0 4px; }"
         ".mailbox button.mailbox-send { background: " +
         c("accent") + "; color: " + c("background") +
         "; }"
@@ -294,6 +298,12 @@ struct Workspace::Impl {
     std::shared_ptr<std::atomic<bool>> alive = std::make_shared<std::atomic<bool>>(true);
     std::shared_ptr<std::atomic<bool>> load_token = std::make_shared<std::atomic<bool>>(false);
     runtime::BackgroundJobs jobs, preview_jobs;
+    ChatJobs chat_jobs;
+    Json chat_models = Json::array(), fixture_previews = Json::object();
+    std::set<std::string> chat_submitting;
+    std::string chat_model, pending_chat_selection;
+    GtkWidget *model_picker = nullptr, *streaming = nullptr, *cancel_chat = nullptr,
+              *retry_chat = nullptr;
     std::unique_ptr<capsule::DesktopClipboard> clipboard;
     std::vector<std::pair<GtkWidget*, bool>> message_actions;
     std::deque<std::function<void()>> previews;
@@ -430,6 +440,7 @@ struct Workspace::Impl {
             g_file_monitor_cancel(monitor);
             g_object_unref(monitor);
         }
+        chat_jobs.Shutdown();
         jobs.Shutdown();
         preview_jobs.Shutdown();
         clipboard.reset();
@@ -463,6 +474,8 @@ struct Workspace::Impl {
             Named(IconButton("square.and.pencil", "新对话", [this] { SelectThread(""); }),
                   "mailbox-new-chat");
         Class(new_chat, "mailbox-tool");
+        gtk_widget_set_size_request(new_chat, 28, 28);
+        gtk_widget_show_all(new_chat);
         gtk_widget_set_no_show_all(new_chat, TRUE);
         Add(title_row, new_chat);
         auto* close = IconButton("chevron.left", "收起列表", [this] { ToggleSidebar(); });
@@ -531,9 +544,30 @@ struct Workspace::Impl {
         gtk_overlay_add_overlay(GTK_OVERLAY(composer_overlay), placeholder);
         gtk_overlay_set_overlay_pass_through(GTK_OVERLAY(composer_overlay), placeholder, TRUE);
         auto* actions = Row(Metric("actionSpacing"));
+        model_picker = Named(gtk_combo_box_text_new(), "mailbox-model-picker");
+        gtk_widget_set_no_show_all(model_picker, TRUE);
+        gtk_widget_set_size_request(model_picker, -1, 18);
+        auto* cells = gtk_cell_layout_get_cells(GTK_CELL_LAYOUT(model_picker));
+        for (auto* item = cells; item; item = item->next)
+            if (GTK_IS_CELL_RENDERER_TEXT(item->data))
+                g_object_set(item->data, "ellipsize", PANGO_ELLIPSIZE_MIDDLE, "max-width-chars", 32,
+                             nullptr);
+        g_list_free(cells);
+        Add(actions, model_picker);
+        g_signal_connect(model_picker, "changed", G_CALLBACK(+[](GtkComboBox* widget, gpointer p) {
+                             auto* self = static_cast<Impl*>(p);
+                             if (self->restoring)
+                                 return;
+                             const auto* id = gtk_combo_box_get_active_id(widget);
+                             self->chat_model = id ? id : "";
+                             self->ComposerState();
+                         }),
+                         this);
         hint = Label("", "mailbox-hint");
         Add(actions, hint, true);
         send = Named(Button("添加备注", [this] { Submit(); }, "mailbox-send"), "mailbox-send");
+        gtk_button_set_image(GTK_BUTTON(send), Icon("arrow.up", 12));
+        gtk_button_set_always_show_image(GTK_BUTTON(send), TRUE);
         gtk_widget_set_size_request(send, -1, 28);
         Add(actions, send);
         auto* input = Column(5);
@@ -634,6 +668,7 @@ struct Workspace::Impl {
         if (clipboard)
             clipboard->Configure(false, value);
         if (value) {
+            chat_jobs.CancelAll();
             if (toast) toast->Hide();
             if (dialog)
                 gtk_widget_destroy(dialog);
@@ -698,7 +733,7 @@ struct Workspace::Impl {
             atk_object_set_name(gtk_widget_get_accessible(nav.at("inbox")), label.c_str());
         }
     }
-    void SelectModule(const std::string& requested) {
+    void SelectModule(const std::string& requested, bool mark_read = true) {
         if (!IsModule(requested) || !grants.count(requested))
             return;
         Revoke();
@@ -720,7 +755,8 @@ struct Workspace::Impl {
         UpdateNavigation();
         Layout(gtk_widget_get_allocated_width(overlay));
         SaveGeometrySoon();
-        MarkRead();
+        if (mark_read)
+            MarkRead();
     }
     void EnsureSelection() {
         if (Selected() && Module(*Selected()) == module)
@@ -803,7 +839,7 @@ struct Workspace::Impl {
             if (thread.at("unread") == true)
                 Add(title, Label("•", "mailbox-unread"));
             Add(lines, title);
-            Add(lines, LineLabel(capsule::CharacterPrefix(Preview(thread), 160),
+            Add(lines, LineLabel(capsule::CharacterPrefix(capsule::OneLine(Preview(thread)), 160),
                                  "mailbox-list-preview", 19));
             Add(lines, LineLabel(thread.at("source").at("displayName").get<std::string>() + " · " +
                                      Time(thread.at("updatedAt")) + " · " + Status(thread),
@@ -836,6 +872,7 @@ struct Workspace::Impl {
         Clear(toolbar);
         message_actions.clear();
         previews.clear();
+        streaming = cancel_chat = retry_chat = nullptr;
         Clear(transcript);
         Add(toolbar, Tool("sidebar.left", "显示或隐藏列表", [this] { ToggleSidebar(); }));
         if (!thread) {
@@ -951,8 +988,36 @@ struct Workspace::Impl {
                 Add(transcript, padded);
             }
         }
+        if (thread && module == "chat" && thread->contains("generation") &&
+            thread->at("generation").is_object()) {
+            const auto& generation = thread->at("generation");
+            if (generation.at("phase") == "generating") {
+                auto* block = Column(Metric("messageSpacing"));
+                auto* identity = Row(8);
+                Add(identity,
+                    LineLabel(thread->at("source").at("displayName"), "mailbox-author", 14), true);
+                Add(identity, LineLabel("生成中", "mailbox-time", 14));
+                Add(block, identity);
+                streaming = Named(Paragraph("正在生成…"), "mailbox-chat-preview");
+                Add(block, streaming);
+                Add(transcript, Pad(block));
+                cancel_chat = Named(Button("停止生成", [this] { chat_jobs.Cancel(selected); }),
+                                    "mailbox-chat-cancel");
+                Add(toolbar, cancel_chat);
+            } else if (generation.at("phase") == "failed") {
+                auto* failure = Column(8);
+                Add(failure, Paragraph(generation.value("failureMessage", "生成未完成，请重试"),
+                                       "mailbox-secondary"));
+                retry_chat =
+                    Named(Button("重试", [this] { SubmitChat(true); }), "mailbox-chat-retry");
+                gtk_widget_set_halign(retry_chat, GTK_ALIGN_START);
+                Add(failure, retry_chat);
+                Add(transcript, Pad(failure));
+            }
+        }
         gtk_widget_show_all(toolbar);
         gtk_widget_show_all(transcript);
+        UpdateChatPreview();
         ComposerState();
         NextPreview();
     }
@@ -966,12 +1031,29 @@ struct Workspace::Impl {
         gtk_label_set_text(GTK_LABEL(placeholder), note ? "写下本地备注…" : "输入消息…");
         gtk_widget_set_visible(placeholder, Text(composer).empty());
         gtk_button_set_label(GTK_BUTTON(send), note ? "添加备注" : "发送");
-        gtk_label_set_text(GTK_LABEL(hint),
-                           note ? "本地备注 · 不会发送给来源" : "选择连接器，开始对话");
+        const bool new_chat = module == "chat" && !thread;
+        const bool running = thread && thread->contains("generation") &&
+                             thread->at("generation").is_object() &&
+                             thread->at("generation").at("phase") == "generating";
+        const bool active = !selected.empty() && chat_jobs.State(selected).has_value();
+        const bool submitting = chat_submitting.count(DraftKey());
+        gtk_widget_set_visible(model_picker, new_chat);
+        gtk_widget_set_sensitive(model_picker, !submitting && (fixture || Allowed()));
+        gtk_label_set_text(GTK_LABEL(hint), note       ? "本地备注 · 不会发送给来源"
+                                            : new_chat ? ""
+                                            : running ? "正在生成 · 可先写下下一条消息"
+                                                      : "Enter 发送 · Shift Enter 换行");
+        if (cancel_chat)
+            gtk_widget_set_sensitive(cancel_chat,
+                                     Allowed() && chat_jobs.State(selected).has_value());
+        if (retry_chat)
+            gtk_widget_set_sensitive(retry_chat, Allowed() && !submitting && !busy && !active);
         gtk_widget_set_sensitive(composer,
                                  !Protected() && grants.count(module) && module != "terminal");
-        gtk_widget_set_sensitive(send, Allowed() && !busy && note &&
-                                           !capsule::TrimText(Text(composer)).empty());
+        gtk_widget_set_sensitive(
+            send, Allowed() && !busy && !submitting && !running && !active &&
+                      (note || (module == "chat" && (thread || !chat_model.empty()))) &&
+                      !capsule::TrimText(Text(composer)).empty());
         atk_object_set_name(gtk_widget_get_accessible(composer), note ? "本地备注" : "消息输入框");
     }
     GtkWidget* MessageAction(const char* icon, const char* title, const std::string& id,
@@ -1291,7 +1373,8 @@ struct Workspace::Impl {
         }
     }
     void Mutate(std::function<void(Store&, const Json&)> action,
-                std::function<void()> completed = {}, std::function<void()> committed = {}) {
+                std::function<void()> completed = {}, std::function<void()> committed = {},
+                bool quiet = false) {
         if (!Allowed() || busy || !Selected())
             return;
         const auto row = *Selected();
@@ -1307,7 +1390,7 @@ struct Workspace::Impl {
         ComposerState();
         auto token = std::make_shared<std::atomic<bool>>(false);
         if (!jobs.Run(token, [this, life, authorization, epoch, row, grant, plugin, action,
-                              completed, committed] {
+                              completed, committed, quiet] {
                 bool ok = false;
                 try {
                     packages.WithEnabledGrant(
@@ -1327,7 +1410,7 @@ struct Workspace::Impl {
                         false);
                 } catch (const std::exception&) {
                 }
-                Post([this, life, authorization, epoch, ok, completed, committed] {
+                Post([this, life, authorization, epoch, ok, completed, committed, quiet] {
                     if (!life->load())
                         return;
                     busy = false;
@@ -1339,7 +1422,9 @@ struct Workspace::Impl {
                         current = authorization->epoch == epoch;
                     }
                     if (current) {
-                        Notice(ok ? "已保存" : "操作未完成，数据或授权可能已变化；原内容已保留。");
+                        if (!quiet)
+                            Notice(ok ? "已保存"
+                                      : "操作未完成，数据或授权可能已变化；原内容已保留。");
                         if (ok && completed)
                             completed();
                     }
@@ -1352,7 +1437,159 @@ struct Workspace::Impl {
             ComposerState();
         }
     }
+    void LoadChatModels(const Json& configuration) {
+        auto options = Json::array();
+        for (const auto* kind : {"codexCLI", "claudeCodeCLI"}) {
+            const auto plugin =
+                std::string(kind) == "codexCLI" ? "builtin.codex-cli" : "builtin.claude-code-cli";
+            const auto model = runtime::FieldDefaults(runtime::PluginFields(plugin)).at("model");
+            const std::string name = std::string(kind) == "codexCLI" ? "Codex CLI" : "Claude Code";
+            options.push_back(
+                {{"id", kind},
+                 {"title", name + " · 默认模型"},
+                 {"source",
+                  {{"kind", kind},
+                   {"displayName", std::string(kind) == "codexCLI" ? "ChatGPT" : "Claude"},
+                   {"model", model},
+                   {"replyCapability", "aiContinuation"}}}});
+        }
+        for (const auto& provider : configuration.at("providers")) {
+            if (provider.at("model") == "")
+                continue;
+            const auto reference = runtime::ProviderRoute(provider);
+            const std::string model = provider.at("model"), name = provider.at("name");
+            options.push_back(
+                {{"id", reference.dump()},
+                 {"title", name + " · " + model},
+                 {"preferred", provider.at("id") == configuration.at("activeProvider")},
+                 {"source",
+                  {{"kind", "openAICompatible"},
+                   {"displayName", name},
+                   {"model", model},
+                   {"providerRoute", reference},
+                   {"replyCapability", "aiContinuation"}}}});
+        }
+        if (options == chat_models)
+            return;
+        chat_models = std::move(options);
+        restoring = true;
+        gtk_combo_box_text_remove_all(GTK_COMBO_BOX_TEXT(model_picker));
+        std::string preferred = chat_models[0].at("id");
+        bool retained = false;
+        for (const auto& option : chat_models) {
+            const std::string id = option.at("id"), title = option.at("title");
+            gtk_combo_box_text_append(GTK_COMBO_BOX_TEXT(model_picker), id.c_str(), title.c_str());
+            retained = retained || id == chat_model;
+            if (option.value("preferred", false))
+                preferred = id;
+        }
+        if (!retained)
+            chat_model = preferred;
+        gtk_combo_box_set_active_id(GTK_COMBO_BOX(model_picker), chat_model.c_str());
+        restoring = false;
+    }
+    void UpdateChatPreview() {
+        if (!streaming || Protected())
+            return;
+        if (fixture && fixture_previews.contains(selected)) {
+            gtk_label_set_text(GTK_LABEL(streaming),
+                               fixture_previews.at(selected).get<std::string>().c_str());
+            return;
+        }
+        const auto event = chat_jobs.State(selected);
+        gtk_label_set_text(GTK_LABEL(streaming),
+                           event && !event->preview.empty() ? event->preview.c_str() : "正在生成…");
+    }
+    void SubmitChat(bool retry = false) {
+        if (!Allowed() || busy || module != "chat" || chat_submitting.count(DraftKey()))
+            return;
+        ChatRequest request;
+        request.body = Text(composer);
+        request.retry = retry;
+        if (const auto* thread = Selected()) {
+            if (thread->at("source").at("replyCapability") != "aiContinuation")
+                return;
+            if (thread->contains("generation") && thread->at("generation").is_object() &&
+                thread->at("generation").at("phase") == "generating")
+                return;
+            request.thread = selected;
+            request.expected = ConversationRevision(*thread);
+        } else {
+            for (const auto& option : chat_models)
+                if (option.at("id") == chat_model)
+                    request.source = option.at("source");
+            if (request.source.is_null())
+                return;
+        }
+        if (!retry && capsule::TrimText(request.body).empty())
+            return;
+        const auto key = DraftKey(), body = request.body;
+        const auto revision = draft_revisions[key];
+        const auto life = alive;
+        const auto authorization = access;
+        const auto grant = grants.at("chat");
+        chat_submitting.insert(key);
+        Notice("");
+        ComposerState();
+        auto consumed = std::make_shared<bool>(false);
+        const bool accepted = chat_jobs.Start(
+            request,
+            [this, authorization, grant](const auto& write) {
+                try {
+                    packages.WithEnabledGrant(
+                        Plugin("chat"), grant,
+                        [&] {
+                            std::lock_guard lock(authorization->mutex);
+                            if (authorization->alive && !authorization->protected_session)
+                                write();
+                        },
+                        false);
+                } catch (...) {
+                }
+            },
+            [this, life, consumed, key, body, revision, retry](ChatEvent event) {
+                Post([this, life, consumed, key, body, revision, retry, event] {
+                    if (!life->load())
+                        return;
+                    if (event.admitted && !*consumed) {
+                        *consumed = true;
+                        chat_submitting.erase(key);
+                        if (!retry && drafts[key] == body && draft_revisions[key] == revision) {
+                            drafts.erase(key);
+                            if (DraftKey() == key)
+                                RestoreDraft();
+                        }
+                        if (key == "chat:" && DraftKey() == key && !Protected()) {
+                            // Carry text entered during admission to the created conversation.
+                            drafts["chat:" + event.thread] = drafts[key];
+                            drafts.erase(key);
+                            pending_chat_selection = event.thread;
+                        }
+                        Refresh();
+                    }
+                    if (event.finished) {
+                        chat_submitting.erase(key);
+                        if (!event.message.empty() && !Protected() &&
+                            (selected == event.thread || DraftKey() == key))
+                            Notice(event.message);
+                        Refresh();
+                    } else if (selected == event.thread)
+                        UpdateChatPreview();
+                    ComposerState();
+                });
+            });
+        if (!accepted) {
+            chat_submitting.erase(key);
+            Notice("对话任务繁忙，请稍后重试");
+            ComposerState();
+        }
+    }
     void Submit() {
+        if (module == "chat" &&
+            (!Selected() || Selected()->at("source").at("replyCapability") == "aiContinuation")) {
+            SubmitChat();
+            return;
+        }
         if (!Selected() || Selected()->at("source").at("replyCapability") != "localNotesOnly")
             return;
         const auto body = Text(composer);
@@ -1417,7 +1654,8 @@ struct Workspace::Impl {
         if (!Allowed() || busy || !Selected() || Selected()->at("unread") != true ||
             !gtk_window_is_active(GTK_WINDOW(window)) || !gtk_widget_get_visible(window))
             return;
-        Mutate([](Store& store, const Json& row) { store.MarkRead(row.at("id"), Revision(row)); });
+        Mutate([](Store& store, const Json& row) { store.MarkRead(row.at("id"), Revision(row)); },
+               {}, {}, true);
     }
     void Layout(int available) {
         narrow = available < Metric("sidebarBreakpoint");
@@ -1507,7 +1745,7 @@ struct Workspace::Impl {
                 auto loaded = std::make_shared<Snapshot>();
                 std::map<std::string, std::string> enabled;
                 std::string next_theme = "night";
-                Json prefs = Json::object();
+                Json prefs = Json::object(), configuration;
                 bool ok = false, prefs_ok = true, storage_busy = false;
                 try {
                     *loaded = Store(root).Read();
@@ -1525,9 +1763,9 @@ struct Workspace::Impl {
                 } catch (...) {
                 }
                 try {
-                    next_theme = runtime::ConfigurationStore(runtime::UserRoot() / "configuration")
-                                     .Load()
-                                     .at("theme");
+                    configuration =
+                        runtime::ConfigurationStore(runtime::UserRoot() / "configuration").Load();
+                    next_theme = configuration.at("theme");
                 } catch (...) {
                 }
                 try {
@@ -1544,8 +1782,8 @@ struct Workspace::Impl {
                     prefs_ok = false;
                     prefs = Json::object();
                 }
-                Post([this, life, token, loaded, enabled, next_theme, prefs, prefs_ok, ok,
-                      storage_busy] {
+                Post([this, life, token, loaded, enabled, next_theme, prefs, configuration,
+                      prefs_ok, ok, storage_busy] {
                     if (!life->load() || token->load())
                         return;
                     refresh_running = false;
@@ -1557,12 +1795,32 @@ struct Workspace::Impl {
                     if (ok)
                         state = *loaded;
                     const bool changed = grants != enabled;
+                    if (grants.count("chat") &&
+                        (!enabled.count("chat") || grants.at("chat") != enabled.at("chat")))
+                        chat_jobs.CancelAll();
                     grants = enabled;
+                    if (!configuration.is_null())
+                        LoadChatModels(configuration);
+                    if (!pending_chat_selection.empty()) {
+                        for (const auto& row : state.document.at("threads"))
+                            if (row.at("id") == pending_chat_selection) {
+                                if (module == "chat" && selected.empty()) {
+                                    selected = pending_chat_selection;
+                                    selections["chat"] = selected;
+                                    creating["chat"] = false;
+                                    RestoreDraft();
+                                }
+                                pending_chat_selection.clear();
+                                break;
+                            }
+                    }
                     if (toast && !toast->Target().empty()) {
                         bool present = false;
                         for (const auto& row : state.document.at("threads"))
-                            if (row.at("id") == toast->Target() && grants.count(Module(row))) present = true;
-                        if (!present) toast->Hide();
+                            if (row.at("id") == toast->Target() && grants.count(Module(row)))
+                                present = true;
+                        if (!present)
+                            toast->Hide();
                     }
                     if (theme != next_theme) {
                         theme = next_theme;
@@ -1581,6 +1839,7 @@ struct Workspace::Impl {
                     if (grants.empty()) {
                         selected.clear();
                         Clear(index);
+                        streaming = cancel_chat = retry_chat = nullptr;
                         Clear(transcript);
                         restoring = true;
                         gtk_text_buffer_set_text(gtk_text_view_get_buffer(GTK_TEXT_VIEW(composer)),
@@ -1666,7 +1925,7 @@ struct Workspace::Impl {
             this);
     }
     bool Open(const std::string& requested, const std::string& thread) {
-        if (!ready || Protected())
+        if (!ready || busy || Protected())
             return false;
         if (!requested.empty() && !IsModule(requested))
             return false;
@@ -1676,7 +1935,10 @@ struct Workspace::Impl {
                 if (row.at("id") == thread) {
                     if (!grants.count(Module(row)))
                         return false;
-                    SelectModule(Module(row));
+                    // Select the requested row before marking anything read.
+                    // Selecting the module's previous row first could start a
+                    // write and silently reject the following deep link.
+                    SelectModule(Module(row), false);
                     SelectThread(thread);
                     found = true;
                     break;
@@ -1739,18 +2001,20 @@ bool Workspace::NotifyCompleted(const std::string& id) {
 void Workspace::Protect(bool value) { impl_->Protect(value); }
 bool Workspace::Protected() const { return impl_->Protected(); }
 void Workspace::Fixture(Snapshot state, const std::string& theme, const std::string& module,
-                        const std::string& thread) {
+                        const std::string& thread, const Json& previews) {
     if (!impl_->fixture)
         throw std::runtime_error("Fixture rendering requires an isolated window");
     Validate(state.document);
     impl_->state = std::move(state);
+    impl_->fixture_previews = previews;
+    impl_->LoadChatModels(runtime::ConfigurationStore::Defaults());
     impl_->theme = theme;
     ApplyTheme(theme, impl_->root_view);
     impl_->ready = impl_->storage_available = true;
     impl_->grants = {{"terminal", "fixture"}, {"chat", "fixture"}, {"inbox", "fixture"}};
     impl_->RenderNavigation();
     impl_->SelectModule(module);
-    if (!thread.empty())
+    if (!thread.empty() || module == "chat")
         impl_->SelectThread(thread);
     gtk_widget_show_all(impl_->root_view);
     impl_->Layout(gtk_widget_get_allocated_width(impl_->overlay));

@@ -11,6 +11,9 @@ import time
 os.umask(0o077)
 home = Path(os.environ['HOME'])
 mode = (home / 'fixture-mode').read_text()
+chat = mode.startswith('chat-')
+if chat:
+    mode = mode[5:]
 assert all(key not in os.environ for key in ('ANTHROPIC_API_KEY', 'ANTHROPIC_BASE_URL', 'CLAUDE_CODE_OAUTH_TOKEN',
                                            'CLAUDE_CONFIG_DIR', 'NODE_OPTIONS', 'PYTHONPATH', 'CODEX_HOME'))
 assert os.getcwd() == os.environ['TMPDIR']
@@ -42,9 +45,12 @@ for option in required:
     assert option in args
 assert args[args.index('--tools') + 1] == ''
 assert args[args.index('--permission-mode') + 1] == 'dontAsk'
-assert args[-4:] == ['--model', 'claude-opus-5-5', '--effort', 'high']
+assert args[-4:] == ['--model', 'claude-opus-5-5', '--effort', 'medium' if chat else 'high']
 prompt = sys.stdin.read()
 assert '公开' in prompt and 'RIMES_SOURCE_TEXT' not in prompt
+if chat:
+    assert 'USER_PAYLOAD_JSON:\n' in prompt or 'CONVERSATION_JSON:\n' in prompt
+    (home / 'last-chat-prompt').write_text(prompt)
 (home / 'inference-started').write_text('public')
 if mode == 'oversized':
     os.write(1, b'x' * 800000)

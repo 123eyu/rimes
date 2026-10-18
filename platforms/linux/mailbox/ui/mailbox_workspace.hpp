@@ -16,7 +16,7 @@ class Workspace {
     void Protect(bool protected_session);
     bool Protected() const;
     void Fixture(Snapshot state, const std::string& theme, const std::string& module,
-                 const std::string& thread);
+                 const std::string& thread, const Json& previews = Json::object());
     Json Inspect() const;
 
   private:

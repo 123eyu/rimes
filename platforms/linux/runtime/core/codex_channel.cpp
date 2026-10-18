@@ -52,14 +52,14 @@ void MountImageSkill(const std::filesystem::path& workspace) {
         PrivateDirectory(target.parent_path()).Write(target.filename().string(), bytes);
     }
 }
-std::string Preview(const std::string& raw) {
+std::string Preview(const std::string& raw, std::string_view separator) {
     // Reuse the API channel's semantic-block preview; partial JSON syntax and
     // reasoning never become Buffer prose.
     openai::Decoder decoder;
     const auto chunk =
         Json{{"choices", Json::array({{{"index", 0}, {"delta", {{"content", raw}}}}})}};
     decoder.Feed("data: " + chunk.dump() + "\n\n");
-    return decoder.Preview();
+    return decoder.Preview(separator);
 }
 } // namespace
 const char* CodexErrorMessage(CodexError error) {
@@ -201,7 +201,8 @@ void RunCodex(CodexRequest request, std::atomic<bool>& cancelled, CodexReceive r
                     if (cancelled.load())
                         return;
                     if (!event.text.empty()) {
-                        event.text = Preview(event.text);
+                        event.text =
+                            Preview(event.text, request.prepared_prompt.empty() ? "" : "\n\n");
                         if (event.text.empty() || event.text == previous)
                             return;
                         previous = event.text;

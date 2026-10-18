@@ -23,6 +23,10 @@ enum MailboxLinuxFixtures {
         let store = try MailboxStore(storageRoot: root, dateProvider: { Date(timeIntervalSince1970: 1_700_000_000) })
         let chat = try store.beginAIConversation(source: .openAICompatible(identifier: "public-fixture", model: "public-model"), title: "公开测试对话", prompt: "你好，这是公开样例。")
         try store.completeGeneration(chat, response: "## 本地工作区\n\n会话、消息和草稿各自保存。", format: .markdown)
+        let running = try store.beginAIConversation(source: .codexCLI(), title: "公开生成样例", prompt: "请整理这段公开内容。")
+        try store.updateGenerationPreview(running, response: "正在整理公开资料，稍后给出完整回复。")
+        let failed = try store.beginAIConversation(source: .claudeCodeCLI(), title: "公开失败样例", prompt: "这是可以重试的公开问题。")
+        try store.failGeneration(failed, message: "生成未完成，请重试")
         let incoming = try store.createInboundThread(source: .http(source: "公开测试来源"), title: "收到一份新的反馈", body: "这是公开的本地测试消息。\n\n收件不会自动回复来源。")
         _ = try store.addLocalNote(threadID: incoming.id, body: "先在本机记录备注。")
         let archived = try store.createInboundThread(source: .mcp(client: "公开测试客户端"), title: "已归档的样例", body: "已保留的公开历史。")
@@ -85,15 +89,27 @@ enum MailboxLinuxFixtures {
                 }
             }
             palettes[theme] = palette
-            let host = MailboxWorkspaceViewController(store: store, remembersModule: false, isEnabled: { _ in true })
+            let host = MailboxWorkspaceViewController(store: store, remembersModule: false, chatModelOptions: {
+                [MailboxNewConversationModelOption(selection: .init(connectorKind: .codexCLI, modelID: nil), title: "Codex CLI · 默认模型", isPreferred: true, unavailableReason: nil),
+                 MailboxNewConversationModelOption(selection: .init(connectorKind: .claudeCodeCLI, modelID: nil), title: "Claude Code · 默认模型", isPreferred: false, unavailableReason: nil)]
+            }, isEnabled: { _ in true })
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: MailboxUI.defaultSize), styleMask: [.titled, .resizable], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false; window.appearance = appearance
             window.contentViewController = host
             for (name, module, selected) in [("inbox", MailboxModuleID.inbox, incoming.id), ("chat", .chat, chat.threadID),
                                                ("terminal", .terminal, UUID()), ("image", .inbox, picture.id),
-                                               ("accepted", .inbox, accepted.id), ("rejected", .inbox, rejected.id)] {
+                                               ("accepted", .inbox, accepted.id), ("rejected", .inbox, rejected.id), ("chat-running", .chat, running.threadID), ("chat-failed", .chat, failed.threadID), ("chat-new", .chat, UUID())] {
                 if module == .terminal { host.selectModule(.terminal) }
-                else { host.show(selecting: selected) }
+                else if name == "chat-new" {
+                    host.selectModule(.chat)
+                    func findNew(_ view: NSView) -> NSButton? {
+                        if let button = view as? NSButton, button.toolTip == "新对话" { return button }
+                        for child in view.subviews { if let button = findNew(child) { return button } }
+                        return nil
+                    }
+                    guard let button = findNew(host.view) else { throw CocoaError(.coderInvalidValue) }
+                    button.performClick(nil)
+                } else { host.show(selecting: selected) }
                 for (suffix, size) in [("wide", MailboxUI.defaultSize), ("compact", MailboxUI.minimumSize)] {
                     window.setContentSize(size)
                     RunLoop.current.run(until: Date().addingTimeInterval(0.15))
@@ -121,6 +137,8 @@ enum MailboxLinuxFixtures {
         }
         let fixture: [String: Any] = ["purpose": "public-parity-fixture", "document": document, "legacy": legacy, "images": imageHashes,
             "modules": modules, "cases": cases, "palettes": palettes, "selectedInbox": incoming.id.uuidString.lowercased(), "selectedChat": chat.threadID.uuidString.lowercased(),
+            "selectedChatRunning": running.threadID.uuidString.lowercased(), "selectedChatFailed": failed.threadID.uuidString.lowercased(),
+            "generationPreviews": [running.threadID.uuidString.lowercased(): "正在整理公开资料，稍后给出完整回复。"],
             "selectedImage": picture.id.uuidString.lowercased(), "selectedAccepted": accepted.id.uuidString.lowercased(), "selectedRejected": rejected.id.uuidString.lowercased(),
             "sources": sources, "metrics": ["defaultWidth": MailboxUI.defaultSize.width, "defaultHeight": MailboxUI.defaultSize.height,
                 "minimumWidth": MailboxUI.minimumSize.width, "minimumHeight": MailboxUI.minimumSize.height,

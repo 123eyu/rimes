@@ -424,9 +424,10 @@
         "图片任务由 Mailbox 持有，Buffer 关闭可继续；产物只保存并预览于 Mailbox，Skill 按渠道显式挂载。",
         "覆盖 CLI 不存在、需要登录、协议错误、取消进程树、迟到结果和文本/图像不同生命周期。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 171,
-      "url": "https://github.com/scholay/xsime/issues/171"
+      "url": "https://github.com/scholay/xsime/issues/171",
+      "visual_status": "requires_review"
     },
     {
       "order": 22,
@@ -445,9 +446,10 @@
         "源缓冲作为完整请求，显式发起；支持超时、取消和进程回收，凭据由渠道自己管理。",
         "覆盖协议碎片、CLI 缺失、认证失败、用户改文/换框以及插件停用后旧结果拒绝。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 172,
-      "url": "https://github.com/scholay/xsime/issues/172"
+      "url": "https://github.com/scholay/xsime/issues/172",
+      "visual_status": "requires_review"
     },
     {
       "order": 23,
@@ -466,9 +468,10 @@
         "每个会话固定 Provider/模型路由，部分流只在内存，最终回复完成后持久化。",
         "覆盖恢复、取消、错误重试和全局配置变化；明确操作才把结果加入 Buffer。"
       ],
-      "status": "planned",
+      "status": "in_progress",
       "issue": 173,
-      "url": "https://github.com/scholay/xsime/issues/173"
+      "url": "https://github.com/scholay/xsime/issues/173",
+      "visual_status": "requires_review"
     },
     {
       "order": 24,

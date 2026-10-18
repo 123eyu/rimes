@@ -29,6 +29,7 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     private let feedback = MailboxFeedbackLabel()
     private let modelPicker = NSPopUpButton()
     private var modelOptions: [MailboxNewConversationModelOption] = []
+    private let modelOptionsProvider: () -> [MailboxNewConversationModelOption]
     private lazy var send = MailboxActionButton("发送", symbol: "arrow.up") { [weak self] in self?.submit() }
     private var transcriptScroll: NSScrollView!
     private var liveBody: MailboxMessageTextView?
@@ -37,7 +38,9 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     private lazy var toggleList = MailboxActionButton("", symbol: "sidebar.left") { [weak self] in self?.split.toggleSidebar() }
     var returnToTerminal: ((UUID) -> Bool)?
 
-    init(module: MailboxModuleID, store: MailboxStore) {
+    init(module: MailboxModuleID, store: MailboxStore,
+         modelOptionsProvider: @escaping () -> [MailboxNewConversationModelOption] = MailboxNewConversationModelCatalog.liveOptions) {
+        self.modelOptionsProvider = modelOptionsProvider
         self.module = module; self.store = store; snapshot = store.snapshot
         super.init(nibName: nil, bundle: nil)
     }
@@ -324,7 +327,7 @@ final class MailboxMessagesWorkspace: NSViewController, NSSearchFieldDelegate {
     }
 
     private func loadModelOptions() {
-        modelOptions = MailboxNewConversationModelCatalog.liveOptions()
+        modelOptions = modelOptionsProvider()
         modelPicker.removeAllItems()
         modelPicker.addItems(withTitles: modelOptions.map(\.title))
         modelPicker.autoenablesItems = false

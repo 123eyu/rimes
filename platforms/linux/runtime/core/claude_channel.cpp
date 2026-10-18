@@ -33,13 +33,13 @@ ClaudeError ExitError(CLIExit code) {
     }
     return ClaudeError::Protocol;
 }
-std::string Preview(const std::string& raw) {
+std::string Preview(const std::string& raw, std::string_view separator) {
     openai::Decoder decoder;
     decoder.Feed(
         "data: " +
         Json{{"choices", Json::array({{{"index", 0}, {"delta", {{"content", raw}}}}})}}.dump() +
         "\n\n");
-    return decoder.Preview();
+    return decoder.Preview(separator);
 }
 CLISessionOptions Options(const VerifiedCLIExecutable& executable, const Workspace& workspace,
                           const std::vector<std::string>& args, std::chrono::milliseconds timeout,
@@ -237,7 +237,11 @@ void RunClaude(ClaudeRequest request, const std::atomic<bool>& cancelled, Claude
             if (marker == prompt.npos)
                 throw std::runtime_error("missing source marker");
             prompt.replace(marker, std::string("RIMES_SOURCE_TEXT").size(), request.text);
-            if (prompt.size() > inference.maximum_pending_input)
+            if (!request.prepared_prompt.empty())
+                prompt = request.prepared_prompt;
+            if (prompt.find('\0') != prompt.npos ||
+                prompt.size() > contract.at("maximumWireBytes").get<std::size_t>() ||
+                prompt.size() > inference.maximum_pending_input)
                 throw std::runtime_error("request too large");
             std::string previous;
             ClaudeProtocol protocol(
@@ -245,7 +249,8 @@ void RunClaude(ClaudeRequest request, const std::atomic<bool>& cancelled, Claude
                     if (cancelled.load())
                         return;
                     if (!event.text.empty()) {
-                        event.text = Preview(event.text);
+                        event.text =
+                            Preview(event.text, request.prepared_prompt.empty() ? "" : "\n\n");
                         if (event.text.empty() || event.text == previous)
                             return;
                         previous = event.text;

@@ -52,24 +52,29 @@ int RenderFixture(const std::filesystem::path& input, const std::filesystem::pat
             }
         Json result = Json::array();
         for (const auto& theme : {"night", "day", "quiet", "rasta"})
-            for (const auto& scene : {"inbox", "chat", "terminal", "image", "accepted", "rejected"})
+            for (const auto& scene : {"inbox", "chat", "terminal", "image", "accepted", "rejected",
+                                      "chat-new", "chat-running", "chat-failed"})
                 for (bool compact : {false, true}) {
                     Workspace workspace(nullptr, true);
                     const int width = compact ? 680 : 1000, height = compact ? 500 : 700;
                     gtk_widget_set_size_request(workspace.Window(), width, height);
                     gtk_window_set_default_size(GTK_WINDOW(workspace.Window()), width, height);
                     const std::string name = scene;
-                    const std::string module = name == "chat"       ? "chat"
-                                               : name == "terminal" ? "terminal"
-                                                                    : "inbox";
+                    const std::string module = name.rfind("chat", 0) == 0 ? "chat"
+                                               : name == "terminal"       ? "terminal"
+                                                                          : "inbox";
                     const std::string thread =
-                        name == "inbox"      ? sample.at("selectedInbox").get<std::string>()
-                        : name == "chat"     ? sample.at("selectedChat").get<std::string>()
-                        : name == "image"    ? sample.at("selectedImage").get<std::string>()
-                        : name == "accepted" ? sample.at("selectedAccepted").get<std::string>()
-                        : name == "rejected" ? sample.at("selectedRejected").get<std::string>()
-                                             : "";
-                    workspace.Fixture({sample.at("document"), "fixture"}, theme, module, thread);
+                        name == "inbox"  ? sample.at("selectedInbox").get<std::string>()
+                        : name == "chat" ? sample.at("selectedChat").get<std::string>()
+                        : name == "chat-running"
+                            ? sample.at("selectedChatRunning").get<std::string>()
+                        : name == "chat-failed" ? sample.at("selectedChatFailed").get<std::string>()
+                        : name == "image"       ? sample.at("selectedImage").get<std::string>()
+                        : name == "accepted"    ? sample.at("selectedAccepted").get<std::string>()
+                        : name == "rejected"    ? sample.at("selectedRejected").get<std::string>()
+                                                : "";
+                    workspace.Fixture({sample.at("document"), "fixture"}, theme, module, thread,
+                                      sample.value("generationPreviews", Json::object()));
                     gtk_widget_show(workspace.Window());
                     Pump(350);
                     auto filename =

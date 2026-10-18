@@ -19,6 +19,7 @@ struct Transfer {
     openai::Decoder decoder;
     AIError error = AIError::None;
     std::string content_type, previous;
+    bool conversation = false;
     std::size_t wire = 0;
     std::chrono::steady_clock::time_point last;
     Transfer(CURL* handle, std::atomic<bool>& stop, AIReceive callback) : curl(handle), cancelled(stop), receive(std::move(callback)) {}
@@ -57,7 +58,7 @@ size_t Write(char* bytes, size_t size, size_t count, void* opaque) noexcept {
         if (state.decoder.Done()) return 0;
         const auto now = std::chrono::steady_clock::now();
         if (now - state.last >= std::chrono::milliseconds(33)) {
-            auto preview = state.decoder.Preview();
+            auto preview = state.decoder.Preview(state.conversation ? "\n\n" : "");
             if (!preview.empty() && preview != state.previous) {
                 state.previous = preview; state.last = now;
                 state.receive({std::move(preview), false, AIError::None, {}});
@@ -93,13 +94,17 @@ const char* AIErrorMessage(AIError code) {
     }
     return "生成失败，原文已保留";
 }
-void RunAIRequest(std::string text, RequestConfiguration configuration, std::atomic<bool>& cancelled,
-                  AIReceive receive, std::chrono::milliseconds timeout) {
+void RunAIRequest(std::string text, RequestConfiguration configuration,
+                  std::atomic<bool>& cancelled, AIReceive receive,
+                  std::chrono::milliseconds timeout, std::string prepared_prompt) {
     AIError error = AIError::None;
     std::string endpoint, body;
     try {
         endpoint = Endpoint(configuration.provider.at("baseURL"));
-        body = openai::RequestBody(configuration.provider.at("model").get<std::string>(), text, rimes::native::aiSystemPrompt);
+        body = openai::RequestBody(
+            configuration.provider.at("model").get<std::string>(),
+            prepared_prompt.empty() ? text : prepared_prompt, rimes::native::aiSystemPrompt,
+            prepared_prompt.empty() ? openai::kTextLimit : openai::kWireLimit);
         if (configuration.credential.size() > 8192 || std::any_of(configuration.credential.begin(), configuration.credential.end(),
             [](unsigned char c) { return c <= 32 || c >= 127; })) throw std::runtime_error("Invalid credential");
     } catch (...) { receive({"", true, AIError::Configuration, {}}); return; }
@@ -119,6 +124,7 @@ void RunAIRequest(std::string text, RequestConfiguration configuration, std::ato
     } catch (...) { receive({"", true, AIError::Network, {}}); return; }
     std::unique_ptr<curl_slist, HeaderClose> owned_headers(headers);
     Transfer state{curl.get(), cancelled, receive};
+    state.conversation = !prepared_prompt.empty();
     curl_easy_setopt(curl.get(), CURLOPT_URL, endpoint.c_str());
     curl_easy_setopt(curl.get(), CURLOPT_HTTPHEADER, headers);
     curl_easy_setopt(curl.get(), CURLOPT_POSTFIELDS, body.data());

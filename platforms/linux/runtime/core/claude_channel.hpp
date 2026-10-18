@@ -23,7 +23,7 @@ struct ClaudeEvent {
 using ClaudeReceive = std::function<void(ClaudeEvent)>;
 struct ClaudeRequest {
     ClaudeMode mode = ClaudeMode::Probe;
-    std::string text, model = "claude-opus-5-5", effort = "medium";
+    std::string text, prepared_prompt, model = "claude-opus-5-5", effort = "medium";
     std::filesystem::path root = UserRoot(), executable;
     std::chrono::milliseconds timeout{120000};
 };

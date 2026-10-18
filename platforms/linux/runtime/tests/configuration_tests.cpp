@@ -44,7 +44,23 @@ int main() {
               snapshot.provider.at("model") == "fixture-model",
           "credential did not reach frozen request");
     PrivateDirectory prefs(root / "settings");
+    const auto route = ProviderRoute(store.Load().at("providers")[0]);
+    auto selection = store.Load();
+    auto second = provider;
+    second["id"] = RandomID();
+    second["model"] = "other-model";
+    selection["providers"].push_back(second);
+    selection["activeProvider"] = second.at("id");
+    store.Save(selection, selection.at("revision"));
+    Check(ConfigurationStore(root / "settings").FreezeProvider(route).credential == secret &&
+              store.FreezeProvider(route).provider.at("model") == "fixture-model",
+          "global selection rerouted saved conversation");
+    selection = store.Load();
+    selection["activeProvider"] = id;
+    store.Save(selection, selection.at("revision"));
     auto legacy = store.Load();
+    for (auto& item : legacy["providers"])
+        item.erase("revision");
     legacy.erase("autoSendSeconds");
     legacy.erase("gatewayEnabled"); legacy.erase("gatewayPort"); legacy.erase("gatewayBlockedSources");
     legacy.erase("shortcuts"); legacy.erase("globalShortcuts");
@@ -82,6 +98,9 @@ int main() {
     Check(snapshot.credential == secret &&
               snapshot.provider.at("model") == "fixture-model",
           "save mutated in-flight snapshot");
+    Reject([&] { store.FreezeProvider(route); });
+    const auto edited_route = ProviderRoute(store.Load().at("providers")[0]);
+    Check(edited_route.at("profileRevision") == 2, "provider edit did not invalidate saved route");
     ConfigurationStore restarted(root / "settings");
     Check(restarted.Freeze("builtin.openai-compatible").credential ==
               "replacement-credential",
@@ -138,6 +157,9 @@ int main() {
           "cleanup touched an unsafe linked file");
     Check(store.Freeze("builtin.openai-compatible").credential.empty(),
           "explicit credential deletion failed");
+    Reject([&] { store.FreezeProvider(edited_route); });
+    Check(ProviderRoute(store.Load().at("providers")[0]).at("profileRevision") == 3,
+          "credential rotation did not invalidate route");
     const auto intact = store.Load();
     prefs.Write("preferences.json", "invalid");
     Reject([&] { store.Load(); });

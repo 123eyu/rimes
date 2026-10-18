@@ -26,7 +26,7 @@ struct CodexEvent {
 using CodexReceive = std::function<void(CodexEvent)>;
 struct CodexRequest {
     CodexMode mode = CodexMode::Probe;
-    std::string text, model, effort, skill;
+    std::string text, model, effort, skill, prepared_prompt;
     std::filesystem::path root = UserRoot();
     // An injected executable is used by the test harness. Production callers
     // leave it empty and resolve an installed, owned executable.

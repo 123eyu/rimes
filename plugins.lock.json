@@ -72,9 +72,9 @@
     "native/shared/Chord.swift": "2f241f8c8d9e0320992596665f5662445cf1a7acbcb37e561c2c69c463b7087c",
     "native/shared/ChordEncoding.swift": "b7d16dbd81ed70ea4c005afa62a38f427e97aa7988c5e77b50e17885ecfad0b1",
     "native/shared/TextArt.swift": "b394e467999379d875f7d8e334939ebbbfb8cc319b46bb93c18c51ad1de6e115",
-    "native/shared/openai/chat_codec.cpp": "dc77c0015348633210bf8d4a76086e5ef67fd1ec97186e39c9e098942af8ce55",
-    "native/shared/openai/chat_codec.hpp": "fc9be0cfb5e495d80328004fe4efab75240b549426284c967dc2cfdea228dfa3",
-    "native/shared/openai/chat_codec_tests.cpp": "eff81e356edeef092e6a1692dd85e47d017d004c53d147cdad54a858bbe50302",
+    "native/shared/openai/chat_codec.cpp": "f10cb221b9c194834a361c42913c8bfde784582414d9923960229fc0d150388c",
+    "native/shared/openai/chat_codec.hpp": "17c9a09980c920a4e5b77416e040d3311eca603c2a0e4b80fe6e05ef545b7a52",
+    "native/shared/openai/chat_codec_tests.cpp": "7d0970676a1bcb5112b8b3fa05aa557d2697e0075e9ba7cd4c2089ef54c6a1b4",
     "native/windows/my_combo.schema.yaml": "d2937f55ac93fe746bf2e854aa523d8488d426392e0e6d8b63f96966c8ec6bc9",
     "native/windows/official_features.hpp": "560de4a57d0b2ab0e6f3724c7cf58884bf8ddb492d4dfd1d39b8ad06dbacc10e",
     "plugins/apple-translation/plugin.json": "220435a67821ddcf739579dddc1a359f5f565ecae266f80c81b4818a1d2f62d7",
@@ -104,6 +104,6 @@
     "source-map.json": "aa2e4792f45a52e1ba78d42af7ac362cc12e44a6e308908d50edea377597ae84"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "cc3611e2976b21fb3215496ba10677a05ec2c761",
+  "revision": "873ebe997b4102b3b0933968ae4a54fb4fe8af9d",
   "schemaVersion": 1
 }

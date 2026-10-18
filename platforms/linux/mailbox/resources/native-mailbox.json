@@ -106,13 +106,13 @@
     "OfficialPlugins/plugins/mailbox.inbox/plugin.json": "91801be8a90c5e39657e807b5220c518998e4c8ad774da240857b604582fbd9d",
     "OfficialPlugins/plugins/mailbox.terminal/plugin.json": "21bd7f24002fde11d19972abe74c88fc2f7946a05ac5f22ed7e9f4db3a909088",
     "Sources/RimeBuffer/Mailbox/MailboxAdaptiveSplitView.swift": "8e3eeb75fe185faaac1ce19f410c1a3e4cdc0b428c79e1c4c92e632fee571f45",
-    "Sources/RimeBuffer/Mailbox/MailboxLinuxFixtures.swift": "8317e4420762a0424fc80f8ce85c421c585d677c0fcc7cf616ab2753fbcc7122",
-    "Sources/RimeBuffer/Mailbox/MailboxMessagesWorkspace.swift": "df964a68bfbfe6d64c195a66f192f2e1ff8766e357206f744d5c244a39207164",
+    "Sources/RimeBuffer/Mailbox/MailboxLinuxFixtures.swift": "c5114f1f8b3d4378b04abaaa3cd26fa6c69f5de0a4f5fa8ca0d6df6324c2e6c2",
+    "Sources/RimeBuffer/Mailbox/MailboxMessagesWorkspace.swift": "eb1b8b89c5547326328fe59abb24ba19d9df1325e1685021ad0f829ccb69d4f2",
     "Sources/RimeBuffer/Mailbox/MailboxModels.swift": "5269e2f8965235c57b01ecde28115a62882e2151a22a039c360ec63c1bd04c60",
     "Sources/RimeBuffer/Mailbox/MailboxModules.swift": "9d03fa00da11812b5aa31d8dcbcc0aeba13087c348cfc2ebc25d3b54f4b8b77f",
     "Sources/RimeBuffer/Mailbox/MailboxStore.swift": "150d1ce8224e73b7a41a69a94a270bb34447996e529d1e8300cc7ec15188c8bf",
     "Sources/RimeBuffer/Mailbox/MailboxWorkspaceUI.swift": "9ee7f32da00695c4a0bcdb23cee36f709810982e21ed937e961cd8a520764558",
-    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceViewController.swift": "404bb3c78b1bc3e7468dc23f94ea1932736d1e0fc8ae7f80eda65b413c1f2d84",
+    "Sources/RimeBuffer/Mailbox/MailboxWorkspaceViewController.swift": "803c421084675cacaeef29e0f9a1c273dce156683c0952d8136a15a02cb08905",
     "Sources/RimeBuffer/RimeUI.swift": "80a1a1046687fd469c8627489f4e9f93ec348a4ff35e4e8228e896464a9b1516"
   }
 }
