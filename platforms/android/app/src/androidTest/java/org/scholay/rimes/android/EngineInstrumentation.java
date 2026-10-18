@@ -11,6 +11,9 @@ public final class EngineInstrumentation extends Instrumentation {
     @Override public void onStart() {
         Bundle result=new Bundle();
         try {
+            if(arguments!=null && "app-update".equals(arguments.getString("mode"))) {
+                AppUpdateContract.run(); result.putString("stream", "PASS application update contracts\n"); finish(-1,result); return;
+            }
             if(arguments!=null && "wubi".equals(arguments.getString("mode"))) {
                 result.putString("stream",WubiContract.run(this)); finish(-1,result); return;
             }

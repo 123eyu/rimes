@@ -2,7 +2,7 @@ package org.scholay.rimes.android;
 import org.json.JSONObject;
 final class AppUpdateContract {
     static void run() throws Exception {
-        JSONObject asset = new JSONObject().put("version", "1.2.3").put("url", "https://github.com/scholay/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk").put("sha256", "a".repeat(64)).put("size", 100);
+        JSONObject asset = new JSONObject().put("version", "1.2.3").put("url", "https://github.com/scholay/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk").put("sha256", new String(new char[64]).replace('\0', 'a')).put("size", 100);
         AppUpdateActivity.validateAsset(asset);
         for (String url : new String[]{"http://github.com/scholay/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk", "https://github.com/attacker/xsime/releases/download/v1.2.3/RIMES-Android-1.2.3.apk", "https://github.com/scholay/xsime/releases/download/v1.2.2/RIMES-Android-1.2.2.apk"}) {
             JSONObject wrong = new JSONObject(asset.toString()).put("url", url);

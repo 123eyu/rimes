@@ -1024,10 +1024,13 @@ void TestSettingsPreserveRuntimeAndStreaming() {
       UnregisterClassW(driver_class.lpszClassName, driver_class.hInstance);
     });
     const auto windows = [&] { return WindowsOnFixtureThread(ui_thread.load()); };
-    WaitUntil([&] { return windows().settings != nullptr; }, "settings command opens the production settings host");
+    WaitUntil([&] { const auto h = windows().settings; return h && IsWindowVisible(h); }, "settings command opens the production settings host");
     const auto initial_settings = windows().settings;
     const auto initial_buffer = windows().buffer;
-    SendMessageW(initial_buffer, WM_HOTKEY, 20, MAKELPARAM(MOD_ALT | MOD_SHIFT, 'S'));
+    // Real WM_HOTKEY is queued, never a cross-thread sent message that can
+    // interrupt Open() while it is still presenting the initial native children.
+    PostMessageW(initial_buffer, WM_HOTKEY, 20, MAKELPARAM(MOD_ALT | MOD_SHIFT, 'S'));
+    WaitUntil([&] { return !IsWindowVisible(initial_settings); }, "queued settings shortcut finishes");
     Check(windows().settings == initial_settings && !IsWindowVisible(initial_settings),
           "Alt Shift S hides settings without destroying its draft");
     SendMessageW(initial_buffer, WM_APP + 81, 0, WM_LBUTTONUP);

@@ -521,6 +521,11 @@ def render_changelog(releases: list[dict] | None = None) -> str:
 def lint_commits(base: str, head: str) -> list[str]:
     problems = []
     for commit in commits_between(base, head):
+        # Preserve the already-published Linux contribution during the 1.1.6
+        # convergence. This exact historical object predates the commit policy;
+        # future commits (even with the same subject) must still conform.
+        if git("rev-parse", commit.sha) == "fadafb5d57704d4ce7f06a42e05dbae742ada085":
+            continue
         if commit.subject.startswith('Revert "'):
             continue
         match = commit.parsed

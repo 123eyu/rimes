@@ -26,7 +26,7 @@ inline Asset Parse(const std::string& bytes, const std::string& platform) {
     result.url = asset.at("url").get<std::string>(); result.sha256 = asset.at("sha256").get<std::string>();
     if (!asset.at("size").is_number_unsigned()) throw std::runtime_error("Invalid package size");
     result.size = asset.at("size").get<std::uint64_t>();
-    const auto name = platform == "windows" ? "RIMES-Windows-" + result.version + ".exe"
+    const auto name = platform == "windows" ? "RIMES-Windows-" + result.version + "-Setup.exe"
         : platform == "linux" ? "fcitx5-rimes_" + result.version + "_amd64.deb" : "";
     if (name.empty() || result.url != "https://github.com/scholay/xsime/releases/download/v" + result.version + "/" + name ||
         result.size == 0 || result.size > kMaximumPackage || !std::regex_match(result.sha256, std::regex("[a-f0-9]{64}")))

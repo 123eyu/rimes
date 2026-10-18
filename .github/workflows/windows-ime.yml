@@ -10,6 +10,7 @@ on:
       - 'platforms/windows/**'
       - 'Shared/SchemeImport/**'
       - 'Shared/CandidateMatrix/**'
+      - 'Shared/AppUpdate/**'
       - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
@@ -28,6 +29,7 @@ on:
       - 'platforms/windows/**'
       - 'Shared/SchemeImport/**'
       - 'Shared/CandidateMatrix/**'
+      - 'Shared/AppUpdate/**'
       - 'scripts/input-schemes/fetch_fixture.py'
       - 'OfficialPlugins'
       - 'plugins.lock.json'
@@ -40,6 +42,11 @@ on:
       - '.github/workflows/windows-native.yml'
       - 'rime-data/**'
       - 'scripts/platform-preview/**'
+  workflow_call:
+    inputs:
+      package_version:
+        type: string
+        default: ''
   workflow_dispatch:
     inputs:
       package_preview:

@@ -8,7 +8,7 @@ int main() {
     auto require = [&](bool result) { ++count; if (!result) throw std::runtime_error("Update contract regression"); };
     auto rejects = [&](const std::function<void()>& call) { bool threw = false; try { call(); } catch (...) { threw = true; } require(threw); };
     nlohmann::json manifest = {{"schemaVersion", 1}, {"version", "1.2.10"}, {"platforms", {{"windows", {
-        {"url", "https://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10.exe"},
+        {"url", "https://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10-Setup.exe"},
         {"sha256", std::string(64, 'a')}, {"size", 100u}, {"architecture", "x64-x86"}}}}}};
     const auto asset = Parse(manifest.dump(), "windows");
     require(Version(asset.version) > Version("1.2.9"));
@@ -18,7 +18,7 @@ int main() {
     Verify(asset, 100, std::string(64, 'a'));
     rejects([&] { Verify(asset, 101, std::string(64, 'a')); });
     rejects([&] { Verify(asset, 100, std::string(64, 'b')); });
-    for (const auto* url : {"http://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10.exe", "https://github.com/attacker/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10.exe", "https://github.com/scholay/xsime/releases/download/v1.2.9/RIMES-Windows-1.2.9.exe", "https://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10.exe?redirect=1"}) {
+    for (const auto* url : {"http://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10-Setup.exe", "https://github.com/attacker/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10-Setup.exe", "https://github.com/scholay/xsime/releases/download/v1.2.9/RIMES-Windows-1.2.9-Setup.exe", "https://github.com/scholay/xsime/releases/download/v1.2.10/RIMES-Windows-1.2.10-Setup.exe?redirect=1"}) {
         auto changed = manifest; changed["platforms"]["windows"]["url"] = url;
         rejects([&] { (void)Parse(changed.dump(), "windows"); });
     }
