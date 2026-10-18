@@ -422,6 +422,7 @@ func runPluginDistributionSmokeTest() -> Bool {
             downloader: downloader,
             completionQueue: DispatchQueue(label: "plugin-distribution-smoke.success"),
             hostVersion: "0.4.2",
+            catalogReleaseVersion: "1.1.0",
             catalogEntries: [entry]
         )
         store.bootstrap(hadLegacyEnablement: false, legacyDisabledIDs: [])
