@@ -214,12 +214,18 @@ int main(int argc, char** argv) {
             stage = "ignore keeps content and disables accept";
             Click(action("reject"));
             Wait([&] {
-                return store.Get(inbox).at("review").at("state") == "rejected" &&
+                // A durable write can finish before the GTK completion runs.
+                // Disabled actions also occur while busy, before the rejected
+                // receipt has been rendered, so wait for the current revision.
+                const auto visible = host.Inspect();
+                return visible.at("busy") == false &&
+                       visible.at("revision") == store.Read().revision &&
+                       store.Get(inbox).at("review").at("state") == "rejected" &&
                        action("buffer") && !gtk_widget_is_sensitive(action("buffer"));
             });
-            Check(!action("reject") &&
-                      store.Get(inbox).at("messages")[0].at("body") == notes[0].content,
-                  "ignore lost original or left repeat action");
+            Check(!action("reject"), "ignored receipt left repeat action");
+            Check(store.Get(inbox).at("messages")[0].at("body") == notes[0].content,
+                  "ignore lost original content");
             stage = "search no result";
             gtk_entry_set_text(GTK_ENTRY(Find(host.Content(), "mailbox-search")),
                                "无法匹配的测试查询");
