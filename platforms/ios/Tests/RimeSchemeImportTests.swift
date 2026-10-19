@@ -3,6 +3,55 @@ import ZIPFoundation
 @testable import RIMES
 
 final class RimeSchemeImportTests: XCTestCase {
+    func testGigabyteZIPUsesPrivateFileSnapshotAndStagesWithoutOriginal() throws {
+        let root = temporaryDirectory()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("large.zip")
+        let size = 1_024 * 1_024 * 1_024 + 4_096
+        do {
+            let zip = try Archive(url: original, accessMode: .create)
+            for (path, bytes) in fixture where path != "demo.dict.yaml" {
+                try zip.addEntry(with: path, type: .file, uncompressedSize: Int64(bytes.count), compressionMethod: .none) { offset, count in
+                    bytes.subdata(in: Int(offset)..<Int(offset) + count)
+                }
+            }
+            let header = Data("---\nname: demo\nversion: '1'\n...\n示例\taa\n".utf8)
+            try zip.addEntry(with: "demo.dict.yaml", type: .file, uncompressedSize: Int64(size), compressionMethod: .none) { offset, count in
+                var block = Data(repeating: 32, count: count)
+                if offset < header.count {
+                    let copied = min(count, header.count - Int(offset))
+                    block.replaceSubrange(0..<copied, with: header.subdata(in: Int(offset)..<Int(offset) + copied))
+                }
+                return block
+            }
+        }
+        let review = try RimeSchemeImportService.inspect(url: original)
+        XCTAssertGreaterThan(review.expandedBytes, 1_024 * 1_024 * 1_024)
+        XCTAssertEqual(review.schemes.first?.blockingIssues, [])
+        // Picker access may end and the original may disappear before confirmation.
+        try FileManager.default.removeItem(at: original)
+        let staged = try RimeSchemeImportService.stage(review: review, selectedSchemaIDs: ["demo"], destinationRoot: root.appendingPathComponent("staging"))
+        XCTAssertEqual(try staged.rootURL.appendingPathComponent("demo.dict.yaml").resourceValues(forKeys: [.fileSizeKey]).fileSize, size)
+    }
+
+    func testOversizedZIPAndInsufficientSpaceAreRejectedBeforeExtraction() throws {
+        let root = temporaryDirectory()
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let original = root.appendingPathComponent("oversized.zip")
+        FileManager.default.createFile(atPath: original.path, contents: nil)
+        let file = try FileHandle(forWritingTo: original)
+        try file.truncate(atOffset: 2 * 1_024 * 1_024 * 1_024 + 1)
+        try file.close()
+        XCTAssertThrowsError(try RimeSchemeImportService.inspect(url: original)) { error in
+            XCTAssertTrue(error.localizedDescription.contains("2 GiB"))
+        }
+        XCTAssertThrowsError(try RimeSchemeImportService.requireSpace(at: root, bytes: UInt64.max - 1_048_576)) { error in
+            XCTAssertTrue(error.localizedDescription.contains("空间不足"))
+        }
+    }
+
     func testCodedTextDictionaryStagesWithOriginalIdentity() throws {
         let data = Data("\u{FEFF}# public fixture\n你好\tnihao\t100\n世界\tshijie\n".utf8)
         let review = try RimeSchemeImportService.inspectTextDictionary(data: data, sourceName: "个人词库")

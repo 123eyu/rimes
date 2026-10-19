@@ -32,7 +32,7 @@ enum RimeSchemeInstaller {
                 let attributes = try file.resourceValues(forKeys: [.fileSizeKey, .isRegularFileKey, .isSymbolicLinkKey])
                 guard attributes.isSymbolicLink != true else { throw RimeSchemeError.invalid("部署结果包含不支持的链接。") }
                 if attributes.isRegularFile == true { artifactBytes += Int64(attributes.fileSize ?? 0) }
-                guard artifactBytes <= 512 * 1024 * 1024 else { throw RimeSchemeError.invalid("部署结果超过 512 MB，暂不支持在键盘中使用。") }
+                guard UInt64(artifactBytes) <= RimeSchemeImportService.maximumDeployedSize else { throw RimeSchemeError.invalid("部署结果超过 8 GiB。") }
                 try FileManager.default.setAttributes([.protectionKey: FileProtectionType.completeUntilFirstUserAuthentication], ofItemAtPath: file.path)
             }
             for id in deploymentIDs {

@@ -25,7 +25,7 @@ struct RimeSchemeImportReview: Sendable {
         ["识别到 \(schemes.count) 个 Rime 方案，\(fileCount) 个文件，展开约 \(expandedBytes / 1_024 / 1_024) MB。",
          "方案文件、词典、Lua 与 OpenCC 数据将部署到新的隔离目录。"]
     }
-    fileprivate let archiveData: Data
+    fileprivate let archiveSource: RimeSchemeArchiveSource
     fileprivate let packagePrefix: String
     fileprivate let permittedPaths: [String]
     fileprivate let normalizedConfigurations: [String: Data]
@@ -47,12 +47,102 @@ enum RimeSchemeImportError: LocalizedError {
     var errorDescription: String? { if case .invalid(let value) = self { return value }; return nil }
 }
 
+/// Keep a private, file-backed snapshot alive until the review/installation ends.
+/// A security-scoped picker URL may become unavailable after inspection returns.
+fileprivate final class RimeSchemeArchiveFile: @unchecked Sendable {
+    let root: URL
+    let url: URL
+    let count: Int
+
+    init(copying source: URL, maximumBytes: Int) throws {
+        let manager = FileManager.default
+        let input = try FileHandle(forReadingFrom: source)
+        defer { try? input.close() }
+        let size = try input.seekToEnd()
+        guard size <= maximumBytes else { throw RimeSchemeImportError.invalid("ZIP 超过 2 GiB。") }
+        try input.seek(toOffset: 0)
+        let root = manager.temporaryDirectory.appendingPathComponent("rimes-scheme-\(UUID().uuidString)", isDirectory: true)
+        let url = root.appendingPathComponent("source.zip")
+        try manager.createDirectory(at: root, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+        do {
+            try RimeSchemeImportService.requireSpace(at: root, bytes: size + RimeSchemeImportService.diskReserve)
+            guard manager.createFile(atPath: url.path, contents: nil, attributes: [.posixPermissions: 0o600]) else {
+                throw RimeSchemeImportError.invalid("无法暂存 ZIP。")
+            }
+            let output = try FileHandle(forWritingTo: url)
+            defer { try? output.close() }
+            var copied = 0
+            while let chunk = try input.read(upToCount: 65_536), !chunk.isEmpty {
+                try Task.checkCancellation()
+                guard chunk.count <= maximumBytes - copied else { throw RimeSchemeImportError.invalid("ZIP 超过 2 GiB。") }
+                if copied % (16 * 1_024 * 1_024) < chunk.count {
+                    try RimeSchemeImportService.requireSpace(at: root, bytes: RimeSchemeImportService.diskReserve + 16 * 1_024 * 1_024)
+                }
+                try output.write(contentsOf: chunk)
+                copied += chunk.count
+            }
+            self.root = root
+            self.url = url
+            self.count = copied
+        } catch {
+            try? manager.removeItem(at: root)
+            throw error
+        }
+    }
+
+    deinit { try? FileManager.default.removeItem(at: root) }
+}
+
+fileprivate enum RimeSchemeArchiveSource: Sendable {
+    case memory(Data)
+    case file(RimeSchemeArchiveFile)
+
+    var count: Int {
+        switch self { case .memory(let data): return data.count; case .file(let file): return file.count }
+    }
+    func open() throws -> Archive {
+        switch self {
+        case .memory(let data): return try Archive(data: data, accessMode: .read)
+        case .file(let file): return try Archive(url: file.url, accessMode: .read)
+        }
+    }
+    func read(_ range: Range<Int>) throws -> Data {
+        guard range.lowerBound >= 0, range.upperBound <= count else { throw RimeSchemeImportError.invalid("ZIP 读取越界。") }
+        switch self {
+        case .memory(let data): return data.subdata(in: range)
+        case .file(let file):
+            let handle = try FileHandle(forReadingFrom: file.url)
+            defer { try? handle.close() }
+            try handle.seek(toOffset: UInt64(range.lowerBound))
+            let bytes = try handle.read(upToCount: range.count) ?? Data()
+            guard bytes.count == range.count else { throw RimeSchemeImportError.invalid("ZIP 目录不完整。") }
+            return bytes
+        }
+    }
+    func digest() throws -> String {
+        var hash = SHA256()
+        switch self {
+        case .memory(let data): hash.update(data: data)
+        case .file(let file):
+            let handle = try FileHandle(forReadingFrom: file.url)
+            defer { try? handle.close() }
+            while let chunk = try handle.read(upToCount: 65_536), !chunk.isEmpty {
+                try Task.checkCancellation()
+                hash.update(data: chunk)
+            }
+        }
+        return hash.finalize().map { String(format: "%02x", $0) }.joined()
+    }
+}
+
 /// Main-app archive inspection and staging. Deployment and atomic publication belong to
 /// the installer; keyboard processes never compile an unreviewed archive during first use.
 enum RimeSchemeImportService {
-    private static let maximumArchiveSize = 256 * 1_024 * 1_024
-    private static let maximumFileSize: UInt64 = 128 * 1_024 * 1_024
-    private static let maximumExpandedSize: UInt64 = 512 * 1_024 * 1_024
+    private static let maximumArchiveSize = 2 * 1_024 * 1_024 * 1_024
+    private static let maximumFileSize: UInt64 = 2 * 1_024 * 1_024 * 1_024
+    private static let maximumExpandedSize: UInt64 = 4 * 1_024 * 1_024 * 1_024
+    static let maximumDeployedSize: UInt64 = 8 * 1_024 * 1_024 * 1_024
+    static let diskReserve: UInt64 = 256 * 1_024 * 1_024
     private static let maximumEntries = 4_096
     private static let maximumConfigurationSize = 512 * 1_024
     private static let globalFiles: Set<String> = ["default.custom.yaml", "installation.yaml", "user.yaml",
@@ -64,11 +154,14 @@ enum RimeSchemeImportService {
         guard ["zip", "txt", "tsv"].contains(kind) else { throw invalid("请选择 Rime ZIP，或带编码的 UTF-8 TXT / TSV 词库。") }
         let access = url.startAccessingSecurityScopedResource()
         defer { if access { url.stopAccessingSecurityScopedResource() } }
+        let name = url.deletingPathExtension().lastPathComponent
+        if kind == "zip" {
+            return try inspect(source: .file(RimeSchemeArchiveFile(copying: url, maximumBytes: maximumArchiveSize)), sourceName: name)
+        }
         let file = try FileHandle(forReadingFrom: url)
         defer { try? file.close() }
-        let data = try file.read(upToCount: maximumArchiveSize + 1) ?? Data()
-        let name = url.deletingPathExtension().lastPathComponent
-        return kind == "zip" ? try inspect(data: data, sourceName: name) : try inspectTextDictionary(data: data, sourceName: name)
+        let data = try file.read(upToCount: 128 * 1_024 * 1_024 + 1) ?? Data()
+        return try inspectTextDictionary(data: data, sourceName: name)
     }
 
     /// A coded text table is data, not a scheme. Give it a deterministic, local
@@ -132,14 +225,18 @@ enum RimeSchemeImportService {
         review = .init(sourceName: review.sourceName, archiveSHA256: digest, schemes: review.schemes,
             fileCount: review.fileCount, expandedBytes: review.expandedBytes,
             warnings: review.warnings + ["已为带编码的文本词库生成独立码表方案；原文件未修改。"],
-            unsupportedFeatures: review.unsupportedFeatures, archiveData: bytes, packagePrefix: review.packagePrefix,
+            unsupportedFeatures: review.unsupportedFeatures, archiveSource: .memory(bytes), packagePrefix: review.packagePrefix,
             permittedPaths: review.permittedPaths, normalizedConfigurations: review.normalizedConfigurations,
             stagingSHA256: Self.digest(bytes))
         return review
     }
 
     static func inspect(data: Data, sourceName: String) throws -> RimeSchemeImportReview {
-        let archive = try CheckedArchive(data)
+        try inspect(source: .memory(data), sourceName: sourceName)
+    }
+
+    private static func inspect(source: RimeSchemeArchiveSource, sourceName: String) throws -> RimeSchemeImportReview {
+        let archive = try CheckedArchive(source)
         guard !archive.entries.contains(where: { $0.type == .file && $0.path.lowercased().hasSuffix(".gram") }) else {
             throw invalid("这个 ZIP 包含 .gram 语言模型。五端统一导入暂不支持模型，请选择上游提供的基础方案包。")
         }
@@ -328,9 +425,9 @@ enum RimeSchemeImportService {
         if entriesByPath.keys.contains(where: { $0.hasSuffix(".lua") }) {
             warnings.append("方案含 Lua 输入逻辑，将在受限运行环境中执行；导入检查不会执行脚本。")
         }
-        return .init(sourceName: String(sourceName.prefix(120)), archiveSHA256: digest(data), schemes: candidates,
+        return .init(sourceName: String(sourceName.prefix(120)), archiveSHA256: try source.digest(), schemes: candidates,
                      fileCount: archive.entries.filter { $0.type == .file }.count, expandedBytes: archive.expandedSize,
-                     warnings: unique(warnings), unsupportedFeatures: unique(unsupported), archiveData: data,
+                     warnings: unique(warnings), unsupportedFeatures: unique(unsupported), archiveSource: source,
                      packagePrefix: prefix, permittedPaths: permitted.sorted(), normalizedConfigurations: normalizedConfigurations)
     }
 
@@ -356,14 +453,15 @@ enum RimeSchemeImportService {
             visited.insert(id); dependencyOrder.append(id)
         }
         for id in selectedSchemaIDs { try visit(id, ancestors: []) }
-        guard digest(review.archiveData) == (review.stagingSHA256 ?? review.archiveSHA256) else { throw invalid("归档在检查后发生变化，请重新检查。") }
-        let archive = try CheckedArchive(review.archiveData)
+        guard try review.archiveSource.digest() == (review.stagingSHA256 ?? review.archiveSHA256) else { throw invalid("归档在检查后发生变化，请重新检查。") }
+        let archive = try CheckedArchive(review.archiveSource)
         let id = UUID().uuidString
         let manager = FileManager.default
         try manager.createDirectory(at: destinationRoot, withIntermediateDirectories: true)
         guard try destinationRoot.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink != true else {
             throw invalid("方案暂存目录不能是符号链接。")
         }
+        try requireSpace(at: destinationRoot, bytes: review.expandedBytes * 2 + diskReserve)
         let root = destinationRoot.appendingPathComponent(id, isDirectory: true)
         try manager.createDirectory(at: root, withIntermediateDirectories: false,
                                     attributes: [.posixPermissions: 0o700])
@@ -389,6 +487,7 @@ enum RimeSchemeImportService {
                 do {
                     var written: UInt64 = 0
                     let crc = try archive.archive.extract(entry, bufferSize: 32_768) { chunk in
+                        try Task.checkCancellation()
                         guard written <= maximumFileSize - UInt64(chunk.count), written + UInt64(chunk.count) <= entry.uncompressedSize else {
                             throw invalid("资源展开大小超过声明或限制：\(relative)。")
                         }
@@ -798,6 +897,12 @@ enum RimeSchemeImportService {
         }
     }
     private static func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
+    static func requireSpace(at directory: URL, bytes: UInt64) throws {
+        let attributes = try FileManager.default.attributesOfFileSystem(forPath: directory.path)
+        if let free = attributes[.systemFreeSize] as? NSNumber, free.uint64Value < bytes {
+            throw invalid("可用空间不足，导入与编译预计至少需要 \((bytes + 1_048_575) / 1_048_576) MiB；请先释放存储空间。")
+        }
+    }
     private static func unique(_ values: [String]) -> [String] { var seen = Set<String>(); return values.filter { seen.insert($0).inserted } }
     private static func invalid(_ text: String) -> RimeSchemeImportError { .invalid(text) }
 
@@ -805,9 +910,9 @@ enum RimeSchemeImportService {
         let archive: Archive
         let entries: [Entry]
         let expandedSize: UInt64
-        init(_ data: Data) throws {
-            let expected = try Self.directoryCount(data)
-            archive = try Archive(data: data, accessMode: .read)
+        init(_ source: RimeSchemeArchiveSource) throws {
+            let expected = try Self.directoryCount(source)
+            archive = try source.open()
             var result = [Entry](), paths = Set<String>(), size: UInt64 = 0
             for entry in archive {
                 guard result.count < maximumEntries else { throw invalid("ZIP 超过 4096 项。") }
@@ -816,7 +921,7 @@ enum RimeSchemeImportService {
                 guard paths.insert(normalized).inserted else { throw invalid("ZIP 资源路径重复。") }
                 guard entry.type != .symlink else { throw invalid("ZIP 不得包含符号链接。") }
                 guard entry.uncompressedSize <= maximumFileSize, size <= maximumExpandedSize - entry.uncompressedSize,
-                      entry.compressedSize <= UInt64(data.count), entry.uncompressedSize <= max(1, entry.compressedSize) * 100 else {
+                      entry.compressedSize <= UInt64(source.count), entry.uncompressedSize <= max(1, entry.compressedSize) * 100 else {
                     throw invalid("ZIP 超过展开大小或压缩比限制。")
                 }
                 size += entry.uncompressedSize; result.append(entry)
@@ -856,28 +961,33 @@ enum RimeSchemeImportService {
             if !completed, header.contains(9) { throw invalid("词典缺少 YAML 结束标记：\(entry.path)。") }
             return header
         }
-        static func directoryCount(_ data: Data) throws -> Int {
-            guard (22...maximumArchiveSize).contains(data.count) else { throw invalid("ZIP 为空、损坏或超过 256 MB。") }
-            func u16(_ n: Int) -> Int { Int(data[n]) | Int(data[n + 1]) << 8 }
-            func u32(_ n: Int) -> UInt64 { UInt64(u16(n)) | UInt64(u16(n + 2)) << 16 }
+        static func directoryCount(_ source: RimeSchemeArchiveSource) throws -> Int {
+            guard (22...maximumArchiveSize).contains(source.count) else { throw invalid("ZIP 为空、损坏或超过 2 GiB。") }
+            let tailStart = max(0, source.count - 65_557)
+            let data = try source.read(tailStart..<source.count)
+            func u16(_ bytes: Data, _ n: Int) -> Int { Int(bytes[n]) | Int(bytes[n + 1]) << 8 }
+            func u32(_ bytes: Data, _ n: Int) -> UInt64 { UInt64(u16(bytes, n)) | UInt64(u16(bytes, n + 2)) << 16 }
             guard let end = stride(from: data.count - 22, through: max(0, data.count - 65_557), by: -1).first(where: {
-                u32($0) == 0x06054b50 && $0 + 22 + u16($0 + 20) == data.count
+                u32(data, $0) == 0x06054b50 && $0 + 22 + u16(data, $0 + 20) == data.count
             }) else { throw invalid("无法识别 ZIP 目录。") }
-            let count = u16(end + 10), length = u32(end + 12), offset = u32(end + 16)
-            guard u16(end + 4) == 0, u16(end + 6) == 0, u16(end + 8) == count, count <= maximumEntries,
-                  offset != 0xffffffff, length != 0xffffffff, offset + length == UInt64(end) else {
+            let endOffset = tailStart + end
+            let count = u16(data, end + 10), length = u32(data, end + 12), offset = u32(data, end + 16)
+            guard u16(data, end + 4) == 0, u16(data, end + 6) == 0, u16(data, end + 8) == count, count <= maximumEntries,
+                  offset != 0xffffffff, length != 0xffffffff, offset + length == UInt64(endOffset) else {
                 throw invalid("不支持分卷、ZIP64、超过 4096 项或目录异常的 ZIP。")
             }
             var cursor = Int(offset)
             for _ in 0..<count {
-                guard cursor + 46 <= end, u32(cursor) == 0x02014b50, u16(cursor + 8) & 1 == 0 else {
+                guard cursor + 46 <= endOffset else { throw invalid("ZIP 条目不完整。") }
+                let header = try source.read(cursor..<cursor + 46)
+                guard u32(header, 0) == 0x02014b50, u16(header, 8) & 1 == 0 else {
                     throw invalid("ZIP 条目损坏或已加密。")
                 }
-                let length = 46 + u16(cursor + 28) + u16(cursor + 30) + u16(cursor + 32)
-                guard length <= end - cursor else { throw invalid("ZIP 条目长度错误。") }
+                let length = 46 + u16(header, 28) + u16(header, 30) + u16(header, 32)
+                guard length <= endOffset - cursor else { throw invalid("ZIP 条目长度错误。") }
                 cursor += length
             }
-            guard cursor == end else { throw invalid("ZIP 目录计数不一致。") }
+            guard cursor == endOffset else { throw invalid("ZIP 目录计数不一致。") }
             return count
         }
     }

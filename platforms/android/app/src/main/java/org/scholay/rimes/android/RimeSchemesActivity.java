@@ -67,7 +67,13 @@ public final class RimeSchemesActivity extends Activity {
                 archive=File.createTempFile("scheme-",".zip",getCacheDir());
                 try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(archive)) {
                     if(in==null) throw new IOException("无法打开所选 ZIP");long size=0;byte[] block=new byte[32768];int n;
-                    while((n=in.read(block))!=-1) {size+=n;if(size>RimeSchemeArchive.MAX_ARCHIVE) throw new IOException("ZIP 超过 256 MB");out.write(block,0,n);}
+                    RimeSchemeArchive.requireSpace(getCacheDir(),RimeSchemeArchive.DISK_RESERVE+block.length);
+                    while((n=in.read(block))!=-1) {
+                        if(Thread.currentThread().isInterrupted()) throw new IOException("导入已取消");
+                        size+=n;if(size>RimeSchemeArchive.MAX_ARCHIVE) throw new IOException("ZIP 超过 2 GiB");
+                        if(size%(16L<<20)<block.length) RimeSchemeArchive.requireSpace(getCacheDir(),RimeSchemeArchive.DISK_RESERVE+(16L<<20));
+                        out.write(block,0,n);
+                    }
                 }
                 RimeSchemeArchive.Review review;
                 if(title.toLowerCase(java.util.Locale.ROOT).endsWith(".txt") || title.toLowerCase(java.util.Locale.ROOT).endsWith(".tsv")) {

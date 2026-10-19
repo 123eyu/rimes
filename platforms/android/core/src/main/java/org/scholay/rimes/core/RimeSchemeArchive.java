@@ -13,7 +13,8 @@ import org.yaml.snakeyaml.constructor.SafeConstructor;
 
 /** Portable Rime source ZIP. Inspection/staging never executes Lua or installs scripts. */
 public final class RimeSchemeArchive {
-    public static final long MAX_ARCHIVE=256L<<20, MAX_FILE=128L<<20, MAX_EXPANDED=512L<<20;
+    public static final long MAX_ARCHIVE=2L<<30, MAX_FILE=2L<<30, MAX_EXPANDED=4L<<30,
+        MAX_DEPLOYED=8L<<30, DISK_RESERVE=256L<<20;
     private static final int MAX_CONFIG=512<<10, MAX_ENTRIES=4096;
     private static final Set<String> GLOBAL=new HashSet<>(Arrays.asList("default.custom.yaml","installation.yaml","user.yaml",
         "hamster.yaml","hamster.custom.yaml","weasel.yaml","weasel.custom.yaml","squirrel.yaml","squirrel.custom.yaml",
@@ -97,7 +98,7 @@ public final class RimeSchemeArchive {
     private static String quote(String value) {return "'"+value.replace("'","''")+"'";}
 
     public static Review inspect(File archive) throws Exception {
-        if(!archive.isFile() || archive.length()>MAX_ARCHIVE) throw bad("请选择不超过 256 MB 的 Rime ZIP");
+        if(!archive.isFile() || archive.length()>MAX_ARCHIVE) throw bad("请选择不超过 2 GiB 的 Rime ZIP");
         checkCentralDirectory(archive);
         Set<String> parents=new TreeSet<>(), names=new HashSet<>();
         long expanded=0;int count=0;
@@ -168,6 +169,7 @@ public final class RimeSchemeArchive {
     public static void stage(Review review,List<String> selected,File destination) throws Exception {
         review.deploymentOrder(selected);
         if(!sha256(review.archive).equals(review.archiveDigest)) throw bad("ZIP 在检查后发生改变，请重新选择");
+        requireSpace(destination.getParentFile(),review.expandedBytes*2+DISK_RESERVE);
         if(destination.exists() || !destination.mkdirs()) throw bad("无法创建独立的暂存目录");
         try(ZipFile zip=new ZipFile(review.archive)) {
             for(String path:review.resources) {
@@ -189,6 +191,11 @@ public final class RimeSchemeArchive {
             for(String key:Arrays.asList("key_binder","ascii_composer","recognizer","punctuator","menu","speller")) if(review.defaults.containsKey(key)) defaults.put(key,review.defaults.get(key));
             Files.write(new File(destination,"default.yaml").toPath(),new Yaml().dump(defaults).getBytes(StandardCharsets.UTF_8));
         } catch(Exception failure) { remove(destination);throw failure; }
+    }
+    public static void requireSpace(File directory,long bytes) throws IOException {
+        while(directory!=null && !directory.exists()) directory=directory.getParentFile();
+        if(directory==null || directory.getUsableSpace()<bytes)
+            throw bad("可用空间不足，导入与编译预计至少需要 "+((bytes+(1L<<20)-1)>>20)+" MiB；请先释放存储空间。");
     }
     private static boolean ignored(String path) {
         for(String p:path.toLowerCase(Locale.ROOT).split("/")) if(p.startsWith(".") || p.equals("__macosx") || p.equals("build") || p.equals("sync") || p.contains(".userdb")) return true;

@@ -71,7 +71,7 @@ final class RimeSchemeStore {
             RimeSchemeArchive.stage(review,selected,staged);
             String failure=NativeRimeEngine.deployNative(staged.getAbsolutePath(),review.deploymentOrder(selected));
             if(failure!=null) throw new IOException("方案部署或加载失败："+failure);
-            if(treeBytes(staged)>512L*1024*1024) throw new IOException("部署结果超过 512 MB");
+            if(treeBytes(staged)>RimeSchemeArchive.MAX_DEPLOYED) throw new IOException("部署结果超过 8 GiB");
             JSONObject metadata=new JSONObject().put("format",1).put("id",id).put("name",title)
                 .put("sourceDigest",review.digest).put("importedAt",java.time.Instant.now().toString());
             JSONArray schemas=new JSONArray();for(RimeSchemeArchive.Scheme schema:review.schemes) if(selected.contains(schema.id))

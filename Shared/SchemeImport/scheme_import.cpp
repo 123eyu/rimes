@@ -22,8 +22,9 @@
 
 namespace rimes::schemes {
 namespace {
-constexpr std::uint64_t kArchive = 256ULL << 20, kFile = 128ULL << 20,
-                        kTotal = 512ULL << 20;
+constexpr std::uint64_t kArchive = 2ULL << 30, kFile = 2ULL << 30,
+                        kTotal = 4ULL << 30, kDeployed = 8ULL << 30,
+                        kText = 128ULL << 20, kDiskReserve = 256ULL << 20;
 constexpr std::size_t kConfig = 512U << 10;
 [[noreturn]] void Fail(const std::string &message) {
   throw std::runtime_error(message);
@@ -184,7 +185,7 @@ public:
   std::FILE *file = nullptr;
   explicit Archive(const fs::path &path) {
     if (!fs::is_regular_file(path) || fs::file_size(path) > kArchive)
-      Fail("请选择不超过 256 MB 的 Rime ZIP");
+      Fail("请选择不超过 2 GiB 的 Rime ZIP");
 #ifdef _WIN32
     file = _wfopen(path.c_str(), L"rb");
 #else
@@ -648,6 +649,13 @@ void Stage(const Review &review, const std::vector<std::string> &selected,
   if (fs::exists(destination) || !fs::create_directories(destination))
     Fail("无法创建独立暂存目录");
   try {
+    if (review.expanded_bytes > kTotal)
+      Fail("ZIP 展开总量超过 4 GiB");
+    const auto needed = review.expanded_bytes * 2 + kDiskReserve;
+    if (fs::space(destination).available < needed)
+      Fail("可用空间不足，导入与编译预计至少需要 " +
+           std::to_string((needed + (1ULL << 20) - 1) >> 20) +
+           " MiB；请先释放存储空间。");
     Archive archive(review.archive);
     for (const auto &path : review.resources) {
       SafePath(path);
@@ -682,7 +690,7 @@ void Stage(const Review &review, const std::vector<std::string> &selected,
   }
 }
 Review InspectText(const fs::path &text_file, const fs::path &generated_zip) {
-  auto text = ReadFile(text_file, kFile);
+  auto text = ReadFile(text_file, kText);
   if (Starts(text, "\xef\xbb\xbf"))
     text.erase(0, 3);
   auto digest = SHA256(text_file), id = "text_" + digest.substr(0, 16);
@@ -864,8 +872,8 @@ Package Library::Install(const Review &review,
       }
       if (it->is_regular_file())
         bytes += it->file_size();
-      if (bytes > kTotal)
-        Fail("部署结果超过 512 MB");
+      if (bytes > kDeployed)
+        Fail("部署结果超过 8 GiB");
     }
     for (const auto &path : discard)
       fs::remove_all(path);

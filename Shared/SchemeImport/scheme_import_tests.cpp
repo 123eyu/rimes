@@ -1,4 +1,5 @@
 #include "scheme_import.hpp"
+#include <algorithm>
 #include <chrono>
 #include <fstream>
 #include <iostream>
@@ -85,6 +86,43 @@ int main(int argc, char **argv) {
       }
     } cleanup{root};
     fs::create_directories(root);
+    {
+      // Exercise a real >1 GiB ZIP without allocating the dictionary in memory.
+      const std::uint64_t size = (1ULL << 30) + 4096;
+      const auto large = root / "large.dict.yaml";
+      {
+        std::ofstream out(large, std::ios::binary);
+        const std::string header = "---\nname: large\nversion: '1'\n...\nword\taa\n";
+        out << header;
+        const std::string block(65536, ' ');
+        for (std::uint64_t written = header.size(); written < size;) {
+          const auto count = std::min<std::uint64_t>(block.size(), size - written);
+          out.write(block.data(), static_cast<std::streamsize>(count));
+          written += count;
+        }
+        Check(out.good(), "large fixture write");
+      }
+      const auto zipPath = root / "large.zip";
+      mz_zip_archive zip{};
+      Check(mz_zip_writer_init_file(&zip, zipPath.string().c_str(), 0) != 0, "large ZIP init");
+      const std::string schema = "schema: {schema_id: large, name: Large}\ntranslator: {dictionary: large}\n";
+      Check(mz_zip_writer_add_mem(&zip, "large.schema.yaml", schema.data(), schema.size(), 0) != 0, "large schema");
+      Check(mz_zip_writer_add_file(&zip, "large.dict.yaml", large.string().c_str(), nullptr, 0, 0) != 0, "stream large dictionary");
+      Check(mz_zip_writer_finalize_archive(&zip) != 0, "large ZIP finalize");
+      mz_zip_writer_end(&zip);
+      fs::remove(large);
+      Check(fs::file_size(zipPath) > (1ULL << 30), "fixture exceeds one GiB");
+      const auto review = Inspect(zipPath);
+      const auto destination = root / "large-stage";
+      Stage(review, {"large"}, destination);
+      Check(fs::file_size(destination / "large.dict.yaml") == size, "large file staged intact");
+      fs::remove_all(destination);
+      fs::remove(zipPath);
+      Write(zipPath, "");
+      fs::resize_file(zipPath, (2ULL << 30) + 1);
+      Reject([&] { Inspect(zipPath); });
+      fs::remove(zipPath);
+    }
     const std::string schema = "schema:\n  schema_id: demo\n  name: "
                                "示例\ntranslator:\n  dictionary: dicts/demo\n";
     const std::string dictionary =
