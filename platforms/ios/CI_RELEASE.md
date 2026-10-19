@@ -1,16 +1,51 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.5 (60)**. This rebuild changes the AI settings explanation to provider-neutral wording without changing the user-configured connection or consent behavior. Follow [the rebuild record](AppStore/release-preparation/1.1.5-build60.md) for validation and submission evidence. Build 59 was uploaded and submitted on October 15, then rejected by App Review under Guideline 5.0; its separate external TestFlight review still showed **Waiting for Review** when checked at 22:31 Asia/Tokyo. The existing six accepted screenshots remain applicable. Earlier device installation and outstanding physical acceptance limitations are documented in [the build 59 record](AppStore/release-preparation/1.1.5.md). Build, upload, TestFlight, App Review and public availability remain separate states. [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
-
-Build 60 was uploaded through Xcode at 22:44 and resubmitted for App Review at
-22:50 Asia/Tokyo on 2026-10-15. The submission page confirmed **1.1.5 (60),
-Waiting for Review**. This is not App Store approval or external TestFlight
-distribution; build 59's separate beta review was left unchanged.
+Current iOS target: **1.1.6 (62)**. App Store Connect readback on October 19
+confirmed **1.1.5 (60), Ready for Distribution** and a newly created **1.1.6,
+Prepare for Submission** draft. Build 62 has not yet been uploaded or submitted.
+Historical build-60 evidence remains in [its rebuild record](AppStore/release-preparation/1.1.5-build60.md).
+Build, upload, TestFlight, App Review and public availability remain separate states.
+[TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
 
 `ios.yml` runs unsigned builds, shared tests and hosted iOS tests on matching
 pull requests targeting main and matching pushes to main. `ios-release.yml` runs
 only for stable tags `ios-vMAJOR.MINOR.PATCH`, using macos-26 / Xcode 26.6 and
 Fastlane 2.240.1. It does not use the maintainer's interactive Apple login.
+
+## Reuse the existing Apple cloud signing account
+
+The existing releases were signed with a **Cloud Managed Apple Distribution**
+certificate, not a local Apple Distribution private key. On October 19 the
+certificate and both matching App Store profiles were still valid through
+September 2027. The existing Developer-role API key can read builds, but does
+not grant cloud signing or App Review submission. Do not export unrelated
+macOS identities or copy an interactive Apple session into CI.
+
+For a maintainer-authorized release using that existing account:
+
+1. Dispatch `ios.yml` on `main` with `archive=true` and an unused `build_number`.
+   GitHub runs the normal resource checks, shared tests and hosted iOS tests,
+   then archives that exact commit for a generic iOS device without credentials.
+2. Download the `ios-cloud-archive-<commit>-<build>` artifact. Check its run,
+   commit, version, build and ZIP SHA-256 against `archive-provenance.json`.
+   The ZIP preserves archive permissions and symlinks. It is unsigned and is
+   not an installable or uploaded release.
+3. Open the downloaded `.xcarchive` in Xcode Organizer. Use the existing
+   authorized Apple Account and automatic cloud signing for App Store Connect,
+   keeping the selected build number. This signs/uploads the CI archive without
+   compiling or testing on the maintainer's Mac.
+4. Read back processing in App Store Connect, select that exact build in the
+   matching version draft, update all three locales and review notes, then
+   submit through the authorized webpage. Preserve screenshots, territories,
+   pricing and automatic release after approval unless explicitly changed.
+5. Record upload, processing and review-submission evidence separately. If the
+   existing login or cloud signing permission fails, stop before introducing
+   new credentials or claiming a submission.
+
+Normal pull-request/push checks never publish an archive. The manual archive
+path is restricted to `main`, has no signing secrets or App Store write access,
+and retains artifacts for 14 days. Fully unattended release remains the
+separate `ios-release.yml` path below, requiring its own credentials.
 
 ## One-time configuration
 

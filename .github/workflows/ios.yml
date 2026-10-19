@@ -6,10 +6,19 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      archive:
+        description: 'Produce an unsigned archive for the maintainer to cloud-sign in Xcode'
+        type: boolean
+        default: false
+      build_number:
+        description: 'Apple build number for the archive (required when archive is enabled)'
+        type: string
+        default: ''
 permissions:
   contents: read
 concurrency:
-  group: ios-checks-${{ github.ref }}
+  group: ios-checks-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 jobs:
   release-config:
@@ -20,6 +29,14 @@ jobs:
         with:
           submodules: true
           persist-credentials: false
+      - name: Validate archive request
+        if: github.event_name == 'workflow_dispatch' && inputs.archive
+        env:
+          IOS_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 scripts/release/create-ios-cloud-archive.py --check-build "$IOS_BUILD_NUMBER"
       - name: Prepare pinned official plugin sources
         working-directory: ${{ github.workspace }}
         run: python3 scripts/prepare-official-plugins.py
@@ -38,6 +55,7 @@ jobs:
           ruby scripts/tests/release-config-test.rb
           bundle exec fastlane lanes
   build:
+    needs: release-config
     runs-on: macos-26
     env:
       DEVELOPER_DIR: /Applications/Xcode_26.6.app/Contents/Developer
@@ -60,4 +78,31 @@ jobs:
       - name: Verify resources
         run: |
           python3 platforms/ios/scripts/verify.py
-          # No upload, signing credentials or artifact publication in this workflow.
+      - name: Archive for existing Apple cloud signing account
+        if: github.event_name == 'workflow_dispatch' && inputs.archive
+        env:
+          IOS_BUILD_NUMBER: ${{ inputs.build_number }}
+        run: |
+          test "$GITHUB_REF" = refs/heads/main
+          test "$(git rev-parse HEAD)" = "$GITHUB_SHA"
+          python3 scripts/release/create-ios-cloud-archive.py --check-build "$IOS_BUILD_NUMBER"
+          python3 platforms/ios/scripts/verify.py --distribution
+          VERSION=$(cat VERSION)
+          xcodebuild -project platforms/ios/RIMES.xcodeproj -scheme RIMES \
+            -configuration Release -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/XSIME.xcarchive" \
+            -derivedDataPath platforms/ios/build/DeviceDerivedData \
+            DEVELOPMENT_TEAM=585J2TL9U6 MARKETING_VERSION="$VERSION" \
+            CURRENT_PROJECT_VERSION="$IOS_BUILD_NUMBER" CODE_SIGNING_ALLOWED=NO archive
+          python3 scripts/release/create-ios-cloud-archive.py \
+            "$RUNNER_TEMP/XSIME.xcarchive" "$VERSION" "$IOS_BUILD_NUMBER" \
+            "$GITHUB_SHA" "$RUNNER_TEMP/ios-cloud-archive"
+      - name: Retain unsigned archive and provenance for Xcode
+        if: github.event_name == 'workflow_dispatch' && inputs.archive
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: ios-cloud-archive-${{ github.sha }}-${{ inputs.build_number }}
+          path: ${{ runner.temp }}/ios-cloud-archive/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
