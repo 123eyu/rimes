@@ -58,11 +58,16 @@
 - 集成本机 Android 70 项核心测试、Debug APK、app/testhost instrumentation 编译、两模块 Lint、原生资源完整性及双 ABI 16 KB 对齐检查通过。原 code14 真机/30 分钟记录对应其确切源提交；本次主线整合没有重装手机或发布安装包。
 - 外部 [PR #77](https://github.com/scholay/xsime/pull/77) 暂留待审：丢失 state.json 时按目录名选择恢复版本，尚需验证与实际注册路径的一致性，以及同现有卸载入口和回滚逻辑的兼容性。
 
+## 2026-10-19 产品路线重组
+
+- 采用[六条产品主线与 29 项需求](PLATFORM-ROADMAP.md)，在原有 [Project](https://github.com/users/scholay/projects/1) 中维护。新设计、现有维护、平台验收分别记录，历史关闭结论与发布证据保留。
+- 原先“Windows 对标 macOS、Android 对标 iOS”作为平台适配背景保留；本轮以五端统一产品规范驱动实现，桌面/移动交互与系统能力差异分别验收。
+- Linux 30 项计划继续保留已实现证据和独立验收。被新设计调整的 Buffer/Mailbox/设置界面，待设计确认后更新验收基线；#175 暂缓不变。新增 Fcitx5 共存冲突验证为 #261。
+- 路线图更新不触发产品发布、安装或任何用户数据迁移。
+
 ## 代码边界
 
-按 [平台路线图](PLATFORM-ROADMAP.md) 开发：Windows 对标 macOS、Android 对标
-iOS。2026-10-17 起 Linux 按维护者授权的 [30 项计划](platforms/linux/PARITY.md)
-补齐内置扩展、Buffer、Capsule、Mailbox 及核心插件，取代之前仅维护的范围。构建与实机验收分别记录。
+按 [五端产品路线图](PLATFORM-ROADMAP.md) 的共享规范开发，平台适配继续参考既有 macOS/iOS 行为与各端宿主边界。Linux 保留 2026-10-17 授权的 [30 项计划](platforms/linux/PARITY.md)，并按本轮产品决策更新相应验收基线。构建与实机验收分别记录。
 
 | 范围 | 维护入口 | 验证责任 |
 |---|---|---|

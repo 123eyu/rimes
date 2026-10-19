@@ -1,5 +1,7 @@
 # XSIME 命名与兼容规范
 
+> **2026-10-19 执行拆分**：本轮五端品牌迁移按 [#253 图标对齐](https://github.com/scholay/xsime/issues/253)、[#254 旧品牌/官网/联系入口清理](https://github.com/scholay/xsime/issues/254)、[#262 开发技能名称与文档更新](https://github.com/scholay/xsime/issues/262)分别验收，统一归入 [#233 品牌主线](https://github.com/scholay/xsime/issues/233)。沿用本文命名及兼容边界；任务登记不代表客户端、网站或技能已完成改名。
+
 2026-10-15 确认。本规范区分目标品牌、已发布状态与下一轮迁移，不声称商店或备案已经更名。
 
 | 用途 | 名称 |
