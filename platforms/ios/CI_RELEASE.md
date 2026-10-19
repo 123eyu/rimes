@@ -1,8 +1,11 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.6 (62)**. On October 19, 2026 at 13:04 JST,
-App Store Connect accepted the submission and showed **Waiting for Review**.
-The exact build is `VALID`; approval and public availability remain pending.
+Current iOS target: **1.1.7 (63)**, prepared for remote archive and upload.
+This version has not yet been submitted or approved.
+
+The previous submission was **1.1.6 (62)**. On October 19, 2026 at 13:04 JST,
+App Store Connect accepted that submission and showed **Waiting for Review**.
+That build was `VALID`; read the live Apple state before changing its review.
 The existing cloud-managed distribution certificate, provisioning profiles,
 Xcode Apple Account and upload API key were reused. No new credential is required
 for this submission. See the [release record](../../docs/releases/1.1.6.md).
