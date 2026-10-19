@@ -108,7 +108,7 @@ final class MacRimeSchemeLibrary {
                 continue
             }
             if info.isRegularFile == true { bytes += Int64(info.fileSize ?? 0) }
-            guard bytes <= 512 * 1024 * 1024 else { throw RimeSchemeImportError.invalid("编译结果超过 512 MB。") }
+            guard bytes <= RimeSchemeImportService.maximumDeployedSize else { throw RimeSchemeImportError.invalid("编译结果超过 8 GiB。") }
         }
         for schema in staged.schemaIDs where !Self.regularFile(staged.rootURL.appendingPathComponent("build/\(schema).schema.yaml")) {
             throw RimeSchemeImportError.invalid("方案未生成可用缓存：\(schema)")

@@ -30,6 +30,8 @@ p=plistlib.loads((ios/'Keyboard/Info.plist').read_bytes())
 assert p['NSExtension']['NSExtensionAttributes']['RequestsOpenAccess'] is True
 manifest=plistlib.loads((ios/'Resources/PrivacyInfo.xcprivacy').read_bytes())
 assert manifest['NSPrivacyTracking'] is False
+reasons={entry['NSPrivacyAccessedAPIType']:entry['NSPrivacyAccessedAPITypeReasons'] for entry in manifest['NSPrivacyAccessedAPITypes']}
+assert 'E174.1' in reasons.get('NSPrivacyAccessedAPICategoryDiskSpace', []), 'Scheme import capacity checks require the on-device disk-space reason'
 # The optional connection is provider-neutral. Keep the settings explanation
 # consistent with the store copy without changing endpoint or consent behavior.
 provider_ui=(ios/'App/RimesApp.swift').read_text()

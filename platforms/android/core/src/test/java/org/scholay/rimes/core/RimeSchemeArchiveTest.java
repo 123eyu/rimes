@@ -14,6 +14,35 @@ public final class RimeSchemeArchiveTest {
     @Rule public TemporaryFolder temporary=new TemporaryFolder();
     private static final String SCHEMA="schema:\n  schema_id: demo\n  name: 示例\ntranslator:\n  dictionary: dicts/demo\n";
     private static final String DICT="---\nname: demo\nversion: '1'\n...\n你好\tnihao\t100\n";
+    @Test public void gigabyteArchiveStagesWithBoundedBuffers() throws Exception {
+        File archive=temporary.newFile("large.zip");
+        long size=(1L<<30)+4096;
+        byte[] block=new byte[65536];Arrays.fill(block,(byte)' ');
+        byte[] header=DICT.getBytes(StandardCharsets.UTF_8);
+        try(ZipOutputStream zip=new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(archive)))) {
+            zip.setLevel(0);
+            zip.putNextEntry(new ZipEntry("demo.schema.yaml"));zip.write(SCHEMA.getBytes(StandardCharsets.UTF_8));zip.closeEntry();
+            zip.putNextEntry(new ZipEntry("dicts/demo.dict.yaml"));zip.write(header);
+            for(long written=header.length;written<size;) {
+                int count=(int)Math.min(block.length,size-written);zip.write(block,0,count);written+=count;
+            }
+            zip.closeEntry();
+        }
+        assertTrue(archive.length()>(1L<<30));
+        RimeSchemeArchive.Review review=RimeSchemeArchive.inspect(archive);
+        File destination=new File(temporary.getRoot(),"large-stage");
+        RimeSchemeArchive.stage(review,List.of("demo"),destination);
+        assertEquals(size,new File(destination,"dicts/demo.dict.yaml").length());
+        assertEquals(review.digest,RimeSchemeArchive.sha256(archive));
+    }
+    @Test public void oversizedArchivesAndInsufficientSpaceFailBeforeExtraction() throws Exception {
+        File archive=temporary.newFile("oversized.zip");
+        try(RandomAccessFile file=new RandomAccessFile(archive,"rw")) {file.setLength(RimeSchemeArchive.MAX_ARCHIVE+1);}
+        try {RimeSchemeArchive.inspect(archive);fail("accepted oversized ZIP");}
+        catch(IOException expected) {assertTrue(expected.getMessage().contains("2 GiB"));}
+        try {RimeSchemeArchive.requireSpace(temporary.getRoot(),Long.MAX_VALUE-(1L<<20));fail("accepted insufficient capacity");}
+        catch(IOException expected) {assertTrue(expected.getMessage().contains("空间不足"));}
+    }
     private LinkedHashMap<String,String> source(String prefix) {
         LinkedHashMap<String,String> files=new LinkedHashMap<>();
         files.put(prefix+"demo.schema.yaml",SCHEMA);files.put(prefix+"dicts/demo.dict.yaml",DICT);return files;
