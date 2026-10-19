@@ -4,6 +4,36 @@
 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。
 每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/xsime/releases)。
 
+## [v1.1.7](https://github.com/scholay/xsime/releases/tag/v1.1.7) — 2026-10-19
+
+### 合并的 PR
+
+- #226
+- #225
+- #224
+- #222
+- #221
+- #220
+- #218
+- #219
+
+### 修复
+
+- **import:** support gigabyte scheme packages across all clients (b1af4f10)
+- **macos:** prevent permission guide resource bundle crashes (fb9e43df)
+- **release:** complete approved assets after alternate job skips (5c7d37ac)
+
+### 文档
+
+- record iOS 1.1.6 community IPA and App Review submission (1f3de8c7)
+- **release:** publish verified 1.1.6 downloads and update guidance (0b09740e)
+
+### 维护
+
+- **release:** prepare 1.1.7 across all clients (e3716679)
+- **ios:** archive on GitHub for existing Apple cloud signing (adac6a6a)
+- **linux:** wait for terminal keyboard focus before injecting keys (99be601b)
+
 ## [v1.1.6](https://github.com/scholay/xsime/releases/tag/v1.1.6) — 2026-10-19
 
 ### 合并的 PR

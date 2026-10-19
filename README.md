@@ -106,17 +106,17 @@
 
 ## 安装
 
-[1.1.6 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.1.6)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP 和 Linux DEB。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；格式与边界见[导入指南](docs/portable-scheme-import.md)。
+[1.1.7 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.1.7)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB 和 iOS 社区 IPA。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；本版将方案 ZIP 上限扩大到 2 GiB，格式与边界见[导入指南](docs/portable-scheme-import.md)。
 
 | 平台 | 版本与安装入口 |
 |---|---|
-| macOS | [1.1.6 PKG](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-1.1.6.pkg)，Apple Silicon／Intel，已签名和公证 |
-| Android | [1.1.6 APK](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Android-1.1.6.apk)，版本码 20，沿用长期签名 |
-| Windows | [1.1.6 EXE](https://github.com/scholay/xsime/releases/download/v1.1.6/RIMES-Windows-1.1.6-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
-| Linux | [1.1.6 DEB](https://github.com/scholay/xsime/releases/download/v1.1.6/fcitx5-rimes_1.1.6_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
-| iOS | [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)。公开可安装版本以 Apple 页面为准 |
+| macOS | [1.1.7 PKG](https://github.com/scholay/xsime/releases/download/v1.1.7/RIMES-1.1.7.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.1.7 APK](https://github.com/scholay/xsime/releases/download/v1.1.7/RIMES-Android-1.1.7.apk)，版本码 21，沿用长期签名 |
+| Windows | [1.1.7 EXE](https://github.com/scholay/xsime/releases/download/v1.1.7/RIMES-Windows-1.1.7-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.1.7 DEB](https://github.com/scholay/xsime/releases/download/v1.1.7/fcitx5-rimes_1.1.7_amd64.deb)，Ubuntu 24.04 amd64／Fcitx5 |
+| iOS | [1.1.7（63）社区 IPA](https://github.com/scholay/xsime/releases/download/v1.1.7/XSIME-1.1.7-63-ios-unsigned.ipa)，需[自行签名](https://github.com/scholay/xsime/releases/download/v1.1.7/XSIME-1.1.7-63-ios-README.txt)；[App Store](https://apps.apple.com/app/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)，实际可安装版本以 Apple 页面为准 |
 
-本轮构建、导入测试与安装验收范围见[1.1.6 发布记录](docs/releases/1.1.6.md)。
+本轮构建、导入测试与安装验收范围见[1.1.7 发布记录](docs/releases/1.1.7.md)。
 
 macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/xsime/issues/90)。
 
