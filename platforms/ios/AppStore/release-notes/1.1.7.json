@@ -1,0 +1,5 @@
+{
+  "en-US": "Supports larger Rime scheme packages, including ZIP files up to 2 GiB. Imports now read large archives in chunks and check available storage before installation. Preserves your current input settings and learned words.",
+  "zh-Hans": "扩大 Rime 方案包导入容量，支持最大 2 GiB 的 ZIP。大包采用分块读取，导入前检查可用存储空间，保留现有输入设置与学习记录。",
+  "zh-Hant": "擴大 Rime 方案包匯入容量，支援最大 2 GiB 的 ZIP。大型檔案採用分塊讀取，匯入前檢查可用儲存空間，保留現有輸入設定與學習記錄。"
+}
