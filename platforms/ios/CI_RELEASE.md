@@ -1,14 +1,15 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.7 (63)**, prepared for remote archive and upload.
-This version has not yet been submitted or approved.
+Current iOS submission: **1.1.7 (63)**. On October 19, 2026 at 18:19 JST,
+App Store Connect accepted the submission and showed **Waiting for Review**.
+The uploaded build is `VALID`; approval and public availability are not yet confirmed.
 
-The previous submission was **1.1.6 (62)**. On October 19, 2026 at 13:04 JST,
-App Store Connect accepted that submission and showed **Waiting for Review**.
-That build was `VALID`; read the live Apple state before changing its review.
-The existing cloud-managed distribution certificate, provisioning profiles,
-Xcode Apple Account and upload API key were reused. No new credential is required
-for this submission. See the [release record](../../docs/releases/1.1.6.md).
+The previous **1.1.6 (62)** submission entered the queue at 13:04 JST that day.
+It was withdrawn before review to submit 1.1.7. The existing cloud-managed
+distribution certificate, both App Store provisioning profiles and upload API key
+were reused after the maintainer signed back into Xcode. No new credential was
+created. See the [1.1.7 release record](../../docs/releases/1.1.7.md) and
+[historical 1.1.6 record](../../docs/releases/1.1.6.md).
 Historical build-60 evidence remains in [its rebuild record](AppStore/release-preparation/1.1.5-build60.md).
 Build, upload, TestFlight, App Review and public availability remain separate states.
 [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
