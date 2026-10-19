@@ -7,6 +7,9 @@ enum ProductResources {
                 return bundle
             }
         }
-        return Bundle.module
+        // SwiftPM's executable accessor can fall back to an absolute build
+        // path and fatalError when that path is absent on an installed Mac.
+        // An optional asset must remain optional even if its bundle is missing.
+        return Bundle.main
     }()
 }

@@ -24,6 +24,11 @@ on:
       - 'Info.plist'
       - 'build_install.sh'
       - 'Resources/**'
+      - 'Sources/RimeBuffer/Resources/**'
+      - 'Sources/RimeBuffer/Permission*.swift'
+      - 'Sources/RimeBuffer/ProductResources.swift'
+      - 'Sources/RimeBuffer/Capture/CapturePermission*.swift'
+      - 'scripts/test-macos-permission-resources.py'
       - 'rime-data/**'
       - 'Sources/CRimeBridge/**'
       - 'scripts/fetch-rime.sh'
@@ -336,6 +341,12 @@ jobs:
           echo "----- assembled bundle -----"
           file "$APP/Contents/MacOS/RIMES"
           du -sh "$APP"
+
+      - name: Verify permission guides from the assembled app
+        run: |
+          python3 scripts/test-macos-permission-resources.py \
+            --binary "$GITHUB_WORKSPACE/RIMES.app/Contents/MacOS/RIMES" \
+            --resources "$GITHUB_WORKSPACE/RIMES.app/Contents/Resources"
 
       # Unlike the stock debug CI runner, the assembled app now contains the
       # exact librime/levers dylibs and SharedSupport shipped to users. Exercise
