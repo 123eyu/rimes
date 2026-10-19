@@ -130,10 +130,23 @@ enum CapturePermissionSmoke {
             try bitmap.representation(using: .png, properties: [:])?.write(to: URL(fileURLWithPath: path))
         }
         cardWindow.close()
+        let expectsMissingResources = CommandLine.arguments.contains("--expect-missing-permission-resources")
         for kind in PermissionGuideAnimation.Kind.allCases {
+            try require(PermissionGuideAnimation(kind, width: 456).image != nil,
+                        "missing artwork keeps a native fallback and usable permission guide")
             for theme in ["light", "dark"] {
-                guard let url = PermissionGuideAnimation.resourceURL("\(kind.rawValue)-\(theme)", extension: "gif"),
+                let resource = PermissionGuideAnimation.resourceURL("\(kind.rawValue)-\(theme)", extension: "gif")
+                if expectsMissingResources {
+                    try require(resource == nil, "missing packaged artwork never falls back to the build directory")
+                    continue
+                }
+                guard let url = resource,
                       let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { throw CaptureError.message("permission GIF missing") }
+                if Bundle.main.bundleURL.pathExtension == "app", let root = Bundle.main.resourceURL {
+                    let resourceRoot = root.standardizedFileURL.resolvingSymlinksInPath().path + "/"
+                    try require(url.standardizedFileURL.resolvingSymlinksInPath().path.hasPrefix(resourceRoot),
+                                "installed permission artwork must come from this app, not the build machine")
+                }
                 try require(CGImageSourceGetCount(source) > 1, "guide resource is a real animated GIF")
             }
         }

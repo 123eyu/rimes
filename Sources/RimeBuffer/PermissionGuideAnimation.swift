@@ -8,7 +8,7 @@ final class PermissionGuideAnimation: NSImageView {
     private var observer: NSObjectProtocol?
 
     static func resourceURL(_ name: String, extension ext: String) -> URL? {
-        Bundle.module.url(forResource: name, withExtension: ext, subdirectory: "Permissions")
+        ProductResources.bundle.url(forResource: name, withExtension: ext, subdirectory: "Permissions")
     }
 
     init(_ kind: Kind, width: CGFloat) {
@@ -39,9 +39,9 @@ final class PermissionGuideAnimation: NSImageView {
 
     private func loadAnimation() {
         let dark = (RimeUI.appKitAppearance ?? effectiveAppearance).bestMatch(from: [.aqua, .darkAqua]) == .darkAqua
-        if let url = Self.resourceURL(kind.rawValue + (dark ? "-dark" : "-light"), extension: "gif") {
-            image = NSImage(contentsOf: url)
-        }
-        animates = !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        let animation = Self.resourceURL(kind.rawValue + (dark ? "-dark" : "-light"), extension: "gif")
+            .flatMap(NSImage.init(contentsOf:))
+        image = animation ?? NSImage(systemSymbolName: "hand.tap", accessibilityDescription: nil)
+        animates = animation != nil && !NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
     }
 }

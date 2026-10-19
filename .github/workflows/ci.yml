@@ -606,6 +606,12 @@ jobs:
       - name: Build (debug)
         run: swift build
 
+      - name: Permission guides in a relocated app and with missing resources
+        run: |
+          BIN_DIR="$(swift build --show-bin-path)"
+          python3 scripts/test-macos-permission-resources.py \
+            --binary "$BIN_DIR/RimeBuffer" --resources "$BIN_DIR"
+
       - name: Export native settings for Linux contract review
         run: |
           BIN="$(swift build --show-bin-path)/RimeBuffer"
