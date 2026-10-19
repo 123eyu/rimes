@@ -1,8 +1,11 @@
 # iOS GitHub Actions release
 
-Current iOS target: **1.1.6 (62)**. App Store Connect readback on October 19
-confirmed **1.1.5 (60), Ready for Distribution** and a newly created **1.1.6,
-Prepare for Submission** draft. Build 62 has not yet been uploaded or submitted.
+Current iOS target: **1.1.6 (62)**. On October 19, 2026 at 13:04 JST,
+App Store Connect accepted the submission and showed **Waiting for Review**.
+The exact build is `VALID`; approval and public availability remain pending.
+The existing cloud-managed distribution certificate, provisioning profiles,
+Xcode Apple Account and upload API key were reused. No new credential is required
+for this submission. See the [release record](../../docs/releases/1.1.6.md).
 Historical build-60 evidence remains in [its rebuild record](AppStore/release-preparation/1.1.5-build60.md).
 Build, upload, TestFlight, App Review and public availability remain separate states.
 [TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q).
@@ -30,15 +33,23 @@ For a maintainer-authorized release using that existing account:
    commit, version, build and ZIP SHA-256 against `archive-provenance.json`.
    The ZIP preserves archive permissions and symlinks. It is unsigned and is
    not an installable or uploaded release.
-3. Open the downloaded `.xcarchive` in Xcode Organizer. Use the existing
-   authorized Apple Account and automatic cloud signing for App Store Connect,
-   keeping the selected build number. This signs/uploads the CI archive without
-   compiling or testing on the maintainer's Mac.
-4. Read back processing in App Store Connect, select that exact build in the
+3. Keep the unsigned archive intact. If Xcode needs a development-signed archive,
+   sign a copy with the existing matching development identity/profiles, including
+   both targets' App Group and shared Keychain entitlements. Sign nested code
+   before the keyboard extension and containing app; verify the resulting
+   entitlements. This preparation is signing only, not a local build or test.
+4. Open the copy in Xcode Organizer. Use Custom > App Store Connect > Export,
+   automatic cloud signing and the existing authorized Apple Account. Turn off
+   Manage version and build number. Verify the exported IPA with
+   `scripts/verify-release-ipa.py`, then inspect both targets' signed App Group
+   and shared Keychain entitlements before uploading. The existing upload API
+   key can upload this distribution-signed IPA even though it cannot cloud-sign
+   an archive or submit App Review. Never upload a development-signed copy.
+5. Read back processing in App Store Connect, select that exact build in the
    matching version draft, update all three locales and review notes, then
    submit through the authorized webpage. Preserve screenshots, territories,
    pricing and automatic release after approval unless explicitly changed.
-5. Record upload, processing and review-submission evidence separately. If the
+6. Record upload, processing and review-submission evidence separately. If the
    existing login or cloud signing permission fails, stop before introducing
    new credentials or claiming a submission.
 
@@ -46,6 +57,28 @@ Normal pull-request/push checks never publish an archive. The manual archive
 path is restricted to `main`, has no signing secrets or App Store write access,
 and retains artifacts for 14 days. Fully unattended release remains the
 separate `ios-release.yml` path below, requiring its own credentials.
+
+## GitHub community IPA
+
+The mobile downloads on GitHub Release are the signed Android APK and an
+**unsigned iOS IPA for user signing**, with App Store and TestFlight links.
+These are separate distribution channels: publishing the IPA does not require
+Apple review and does not imply that the store version is available.
+
+Package `Payload/RIMES.app` from the original unsigned CI archive, preserving
+executable permissions and symlinks. Include the keyboard extension, verify the
+version/build and privacy manifests for both targets, and compare executable
+digests against the CI archive. Do not publish the development-signing copy,
+device provisioning profiles or credentials. Attach a SHA-256 file, CI/source
+provenance and signing instructions. Read back the public download and verify
+its complete digest; do not replace assets already published under the tag.
+
+The community IPA cannot be installed directly like an APK. User signing must
+cover both targets with valid profiles and authorized shared App Group/Keychain
+entitlements. Changing bundle IDs alone does not preserve shared-data access;
+arbitrary third-party re-signing tools are not verified. Ordinary users can use
+the App Store or TestFlight links. iOS Settings updates continue to use the
+actual App Store version, not the GitHub community package.
 
 ## One-time configuration
 
