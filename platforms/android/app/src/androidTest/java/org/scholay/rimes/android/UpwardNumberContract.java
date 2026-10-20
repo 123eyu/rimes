@@ -322,6 +322,13 @@ final class UpwardNumberContract {
         int[] disabled=counts(); press(); up(0,0);
         onMain(() -> check(letters.size()==disabled[0]+1 && numbers.size()==disabled[1],"disabled gesture preserves ordinary tap"));
         onMain(() -> { settings.setSymbolGesture("hold"); surface.applyPreferences(settings); render(); }); idle(); findKey("q");
+        onMain(() -> {
+            settings.setLayout("nineKey");
+            check(settings.builtInRuntimeSchema(true).equals("rimes_pinyin9"),"settings address the nine-key runtime schema");
+            settings.setLayout("orthogonal");
+            check(settings.builtInRuntimeSchema(true).equals("rimes_ziranma"),"chord settings address their natural-code engine");
+            check(settings.builtInRuntimeSchema(false).equals("rimes_pinyin"),"disabled chords preserve the ordinary schema");
+        });
         fixture.edit().clear().commit();
         int[] detached=counts(); press(); hold(); onMain(() -> {emit(MotionEvent.ACTION_MOVE,0,-24);activity.setContentView(new LinearLayout(activity));});
         unchanged(detached,"detaching an armed keyboard cannot leave an insertion callback");

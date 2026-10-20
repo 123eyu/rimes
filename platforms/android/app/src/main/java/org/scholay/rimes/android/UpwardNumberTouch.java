@@ -70,6 +70,10 @@ final class UpwardNumberTouch {
     }
     private void move(float x,float y,long at) {
         arm(at);
+        // Native ViewGroup can defer Button's pressed state until its tap
+        // timeout. A direct upward gesture must not then look like a canceled
+        // press at ACTION_UP; the active, eligible pointer owns this feedback.
+        if(direct && eligible && y<originY && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f)) button.setPressed(true);
         if(direct && eligible && originY-y>=18*density && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f)) armed=true;
         if(armed) {
             boolean next=originY-y>=18*density && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f);

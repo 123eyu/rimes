@@ -87,6 +87,11 @@ public final class KeyboardSettings {
     }
     public String getSchema() { return snapshot().schema; }
     public String getLayout() { return snapshot().layout; }
+    public String builtInRuntimeSchema(boolean chordEnabled) {
+        Snapshot saved=snapshot();
+        if(chordEnabled && chord(saved.layout)) return "rimes_ziranma";
+        return "nineKey".equals(saved.layout)?"rimes_pinyin9":saved.schema;
+    }
     public String getTheme() { return snapshot().theme; }
     public String getTranslationDirection() { return snapshot().translationDirection; }
     public boolean isLearningEnabled() { return snapshot().learning; }

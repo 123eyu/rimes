@@ -313,7 +313,8 @@ public final class SetupActivity extends Activity {
         LinearLayout group=group(t("当前方案的输入习惯","Current scheme input preferences"));
         paragraph(group,t("跟随方案保留原配置。修改在下一次打开键盘时生效。","Use scheme default to preserve the original configuration. Changes apply when the keyboard next opens."));
         RimeSchemeStore.Selection imported=new RimeSchemeStore(this).active();
-        String schema=imported==null?settings.getSchema():imported.schemaID;
+        String schema=imported==null?settings.builtInRuntimeSchema(officialPlugins.enabled("chord"))
+                :imported.layouts==null?imported.schemaID:imported.layouts.schema(settings.getLayout());
         String scope=(imported==null?"builtin":imported.packageID)+":"+schema;
         EngineWorker.QUEUE.execute(() -> {
             org.json.JSONArray options;
