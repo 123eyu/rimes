@@ -306,6 +306,16 @@ final class UpwardNumberContract {
         }); idle(); findKey("q");
         int[] direct=counts(); press(); onMain(() -> emit(MotionEvent.ACTION_MOVE,0,-24)); up(0,-24);
         onMain(() -> check(letters.size()==direct[0] && numbers.size()==direct[1]+1,"direct swipe emits once without hold delay"));
+        int[] edge=counts();
+        onMain(() -> {
+            down=SystemClock.uptimeMillis(); startX=surface.getLeft()+key.getLeft()+key.getWidth()/2f;
+            startY=surface.getTop()+key.getTop()+2*density;
+            emit(MotionEvent.ACTION_DOWN,0,0);
+            emit(MotionEvent.ACTION_MOVE,0,-12);
+            check(key.isPressed(),"partial upward path survives leaving the top edge");
+            emit(MotionEvent.ACTION_MOVE,0,-24);
+        }); up(0,-24);
+        onMain(() -> check(letters.size()==edge[0] && numbers.size()==edge[1]+1,"top-edge direct swipe emits exactly once"));
         int[] directCanceled=counts(); press(); onMain(() -> {emit(MotionEvent.ACTION_MOVE,0,-24);root.cancelPendingInputEvents();}); up(0,-24);
         unchanged(directCanceled,"retirement also cancels direct swipe");
         onMain(() -> { settings.setSymbolGesture("off"); surface.applyPreferences(settings); render(); }); idle(); findKey("q");

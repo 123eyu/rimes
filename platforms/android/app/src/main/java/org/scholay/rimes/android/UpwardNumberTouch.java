@@ -103,7 +103,9 @@ final class UpwardNumberTouch {
         if(action==MotionEvent.ACTION_MOVE) {
             move(x,y,event.getEventTime());
             // Once armed, preserve the native cap's feedback while the finger moves above it.
-            return armed;
+            // Keep an upward path starting near the cap edge alive until it
+            // reaches the threshold; native Button would otherwise cancel it.
+            return armed || (direct && eligible && y < originY);
         }
         if(action==MotionEvent.ACTION_UP) {
             move(x,y,event.getEventTime());

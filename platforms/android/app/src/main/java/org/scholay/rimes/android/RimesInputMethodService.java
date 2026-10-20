@@ -199,6 +199,17 @@ public final class RimesInputMethodService extends InputMethodService {
         super.onStartInputView(info,restarting);
         if(keys!=null) keys.applyPreferences(settings);
         if(target==null) { target=getCurrentInputConnection(); configure(info); }
+        if(ready && target!=null && !privateField) {
+            final InputEpoch.Ticket ticket=epoch.issue();
+            final String selected=effectiveSchema();
+            final RimeSchemeStore.Selection imported=importedScheme;
+            EngineWorker.QUEUE.execute(() -> {
+                if(destroyed || !epoch.current(ticket) || session==0) return;
+                ImportedRuntimeLayout loaded=importedRuntimeLayout;
+                String current=imported!=null && loaded!=null && loaded.matches(imported)?loaded.schema:selected;
+                applySchemePreferences(imported,current);
+            });
+        }
         render();
     }
     private String effectiveSchema() {
@@ -210,15 +221,17 @@ public final class RimesInputMethodService extends InputMethodService {
         if(session==0) throw new IllegalStateException("Cannot create input session");
         String loaded=ImportedKeyboardLayouts.selectSchema(selected,imported==null?selected:imported.schemaID,
                 candidate -> engine.selectSchema(session,candidate));
-        if(engine instanceof NativeRimeEngine && !privateField) {
-            String scope=(imported==null?"builtin":imported.packageID)+":"+loaded.replaceFirst("_private$","");
-            NativeRimeEngine.applyInputOptionsNative(session,loaded,settings.inputOptions(scope).toString());
-        }
+        applySchemePreferences(imported,loaded);
         ImportedRuntimeLayout result=imported==null?null:new ImportedRuntimeLayout(imported,loaded);
         importedRuntimeLayout=result;
         if(imported!=null) main.post(() -> {
             if(!destroyed && epoch.current(ticket) && importedRuntimeLayout==result && result.matches(importedScheme)) render();
         });
+    }
+    private void applySchemePreferences(RimeSchemeStore.Selection imported,String loaded) {
+        if(session==0 || !(engine instanceof NativeRimeEngine) || privateField) return;
+        String scope=(imported==null?"builtin":imported.packageID)+":"+(imported==null?loaded.replaceFirst("_private$",""):loaded);
+        NativeRimeEngine.applyInputOptionsNative(session,loaded,settings.inputOptions(scope).toString());
     }
     private void resetEngine() {
         closeCandidateMatrix();
@@ -356,6 +369,7 @@ public final class RimesInputMethodService extends InputMethodService {
         dispatch(() -> {
             Result settled=literal("");
             if(session!=0 && !engine.selectSchema(session,selected)) throw new IllegalStateException("Cannot change learning mode");
+            applySchemePreferences(null,selected);
             return settled;
         },true);
     }

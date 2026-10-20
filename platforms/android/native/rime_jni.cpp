@@ -29,7 +29,24 @@ static jstring string(JNIEnv* env, const std::string& s) {
 }
 static RimeApi* api() { return rime_get_api(); }
 static bool initialized = false;
-static std::map<RimeSessionId, xsime::input::SessionOverrides> input_habits;
+struct InputPreferences {
+    xsime::input::SessionOverrides state;
+    std::string schema;
+    std::map<std::string, bool> values;
+    bool pending = false;
+};
+static std::map<RimeSessionId, InputPreferences> input_habits;
+static void applyPendingInputHabits(RimeSessionId session) {
+    const auto found = input_habits.find(session);
+    if (found == input_habits.end() || !found->second.pending) return;
+    const char* input = api()->get_input(session);
+    if (input && input[0]) return;
+    try {
+        auto& value = found->second;
+        value.state.Update<RimeConfig>(api(), session, value.schema, value.values);
+        value.pending = false;
+    } catch (...) { /* Retain the pending preference without interrupting input. */ }
+}
 static std::string shared_path, user_path, build_path;
 extern "C" const char* rimes_lua_last_error();
 extern "C" void rimes_lua_clear_error();
@@ -61,7 +78,7 @@ extern "C" JNIEXPORT void JNICALL JNI(destroyNative)(JNIEnv*, jclass, jlong sess
 extern "C" JNIEXPORT jboolean JNICALL JNI(schemaNative)(JNIEnv* env, jclass, jlong session, jstring schema) {
     rimes_lua_clear_error();
     api()->clear_composition(session);
-    input_habits[session].Restore(api(), session); input_habits.erase(session);
+    input_habits[session].state.Restore(api(), session); input_habits.erase(session);
     const bool selected = api()->select_schema(session, utf8(env, schema).c_str());
     return selected && (!rimes_lua_last_error() || !rimes_lua_last_error()[0]);
 }
@@ -87,14 +104,14 @@ extern "C" JNIEXPORT void JNICALL JNI(applyInputOptionsNative)(JNIEnv* env, jcla
             return;
         }
         const auto id = utf8(env, schema);
-        const char* input = api()->get_input(session);
-        if (input && input[0]) { api()->config_close(&config); return; }
         std::map<std::string, bool> values;
         for (const auto& option : xsime::input::Switches<RimeConfig>(api(), id)) {
             Bool value = False;
             if (api()->config_get_bool(&config, option.name.c_str(), &value)) values[option.name] = value != 0;
         }
-        input_habits[session].Update<RimeConfig>(api(), session, id, values);
+        auto& saved = input_habits[session];
+        saved.schema = id; saved.values = std::move(values); saved.pending = true;
+        applyPendingInputHabits(session);
         api()->config_close(&config);
     } catch (...) { if (config.ptr) api()->config_close(&config); }
 }
@@ -143,11 +160,14 @@ extern "C" JNIEXPORT jstring JNICALL JNI(deployNative)(JNIEnv* env, jclass, jstr
     if (!resources.empty()) std::filesystem::remove_all(resources + "/.validation-user", ignored);
     return failure.empty() ? nullptr : string(env, failure);
 }
-extern "C" JNIEXPORT jboolean JNICALL JNI(keyNative)(JNIEnv*, jclass, jlong session, jint key) { return api()->process_key(session,key,0); }
+extern "C" JNIEXPORT jboolean JNICALL JNI(keyNative)(JNIEnv*, jclass, jlong session, jint key) {
+    applyPendingInputHabits(session);
+    return api()->process_key(session,key,0);
+}
 extern "C" JNIEXPORT jboolean JNICALL JNI(selectNative)(JNIEnv*, jclass, jlong session, jint index) {
     return index >= 0 && api()->select_candidate(session,static_cast<size_t>(index));
 }
-extern "C" JNIEXPORT void JNICALL JNI(clearNative)(JNIEnv*, jclass, jlong session) { api()->clear_composition(session); }
+extern "C" JNIEXPORT void JNICALL JNI(clearNative)(JNIEnv*, jclass, jlong session) { api()->clear_composition(session); applyPendingInputHabits(session); }
 extern "C" JNIEXPORT jstring JNICALL JNI(roundTripNative)(JNIEnv* env, jclass, jstring text) { return string(env,utf8(env,text)); }
 static jobject candidateSnapshot(JNIEnv* env, bool handled, const std::string& raw, const std::string& preedit,
     int cursor, const std::string& commit, const std::vector<std::string>& candidates,

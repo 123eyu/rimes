@@ -89,6 +89,15 @@ final class WubiContract {
                                 engine.clearComposition(session);
                                 for(char key:"znihao".toCharArray()) check(engine.processKey(session,key).commit.isEmpty(),"reverse lookup never forced by Wubi options");
                             }
+                            engine.clearComposition(session);
+                            NativeRimeEngine.applyInputOptionsNative(session,base+suffix,"{\"rimes_wubi_manual_commit\":true}");
+                            engine.processKey(session,'v');
+                            NativeRimeEngine.applyInputOptionsNative(session,base+suffix,"{}");
+                            for(char key:"oni".toCharArray()) check(engine.processKey(session,key).commit.isEmpty(),"pending preference keeps current composition intact");
+                            engine.clearComposition(session);
+                            String inherited="";
+                            for(char key:"voni".toCharArray()) inherited+=engine.processKey(session,key).commit;
+                            check(inherited.equals("灵犀"),"inherited value restored at the next composition boundary");
                         } finally { engine.destroySession(session); }
                     }
                 }
