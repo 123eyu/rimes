@@ -184,7 +184,11 @@ public final class RimesInputMethodService extends InputMethodService {
         restoreSettings();
         int kind=info.inputType&InputType.TYPE_MASK_CLASS;
         numeric=kind==InputType.TYPE_CLASS_NUMBER || kind==InputType.TYPE_CLASS_PHONE || kind==InputType.TYPE_CLASS_DATETIME;
-        directOnly=numeric || isPassword(info) || kind!=InputType.TYPE_CLASS_TEXT;
+        // Custom editors commonly publish TYPE_NULL instead of TYPE_CLASS_TEXT (the Douyin
+        // live-room chat box does) while still accepting ordinary committed text. Only numeric
+        // and password fields need the literal route; an unknown class stays Chinese-capable
+        // but keeps the private, off-learning resources below.
+        directOnly=numeric || isPassword(info);
         privateField=!allowsBuffer(info);
         uppercase=false; symbols=false; emoji=false; appearanceOpen=false; spellingOpen=false; punctuationOpen=false; numberPageFresh=false;
         selection=info.initialSelEnd; selectionStart=info.initialSelStart;

@@ -35,7 +35,10 @@ implemented in this Android revision.
   layout, Chinese schema and palette choices; its right layers icon toggles Buffer. There
   are nine candidates per page, with tap selection and previous/next buttons.
   Composing text is displayed through the host's `InputConnection` when Buffer
-  is off, and in the Buffer input rail when it is on.
+  is off, and in the Buffer input rail when it is on. Hosts that publish `TYPE_NULL`
+  for their own editor (the Douyin live-room chat box does) still get Chinese input;
+  only numeric and password fields stay on the literal route, and unknown classes
+  keep private, non-learning resources without Buffer.
 - Space selects the first candidate on the current page. Without composition it
   inserts a space. Return during composition confirms the raw input code only;
   the same press never also sends Buffer. Delete edits composition first.
