@@ -197,6 +197,7 @@ public final class RimesInputMethodService extends InputMethodService {
     }
     @Override public void onStartInputView(EditorInfo info,boolean restarting) {
         super.onStartInputView(info,restarting);
+        if(keys!=null) keys.applyPreferences(settings);
         if(target==null) { target=getCurrentInputConnection(); configure(info); }
         render();
     }
@@ -934,7 +935,7 @@ public final class RimesInputMethodService extends InputMethodService {
         retryButton=new KeyButton(this); chromeButtons.add((KeyButton)retryButton); retryButton.setText(R.string.retry);
         retryButton.setOnClickListener(v -> { if(failed) initialize(); else retryRetained(); }); keyboard.addView(retryButton,new LinearLayout.LayoutParams(-1,dp(44)));
         surfaceContainer=new FrameLayout(this);
-        keys=new KeyboardSurface(this,keyHandler); surfaceContainer.addView(keys,new FrameLayout.LayoutParams(-1,-1));
+        keys=new KeyboardSurface(this,keyHandler); keys.applyPreferences(settings); surfaceContainer.addView(keys,new FrameLayout.LayoutParams(-1,-1));
         chords=new ChordSurface(this,new ChordSurface.Handler() {
             public void onChord(String code) { chordPreview=""; typeChord(code); }
             public void onKey(String text) { type(uppercase?text.toUpperCase(Locale.ROOT):text); }
@@ -1235,7 +1236,7 @@ public final class RimesInputMethodService extends InputMethodService {
         retryButton.setVisibility(failed || !retained.isEmpty()?View.VISIBLE:View.GONE);
         boolean chord=chordVisible();
         float width=(keyboard.getWidth()>0?keyboard.getWidth():getResources().getDisplayMetrics().widthPixels)-keyboard.getPaddingLeft()-keyboard.getPaddingRight();
-        float surfaceHeight=chord?ChordLayout.height(Math.max(1,width/getResources().getDisplayMetrics().density),"splitOrthogonal".equals(layout)):KeyboardLayout.height(landscape());
+        float surfaceHeight=chord?ChordLayout.height(Math.max(1,width/getResources().getDisplayMetrics().density),"splitOrthogonal".equals(layout)):keys.desiredHeight();
         boolean panelOpen=appearanceOpen || pluginSettingsOpen || clipboardOpen;
         if(chord && panelOpen) surfaceHeight+=landscape()?35:41;
         int desiredHeight=Math.round(surfaceHeight*getResources().getDisplayMetrics().density);

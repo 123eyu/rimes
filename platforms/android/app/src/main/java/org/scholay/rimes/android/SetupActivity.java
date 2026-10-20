@@ -370,6 +370,20 @@ public final class SetupActivity extends Activity {
         LinearLayout standard=group(t("标准键盘","Standard keyboard"));
         segments(standard,new String[]{"qwerty","nineKey"},new String[]{t("QWERTY · 26 键","QWERTY · 26 keys"),t("九键全拼","9-key Pinyin")},settings.getLayout(),"settings.layout.",id -> { settings.setLayout(id); render(); }); preview(standard);
         note(settings.getLayout().equals("nineKey")?t("九键仅用于全拼；英文和数字沿用标准键位。","9-key is for Pinyin; English and numbers use the standard keys."):t("当前布局：","Current layout: ")+layoutName(settings.getLayout()));
+        LinearLayout behavior=group(t("普通键盘输入","Standard keyboard input"));
+        String[] gestures={"off","hold","swipe"}, labels={t("关闭","Off"),t("长按后上滑","Hold then swipe"),t("直接上滑","Swipe directly")};
+        segments(behavior,gestures,labels,settings.symbolGesture(),"settings.gesture.",id -> { settings.setSymbolGesture(id); render(); });
+        toggle(behavior,t("数字九宫格","Numeric keypad"),"settings.numericGrid",settings.numericGrid(),settings::setNumericGrid);
+        toggle(behavior,t("加宽空格（将逗号和句号收进符号页）","Wide space (comma and period on symbol page)"),"settings.wideSpace",settings.wideSpace(),settings::setWideSpace);
+        for(boolean landscape:new boolean[]{false,true}) {
+            String title=landscape?t("横屏高度","Landscape height"):t("竖屏高度","Portrait height");
+            int percent=settings.heightPercent(landscape); String[] heights={"100%","105%","110%","115%","120%","125%","130%"};
+            row(behavior,null,title,null,percent+"%",landscape?"settings.landscapeHeight":"settings.portraitHeight",() ->
+                new android.app.AlertDialog.Builder(this).setTitle(title).setSingleChoiceItems(heights,(percent-100)/5,(dialog,index) -> {
+                    settings.setHeightPercent(landscape,100+index*5); dialog.dismiss(); render();
+                }).setNegativeButton(t("取消","Cancel"),null).show());
+        }
+        paragraph(behavior,t("下次打开键盘时应用。数字九宫格只改变数字页，并击布局保持原尺寸。","Applied when the keyboard opens. The numeric keypad changes only the number page; chord layouts retain their dimensions."));
         LinearLayout themes=group(t("宠物与键盘配色","Pets & keyboard colors")); paragraph(themes,t("当前配色：","Current color: ")+KeyboardTheme.named(settings.getTheme()).title);
         for(int start=0;start<KeyboardTheme.ALL.length;start+=3) {
             LinearLayout line=new LinearLayout(this); line.setOrientation(LinearLayout.HORIZONTAL);

@@ -16,6 +16,11 @@ public struct KeyboardPreferences: Codable {
     public var traditional = false
     public var chordLayout: ChordLayout = .orthogonal
     public var ordinaryLayout: OrdinaryKeyboardLayout = .qwerty
+    public var directSwipeSymbols = false
+    public var portraitHeight = 100
+    public var landscapeHeight = 100
+    public var numericNineGrid = false
+    public var appliedLayoutOptionsRevision: UUID?
     public var longPressSwipeSymbols = false
     public var appliedLongPressSwipeSymbolsRevision: UUID?
     public var keyboardSkin: KeyboardSkin = .system
@@ -44,6 +49,7 @@ public struct KeyboardPreferences: Codable {
         case scheme, appliedAppSelection, initialized, haptics, keySounds, traditional, sourceLanguage, targetLanguage
         case chordLayout, hapticStrength, lastChineseScheme, englishInput, poem, speakTranslation, statusSkin, art, statusSkinRotation, appliedSkinRevision, thinking
         case ordinaryLayout, longPressSwipeSymbols, appliedLongPressSwipeSymbolsRevision, keyboardSkin, appliedKeyboardAppearanceRevision, overriddenCustomLayoutRevision
+        case directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, appliedLayoutOptionsRevision
         case appliedKeyboardThemeRevision, keyboardThemeMigrationVersion
     }
     public init(from decoder: Decoder) throws {
@@ -56,6 +62,11 @@ public struct KeyboardPreferences: Codable {
         traditional = try values.decodeIfPresent(Bool.self, forKey: .traditional) ?? false
         chordLayout = (try? values.decode(ChordLayout.self, forKey: .chordLayout)) ?? .orthogonal
         ordinaryLayout = (try? values.decode(OrdinaryKeyboardLayout.self, forKey: .ordinaryLayout)) ?? .qwerty
+        directSwipeSymbols = (try? values.decode(Bool.self, forKey: .directSwipeSymbols)) ?? false
+        portraitHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .portraitHeight)) ?? 100))
+        landscapeHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .landscapeHeight)) ?? 100))
+        numericNineGrid = (try? values.decode(Bool.self, forKey: .numericNineGrid)) ?? false
+        appliedLayoutOptionsRevision = try? values.decode(UUID.self, forKey: .appliedLayoutOptionsRevision)
         longPressSwipeSymbols = (try? values.decode(Bool.self, forKey: .longPressSwipeSymbols)) ?? false
         appliedLongPressSwipeSymbolsRevision = try? values.decode(UUID.self, forKey: .appliedLongPressSwipeSymbolsRevision)
         keyboardSkin = (try? values.decode(KeyboardSkin.self, forKey: .keyboardSkin)) ?? .system

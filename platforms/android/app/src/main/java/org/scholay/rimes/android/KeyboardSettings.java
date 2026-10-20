@@ -16,6 +16,11 @@ public final class KeyboardSettings {
     public static final String KEY_THEME="theme";
     public static final String KEY_TRANSLATION_DIRECTION="translation_direction";
     public static final String KEY_LEARNING="learning";
+    public static final String KEY_SYMBOL_GESTURE="symbol_gesture";
+    public static final String KEY_NUMERIC_GRID="numeric_grid";
+    public static final String KEY_WIDE_SPACE="wide_space";
+    public static final String KEY_PORTRAIT_HEIGHT="portrait_height";
+    public static final String KEY_LANDSCAPE_HEIGHT="landscape_height";
     public static final String KEY_INPUT_HABITS="input_habits_v1";
     public static final String KEY_AI_MOCK_ENABLED="ai_mock_enabled";
     public static final String DEFAULT_SCHEMA="rimes_pinyin";
@@ -112,6 +117,19 @@ public final class KeyboardSettings {
     }
     public void setLearningEnabled(boolean enabled) { preferences.edit().putBoolean(KEY_LEARNING,enabled).apply(); }
     public void setAiMockEnabled(boolean enabled) { preferences.edit().putBoolean(KEY_AI_MOCK_ENABLED,enabled).apply(); }
+
+    // Android has always enabled hold/up; existing profiles retain that behavior.
+    public String symbolGesture() { return text(preferences.getAll(),KEY_SYMBOL_GESTURE,values("off","hold","swipe"),"hold"); }
+    public void setSymbolGesture(String mode) { preferences.edit().putString(KEY_SYMBOL_GESTURE,normalized(mode,values("off","hold","swipe"),"hold")).apply(); }
+    public boolean numericGrid() { return flag(preferences.getAll(),KEY_NUMERIC_GRID,false); }
+    public boolean wideSpace() { return flag(preferences.getAll(),KEY_WIDE_SPACE,false); }
+    public void setNumericGrid(boolean value) { preferences.edit().putBoolean(KEY_NUMERIC_GRID,value).apply(); }
+    public void setWideSpace(boolean value) { preferences.edit().putBoolean(KEY_WIDE_SPACE,value).apply(); }
+    public int heightPercent(boolean landscape) {
+        Object value=preferences.getAll().get(landscape?KEY_LANDSCAPE_HEIGHT:KEY_PORTRAIT_HEIGHT);
+        return value instanceof Integer?Math.min(130,Math.max(100,(Integer)value)):100;
+    }
+    public void setHeightPercent(boolean landscape,int value) { preferences.edit().putInt(landscape?KEY_LANDSCAPE_HEIGHT:KEY_PORTRAIT_HEIGHT,Math.min(130,Math.max(100,value))).apply(); }
 
     public org.json.JSONObject inputOptions(String scope) {
         try {

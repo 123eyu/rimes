@@ -11,17 +11,25 @@ struct StandardKeyboardGeometry {
     var keys: [(text: String, label: String, frame: CGRect)] = []
     var controls: [StandardKeyControl: CGRect] = [:]
     var height: CGFloat
-    static func height(landscape: Bool) -> CGFloat { landscape ? 143 : 206 }
+    static func height(landscape: Bool, percent: Int = 100) -> CGFloat { (landscape ? 143 : 206) * CGFloat(min(130, max(100, percent))) / 100 }
 
     /// `chinese` swaps the number and symbol rows for the marks Chinese input types.
-    static func make(width: CGFloat, mode: StandardKeyboardMode, landscape: Bool, chinese: Bool = false) -> Self {
-        let height = height(landscape: landscape), gap: CGFloat = landscape ? 5 : 6
+    static func make(width: CGFloat, mode: StandardKeyboardMode, landscape: Bool, chinese: Bool = false, numericNineGrid: Bool = false, availableHeight: CGFloat? = nil) -> Self {
+        let height = max(1, availableHeight ?? height(landscape: landscape)), gap: CGFloat = landscape ? 5 : 6
         let rowGap: CGFloat = landscape ? 5 : 10, rowHeight = (height - rowGap * 3) / 4
         let width = max(1, width)
         var value = Self(height: height)
         func rect(_ x: CGFloat, _ row: Int, _ w: CGFloat, span: Int = 1) -> CGRect {
             CGRect(x: x, y: CGFloat(row) * (rowHeight + rowGap), width: max(1, w),
                    height: CGFloat(span) * rowHeight + CGFloat(span - 1) * rowGap)
+        }
+        if mode == .numeric && numericNineGrid {
+            let unit = (width - gap * 3) / 4
+            func cell(_ c: Int, _ r: Int, rows: Int = 1) -> CGRect { rect(CGFloat(c) * (unit + gap), r, unit, span: rows) }
+            for digit in 1...9 { value.keys.append((String(digit), String(digit), cell((digit - 1) % 3, (digit - 1) / 3))) }
+            value.keys.append(("0", "0", cell(1, 3))); value.keys.append((".", ".", cell(2, 3)))
+            value.controls = [.numbers: cell(0, 3), .backspace: cell(3, 0), .symbols: cell(3, 1), .enter: cell(3, 2, rows: 2)]
+            return value
         }
         if mode == .nineKey {
             let unit = (width - gap * 4) / 5

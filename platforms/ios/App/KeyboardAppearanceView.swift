@@ -31,12 +31,22 @@ struct KeyboardAppearanceView: View {
                 }
             }
             Section {
-                Toggle("长按上滑输入数字和符号", isOn: Binding(get: { value.longPressSwipeSymbols }, set: { enabled in
-                    do { try store.saveSwipeSymbols(enabled); value = store.load() }
+                Picker(L("上滑数字和符号", "Swipe symbols"), selection: Binding(get: {
+                    value.longPressSwipeSymbols ? (value.directSwipeSymbols ? 2 : 1) : 0
+                }, set: { mode in
+                    do { try store.saveSwipeSymbols(mode != 0, direct: mode == 2); value = store.load() }
                     catch { self.error = error.localizedDescription }
-                })).accessibilityIdentifier("keyboardAppearance.swipeSymbols")
-            } header: { Text("普通键盘输入") } footer: {
-                Text("按住字母键，向上滑动后松手，输入键角标注的字符。26 键顶排对应数字 1–0，其余字母键和 9 键对应常用标点。并击布局不受影响。")
+                })) {
+                    Text(L("关闭", "Off")).tag(0)
+                    Text(L("长按后上滑", "Hold then swipe")).tag(1)
+                    Text(L("直接上滑", "Swipe directly")).tag(2)
+                }.accessibilityIdentifier("keyboardAppearance.swipeSymbols")
+                Toggle(L("数字九宫格", "Numeric keypad"), isOn: Binding(get: { value.numericNineGrid }, set: { value.numericNineGrid = $0; saveSizing() }))
+                    .accessibilityIdentifier("keyboardAppearance.numericNineGrid")
+                Stepper(L("竖屏高度", "Portrait height") + " \(value.portraitHeight)%", value: Binding(get: { value.portraitHeight }, set: { value.portraitHeight = $0; saveSizing() }), in: 100...130, step: 5)
+                Stepper(L("横屏高度", "Landscape height") + " \(value.landscapeHeight)%", value: Binding(get: { value.landscapeHeight }, set: { value.landscapeHeight = $0; saveSizing() }), in: 100...130, step: 5)
+            } header: { Text(L("普通键盘输入", "Standard keyboard input")) } footer: {
+                Text(L("上滑后松手输入键角的数字或符号。数字九宫格只改变数字页；高度分别保存，下次打开键盘时生效。并击和自定义布局保持原尺寸。", "Release after swiping up to insert the alternate. The numeric keypad changes only the number page. Heights are saved per orientation and applied when the keyboard opens. Chord and custom layouts keep their dimensions."))
             }
             Section("宠物与键盘配色") {
                 Text(theme == .rhino ? "\(ProductBrand.name) 经典 · 象牙白、灰色与橙色" : "当前：\(theme.title)")
@@ -92,6 +102,10 @@ struct KeyboardAppearanceView: View {
         .alert("无法保存", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("好") { error = nil }
         } message: { Text(error ?? "") }
+    }
+    private func saveSizing() {
+        do { try store.saveLayoutOptions(portrait: value.portraitHeight, landscape: value.landscapeHeight, numericNineGrid: value.numericNineGrid); value = store.load() }
+        catch { value = store.load(); self.error = error.localizedDescription }
     }
     private func selectTheme(_ next: StatusSkin) {
         do { try KeyboardThemeStore().save(next); theme = next }

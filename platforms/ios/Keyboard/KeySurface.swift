@@ -19,6 +19,8 @@ final class KeySurface: UIView {
     var numeric = false { didSet { retire(); setNeedsLayout() } }
     var shifted = false { didSet { if oldValue != shifted { retire() }; setNeedsDisplay() } }
     var englishInput = false { didSet { if oldValue != englishInput { retire() }; updateLanguageButton(); setNeedsDisplay() } }
+    var directSwipeSymbols = false { didSet { if oldValue != directSwipeSymbols { cancel() } } }
+    var numericNineGrid = false { didSet { if oldValue != numericNineGrid { cancel(); setNeedsLayout() } } }
     var longPressSwipeSymbols = false { didSet { if oldValue != longPressSwipeSymbols { cancel(); setNeedsLayout() } } }
     var chordLayout: ChordLayout = .orthogonal { didSet { if oldValue != chordLayout { retire(); setNeedsLayout() } } }
     var resolvesChords: Bool { chordMode && !numeric && !emojiMode && !shifted && !englishInput }
@@ -158,7 +160,7 @@ final class KeySurface: UIView {
                 else if let button = customFunctionViews[item.key.action] { button.frame = frame; button.isHidden = false }
             }
         } else if usesStandardLayout, let standardMode {
-            let geometry = StandardKeyboardGeometry.make(width: bounds.width, mode: standardMode, landscape: bounds.width > 590, chinese: chineseNumberPages)
+            let geometry = StandardKeyboardGeometry.make(width: bounds.width, mode: standardMode, landscape: bounds.width > 590, chinese: chineseNumberPages, numericNineGrid: numericNineGrid, availableHeight: bounds.height)
             boxes = geometry.keys.map { ($0.text, $0.frame) }
             labels = Dictionary(uniqueKeysWithValues: geometry.keys.map { ($0.text, $0.label) })
             standardFunctionViews.values.forEach { $0.isHidden = true }
@@ -267,8 +269,8 @@ final class KeySurface: UIView {
     }
     private func beginOrdinary(_ id: ObjectIdentifier, key: String, point: CGPoint, at time: TimeInterval, scheduleHold: Bool = true) {
         let alternate = alternate(for: key)
-        ordinary[id] = .init(key: key, origin: point, at: time, alternate: alternate, keyWidth: boxes.first { $0.0 == key }?.1.width ?? 32)
-        guard alternate != nil, scheduleHold else { return }
+        ordinary[id] = .init(key: key, origin: point, at: time, alternate: alternate, keyWidth: boxes.first { $0.0 == key }?.1.width ?? 32, direct: directSwipeSymbols)
+        guard alternate != nil, scheduleHold, !directSwipeSymbols else { return }
         let timer = Timer(timeInterval: OrdinaryKeyGesture.holdDuration, repeats: false) { [weak self] _ in
             guard let self, self.ordinary[id]?.arm(at: ProcessInfo.processInfo.systemUptime) == true else { return }
             self.holdTimers.removeValue(forKey: id)

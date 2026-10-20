@@ -5,6 +5,26 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class KeyboardLayoutTest {
+    @Test public void optionalNumericGridAndWideSpaceKeepTheirOwnModes() {
+        for(int width:new int[]{280,392,840}) for(boolean landscape:new boolean[]{false,true}) {
+            List<KeyboardLayout.Key> grid=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.NUMERIC,true,true,true);
+            assertEquals(11,grid.stream().filter(k -> k.action==KeyboardLayout.Action.TEXT).count());
+            for(int digit=0;digit<=9;digit++) { String text=String.valueOf(digit); assertEquals(1,grid.stream().filter(k -> text.equals(k.text)).count()); }
+            for(int i=0;i<grid.size();i++) {
+                KeyboardLayout.Key a=grid.get(i);
+                assertTrue(a.x>=0 && a.y>=0 && a.x+a.width<=width+0.01 && a.y+a.height<=KeyboardLayout.height(landscape)+0.01);
+                for(int j=i+1;j<grid.size();j++) { KeyboardLayout.Key b=grid.get(j);
+                    assertFalse(Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x)>0.01 && Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y)>0.01);
+                }
+            }
+            List<KeyboardLayout.Key> regular=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.QWERTY,true,false,false);
+            List<KeyboardLayout.Key> wide=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.QWERTY,true,true,true);
+            assertTrue(find(wide,KeyboardLayout.Action.SPACE).width>find(regular,KeyboardLayout.Action.SPACE).width);
+            assertEquals(26,wide.stream().filter(k -> k.action==KeyboardLayout.Action.TEXT).count());
+            assertEquals(KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.NINE_KEY).size(), KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.NINE_KEY,false,true,true).size());
+        }
+    }
+
     @Test public void everyModeFitsWithoutOverlappingAtPhoneAndTabletWidths() {
         for(int width:new int[]{280,320,360,411,600,840,1200}) for(boolean landscape:new boolean[]{false,true})
             for(KeyboardLayout.Mode mode:KeyboardLayout.Mode.values()) for(boolean chinese:new boolean[]{false,true}) {

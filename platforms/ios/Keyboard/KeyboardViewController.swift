@@ -266,6 +266,7 @@ final class KeyboardViewController: UIInputViewController {
         var theme: StatusSkin
         var layout: OrdinaryKeyboardLayout
         var customLayout: Bool
+        var directSwipeSymbols: Bool
         var swipeSymbols: Bool
         var english: Bool
         var utilityCells: Bool
@@ -1305,7 +1306,7 @@ final class KeyboardViewController: UIInputViewController {
         bottom.isHidden = surface.usesManagedLayout && !needsInputModeSwitchKey
         let bufferHeight: CGFloat = landscape ? 60 : 76
         let customHeight = surface.usesCustomLayout ? surface.customLayout.map { CGFloat($0.geometry(width: Double(max(1, width - 10)), landscape: landscape).height) } : nil
-        let standardHeight = surface.usesStandardLayout ? StandardKeyboardGeometry.height(landscape: landscape) : nil
+        let standardHeight = surface.usesStandardLayout ? StandardKeyboardGeometry.height(landscape: landscape, percent: landscape ? preferences.landscapeHeight : preferences.portraitHeight) : nil
         return [(status, 28), (bufferPanel, bufferHeight),
                 (candidatePanel, max(32, candidateStrip.fittingHeight(width: max(0, width - 10)))),
                 (spellingStrip, 34),
@@ -1436,7 +1437,7 @@ final class KeyboardViewController: UIInputViewController {
             for (action, button) in customFunctions { button.isHidden = !actions.contains(action) }
             customBufferKey.isSelected = bufferEnabled
         } else if surface.usesStandardLayout, let mode = surface.standardMode {
-            let actions = Set(StandardKeyboardGeometry.make(width: max(1, surface.bounds.width), mode: mode, landscape: view.bounds.width > 600).controls.keys)
+            let actions = Set(StandardKeyboardGeometry.make(width: max(1, surface.bounds.width), mode: mode, landscape: view.bounds.width > 600, numericNineGrid: preferences.numericNineGrid).controls.keys)
             for (action, button) in standardFunctions { button.isHidden = !actions.contains(action) }
             bottomLanguage.setTitle(usesNineKey ? "ABC" : (directEnglish ? "中" : "英"), for: .normal)
         }
@@ -1549,7 +1550,7 @@ final class KeyboardViewController: UIInputViewController {
             }, haptics: preferences.haptics, hapticStrength: preferences.hapticStrength,
             sounds: preferences.keySounds, traditional: preferences.traditional, theme: preferences.resolvedTheme,
             layout: preferences.ordinaryLayout, customLayout: customLayoutSnapshot != nil,
-            swipeSymbols: preferences.longPressSwipeSymbols, english: directEnglish,
+            directSwipeSymbols: preferences.directSwipeSymbols, swipeSymbols: preferences.longPressSwipeSymbols, english: directEnglish,
             utilityCells: surface.hasUtilityCells, language: Locale.preferredLanguages.first)
         guard state != menuState else { return }
         menuState = state
@@ -1615,13 +1616,17 @@ final class KeyboardViewController: UIInputViewController {
                     self.choose(self.preferences.scheme); self.render()
                 }
             }))
-            items.append(UIAction(title: L("长按上滑输入数字和符号", "Hold and swipe up for symbols"), image: UIImage(systemName: "hand.draw"), state: preferences.longPressSwipeSymbols ? .on : .off) { [weak self] _ in
-                guard let self else { return }
-                self.preferences.longPressSwipeSymbols.toggle()
-                self.preferencesStore.save(self.preferences)
-                self.surface.longPressSwipeSymbols = self.preferences.longPressSwipeSymbols
-                self.refreshMoreMenu(); self.render()
-            })
+            items.append(UIMenu(title: L("上滑数字和符号", "Swipe symbols"), children: [
+                (L("关闭", "Off"), 0), (L("长按后上滑", "Hold then swipe"), 1), (L("直接上滑", "Swipe directly"), 2)
+            ].map { title, mode in
+                UIAction(title: title, state: (preferences.longPressSwipeSymbols ? (preferences.directSwipeSymbols ? 2 : 1) : 0) == mode ? .on : .off) { [weak self] _ in
+                    guard let self else { return }
+                    self.preferences.longPressSwipeSymbols = mode != 0; self.preferences.directSwipeSymbols = mode == 2
+                    self.preferencesStore.save(self.preferences)
+                    self.surface.longPressSwipeSymbols = mode != 0; self.surface.directSwipeSymbols = mode == 2
+                    self.refreshMoreMenu(); self.render()
+                }
+            }))
         }
         if !surface.hasUtilityCells {
             items.append(UIAction(title: directEnglish ? L("切换中文", "Switch to Chinese") : L("切换英文", "Switch to English"), image: UIImage(systemName: "globe")) { [weak self] _ in self?.toggleLanguage() })
@@ -1885,9 +1890,16 @@ final class KeyboardViewController: UIInputViewController {
         }
         if let revision = appearance.longPressSwipeSymbolsRevision, revision != preferences.appliedLongPressSwipeSymbolsRevision {
             preferences.longPressSwipeSymbols = appearance.longPressSwipeSymbols
+            preferences.directSwipeSymbols = appearance.directSwipeSymbols
             preferences.appliedLongPressSwipeSymbolsRevision = revision
         }
         surface.longPressSwipeSymbols = preferences.longPressSwipeSymbols
+        surface.directSwipeSymbols = preferences.directSwipeSymbols
+        if let revision = appearance.layoutOptionsRevision, revision != preferences.appliedLayoutOptionsRevision {
+            preferences.portraitHeight = appearance.portraitHeight; preferences.landscapeHeight = appearance.landscapeHeight
+            preferences.numericNineGrid = appearance.numericNineGrid; preferences.appliedLayoutOptionsRevision = revision
+        }
+        surface.numericNineGrid = preferences.numericNineGrid
         let savedTheme = KeyboardThemeStore().load()
         let explicitAppTheme = savedTheme.revision != nil && savedTheme.revision != preferences.appliedKeyboardThemeRevision
         preferences.reconcileTheme(savedTheme)

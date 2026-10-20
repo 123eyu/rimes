@@ -28,6 +28,9 @@ final class KeyboardSurface extends ViewGroup {
     }
     private KeyboardLayout.Mode mode;
     private boolean chinese;
+    private String symbolGesture="hold";
+    private boolean numericGrid,wideSpace;
+    private int portraitHeight=100,landscapeHeight=100;
     private List<KeyboardLayout.Key> frames;
     private final Handler handler;
     private KeyboardTheme theme=KeyboardTheme.ALL[0];
@@ -36,6 +39,14 @@ final class KeyboardSurface extends ViewGroup {
     private final List<UpwardNumberTouch> alternates=new ArrayList<>();
     private final Paint hintPaint=new Paint(Paint.ANTI_ALIAS_FLAG);
     KeyboardSurface(Context context,Handler handler) { super(context); this.handler=handler; setLayoutDirection(LAYOUT_DIRECTION_LTR); }
+    void applyPreferences(KeyboardSettings settings) {
+        String gesture=settings.symbolGesture(); boolean grid=settings.numericGrid(), wide=settings.wideSpace();
+        if(!gesture.equals(symbolGesture) || grid!=numericGrid || wide!=wideSpace) { cancelTouches(); mode=null; }
+        symbolGesture=gesture; numericGrid=grid; wideSpace=wide;
+        portraitHeight=settings.heightPercent(false); landscapeHeight=settings.heightPercent(true);
+        requestLayout();
+    }
+    float desiredHeight() { return KeyboardLayout.height(landscape())*(landscape()?landscapeHeight:portraitHeight)/100f; }
     void render(KeyboardLayout.Mode mode,KeyboardTheme theme) { render(mode,false,theme); }
     void render(KeyboardLayout.Mode mode,boolean chinese,KeyboardTheme theme) {
         // Letter-key alternates also depend on language; retire them when it changes.
@@ -46,13 +57,13 @@ final class KeyboardSurface extends ViewGroup {
         themeUiMode=uiMode;
         if(rebuild) {
             this.mode=mode; this.chinese=chinese; removeAllViews(); deleteRepeats.clear(); alternates.clear();
-            frames=KeyboardLayout.keys(400,landscape(),mode,chinese);
+            frames=KeyboardLayout.keys(400,landscape(),mode,chinese,numericGrid,wideSpace);
             for(KeyboardLayout.Key key:frames) {
                 KeyButton button=new KeyButton(getContext());
                 button.setOnClickListener(v -> handler.press(key));
                 if(key.action==KeyboardLayout.Action.DELETE) deleteRepeats.add(new DeleteRepeatTouch(button,handler::canRepeatDelete));
                 String alternate=alternateFor(key);
-                if(alternate!=null) alternates.add(new UpwardNumberTouch(button,alternate,() -> handler.onAlternate(alternate),this::invalidate));
+                if(alternate!=null) alternates.add(new UpwardNumberTouch(button,alternate,() -> handler.onAlternate(alternate),this::invalidate,"swipe".equals(symbolGesture)));
                 addView(button);
             }
             requestLayout();
@@ -114,7 +125,7 @@ final class KeyboardSurface extends ViewGroup {
         cancelTouches(); super.onDetachedFromWindow();
     }
     private String alternateFor(KeyboardLayout.Key key) {
-        return key.action==KeyboardLayout.Action.TEXT?OrdinaryKeyAlternates.text(mode,key.text,chinese):null;
+        return !"off".equals(symbolGesture) && key.action==KeyboardLayout.Action.TEXT?OrdinaryKeyAlternates.text(mode,key.text,chinese):null;
     }
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
@@ -136,10 +147,10 @@ final class KeyboardSurface extends ViewGroup {
     private boolean landscape() { return getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE; }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {
         int width=MeasureSpec.getSize(widthSpec); float density=getResources().getDisplayMetrics().density;
-        int height=Math.round(KeyboardLayout.height(landscape())*density);
+        int height=Math.round(desiredHeight()*density);
         setMeasuredDimension(width,resolveSize(height,heightSpec));
         if(mode==null) return;
-        frames=KeyboardGeometry.fitHeight(KeyboardLayout.keys(Math.max(1,width/density),landscape(),mode,chinese),
+        frames=KeyboardGeometry.fitHeight(KeyboardLayout.keys(Math.max(1,width/density),landscape(),mode,chinese,numericGrid,wideSpace),
                 KeyboardLayout.height(landscape()),getMeasuredHeight()/density);
         for(int i=0;i<frames.size();i++) {
             KeyboardLayout.Key key=frames.get(i);

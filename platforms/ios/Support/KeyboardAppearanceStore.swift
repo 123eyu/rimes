@@ -5,6 +5,11 @@ struct KeyboardAppearanceConfiguration: Codable, Equatable {
     var layout: OrdinaryKeyboardLayout = .qwerty
     /// Pre-build-28 skin choice, read only during migration to KeyboardThemeStore.
     var skin: KeyboardSkin = .system
+    var directSwipeSymbols = false
+    var portraitHeight = 100
+    var landscapeHeight = 100
+    var numericNineGrid = false
+    var layoutOptionsRevision: UUID?
     var longPressSwipeSymbols = false
     var longPressSwipeSymbolsRevision: UUID?
     var revision: UUID?
@@ -14,13 +19,18 @@ struct KeyboardAppearanceConfiguration: Codable, Equatable {
         self.layout = layout; self.skin = skin
         self.longPressSwipeSymbols = longPressSwipeSymbols; self.revision = revision
     }
-    private enum CodingKeys: String, CodingKey { case layout, skin, longPressSwipeSymbols, longPressSwipeSymbolsRevision, revision }
+    private enum CodingKeys: String, CodingKey { case layout, skin, longPressSwipeSymbols, longPressSwipeSymbolsRevision, revision, directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, layoutOptionsRevision }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         layout = try values.decodeIfPresent(OrdinaryKeyboardLayout.self, forKey: .layout) ?? .qwerty
         skin = try values.decodeIfPresent(KeyboardSkin.self, forKey: .skin) ?? .system
         longPressSwipeSymbols = try values.decodeIfPresent(Bool.self, forKey: .longPressSwipeSymbols) ?? false
         longPressSwipeSymbolsRevision = try values.decodeIfPresent(UUID.self, forKey: .longPressSwipeSymbolsRevision)
+        directSwipeSymbols = (try? values.decode(Bool.self, forKey: .directSwipeSymbols)) ?? false
+        portraitHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .portraitHeight)) ?? 100))
+        landscapeHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .landscapeHeight)) ?? 100))
+        numericNineGrid = (try? values.decode(Bool.self, forKey: .numericNineGrid)) ?? false
+        layoutOptionsRevision = try? values.decode(UUID.self, forKey: .layoutOptionsRevision)
         revision = try values.decodeIfPresent(UUID.self, forKey: .revision)
     }
 }
@@ -44,11 +54,21 @@ final class KeyboardAppearanceStore {
         let previous = load()
         value.longPressSwipeSymbols = previous.longPressSwipeSymbols
         value.longPressSwipeSymbolsRevision = previous.longPressSwipeSymbolsRevision
+        value.directSwipeSymbols = previous.directSwipeSymbols
+        value.portraitHeight = previous.portraitHeight; value.landscapeHeight = previous.landscapeHeight
+        value.numericNineGrid = previous.numericNineGrid; value.layoutOptionsRevision = previous.layoutOptionsRevision
         try write(value)
     }
-    func saveSwipeSymbols(_ enabled: Bool) throws {
+    func saveSwipeSymbols(_ enabled: Bool, direct: Bool = false) throws {
         var value = load()
+        value.directSwipeSymbols = enabled && direct
         value.longPressSwipeSymbols = enabled; value.longPressSwipeSymbolsRevision = UUID()
+        try write(value)
+    }
+    func saveLayoutOptions(portrait: Int, landscape: Int, numericNineGrid: Bool) throws {
+        var value = load()
+        value.portraitHeight = min(130, max(100, portrait)); value.landscapeHeight = min(130, max(100, landscape))
+        value.numericNineGrid = numericNineGrid; value.layoutOptionsRevision = UUID()
         try write(value)
     }
     private func write(_ value: KeyboardAppearanceConfiguration) throws {

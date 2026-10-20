@@ -294,6 +294,25 @@ final class UpwardNumberContract {
             onMain(() -> check(letters.size()==before[0] && numbers.size()==before[1]+1 && numbers.get(numbers.size()-1).equals(number),"top-row mapping "+letter+" → "+number));
         }
         overlappingNativeTaps();standardAccessibilityClicks();punctuationMappings();
+        android.content.SharedPreferences fixture=activity.getSharedPreferences("input-options-contract",android.content.Context.MODE_PRIVATE);
+        fixture.edit().clear().commit();
+        KeyboardSettings settings=new KeyboardSettings(fixture);
+        onMain(() -> {
+            check(settings.symbolGesture().equals("hold") && settings.heightPercent(false)==100 && !settings.numericGrid(),"legacy mobile defaults preserved");
+            settings.setSymbolGesture("swipe"); settings.setHeightPercent(false,125); settings.setHeightPercent(true,110);
+            settings.setNumericGrid(true); settings.setWideSpace(true);
+            check(new KeyboardSettings(fixture).heightPercent(false)==125 && settings.heightPercent(true)==110,"height saved per orientation");
+            mode=KeyboardLayout.Mode.QWERTY; surface.applyPreferences(settings); render();
+        }); idle(); findKey("q");
+        int[] direct=counts(); press(); onMain(() -> emit(MotionEvent.ACTION_MOVE,0,-24)); up(0,-24);
+        onMain(() -> check(letters.size()==direct[0] && numbers.size()==direct[1]+1,"direct swipe emits once without hold delay"));
+        int[] directCanceled=counts(); press(); onMain(() -> {emit(MotionEvent.ACTION_MOVE,0,-24);root.cancelPendingInputEvents();}); up(0,-24);
+        unchanged(directCanceled,"retirement also cancels direct swipe");
+        onMain(() -> { settings.setSymbolGesture("off"); surface.applyPreferences(settings); render(); }); idle(); findKey("q");
+        int[] disabled=counts(); press(); up(0,0);
+        onMain(() -> check(letters.size()==disabled[0]+1 && numbers.size()==disabled[1],"disabled gesture preserves ordinary tap"));
+        onMain(() -> { settings.setSymbolGesture("hold"); surface.applyPreferences(settings); render(); }); idle(); findKey("q");
+        fixture.edit().clear().commit();
         int[] detached=counts(); press(); hold(); onMain(() -> {emit(MotionEvent.ACTION_MOVE,0,-24);activity.setContentView(new LinearLayout(activity));});
         unchanged(detached,"detaching an armed keyboard cannot leave an insertion callback");
     }
