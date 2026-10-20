@@ -59,7 +59,10 @@ void SettingsUiHost::OpenInputHabits() {
   HMENU menu = nullptr;
   try {
     auto config = callbacks_.load();
-    const auto options = callbacks_.input_options(config.schema);
+    auto options = callbacks_.input_options(config.schema);
+    options.erase(std::remove_if(options.begin(), options.end(), [](const auto& option) {
+      return option.name == "ascii_punct"; // Existing native punctuation checkbox owns this choice.
+    }), options.end());
     if (options.empty()) {
       MessageBoxW(hwnd_, L"当前方案未提供可配置的双状态开关；原方案文件保持不变。", L"输入习惯", MB_OK);
       return;

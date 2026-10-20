@@ -396,8 +396,9 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   }
   session.last_sequence_id = key.sequence_id;
   if (session.candidate_guard) {
-    const auto revision = settings_ ? settings_->ConfigurationRevision() : 0;
-    const bool valid = *session.candidate_guard == revision;
+    // A pending preference edit does not replace the visible composition. Its
+    // candidate click still belongs to the configuration applied to this session.
+    const bool valid = *session.candidate_guard == session.settings_revision;
     session.candidate_guard.reset();
     if (!valid) return RespondPassThrough(request, key, session, response);
   }

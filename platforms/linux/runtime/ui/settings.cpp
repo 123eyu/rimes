@@ -403,9 +403,9 @@ struct Settings {
               self->Save(next);
             } catch (...) {
               self->Message("设置未保存，请重新加载后再试。原配置保持不变。");
-              g_signal_handlers_block_by_data(control, data);
+              g_signal_handlers_block_matched(control, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, data);
               gtk_combo_box_set_active(control, before.contains(item->name) ? (before.at(item->name).get<bool>() ? 2 : 1) : 0);
-              g_signal_handlers_unblock_by_data(control, data);
+              g_signal_handlers_unblock_matched(control, G_SIGNAL_MATCH_DATA, 0, 0, nullptr, nullptr, data);
             }
           }), context, +[](gpointer data, GClosure*) { delete static_cast<Context*>(data); }, GConnectFlags(0));
           Add(row, combo); Add(body, row);

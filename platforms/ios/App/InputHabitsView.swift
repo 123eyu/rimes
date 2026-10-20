@@ -13,10 +13,11 @@ struct InputHabitsView: View {
     private var profiles: [Profile] {
         var result: [Profile] = []
         if let root = Bundle.main.url(forResource: "EngineData", withExtension: nil) {
-            for scheme in InputScheme.allCases {
+            for scheme in InputScheme.allCases where scheme != .english && scheme != .chord {
                 result.append(.init(id: "builtin:" + scheme.schemaID, title: scheme.title,
                     file: root.appendingPathComponent("build/\(scheme.schemaID).schema.yaml")))
             }
+            result.append(.init(id: "builtin:rimes_pinyin9", title: L("九键全拼", "9-key Pinyin"), file: root.appendingPathComponent("build/rimes_pinyin9.schema.yaml")))
         }
         let store = RimeSchemeStore()
         for package in store.load().packages {
@@ -65,7 +66,8 @@ struct InputHabitsView: View {
             values = mobileInputHabitsStore().load()
             if selection.isEmpty {
                 let imported = RimeSchemeStore().load().active
-                selection = imported.map { $0.packageID + ":" + $0.schemaID } ?? "builtin:" + ConfigurationStore().load().scheme.schemaID
+                let current = imported.map { $0.packageID + ":" + $0.schemaID } ?? "builtin:" + ConfigurationStore().load().scheme.schemaID
+                selection = profiles.contains(where: { $0.id == current }) ? current : (profiles.first?.id ?? "")
             }
         }
         .alert(L("无法保存", "Could not save"), isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {

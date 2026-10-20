@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <set>
+#include <utility>
 
 namespace xsime::input {
 struct Switch {
