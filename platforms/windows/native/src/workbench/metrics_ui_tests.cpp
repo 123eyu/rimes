@@ -7,6 +7,7 @@
 #include <iostream>
 #include <atomic>
 #include <thread>
+#include <fstream>
 
 #include "settings_ui.hpp"
 
@@ -179,6 +180,172 @@ std::vector<workbench::PluginView> Plugins() {
     items.push_back(p);
   }
   return items;
+}
+struct PageProbe {
+  unsigned paints = 0, writes = 0, hides = 0, fonts = 0, combo_resets = 0;
+  std::vector<HWND> windows;
+  static LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l,
+                              UINT_PTR id, DWORD_PTR data) {
+    auto& p = *reinterpret_cast<PageProbe*>(data);
+    if (m == WM_PAINT && IsWindowVisible(h)) ++p.paints;
+    if (m == WM_SETTEXT) ++p.writes;
+    if (m == WM_SETFONT) ++p.fonts;
+    if (m == CB_RESETCONTENT) ++p.combo_resets;
+    if (m == WM_SHOWWINDOW && !w) ++p.hides;
+    if (m == WM_NCDESTROY) RemoveWindowSubclass(h, Proc, id);
+    return DefSubclassProc(h, m, w, l);
+  }
+  void Add(HWND h) {
+    windows.push_back(h);
+    SetWindowSubclass(h, Proc, 91, reinterpret_cast<DWORD_PTR>(this));
+  }
+  explicit PageProbe(HWND root) {
+    Add(root);
+    EnumChildWindows(root, [](HWND h, LPARAM p) -> BOOL {
+      reinterpret_cast<PageProbe*>(p)->Add(h); return TRUE;
+    }, reinterpret_cast<LPARAM>(this));
+  }
+  ~PageProbe() { for (auto h : windows) if (IsWindow(h)) RemoveWindowSubclass(h, Proc, 91); }
+};
+int CheckHistoryRefresh(const std::filesystem::path& output) {
+  std::filesystem::create_directories(output);
+  auto service = std::make_shared<metrics::Service>(output / L"history-data");
+  workbench::SettingsUiCallbacks cb;
+  cb.metrics = service;
+  cb.plugins = Plugins;
+  cb.load = [] { return workbench::Settings{}; };
+  workbench::SettingsUiHost host(cb);
+  host.Open(nullptr, false);
+  ShowWindow(host.hwnd(), SW_SHOWNOACTIVATE);
+  SetWindowPos(host.hwnd(), nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  for (const auto page : {ui::SettingsPage::kTyping, ui::SettingsPage::kStatistics}) {
+    service->Arm(host.hwnd(), metrics::Articles().front(),
+                 {{"comparison", "history-refresh"}, {"schema", "Regression fixture"}});
+    service->Reconcile("天");
+    service->Finish("interrupted");
+    service->ResetPractice();
+    Check(!service->Data()["results"].empty(), "history fixture contains a saved result");
+    host.OpenPage(nullptr, page, page == ui::SettingsPage::kTyping ? 1 : 2, false);
+    Pump(host, 100);
+    const auto panel = FindWindowExW(host.hwnd(), nullptr, L"Rimes.ExtensionPages", nullptr);
+    const auto comparison = GetDlgItem(panel, 7010);
+    Check(comparison && IsWindowVisible(comparison), "history has a native comparison control");
+    PageProbe probe(panel);
+    const auto previous = service->Data();
+    ValidateRect(panel, nullptr);
+    service->Daily('A', false, 0, 2, 1, metrics::Wall());
+    Check(service->Data()["days"] != previous["days"], "daily statistics actually changed");
+    for (int tick = 0; tick < 3; ++tick) SendMessageW(panel, WM_TIMER, 1, 0);
+    Check(probe.combo_resets == 0 && probe.fonts == 0 &&
+              !GetUpdateRect(panel, nullptr, FALSE),
+          "unrelated daily statistics leave history controls and paint state untouched");
+    Check(service->Clear("results"), "history results can still be removed");
+    SendMessageW(panel, WM_TIMER, 1, 0);
+    Check(probe.combo_resets > 0 && GetUpdateRect(panel, nullptr, FALSE),
+          "changed results still rebuild and repaint history controls");
+    wchar_t label[64]{};
+    SendMessageW(comparison, CB_GETLBTEXT, 0, reinterpret_cast<LPARAM>(label));
+    Check(std::wstring(label) == L"暂无输入方案记录", "empty history replaces the old comparison");
+  }
+  host.Close();
+  return failures ? 1 : 0;
+}
+int AuditPages(const std::filesystem::path& output) {
+  std::filesystem::create_directories(output);
+  auto service = std::make_shared<metrics::Service>(output / L"audit-data");
+  auto plugins = Plugins();
+  workbench::Settings config;
+  workbench::SettingsUiCallbacks cb;
+  cb.metrics = service;
+  cb.plugins = [&] { return plugins; };
+  cb.load = [&] { return config; };
+  cb.save_connections = [&](auto value, const auto&, std::string*) { config = value; return true; };
+  cb.connectors.has_secret = [](const auto&) { return false; };
+  cb.connectors.probe = [](const auto&, const auto&) {
+    return workbench::ConnectionProbeResult{false, "Fixture: disconnected", {}};
+  };
+  workbench::SettingsUiHost host(cb);
+  host.Open(nullptr, false);
+  ShowWindow(host.hwnd(), SW_SHOWNOACTIVATE);
+  SetWindowPos(host.hwnd(), nullptr, 0, 0, 0, 0,
+      SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  auto panel = FindWindowExW(host.hwnd(), nullptr, L"Rimes.ExtensionPages", nullptr);
+  nlohmann::json audit = nlohmann::json::array();
+  for (auto page : ui::kSettingsNavOrder) {
+    for (int sub = 0; sub < ui::SettingsTabCount(page); ++sub) {
+      host.OpenPage(nullptr, page, sub, false);
+      Pump(host, 350);
+      PageProbe probe(host.hwnd());
+      RedrawWindow(host.hwnd(), nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
+      Pump(host, 150);
+      const auto forced = probe.paints;
+      probe.paints = probe.writes = probe.hides = 0;
+      for (int tick = 0; tick < 6; ++tick) {
+        SendMessageW(host.hwnd(), WM_TIMER, 11, 0);
+        SendMessageW(panel, WM_TIMER, 1, 0);
+        UpdateWindow(host.hwnd());
+        UpdateWindow(panel);
+      }
+      const auto commanded = probe.paints;
+      Pump(host, 450);
+      std::cout << "Page " << static_cast<int>(page) << '/' << sub
+                << ": idle=" << probe.paints << " timer=" << commanded
+                << " text=" << probe.writes << " hides=" << probe.hides
+                << " forced=" << forced << std::endl;
+      audit.push_back({{"page", static_cast<int>(page)}, {"subpage", sub},
+          {"idlePaints", probe.paints}, {"timerPaints", commanded},
+          {"textWrites", probe.writes}, {"hides", probe.hides}, {"forcedPaints", forced}});
+      Check(forced > 0, "audit observes the real visible paint path");
+      Check(commanded == 0 && probe.paints <= 1 && probe.writes == 0 && probe.hides == 0,
+            "unchanged settings page stays idle across timer ticks");
+      // Async status completions, resizing and dropdown changes share this
+      // layout path. Retained controls must not disappear between frames.
+      probe.hides = 0;
+      host.OpenPage(nullptr, page, sub, false);
+      Check(probe.hides == 0, "same-page layout does not hide retained controls");
+      audit.back()["relayoutHides"] = probe.hides;
+    }
+  }
+  host.OpenPage(nullptr, ui::SettingsPage::kAppearance, 1, false);
+  Pump(host, 200);
+  const auto edit = GetDlgItem(host.hwnd(), 6033);
+  SetFocus(edit);
+  SendMessageW(edit, EM_SETSEL, 1, 2);
+  {
+    PageProbe probe(host.hwnd());
+    SetWindowTextW(edit, L"720");
+    SendMessageW(edit, EM_SETSEL, 1, 2);
+    SendMessageW(host.hwnd(), WM_TIMER, 12, 0);
+    DWORD first = 0, last = 0;
+    SendMessageW(edit, EM_GETSEL, reinterpret_cast<WPARAM>(&first), reinterpret_cast<LPARAM>(&last));
+    Check(config.candidate_width == 720, "autosave remains immediate");
+    Check(probe.fonts == 0 && probe.hides == 0, "autosave does not reset fonts or hide editors");
+    Check(GetFocus() == edit && first == 1 && last == 2, "autosave preserves editor focus and selection");
+    host.OpenPage(nullptr, ui::SettingsPage::kAppearance, 1, false);
+    SendMessageW(edit, EM_GETSEL, reinterpret_cast<WPARAM>(&first), reinterpret_cast<LPARAM>(&last));
+    Check(GetFocus() == edit && first == 1 && last == 2 && probe.hides == 0,
+          "same-page layout preserves editor focus and selection");
+  }
+  host.OpenPage(nullptr, ui::SettingsPage::kStatistics, 0, false);
+  Pump(host, 200);
+  ValidateRect(panel, nullptr);
+  service->Daily('A', false, 0, 2, 1, metrics::Wall());
+  SendMessageW(panel, WM_TIMER, 1, 0);
+  Check(GetUpdateRect(panel, nullptr, FALSE), "new statistics still invalidate the page");
+  host.OpenPage(nullptr, ui::SettingsPage::kPlugins, 4, false);
+  Pump(host, 200);
+  ValidateRect(panel, nullptr);
+  plugins[0].name += " updated";
+  SendMessageW(panel, WM_TIMER, 1, 0);
+  Check(GetUpdateRect(panel, nullptr, FALSE), "changed plugin metadata refreshes the gallery");
+  Pump(host, 200);
+  ValidateRect(panel, nullptr);
+  SendMessageW(panel, WM_TIMER, 1, 0);
+  Check(!GetUpdateRect(panel, nullptr, FALSE), "gallery returns to idle after the change");
+  std::ofstream(output / L"page-repaint-audit.json") << audit.dump(2) << '\n';
+  host.Close();
+  return failures ? 1 : 0;
 }
 int Run(const std::filesystem::path& output) {
   std::filesystem::create_directories(output);
@@ -389,7 +556,12 @@ int wmain(int argc, wchar_t** argv) {
   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   int result = 1;
   try {
-    result = Run(argc > 1 ? std::filesystem::path(argv[1])
+    result = argc > 1 && std::wstring(argv[1]) == L"--history-refresh"
+        ? CheckHistoryRefresh(std::filesystem::temp_directory_path() /
+                              (L"rimes-history-refresh-" + std::to_wstring(GetCurrentProcessId())))
+        : argc > 2 && std::wstring(argv[2]) == L"--repaint-audit"
+        ? AuditPages(std::filesystem::path(argv[1]))
+        : Run(argc > 1 ? std::filesystem::path(argv[1])
                           : std::filesystem::temp_directory_path() /
                                 (L"rimes-metrics-ui-" +
                                  std::to_wstring(GetCurrentProcessId())));
