@@ -1,0 +1,322 @@
+[
+  {
+    "forcedPaints": 1,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 2,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 3,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 4,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 11,
+    "relayoutHides": 0,
+    "subpage": 5,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 0,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 4,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 0,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 3,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 1,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 12,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 1,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 17,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 2,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 6,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 2,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 8,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 2,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 8,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 3,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 7,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 3,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 7,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 28,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 3,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 12,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 3,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 27,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 4,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 14,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 4,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 17,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 4,
+    "relayoutHides": 0,
+    "subpage": 2,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 11,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 4,
+    "relayoutHides": 0,
+    "subpage": 3,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 14,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 4,
+    "relayoutHides": 0,
+    "subpage": 4,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 1,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 5,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 1,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 5,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 16,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 6,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 13,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 6,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 9,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 9,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 5,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 9,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 8,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 10,
+    "relayoutHides": 0,
+    "subpage": 0,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 8,
+    "hides": 0,
+    "idlePaints": 0,
+    "page": 10,
+    "relayoutHides": 0,
+    "subpage": 1,
+    "textWrites": 0,
+    "timerPaints": 0
+  },
+  {
+    "forcedPaints": 5,
+    "hides": 0,
+    "idlePaints": 2,
+    "page": 10,
+    "relayoutHides": 0,
+    "subpage": 2,
+    "textWrites": 0,
+    "timerPaints": 0
+  }
+]

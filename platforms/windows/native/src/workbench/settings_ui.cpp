@@ -507,6 +507,12 @@ void SettingsUiHost::CreateOrUpdateChildren() {
 }
 
 void SettingsUiHost::UpdatePlugins() {
+  // The extension gallery owns this page when available. Updating the hidden
+  // legacy labels still sends repaint notifications through the shared host.
+  if (extensions_) return;
+  const auto set_text = [](HWND h, const std::wstring& text) {
+    if (GetText(h) != text) SetWindowTextW(h, text.c_str());
+  };
   if (callbacks_.plugins) plugin_rows_ = callbacks_.plugins();
   constexpr const char* kinds[] = {"", "buffer", "capsule", "mailbox", "extension"};
   const auto filter = SendMessageW(plugin_filter_, CB_GETCURSEL, 0, 0);
@@ -519,20 +525,20 @@ void SettingsUiHost::UpdatePlugins() {
   EnableWindow(plugin_next_, plugin_offset_ + page_size < count);
   const auto page_text = count ? std::to_wstring(plugin_offset_ / page_size + 1) + L" / " +
       std::to_wstring((count + page_size - 1) / page_size) : L"暂无插件";
-  SetWindowTextW(plugin_page_, page_text.c_str());
+  set_text(plugin_page_, page_text);
   for (std::size_t i = 0; i < plugin_labels_.size(); ++i) {
     if (plugin_offset_ + i >= plugin_rows_.size()) continue;
     const auto& item = plugin_rows_[plugin_offset_ + i];
     const auto name = item.id == "builtin.apple-translation" ? std::string("翻译") : item.name;
     const std::string kind = item.kind == "capsule" ? "Capsule 插件" : item.kind == "mailbox" ? "Mailbox 插件" : item.kind == "extension" ? "内置扩展" : "缓冲插件";
     const auto label = Wide(name + "  " + item.version + "\n" + kind + " · " + (item.installed ? item.enabled ? "已启用" : "已停用" : "未安装"));
-    SetWindowTextW(plugin_labels_[i], label.c_str());
-    SetWindowTextW(plugin_install_[i], item.bundled ? L"恢复安装" : L"下载安装");
+    set_text(plugin_labels_[i], label);
+    set_text(plugin_install_[i], item.bundled ? L"恢复安装" : L"下载安装");
     EnableWindow(plugin_install_[i], !item.installed);
-    SetWindowTextW(plugin_enable_[i], item.enabled ? L"停用" : L"启用");
+    set_text(plugin_enable_[i], item.enabled ? L"停用" : L"启用");
     EnableWindow(plugin_enable_[i], item.installed);
   }
-  if (callbacks_.plugin_status) SetWindowTextW(plugin_status_, Wide(callbacks_.plugin_status()).c_str());
+  if (callbacks_.plugin_status) set_text(plugin_status_, Wide(callbacks_.plugin_status()));
 }
 
 void SettingsUiHost::ThemeEdits() {
@@ -696,7 +702,8 @@ void SettingsUiHost::Relayout() {
   if (extensions_) extensions_->Layout(draft_.page, draft_.subpage, layout_.body, dpi_, draft_.preview_theme);
   // WS_CLIPCHILDREN excludes native labels/controls from the shell repaint.
   // They must also redraw after navigation, resizing or a theme preview.
-  RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN | RDW_UPDATENOW);
+  // Coalesce child layout/notification changes into the next complete frame.
+  RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
   updating_controls_ = was_updating;
 }
 
@@ -867,6 +874,7 @@ bool SettingsUiHost::CommitSave() {
       SaveError(Wide(error));
       return false;
     }
+    const auto previous_theme = draft_.theme;
     draft_.theme = config.follow_system_theme && callbacks_.load_theme
         ? callbacks_.load_theme() : static_cast<ui::ThemeId>(draft_.theme_index);
     draft_.preview_theme = draft_.theme;
@@ -875,15 +883,16 @@ bool SettingsUiHost::CommitSave() {
     draft_.save_error.clear();
     updating_controls_ = true;
     if (parity_) parity_->Saved();
-    SetWindowTextW(edit_key_, L"");
+    if (!GetText(edit_key_).empty()) SetWindowTextW(edit_key_, L"");
     updating_controls_ = false;
     InvalidateRect(hwnd_, nullptr, FALSE);
-    if (callbacks_.on_theme_preview)
-      callbacks_.on_theme_preview(draft_.theme);
-    // Persisting text must keep the native editor and its caret in place.
-    // Relayout hides/re-shows page children, so only refresh their colors here.
-    ThemeEdits();
-    RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+    // Ordinary autosaves do not change fonts/colors. Resetting every native
+    // control here makes the whole page blink after each typing pause.
+    if (previous_theme != draft_.theme) {
+      ThemeEdits();
+      if (callbacks_.on_theme_preview) callbacks_.on_theme_preview(draft_.theme);
+      RedrawWindow(hwnd_, nullptr, nullptr, RDW_INVALIDATE | RDW_ALLCHILDREN);
+    }
     return true;
   } catch (...) {
     SaveError(L"请输入有效的候选数（1–9）、字号或快捷键；原设置保持不变。");
