@@ -182,7 +182,7 @@ std::vector<workbench::PluginView> Plugins() {
   return items;
 }
 struct PageProbe {
-  unsigned paints = 0, writes = 0, hides = 0, fonts = 0;
+  unsigned paints = 0, writes = 0, hides = 0, fonts = 0, combo_resets = 0;
   std::vector<HWND> windows;
   static LRESULT CALLBACK Proc(HWND h, UINT m, WPARAM w, LPARAM l,
                               UINT_PTR id, DWORD_PTR data) {
@@ -190,6 +190,7 @@ struct PageProbe {
     if (m == WM_PAINT && IsWindowVisible(h)) ++p.paints;
     if (m == WM_SETTEXT) ++p.writes;
     if (m == WM_SETFONT) ++p.fonts;
+    if (m == CB_RESETCONTENT) ++p.combo_resets;
     if (m == WM_SHOWWINDOW && !w) ++p.hides;
     if (m == WM_NCDESTROY) RemoveWindowSubclass(h, Proc, id);
     return DefSubclassProc(h, m, w, l);
@@ -206,6 +207,50 @@ struct PageProbe {
   }
   ~PageProbe() { for (auto h : windows) if (IsWindow(h)) RemoveWindowSubclass(h, Proc, 91); }
 };
+int CheckHistoryRefresh(const std::filesystem::path& output) {
+  std::filesystem::create_directories(output);
+  auto service = std::make_shared<metrics::Service>(output / L"history-data");
+  workbench::SettingsUiCallbacks cb;
+  cb.metrics = service;
+  cb.plugins = Plugins;
+  cb.load = [] { return workbench::Settings{}; };
+  workbench::SettingsUiHost host(cb);
+  host.Open(nullptr, false);
+  ShowWindow(host.hwnd(), SW_SHOWNOACTIVATE);
+  SetWindowPos(host.hwnd(), nullptr, 0, 0, 0, 0,
+               SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE | SWP_SHOWWINDOW);
+  for (const auto page : {ui::SettingsPage::kTyping, ui::SettingsPage::kStatistics}) {
+    service->Arm(host.hwnd(), metrics::Articles().front(),
+                 {{"comparison", "history-refresh"}, {"schema", "Regression fixture"}});
+    service->Reconcile("天");
+    service->Finish("interrupted");
+    service->ResetPractice();
+    Check(!service->Data()["results"].empty(), "history fixture contains a saved result");
+    host.OpenPage(nullptr, page, page == ui::SettingsPage::kTyping ? 1 : 2, false);
+    Pump(host, 100);
+    const auto panel = FindWindowExW(host.hwnd(), nullptr, L"Rimes.ExtensionPages", nullptr);
+    const auto comparison = GetDlgItem(panel, 7010);
+    Check(comparison && IsWindowVisible(comparison), "history has a native comparison control");
+    PageProbe probe(panel);
+    const auto previous = service->Data();
+    ValidateRect(panel, nullptr);
+    service->Daily('A', false, 0, 2, 1, metrics::Wall());
+    Check(service->Data()["days"] != previous["days"], "daily statistics actually changed");
+    for (int tick = 0; tick < 3; ++tick) SendMessageW(panel, WM_TIMER, 1, 0);
+    Check(probe.combo_resets == 0 && probe.fonts == 0 &&
+              !GetUpdateRect(panel, nullptr, FALSE),
+          "unrelated daily statistics leave history controls and paint state untouched");
+    Check(service->Clear("results"), "history results can still be removed");
+    SendMessageW(panel, WM_TIMER, 1, 0);
+    Check(probe.combo_resets > 0 && GetUpdateRect(panel, nullptr, FALSE),
+          "changed results still rebuild and repaint history controls");
+    wchar_t label[64]{};
+    SendMessageW(comparison, CB_GETLBTEXT, 0, reinterpret_cast<LPARAM>(label));
+    Check(std::wstring(label) == L"暂无输入方案记录", "empty history replaces the old comparison");
+  }
+  host.Close();
+  return failures ? 1 : 0;
+}
 int AuditPages(const std::filesystem::path& output) {
   std::filesystem::create_directories(output);
   auto service = std::make_shared<metrics::Service>(output / L"audit-data");
@@ -511,7 +556,10 @@ int wmain(int argc, wchar_t** argv) {
   CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED);
   int result = 1;
   try {
-    result = argc > 2 && std::wstring(argv[2]) == L"--repaint-audit"
+    result = argc > 1 && std::wstring(argv[1]) == L"--history-refresh"
+        ? CheckHistoryRefresh(std::filesystem::temp_directory_path() /
+                              (L"rimes-history-refresh-" + std::to_wstring(GetCurrentProcessId())))
+        : argc > 2 && std::wstring(argv[2]) == L"--repaint-audit"
         ? AuditPages(std::filesystem::path(argv[1]))
         : Run(argc > 1 ? std::filesystem::path(argv[1])
                           : std::filesystem::temp_directory_path() /

@@ -14,7 +14,7 @@
 ## 2026-10-20 分支收敛
 
 - Android 纳入 [PR #223](https://github.com/scholay/xsime/pull/223) 的 `TYPE_NULL` 中文输入修复，保留贡献者原始提交，并将真实 Service 的投递及字段分类测试接入 Android 模拟器 CI。数字、日期和密码字段仍走原有受限路径。
-- Windows 纳入 `c2b30056` 的设置重绘与编辑状态修复；官方插件 [PR #20](https://github.com/scholay/rimes-plugins/pull/20) 将 `666c5fa0` 的按需刷新改动与插件主线整合，本体固定 `be18f785` 并重新生成依赖锁，保留较新的移动端和 Linux 适配。
+- Windows 纳入 `c2b30056` 的设置重绘与编辑状态修复；官方插件 [PR #20](https://github.com/scholay/rimes-plugins/pull/20) 将 `666c5fa0` 的按需刷新改动与插件主线整合，本体固定 `4579678b` 并重新生成依赖锁，保留较新的移动端和 Linux 适配；修正历史成绩页被无关日常统计重建的问题，新增 x64/x86 CTest 回归。
 - [PR #263](https://github.com/scholay/xsime/pull/263) 的五端路线图回到主线；规划与已实现能力继续区分。README 新增 Scholay 学术和恩特学术友链，贡献者名单补充 limingzxc。
 - 构建与测试使用 GitHub CI，结果以整合 PR 及对应工作流为准。Windows 提交中的本地验收记录对应原提交和原安装包；本轮不以这些记录替代整合后的 CI，也不在维护者的 Mac 上重建或安装应用。
 - 旧 Linux 工作区的模块重启修复已包含在主线；整理时保留原补丁、备份引用和本地验收资料，仅清理已确认合入的开发分支。Windows 开发机 SSH 暂时超时，未推送工作不在本轮已核验范围内。
