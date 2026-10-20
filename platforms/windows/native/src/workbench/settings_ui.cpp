@@ -54,6 +54,48 @@ SettingsUiHost::SettingsUiHost(SettingsUiCallbacks callbacks)
   draft_.about_text = callbacks_.about_text;
 }
 
+void SettingsUiHost::OpenInputHabits() {
+  if (!callbacks_.load || !callbacks_.save || !callbacks_.input_options || !CommitSave()) return;
+  HMENU menu = nullptr;
+  try {
+    auto config = callbacks_.load();
+    const auto options = callbacks_.input_options(config.schema);
+    if (options.empty()) {
+      MessageBoxW(hwnd_, L"当前方案未提供可配置的双状态开关；原方案文件保持不变。", L"输入习惯", MB_OK);
+      return;
+    }
+    menu = CreatePopupMenu();
+    const auto scope = config.input_scope + ":" + config.schema;
+    const auto saved = config.InputOptionsFor(config.schema);
+    for (std::size_t i = 0; i < options.size(); ++i) {
+      const auto& option = options[i];
+      HMENU choices = CreatePopupMenu();
+      const auto found = saved.find(option.name);
+      const int selected = found == saved.end() ? 0 : found->second ? 2 : 1;
+      const std::wstring titles[] = {L"跟随方案", Wide(option.off), Wide(option.on)};
+      for (int value = 0; value < 3; ++value)
+        AppendMenuW(choices, MF_STRING | (selected == value ? MF_CHECKED : 0), 1000 + i * 3 + value, titles[value].c_str());
+      AppendMenuW(menu, MF_POPUP, reinterpret_cast<UINT_PTR>(choices), Wide(option.off + " / " + option.on).c_str());
+    }
+    RECT bounds{}; GetWindowRect(input_habits_, &bounds);
+    const UINT command = TrackPopupMenu(menu, TPM_RETURNCMD | TPM_NONOTIFY, bounds.left, bounds.bottom, 0, hwnd_, nullptr);
+    DestroyMenu(menu); menu = nullptr;
+    if (command < 1000 || (command - 1000) / 3 >= options.size()) return;
+    const auto& name = options[(command - 1000) / 3].name;
+    const auto choice = (command - 1000) % 3;
+    // Reload after the menu closes; retain changes in all other settings.
+    config = callbacks_.load();
+    if (!config.input_options.contains(scope)) config.input_options[scope] = core::Json::object();
+    if (choice == 0) config.input_options[scope].erase(name);
+    else config.input_options[scope][name] = choice == 2;
+    std::string error;
+    if (!callbacks_.save(config, L"", false, &error)) SaveError(Wide(error));
+  } catch (...) {
+    if (menu) DestroyMenu(menu);
+    SaveError(L"输入习惯未保存，原设置保持不变。");
+  }
+}
+
 SettingsUiHost::~SettingsUiHost() {
   if (hwnd_) DestroyWindow(hwnd_);
   if (settings_icon_) DestroyIcon(settings_icon_);
@@ -314,7 +356,7 @@ bool SettingsUiHost::HandleDialogMessage(MSG* message) {
     }
     if (key == VK_TAB) {
       std::vector<HWND> controls;
-      for (const auto control : {schemes_button_, check_ascii_, check_trad_, check_punct_,
+      for (const auto control : {schemes_button_, input_habits_, check_ascii_, check_trad_, check_punct_,
                                 edit_font_, edit_candidate_count_, check_vertical_, combo_hotkey_modifiers_, edit_hotkey_, record_hotkey_,
                                 combo_send_modifiers_, edit_send_, record_send_,
                                 combo_plugin_modifiers_[0], edit_plugin_[0], record_plugin_[0],
@@ -410,6 +452,8 @@ void SettingsUiHost::CreateOrUpdateChildren() {
         0, 0, 1, 1, hwnd_, reinterpret_cast<HMENU>(static_cast<INT_PTR>(id)), GetModuleHandleW(nullptr), nullptr);
   };
   make_button(schemes_button_, L"导入与管理方案…", 415);
+  make_button(input_habits_, L"当前方案的输入习惯…", 425);
+  EnableWindow(input_habits_, static_cast<bool>(callbacks_.input_options));
   make_button(peripheral_open_, L"打开独立窗口…", 416);
   make_button(home_action_, L"", 417);
   EnableWindow(schemes_button_, static_cast<bool>(callbacks_.open_schemes));
@@ -661,6 +705,8 @@ void SettingsUiHost::Relayout() {
   const float schemes_top = layout_.scheme_cards.empty()
       ? layout_.body.top + 170 : layout_.scheme_cards.back().bottom + 20;
   Place(schemes_button_, {layout_.body.left, schemes_top, layout_.body.left + 225, schemes_top + 34}, dpi_, schemes);
+  Place(input_habits_, {layout_.body.left + 240, schemes_top, layout_.body.left + 490, schemes_top + 34}, dpi_, schemes);
+  SendMessageW(input_habits_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   Place(imported_label_, {layout_.body.left, layout_.body.top, layout_.body.right, layout_.body.top + 100}, dpi_, schemes && !draft_.imported_schema.empty());
   SendMessageW(schemes_button_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
   SendMessageW(imported_label_, WM_SETFONT, reinterpret_cast<WPARAM>(fonts_.body), TRUE);
@@ -1095,6 +1141,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
           MessageBoxW(hwnd, L"无法打开方案管理。", rimes::branding::Text(L"{brand} 设置").c_str(), MB_OK | MB_ICONERROR);
         return 0;
       }
+      if (LOWORD(wparam) == 425 && HIWORD(wparam) == BN_CLICKED) { self->OpenInputHabits(); return 0; }
       if (HIWORD(wparam) == BN_CLICKED && (LOWORD(wparam) == 409 || LOWORD(wparam) == 410 || LOWORD(wparam) == 418 || LOWORD(wparam) == 419)) {
         const int recording = LOWORD(wparam) >= 418 ? LOWORD(wparam) - 416 : LOWORD(wparam) - 409;
         const bool stop = self->recording_shortcut_ == recording;
@@ -1426,7 +1473,7 @@ LRESULT CALLBACK SettingsUiHost::Procedure(HWND hwnd, UINT message,
       self->record_hotkey_ = self->record_send_ = self->reset_shortcuts_ = self->shortcut_feedback_ = nullptr;
       KillTimer(hwnd, 11);
       self->hwnd_ = nullptr;
-      self->schemes_button_ = self->imported_label_ = nullptr;
+      self->schemes_button_ = self->imported_label_ = self->input_habits_ = nullptr;
       self->peripheral_open_ = self->home_action_ = nullptr;
       self->clipboard_recording_ = nullptr;
       self->plugin_filter_ = self->plugin_previous_ = self->plugin_next_ = self->plugin_page_ = nullptr;

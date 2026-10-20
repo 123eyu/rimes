@@ -292,7 +292,7 @@ ClientAction BrokerConnection::HandleOpenSession(const core::Frame& request,
       const auto config = settings_->Configuration();
       if (!engine_->Configure(engine_session, pending_chord_ && config.schema == "my_combo" ? "rime_ice" : config.schema, config.ascii,
                               config.traditional, config.ascii_punctuation,
-                              nullptr, config.candidate_count))
+                              nullptr, config.candidate_count, config.InputOptionsFor(config.schema)))
         throw std::runtime_error("Schema unavailable");
       if (runtime_) state.target =
           runtime_->Register(peer_process_, session_id, open.context_id);
@@ -405,12 +405,12 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     const auto settings_revision = settings_->ConfigurationRevision();
     const bool capture = runtime_ && runtime_->Capturing(session.target);
     const auto input_route = runtime_ ? runtime_->InputRoute(session.target) : 0;
-    if (session.settings_revision != settings_revision ||
+    if ((session.settings_revision != settings_revision && !session.composing) ||
         session.capture != capture || session.input_route != input_route) {
       const auto config = settings_->Configuration();
       if (!engine_->Configure(session.engine_session_id, (pending_chord_ && config.schema == "my_combo" ? "rime_ice" : config.schema),
                               config.ascii, config.traditional,
-                              config.ascii_punctuation, nullptr, config.candidate_count))
+                              config.ascii_punctuation, nullptr, config.candidate_count, config.InputOptionsFor(config.schema)))
         return RespondPassThrough(request, key, session, response);
       session.chord.Reset(); session.chord_snapshot = {}; session.chord_profile.reset();
       if (pending_chord_ && config.schema == "my_combo" && config.chord_enabled) {

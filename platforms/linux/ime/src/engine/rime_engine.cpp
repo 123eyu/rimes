@@ -1,4 +1,5 @@
 #include "rime_engine.hpp"
+#include "../../../../../Shared/InputHabits/rime_options.hpp"
 
 #include <chrono>
 #include <condition_variable>
@@ -415,6 +416,17 @@ public:
         }
     }
 
+    std::map<std::string, bool> InputOptions(SessionId session, const std::string& schema) noexcept {
+        try {
+            std::lock_guard<std::mutex> lock(mutex_);
+            std::map<std::string, bool> result;
+            if (!HasSessionLocked(session, nullptr) || !api_->get_option) return result;
+            for (const auto& option : xsime::input::Switches<RimeConfig>(api_, schema))
+                result[option.name] = api_->get_option(session, option.name.c_str());
+            return result;
+        } catch (...) { return {}; }
+    }
+
 private:
     bool HasSessionLocked(SessionId session, std::string* error) const noexcept {
         if (!healthy_ || api_ == nullptr || session == 0 ||
@@ -766,6 +778,9 @@ bool RimeEngine::SetOption(SessionId session,
                            bool value,
                            std::string* error) noexcept {
     return impl_->SetOption(session, option, value, error);
+}
+std::map<std::string, bool> RimeEngine::InputOptions(SessionId session, const std::string& schema) noexcept {
+    return impl_->InputOptions(session, schema);
 }
 
 bool RimeEngine::ProcessKey(SessionId session,

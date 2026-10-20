@@ -148,6 +148,12 @@ bool ValidBufferShortcuts(const Settings& value) {
   return true;
 }
 bool ValidSettings(const Settings& value) {
+  if (!value.input_options.is_object() || value.input_options.size() > 256 || value.input_options.dump().size() > 262144) return false;
+  for (const auto& [scope, options] : value.input_options.items()) {
+    if (scope.empty() || scope.size() > 256 || !options.is_object() || options.size() > 128) return false;
+    for (const auto& [name, enabled] : options.items())
+      if (name.empty() || name.size() > 96 || !enabled.is_boolean()) return false;
+  }
   try { if (!value.chord_profile.is_null()) (void)ChordProfile::Parse(value.chord_profile); } catch (...) { return false; }
   const bool schema = rimes::schemes::ValidID(value.schema);
   return ValidConnections(value) && value.buffer_width >= 520 && value.buffer_width <= 1100 &&
@@ -188,6 +194,7 @@ bool LoadSettings(Settings* value, std::string* error) {
     Settings candidate;
     candidate.revision = j.value("revision", 1ULL);
     candidate.schema = j.value("schema", "rime_ice");
+    candidate.input_options = j.value("input_options", core::Json::object());
     candidate.base_url = j.value("base_url", "");
     candidate.model = j.value("model", "");
     candidate.ai_connector = j.value("ai_connector", "openai-compatible");
@@ -282,6 +289,7 @@ bool SaveSettings(const Settings& value, std::string* error) {
               {"ascii", value.ascii},
               {"traditional", value.traditional},
               {"ascii_punctuation", value.ascii_punctuation},
+              {"input_options", value.input_options},
               {"font_size", value.font_size},
               {"candidate_count", value.candidate_count},
               {"vertical_candidates", value.vertical_candidates},

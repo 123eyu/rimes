@@ -6,6 +6,7 @@
 #include <string>
 
 #include "rime_snapshot.hpp"
+#include "../../../../../Shared/InputHabits/rime_options.hpp"
 
 namespace rimes::windows::engine {
 
@@ -59,7 +60,9 @@ class RimeEngine final {
 
   bool Configure(SessionId session, const std::string& schema, bool ascii,
                  bool traditional, bool ascii_punctuation,
-                 std::string* error = nullptr, unsigned candidate_count = 9) noexcept;
+                 std::string* error = nullptr, unsigned candidate_count = 9,
+                 const std::map<std::string, bool>& input_options = {}) noexcept;
+  std::vector<xsime::input::Switch> InputOptions(const std::string& schema) noexcept;
 
   // Applies one key and atomically drains its commit/context into output. An
   // ordinary unhandled key yields an empty snapshot; explicit Shift snapshots

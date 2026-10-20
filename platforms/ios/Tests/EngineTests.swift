@@ -57,6 +57,41 @@ import RimesCore
         }
         engine.clear()
     }
+    func testWubiPreferencesApplyOnlyAfterCompositionAndReset() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let resources = try XCTUnwrap(Bundle.main.url(forResource: "EngineData", withExtension: nil))
+        let engine = try XCTUnwrap(RimeMobile(resources: resources.path, userDirectory: root.path))
+        for schema in ["rimes_wubi", "lingxi_wubi"] {
+            engine.setInputOptions([:]); XCTAssertTrue(engine.selectSchema(schema))
+            for manual in [false, true] {
+                for fifth in [false, true] {
+                    engine.setInputOptions(["rimes_wubi_manual_commit": NSNumber(value: manual), "rimes_wubi_fifth_code": NSNumber(value: fifth)])
+                    var commit = ""
+                    for c in "voni".unicodeScalars { commit += engine.processKey(Int32(c.value))["commit"] as? String ?? "" }
+                    XCTAssertEqual(commit, manual ? "" : "灵犀")
+                    if manual && fifth {
+                        XCTAssertEqual(engine.processKey(119)["commit"] as? String, "灵犀")
+                        XCTAssertEqual(engine.rawInput, "w")
+                    }
+                    engine.clear()
+                    for c in "znihao".unicodeScalars { XCTAssertEqual(engine.processKey(Int32(c.value))["commit"] as? String ?? "", "") }
+                    engine.clear()
+                }
+            }
+            engine.setInputOptions(["rimes_wubi_manual_commit": true])
+            _ = engine.processKey(118)
+            engine.setInputOptions([:]) // Inheritance must wait until this composition ends.
+            for c in "oni".unicodeScalars { XCTAssertEqual(engine.processKey(Int32(c.value))["commit"] as? String ?? "", "") }
+            XCTAssertEqual(engine.rawInput, "voni")
+            engine.clear()
+            var commit = ""
+            for c in "voni".unicodeScalars { commit += engine.processKey(Int32(c.value))["commit"] as? String ?? "" }
+            XCTAssertEqual(commit, "灵犀")
+        }
+        engine.suspend()
+    }
     func testDefaultChordUsesZiranmaForSinglesFragmentsAndSyllables() throws {
         let config = AppConfiguration()
         let restored = try JSONDecoder().decode(AppConfiguration.self, from: JSONEncoder().encode(config))

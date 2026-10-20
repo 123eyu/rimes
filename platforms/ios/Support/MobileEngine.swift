@@ -36,6 +36,7 @@ final class MobileEngine: InputEngine {
     func select(schema: String) -> Bool {
         rawSnapshot = .init(); candidateReadings = []; provenance.reset(); lastError = ""
         available = configureBuiltIn() && (bridge?.selectSchema(schema) ?? false)
+        if available { bridge?.setInputOptions((mobileInputHabitsStore().load().schemes["builtin:" + schema] ?? [:]).mapValues { NSNumber(value: $0) }) }
         if !available { lastError = bridge?.lastError ?? "输入引擎不可用" }
         return available
     }
@@ -61,6 +62,7 @@ final class MobileEngine: InputEngine {
             }
         }
         available = bridge?.selectSchema(selectedSchema) ?? false
+        if available { bridge?.setInputOptions((mobileInputHabitsStore().load().schemes[selection.packageID + ":" + selectedSchema] ?? [:]).mapValues { NSNumber(value: $0) }) }
         if !available { lastError = bridge?.lastError ?? "导入方案无法加载" }
         return available
     }

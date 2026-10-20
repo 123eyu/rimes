@@ -99,6 +99,14 @@ int BBRimeDecodeCandidateTexts(uint64_t session,
 // key="chord_duration"). Returns false when missing/engine down.
 bool BBRimeConfigGetDouble(const char* configId, const char* key, double* out);
 
+typedef struct {
+    char name[97];
+    char off[512];
+    char on[512];
+} BBRimeInputOption;
+// Caller-owned copied metadata. Only real two-state schema switches are returned.
+int BBRimeGetInputOptions(const char* schema, BBRimeInputOption* out, int capacity);
+
 // A deployed schema. Pointers are bridge-owned, valid until the next
 // BBRimeGetSchemaList call; copy immediately.
 typedef struct {

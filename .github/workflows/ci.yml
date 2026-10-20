@@ -31,6 +31,11 @@ jobs:
       - name: Pinned plugin import tests
         run: python3 scripts/test-official-plugin-import.py
 
+      - name: Scheme capability contracts
+        run: |
+          g++ -std=c++17 -Wall -Wextra -Werror Shared/InputHabits/tests.cpp -o "$RUNNER_TEMP/input-habits-contract"
+          "$RUNNER_TEMP/input-habits-contract"
+
       - name: Application update manifest contracts
         run: |
           g++ -std=c++17 -Wall -Wextra -Werror -Iplatforms/windows/native/third_party Shared/AppUpdate/manifest_tests.cpp -o "$RUNNER_TEMP/update-contract"

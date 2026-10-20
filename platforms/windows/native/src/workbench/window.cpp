@@ -316,6 +316,7 @@ ui::BufferPaintState Window::MakePaintState(const core::Json& state) const {
 void Window::EnsureSettings() {
   if (settings) return;
   SettingsUiCallbacks cb;
+  cb.input_options = runtime.input_option_provider;
   cb.connectors = NativeConnectorUiServices();
   cb.metrics = runtime.Metrics();
   cb.open_schemes = [this] {

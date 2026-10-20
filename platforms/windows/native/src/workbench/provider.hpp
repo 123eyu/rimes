@@ -24,6 +24,15 @@ struct Settings {
   unsigned chord_interval_ms = 50;
   core::Json chord_profile; // Applied portable keymap snapshot, never a draft.
   bool imported_scheme = false;  // Runtime-only; never persisted to settings.json.
+  std::string input_scope = "builtin"; // Package identity, runtime-only.
+  core::Json input_options = core::Json::object();
+  std::map<std::string, bool> InputOptionsFor(const std::string& id) const {
+    const auto scope = input_scope + ":" + id;
+    std::map<std::string, bool> result;
+    if (input_options.is_object() && input_options.contains(scope) && input_options.at(scope).is_object())
+      for (const auto& [key, value] : input_options.at(scope).items()) if (value.is_boolean()) result[key] = value.get<bool>();
+    return result;
+  }
   std::uint64_t revision = 1;
   std::string schema = "rime_ice", base_url, model, target_language = "English";
   std::string ai_connector = "openai-compatible", codex_path, codex_model;

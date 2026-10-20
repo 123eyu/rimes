@@ -232,7 +232,7 @@ Json ConfigurationStore::Defaults() {
           {"gatewayEnabled", true}, {"gatewayPort", 47700}, {"gatewayBlockedSources", Json::array()},
           {"activeConnector", "openai-compatible"},
           {"activeProvider", ""},     {"providers", Json::array()},
-          {"plugins", Json::object()}};
+          {"plugins", Json::object()}, {"inputOptions", Json::object()}};
 }
 ConfigurationStore::ConfigurationStore(const std::filesystem::path &root, bool wait_for_seed)
     : files_(root), credentials_(root / "credentials") {
@@ -284,8 +284,14 @@ Json ConfigurationStore::NormalizePlugin(std::string_view id,
   return normalized;
 }
 void ConfigurationStore::Validate(const Json &value) {
-  Require(value.is_object() && value.size() == 17 &&
+  Require(value.is_object() && value.size() == 18 &&
           value.at("schemaVersion") == 1 && Identity(value.at("revision")));
+  const auto& habits = value.at("inputOptions");
+  Require(habits.is_object() && habits.size() <= 256 && habits.dump().size() <= 262144);
+  for (const auto& [scope, options] : habits.items()) {
+    Require(!scope.empty() && scope.size() <= 256 && options.is_object() && options.size() <= 128);
+    for (const auto& [name, enabled] : options.items()) Require(!name.empty() && name.size() <= 96 && enabled.is_boolean());
+  }
   Require(value.at("theme") == "night" || value.at("theme") == "day" ||
           value.at("theme") == "quiet" || value.at("theme") == "rasta" ||
           value.at("theme") == "liquidGlass");
@@ -344,6 +350,7 @@ Json ConfigurationStore::Load() const {
   if (!bytes)
     throw std::runtime_error("设置文件缺失，请恢复备份后重试。");
   auto value = Json::parse(*bytes);
+  if (value.is_object() && !value.contains("inputOptions")) value["inputOptions"] = Json::object();
   if (value.is_object() && !value.contains("autoSendSeconds")) value["autoSendSeconds"] = 1;
   if (value.is_object() && !value.contains("shortcuts")) value["shortcuts"] = DefaultShortcuts();
   if (value.is_object() && !value.contains("globalShortcuts")) value["globalShortcuts"] = true;
@@ -367,6 +374,7 @@ bool ConfigurationStore::Save(
     Json next, const std::string &expected,
     const std::map<std::string, std::string> &changes) {
   auto lock = files_.Lock();
+  if (next.is_object() && !next.contains("inputOptions")) next["inputOptions"] = Json::object();
   if (next.is_object() && !next.contains("autoSendSeconds")) next["autoSendSeconds"] = 1;
   if (next.is_object() && !next.contains("shortcuts")) next["shortcuts"] = DefaultShortcuts();
   if (next.is_object() && !next.contains("globalShortcuts")) next["globalShortcuts"] = true;

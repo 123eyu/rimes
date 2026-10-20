@@ -62,6 +62,7 @@ RimesIme::RimesIme(Instance* instance)
     options.log_dir = paths.log_dir;
     options.wait_for_maintenance = false;
     imported_schema_ = paths.imported_schema;
+    input_scope_ = paths.imported_package.empty() ? "builtin" : paths.imported_package;
 
     std::string error;
     if (!engine_.Start(options, &error)) {
@@ -473,6 +474,7 @@ void RimesIme::ApplyConfiguration() {
         const auto revision = config.at("revision").get<std::string>();
         if (revision == configuration_revision_) return;
         configuration_revision_ = revision;
+        input_options_ = config.at("inputOptions");
         if (gateway_) gateway_->Configure(config);
         for (const auto& state : plugins_.Entries()) plugins_.Invalidate(state.descriptor.id);
         if (chord_) chord_->Configure(config);

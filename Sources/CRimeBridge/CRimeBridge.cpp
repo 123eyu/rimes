@@ -1,4 +1,5 @@
 #include "CRimeBridge.h"
+#include "../../Shared/InputHabits/rime_options.hpp"
 
 #include <dlfcn.h>
 #include <stddef.h>
@@ -755,6 +756,21 @@ bool BBRimeConfigGetDouble(const char* configId, const char* key, double* out) {
     Bool ok = gApi->config_get_double(&config, key, out);
     gApi->config_close(&config);
     return ok != 0;
+}
+
+int BBRimeGetInputOptions(const char* schema, BBRimeInputOption* out, int capacity) {
+    std::lock_guard<std::mutex> lock(gMutex);
+    if (!gStarted || !schema || !out || capacity < 1) return 0;
+    const auto options = xsime::input::Switches<RimeConfig>(gApi, schema);
+    int count = 0;
+    for (const auto& option : options) {
+        if (count >= capacity) break;
+        auto& item = out[count++];
+        snprintf(item.name, sizeof(item.name), "%s", option.name.c_str());
+        snprintf(item.off, sizeof(item.off), "%s", option.off.c_str());
+        snprintf(item.on, sizeof(item.on), "%s", option.on.c_str());
+    }
+    return count;
 }
 
 static std::vector<std::string> gSchemaIds(64);

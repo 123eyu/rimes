@@ -577,7 +577,8 @@ class RimeEngine::Impl final {
 
   bool Configure(SessionId session, const std::string& schema, bool ascii,
                  bool traditional, bool punctuation,
-                 std::string* error, unsigned candidate_count) noexcept {
+                 std::string* error, unsigned candidate_count,
+                 const std::map<std::string, bool>& input_options) noexcept {
     try {
       std::lock_guard lock(mutex_);
       if (!healthy_ || !sessions_.contains(session) || !api_ ||
@@ -613,11 +614,19 @@ class RimeEngine::Impl final {
       api_->set_option(session, "ascii_mode", ascii ? 1 : 0);
       api_->set_option(session, "traditionalization", traditional ? 1 : 0);
       api_->set_option(session, "ascii_punct", punctuation ? 1 : 0);
+      xsime::input::Apply<abi::Config>(api_, session, schema, input_options);
       return true;
     } catch (...) {
       SetError(error, "Engine configuration failed");
       return false;
     }
+  }
+
+  std::vector<xsime::input::Switch> InputOptions(const std::string& schema) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      return healthy_ ? xsime::input::Switches<abi::Config>(api_, schema) : std::vector<xsime::input::Switch>{};
+    } catch (...) { return {}; }
   }
 
  private:
@@ -911,9 +920,13 @@ bool RimeEngine::ProcessShiftTap(SessionId session, std::int32_t keycode,
 
 bool RimeEngine::Configure(SessionId session, const std::string& schema,
                            bool ascii, bool traditional, bool punctuation,
-                           std::string* error, unsigned candidate_count) noexcept {
+                           std::string* error, unsigned candidate_count,
+                           const std::map<std::string, bool>& input_options) noexcept {
   return impl_->Configure(session, schema, ascii, traditional, punctuation,
-                          error, candidate_count);
+                          error, candidate_count, input_options);
+}
+std::vector<xsime::input::Switch> RimeEngine::InputOptions(const std::string& schema) noexcept {
+  return impl_->InputOptions(schema);
 }
 
 bool RimeEngine::IsAsciiMode(SessionId session) const noexcept {

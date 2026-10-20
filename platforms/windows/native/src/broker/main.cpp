@@ -219,7 +219,8 @@ int wmain(const int argc, wchar_t** argv) {
   NamedPipeServer input_server(&security, true);
   workbench::Runtime runtime(workbench::GenerateText,
       {workbench::LocalTranslationReady, workbench::PrepareLocalTranslation});
-  if (imported) runtime.SetImportedSchema(imported->schema);
+  runtime.input_option_provider = [&engine](const std::string& schema) { return engine.InputOptions(schema); };
+  if (imported) runtime.SetImportedSchema(imported->schema, imported->package.id);
   workbench::UiCommands commands;
   const bool interactive = security.session_id() != 0;
 #ifndef RIMES_E2E_TEST_IDENTITY

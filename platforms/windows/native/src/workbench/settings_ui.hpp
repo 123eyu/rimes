@@ -11,10 +11,12 @@
 #include "official_plugins.hpp"
 #include "parity_settings.hpp"
 #include "metrics_ui.hpp"
+#include "../../../../../Shared/InputHabits/rime_options.hpp"
 
 namespace rimes::windows::workbench {
 
 struct SettingsUiCallbacks {
+  std::function<std::vector<xsime::input::Switch>(const std::string&)> input_options;
   std::function<Settings()> load;
   std::function<bool(Settings, const std::wstring& key, bool replace_key,
                      std::string* error)>
@@ -97,6 +99,8 @@ class SettingsUiHost {
   int recording_shortcut_ = -1;
   unsigned recorded_key_ = 0;
   void StopRecording();
+  void OpenInputHabits();
+  HWND input_habits_ = nullptr;
   HWND edit_base_ = nullptr;
   HWND combo_connector_ = nullptr, edit_codex_path_ = nullptr, edit_codex_model_ = nullptr;
   HWND edit_model_ = nullptr;

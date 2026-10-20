@@ -115,7 +115,7 @@ struct ApiPrefix {
   void (*unused_config_get_bool)();
   void (*unused_config_get_int)();
   void (*unused_config_get_double)();
-  void (*unused_config_get_string)();
+  Bool (*config_get_string)(Config*, const char*, char*, std::size_t);
   void (*unused_config_get_cstring)();
   void (*unused_config_update_signature)();
   void (*unused_config_begin_map)();

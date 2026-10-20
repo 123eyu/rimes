@@ -12,7 +12,7 @@ void Check(bool ok, const char* reason) {
   if (!ok) throw std::runtime_error(reason);
 }
 bool SameSettings(const Settings& a, const Settings& b) {
-  return a.revision == b.revision && a.schema == b.schema && a.send_hold_ms == b.send_hold_ms &&
+  return a.input_options == b.input_options && a.revision == b.revision && a.schema == b.schema && a.send_hold_ms == b.send_hold_ms &&
          a.base_url == b.base_url && a.model == b.model && a.ai_connector == b.ai_connector &&
          a.codex_path == b.codex_path && a.codex_model == b.codex_model &&
          a.chatgpt_model == b.chatgpt_model && a.chatgpt_effort == b.chatgpt_effort &&
@@ -82,6 +82,12 @@ int main() {
             "round trip retains theme and unrelated settings");
     }
     Check(settings.chatgpt_model == "gpt-6-sol" && settings.chatgpt_effort == "medium", "ChatGPT defaults match macOS");
+    settings.input_options["builtin:wubi86"] = {{"rimes_wubi_manual_commit", true}};
+    settings.input_options["fixture:wubi86"] = {{"rimes_wubi_fifth_code", false}};
+    Check(settings.InputOptionsFor("wubi86").at("rimes_wubi_manual_commit"), "built-in scheme override");
+    settings.input_scope = "fixture";
+    Check(settings.InputOptionsFor("wubi86").size() == 1 && !settings.InputOptionsFor("wubi86").at("rimes_wubi_fifth_code"), "same schema in another package is isolated");
+    settings.input_scope = "builtin";
     settings.chatgpt_model = "gpt-6-astra"; settings.chatgpt_effort = "high";
     settings.candidate_count = 5;
     settings.auto_send_seconds = 3; settings.close_after_send = true; settings.translation_provider = "ai";

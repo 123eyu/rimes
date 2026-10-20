@@ -87,6 +87,27 @@ std::int32_t RimesState::ModifierMask(const KeyEvent& event) const {
     return mask;
 }
 
+void RimesState::ApplyInputHabits() {
+    if (!session_ || composing() || !snapshot_.raw_input.empty() || ime_->observationProtected() || ProtectedInput(ic_->capabilityFlags())) return;
+    if (input_habit_schema_ != snapshot_.schema_id) {
+        input_habit_schema_ = snapshot_.schema_id;
+        input_habit_baseline_ = ime_->engine().InputOptions(session_, input_habit_schema_);
+        input_habit_applied_.clear(); input_habit_revision_.clear();
+    }
+    if (input_habit_revision_ == ime_->inputOptionsRevision()) return;
+    const auto scope = ime_->inputScope() + ":" + input_habit_schema_;
+    const auto& all = ime_->inputOptions();
+    const auto values = all.value(scope, rimes::runtime::Json::object());
+    for (const auto& [name, baseline] : input_habit_baseline_) {
+        if (values.contains(name) && values.at(name).is_boolean()) {
+            ime_->engine().SetOption(session_, name, values.at(name).get<bool>());
+            input_habit_applied_.insert(name);
+        } else if (input_habit_applied_.erase(name)) ime_->engine().SetOption(session_, name, baseline);
+    }
+    input_habit_revision_ = ime_->inputOptionsRevision();
+    ime_->engine().Refresh(session_, &snapshot_);
+}
+
 void RimesState::keyEvent(KeyEvent& event) {
     if (ime_->engine().IsDeploying()) {
         return;
@@ -98,6 +119,7 @@ void RimesState::keyEvent(KeyEvent& event) {
     if (session == 0) {
         return;
     }
+    ApplyInputHabits();
 
     if (HandleCandidateKey(event)) return;
 
@@ -145,6 +167,7 @@ void RimesState::keyEvent(KeyEvent& event) {
 void RimesState::activate() {
     cancelChord(false);
     (void)EnsureSession();
+    ApplyInputHabits();
 }
 
 void RimesState::retireSession() {
@@ -155,6 +178,7 @@ void RimesState::retireSession() {
     }
     snapshot_ = {};
     schema_id_.clear();
+    input_habit_schema_.clear(); input_habit_revision_.clear(); input_habit_baseline_.clear(); input_habit_applied_.clear();
     pending_schema_.clear();
     composing_ = false;
 }
@@ -264,6 +288,7 @@ bool RimesState::prepareChord(KeyEvent& event) {
         cancelChord(false);
     if (!EnsureSession())
         return false;
+    ApplyInputHabits();
     const auto lease = ime_->plugins().Authorize(rimes::chord::kPluginID, "input.chord");
     if (!lease || !ime_->acceptsPluginResult(*lease) || !session_) {
         cancelChord(true);

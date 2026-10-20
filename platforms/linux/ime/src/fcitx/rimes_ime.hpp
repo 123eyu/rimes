@@ -60,6 +60,9 @@ public:
     const Configuration* getConfig() const override { return &config_; }
     const Configuration* getConfigForInputMethod(const InputMethodEntry&) const override { return &config_; }
     const std::string& initialSchema() const { return imported_schema_; }
+    const std::string& inputScope() const { return input_scope_; }
+    const std::string& inputOptionsRevision() const { return configuration_revision_; }
+    const rimes::runtime::Json& inputOptions() const { return input_options_; }
     Instance* instance() { return instance_; }
     rimes::linuxime::RimeEngine& engine() { return engine_; }
     FactoryFor<RimesState>& factory() { return factory_; }
@@ -88,6 +91,8 @@ private:
 
     RimesConfiguration config_;
     std::string imported_schema_;
+    std::string input_scope_ = "builtin";
+    rimes::runtime::Json input_options_ = rimes::runtime::Json::object();
     Instance* instance_;
     rimes::linuxime::RimeEngine engine_;
     FactoryFor<RimesState> factory_;

@@ -16,6 +16,7 @@ public final class KeyboardSettings {
     public static final String KEY_THEME="theme";
     public static final String KEY_TRANSLATION_DIRECTION="translation_direction";
     public static final String KEY_LEARNING="learning";
+    public static final String KEY_INPUT_HABITS="input_habits_v1";
     public static final String KEY_AI_MOCK_ENABLED="ai_mock_enabled";
     public static final String DEFAULT_SCHEMA="rimes_pinyin";
     public static final String DEFAULT_LAYOUT="qwerty";
@@ -111,6 +112,26 @@ public final class KeyboardSettings {
     }
     public void setLearningEnabled(boolean enabled) { preferences.edit().putBoolean(KEY_LEARNING,enabled).apply(); }
     public void setAiMockEnabled(boolean enabled) { preferences.edit().putBoolean(KEY_AI_MOCK_ENABLED,enabled).apply(); }
+
+    public org.json.JSONObject inputOptions(String scope) {
+        try {
+            String raw=preferences.getString(KEY_INPUT_HABITS,"{}");
+            if(raw.length()>262144) return new org.json.JSONObject();
+            org.json.JSONObject values=new org.json.JSONObject(raw).optJSONObject(scope);
+            return values==null?new org.json.JSONObject():values;
+        } catch(Exception e) { return new org.json.JSONObject(); }
+    }
+    public void setInputOption(String scope,String option,Boolean value) throws org.json.JSONException {
+        synchronized(preferences) {
+            org.json.JSONObject all=new org.json.JSONObject(preferences.getString(KEY_INPUT_HABITS,"{}"));
+            org.json.JSONObject values=all.optJSONObject(scope);
+            if(values==null) values=new org.json.JSONObject();
+            if(value==null) values.remove(option); else values.put(option,value);
+            all.put(scope,values);
+            if(all.toString().length()>262144) throw new org.json.JSONException("Input preferences are too large");
+            preferences.edit().putString(KEY_INPUT_HABITS,all.toString()).apply();
+        }
+    }
 
     public static final class Snapshot {
         public final String schema,layout,theme,translationDirection;

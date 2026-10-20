@@ -12,6 +12,9 @@
 #include "chord_core.hpp"
 #include "statistics_pane.hpp"
 #include "practice_pane.hpp"
+#include "scheme_import.hpp"
+#include <yaml-cpp/yaml.h>
+#include "../../../../Shared/InputHabits/rime_options.hpp"
 #ifdef RIMES_GATEWAY_CLIPBOARD
 #include "clipboard_desktop.hpp"
 #include "capsule_password.hpp"
@@ -331,6 +334,7 @@ struct Settings {
       Add(body, Label(subpage == "encoding" ? "输入方案" : "词库", "section"));
       Add(body, Button("导入与管理…", [this] { Launch("rimes-schemes"); }));
       Add(body, Label("导入方案和移除方案均保留学习记录。", "caption"));
+      if (subpage == "encoding") InputHabits(body);
     } else if (route == "core.rimes") {
       Add(body, Label("XSIME", "heading"));
       Add(body, Label(std::string("版本 ") + RIMES_PRODUCT_VERSION, "caption"));
@@ -351,6 +355,65 @@ struct Settings {
     }
     gtk_widget_show_all(content);
   }
+  void InputHabits(GtkWidget* body) {
+    Add(body, Label("方案输入习惯", "section"));
+    Add(body, Label("按方案独立保存，组字结束后应用。“跟随方案”撤销覆盖，原 YAML 文件保持不变。", "caption"));
+    try {
+      auto build = UserRoot() / "build";
+      std::string prefix = "builtin";
+      if (auto active = rimes::schemes::Library(UserRoot() / "schemes").Active()) {
+        build = active->resources / "build"; prefix = active->package.id;
+      }
+      if (!std::filesystem::is_directory(build)) { Add(body, Label("完成方案部署后可在这里调整输入习惯。", "caption")); return; }
+      std::size_t profiles = 0;
+      for (const auto& entry : std::filesystem::directory_iterator(build)) {
+        const auto filename = entry.path().filename().string();
+        if (!entry.is_regular_file() || filename.size() < 13 || filename.substr(filename.size() - 12) != ".schema.yaml" || entry.file_size() > 1024 * 1024) continue;
+        if (++profiles > 64) break;
+        const auto schema = YAML::LoadFile(entry.path().string());
+        const auto id = schema["schema"]["schema_id"].as<std::string>("");
+        const auto switches = schema["switches"];
+        if (!rimes::schemes::ValidID(id) || !switches.IsSequence()) continue;
+        const auto scope = prefix + ":" + id;
+        bool heading = false;
+        std::set<std::string> names;
+        for (std::size_t i = 0; i < switches.size() && i < 128; ++i) {
+          const auto option = switches[i], states = option["states"];
+          const auto name = option["name"].as<std::string>("");
+          if (!xsime::input::ConfigurableName(name) || !states.IsSequence() || states.size() != 2 || !names.insert(name).second) continue;
+          const auto off = states[0].as<std::string>(""), on = states[1].as<std::string>("");
+          if (off.empty() || on.empty()) continue;
+          if (!heading) { Add(body, Label(schema["schema"]["name"].as<std::string>(id), "section")); heading = true; }
+          auto* row = Row(); Add(row, Label(off + " / " + on), true);
+          auto* combo = gtk_combo_box_text_new();
+          for (const auto& title : {std::string("跟随方案"), off, on}) gtk_combo_box_text_append_text(GTK_COMBO_BOX_TEXT(combo), title.c_str());
+          const auto values = saved.at("inputOptions").value(scope, Json::object());
+          gtk_combo_box_set_active(GTK_COMBO_BOX(combo), values.contains(name) ? (values.at(name).get<bool>() ? 2 : 1) : 0);
+          struct Context { Settings* owner; std::string scope, name; };
+          auto* context = new Context{this, scope, name};
+          g_signal_connect_data(combo, "changed", G_CALLBACK(+[](GtkComboBox* control, gpointer data) {
+            auto* item = static_cast<Context*>(data); auto* self = item->owner;
+            const auto before = self->saved.at("inputOptions").value(item->scope, Json::object());
+            try {
+              auto next = self->saved;
+              auto& values = next["inputOptions"][item->scope];
+              if (!values.is_object()) values = Json::object();
+              const auto selected = gtk_combo_box_get_active(control);
+              if (selected == 0) values.erase(item->name); else values[item->name] = selected == 2;
+              self->Save(next);
+            } catch (...) {
+              self->Message("设置未保存，请重新加载后再试。原配置保持不变。");
+              g_signal_handlers_block_by_data(control, data);
+              gtk_combo_box_set_active(control, before.contains(item->name) ? (before.at(item->name).get<bool>() ? 2 : 1) : 0);
+              g_signal_handlers_unblock_by_data(control, data);
+            }
+          }), context, +[](gpointer data, GClosure*) { delete static_cast<Context*>(data); }, GConnectFlags(0));
+          Add(row, combo); Add(body, row);
+        }
+      }
+    } catch (...) { Add(body, Label("无法读取已部署方案；现有输入不受影响。", "caption")); }
+  }
+
   void OpenPath(const std::filesystem::path &path) {
     gchar *uri = g_filename_to_uri(path.c_str(), nullptr, nullptr);
     if (!uri) {

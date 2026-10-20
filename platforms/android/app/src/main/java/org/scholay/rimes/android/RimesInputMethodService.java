@@ -209,6 +209,10 @@ public final class RimesInputMethodService extends InputMethodService {
         if(session==0) throw new IllegalStateException("Cannot create input session");
         String loaded=ImportedKeyboardLayouts.selectSchema(selected,imported==null?selected:imported.schemaID,
                 candidate -> engine.selectSchema(session,candidate));
+        if(engine instanceof NativeRimeEngine && !privateField) {
+            String scope=(imported==null?"builtin":imported.packageID)+":"+loaded.replaceFirst("_private$","");
+            NativeRimeEngine.applyInputOptionsNative(session,loaded,settings.inputOptions(scope).toString());
+        }
         ImportedRuntimeLayout result=imported==null?null:new ImportedRuntimeLayout(imported,loaded);
         importedRuntimeLayout=result;
         if(imported!=null) main.post(() -> {

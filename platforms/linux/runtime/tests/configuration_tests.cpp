@@ -61,6 +61,7 @@ int main() {
     auto legacy = store.Load();
     for (auto& item : legacy["providers"])
         item.erase("revision");
+    legacy.erase("inputOptions");
     legacy.erase("autoSendSeconds");
     legacy.erase("gatewayEnabled"); legacy.erase("gatewayPort"); legacy.erase("gatewayBlockedSources");
     legacy.erase("shortcuts"); legacy.erase("globalShortcuts");
@@ -76,6 +77,16 @@ int main() {
       Reject([&] { store.Save(candidate, candidate.at("revision")); });
       Check(store.Load() == original, "invalid gateway settings changed durable data");
     }
+    Check(store.Load().at("inputOptions").empty(), "legacy scheme options migration");
+    auto habits = store.Load();
+    habits["inputOptions"]["builtin:wubi86"] = {{"rimes_wubi_manual_commit", true}};
+    habits["inputOptions"]["fixture:wubi86"] = {{"rimes_wubi_fifth_code", false}};
+    store.Save(habits, habits.at("revision"));
+    Check(store.Load().at("inputOptions") == habits.at("inputOptions"), "scheme overrides persisted independently");
+    auto invalid_habits = store.Load();
+    invalid_habits["inputOptions"]["builtin:wubi86"]["rimes_wubi_manual_commit"] = "yes";
+    Reject([&] { store.Save(invalid_habits, invalid_habits.at("revision")); });
+    Check(store.Load().at("inputOptions") == habits.at("inputOptions"), "invalid settings overwrite saved choices");
     ValidateShortcuts(DefaultShortcuts());
     for (const auto* chord : {"b", "SHIFT+b", "CTRL+a", "CTRL+v", "LOGO+v", "CTRL+CTRL+b", "CTRL+SHIFT+B", "SHIFT+CTRL+b", "CTRL+bad", "CTRL+b\n"})
       Reject([&] { ParseShortcut(chord); });

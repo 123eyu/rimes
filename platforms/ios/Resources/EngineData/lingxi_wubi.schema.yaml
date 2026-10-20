@@ -23,6 +23,12 @@ switches:
   - name: ascii_mode
     reset: 0
     states: [ 中文, 西文 ]
+  - name: rimes_wubi_manual_commit
+    reset: 0
+    states: [ 四码唯一上屏, 四码手动确认 ]
+  - name: rimes_wubi_fifth_code
+    reset: 0
+    states: [ 第五码不顶字, 第五码顶字 ]
   - name: full_shape
     states: [ 半角, 全角 ]
   - name: extended_charset

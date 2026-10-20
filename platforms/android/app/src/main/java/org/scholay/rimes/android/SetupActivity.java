@@ -307,6 +307,47 @@ public final class SetupActivity extends Activity {
             catch(Exception e) { android.widget.Toast.makeText(this,e.getMessage(),android.widget.Toast.LENGTH_LONG).show(); }
         }); }
         note(t("九键使用全拼；选择其他方案会切换到 QWERTY。并击使用自然码编码，选择普通中文方案会退出并击布局。","9-key uses Pinyin; another scheme switches to QWERTY. Chords use Natural Code; selecting a regular scheme leaves the chord layout."));
+        inputHabits();
+    }
+    private void inputHabits() {
+        LinearLayout group=group(t("当前方案的输入习惯","Current scheme input preferences"));
+        paragraph(group,t("跟随方案保留原配置。修改在下一次打开键盘时生效。","Use scheme default to preserve the original configuration. Changes apply when the keyboard next opens."));
+        RimeSchemeStore.Selection imported=new RimeSchemeStore(this).active();
+        String schema=imported==null?settings.getSchema():imported.schemaID;
+        String scope=(imported==null?"builtin":imported.packageID)+":"+schema;
+        EngineWorker.QUEUE.execute(() -> {
+            org.json.JSONArray options;
+            try {
+                byte[] data;
+                if(imported!=null) {
+                    java.io.File file=new java.io.File(imported.resources,"build/"+schema+".schema.yaml");
+                    if(file.length()>1024*1024) throw new java.io.IOException("Schema too large");
+                    data=java.nio.file.Files.readAllBytes(file.toPath());
+                } else try(java.io.InputStream stream=getAssets().open("rime/build/"+schema+".schema.yaml")) {
+                    java.io.ByteArrayOutputStream out=new java.io.ByteArrayOutputStream(); byte[] block=new byte[8192]; int count;
+                    while((count=stream.read(block))!=-1) { out.write(block,0,count); if(out.size()>1024*1024) throw new java.io.IOException("Schema too large"); }
+                    data=out.toByteArray();
+                }
+                options=new org.json.JSONArray(NativeRimeEngine.inputOptionsNative(new String(data,java.nio.charset.StandardCharsets.UTF_8)));
+            } catch(Exception e) { options=new org.json.JSONArray(); }
+            final org.json.JSONArray found=options;
+            runOnUiThread(() -> {
+                if(destroyed || !group.isAttachedToWindow()) return;
+                if(found.length()==0) paragraph(group,t("此方案没有可配置的双状态开关。","This scheme exposes no configurable two-state switches."));
+                for(int i=0;i<found.length();i++) {
+                    org.json.JSONObject option=found.optJSONObject(i); if(option==null) continue;
+                    String name=option.optString("name"),off=option.optString("off"),on=option.optString("on");
+                    org.json.JSONObject saved=settings.inputOptions(scope);
+                    int selected=saved.has(name)?(saved.optBoolean(name)?2:1):0;
+                    String[] labels={t("跟随方案","Use scheme default"),off,on};
+                    row(group,null,off+" / "+on,null,labels[selected],"settings.inputHabit."+name,() ->
+                        new android.app.AlertDialog.Builder(this).setTitle(off+" / "+on).setSingleChoiceItems(labels,selected,(dialog,index) -> {
+                            try { settings.setInputOption(scope,name,index==0?null:index==2); dialog.dismiss(); render(); }
+                            catch(Exception e) { android.widget.Toast.makeText(this,t("保存失败，原设置保留","Save failed; previous settings preserved"),android.widget.Toast.LENGTH_LONG).show(); }
+                        }).setNegativeButton(t("取消","Cancel"),null).show());
+                }
+            });
+        });
     }
     private void segments(LinearLayout parent,String[] ids,String[] labels,String selected,String prefix,java.util.function.Consumer<String> action) {
         LinearLayout bar=new LinearLayout(this); bar.setOrientation(LinearLayout.HORIZONTAL); bar.setPadding(dp(3),dp(3),dp(3),dp(3)); bar.setBackground(shape(separator,9));

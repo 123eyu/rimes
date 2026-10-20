@@ -73,6 +73,7 @@ EnginePaths ResolveEnginePaths(const std::filesystem::path& install_shared_dir) 
             paths.shared_data_dir = selected->resources;
             paths.user_data_dir = selected->user;
             paths.imported_schema = selected->schema;
+            paths.imported_package = selected->package.id;
         }
     }
     return paths;

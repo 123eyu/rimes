@@ -7,6 +7,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
+#include "../../../Shared/InputHabits/rime_options.hpp"
 
 // JNI's modified UTF-8 is not standard UTF-8. Use explicit UTF-16 conversions,
 // including surrogate pairs; Rime's caret offsets count UTF-8 bytes.
@@ -59,6 +60,35 @@ extern "C" JNIEXPORT jboolean JNICALL JNI(schemaNative)(JNIEnv* env, jclass, jlo
     rimes_lua_clear_error();
     const bool selected = api()->select_schema(session, utf8(env, schema).c_str());
     return selected && (!rimes_lua_last_error() || !rimes_lua_last_error()[0]);
+}
+extern "C" JNIEXPORT jstring JNICALL JNI(inputOptionsNative)(JNIEnv* env, jclass, jstring yaml) {
+    RimeConfig config{};
+    try {
+        const auto source = utf8(env, yaml);
+        if (source.size() > 1024 * 1024 || !api()->config_load_string(&config, source.c_str())) {
+            if (config.ptr) api()->config_close(&config);
+            return string(env, "[]");
+        }
+        const auto result = xsime::input::JSON(xsime::input::ReadSwitches(api(), config));
+        api()->config_close(&config);
+        return string(env, result);
+    } catch (...) { if (config.ptr) api()->config_close(&config); return string(env, "[]"); }
+}
+extern "C" JNIEXPORT void JNICALL JNI(applyInputOptionsNative)(JNIEnv* env, jclass, jlong session, jstring schema, jstring json) {
+    RimeConfig config{};
+    try {
+        const auto source = utf8(env, json);
+        if (source.size() > 262144 || !api()->config_load_string(&config, source.c_str())) {
+            if (config.ptr) api()->config_close(&config);
+            return;
+        }
+        const auto id = utf8(env, schema);
+        for (const auto& option : xsime::input::Switches<RimeConfig>(api(), id)) {
+            Bool value = False;
+            if (api()->config_get_bool(&config, option.name.c_str(), &value)) api()->set_option(session, option.name.c_str(), value);
+        }
+        api()->config_close(&config);
+    } catch (...) { if (config.ptr) api()->config_close(&config); }
 }
 extern "C" JNIEXPORT jstring JNICALL JNI(deployNative)(JNIEnv* env, jclass, jstring root, jobjectArray schemas) {
     std::string failure;
