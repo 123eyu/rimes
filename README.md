@@ -27,10 +27,6 @@
 
 **前 5000 位为本项目点亮 Star 的用户，可免费预约半年会员。** 欢迎添加微信或加入 QQ 群预约。
 
-## 友情链接
-
-[Scholay 学术](https://www.scholay.com/t/M4ZZW8KRE5) · [恩特学术](https://enterscholar.com/)
-
 ## 演示视频
 
 - [哔哩哔哩 · 完整介绍](https://www.bilibili.com/video/BV17XuH6SEDg/)
@@ -187,9 +183,11 @@ cd xsime
 
 ## 友链
 
-- [RIME 输入法引擎](https://rime.im/) — 本项目的中文编码基于 RIME。
-- [Linux.do](https://linux.do/u/leowangling/preferences/account) - 感谢真诚、友善、团结、专业之社区L站及一众佬友。
-- [iRime](https://github.com/jimmy54/iRime) — 感谢 iRime 作者对 XSIME 的指导与宣传支持。
+- [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> RIME 输入法引擎](https://rime.im/) — 本项目的中文编码基于 RIME。
+- [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) - 感谢真诚、友善、团结、专业之社区L站及一众佬友。
+- [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — 感谢 iRime 作者对 XSIME 的指导与宣传支持。
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay 学术](https://www.scholay.com/t/M4ZZW8KRE5)
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> 恩特学术](https://enterscholar.com/)
 
 ## 贡献者
 

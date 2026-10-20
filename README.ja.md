@@ -132,9 +132,11 @@ iOS は実際に提供されているストア版を確認し、App Store でダ
 
 ## リンク
 
-- [RIME 入力メソッドエンジン](https://rime.im/) — 本プロジェクトの中国語入力は RIME に基づいています。
-- [Linux.do](https://linux.do/u/leowangling/preferences/account) — 誠実で、友好的で、結束し、専門的なコミュニティ Linux.do と、その仲間たちに感謝します。
-- [iRime](https://github.com/jimmy54/iRime) — XSIME への指導と紹介に、iRime の作者へ感謝します。
+- [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> RIME 入力メソッドエンジン](https://rime.im/) — 本プロジェクトの中国語入力は RIME に基づいています。
+- [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) — 誠実で、友好的で、結束し、専門的なコミュニティ Linux.do と、その仲間たちに感謝します。
+- [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — XSIME への指導と紹介に、iRime の作者へ感謝します。
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5)
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar](https://enterscholar.com/)
 
 ## 貢献者
 

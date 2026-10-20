@@ -132,9 +132,11 @@ Los mantenedores publican cuando pasan los cinco flujos de CI de main. Consulta 
 
 ## Enlaces
 
-- [Motor de método de entrada RIME](https://rime.im/) — la entrada en chino de este proyecto se basa en RIME.
-- [Linux.do](https://linux.do/u/leowangling/preferences/account) — gracias a Linux.do, una comunidad sincera, amable, unida y profesional, y a quienes forman parte de ella.
-- [iRime](https://github.com/jimmy54/iRime) — gracias al autor de iRime por la orientación y por ayudar a dar a conocer RIMES.
+- [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> Motor de método de entrada RIME](https://rime.im/) — la entrada en chino de este proyecto se basa en RIME.
+- [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) — gracias a Linux.do, una comunidad sincera, amable, unida y profesional, y a quienes forman parte de ella.
+- [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — gracias al autor de iRime por la orientación y por ayudar a dar a conocer RIMES.
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5)
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar](https://enterscholar.com/)
 
 ## Colaboradores
 
