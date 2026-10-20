@@ -11,6 +11,7 @@ Core maintainer / 核心维护者: [学术海](https://pm.scholay.com) ([GitHub:
 - [Kindred5210](https://github.com/Kindred5210) — Liquid Glass theme design and implementation adapted from [PR #46](https://github.com/scholay/xsime/pull/46).
 - [XyTT2N2bTc](https://github.com/XyTT2N2bTc) — Windows candidate-window placement via [PR #82](https://github.com/scholay/xsime/pull/82).
 - [Sparky579](https://github.com/Sparky579) — Windows candidate-window caret fallback and regression coverage via [PR #105](https://github.com/scholay/xsime/pull/105).
+- [limingzxc](https://github.com/limingzxc) — Android Chinese input in `TYPE_NULL` chat editors and editor policy regression coverage via [PR #223](https://github.com/scholay/xsime/pull/223).
 
 ## AI coding assistants
 

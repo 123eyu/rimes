@@ -27,6 +27,10 @@
 
 **前 5000 位为本项目点亮 Star 的用户，可免费预约半年会员。** 欢迎添加微信或加入 QQ 群预约。
 
+## 友情链接
+
+[Scholay 学术](https://www.scholay.com/t/M4ZZW8KRE5) · [恩特学术](https://enterscholar.com/)
+
 ## 演示视频
 
 - [哔哩哔哩 · 完整介绍](https://www.bilibili.com/video/BV17XuH6SEDg/)
