@@ -15,6 +15,10 @@
 
 > **犀术IME / 犀術IME / XSIME** 是产品、项目与架构的统一名称（原 RIMES / 灵犀输入法 / Lingxi IME）。品牌正在迁移；已发布客户端、商店和备案名称按各自流程更新，不代表已经全部更名。兼容标识与迁移顺序见 [命名规范](BRANDING.md)。
 
+## 产品路线图
+
+[五端 Roadmap 看板](https://github.com/users/scholay/projects/1)按日常输入与 Buffer、输入方案与插件、个人词库、AI 与 Mailbox、品牌一致性、跨端与个人云六条主线组织。2026-10-19 的 29 项需求、依赖和旧计划衔接见[产品路线图](PLATFORM-ROADMAP.md)；新规划不代表已发布能力，各端实现与设备验收分别跟踪。
+
 ## 联系与交流
 
 邮箱：[pm@scholay.com](mailto:pm@scholay.com) · 微信 ID：`scholar_hi` · QQ 群：`567629445`，诚邀进群交流。

@@ -1,5 +1,7 @@
 # RIMES · 缓冲工作台（Workbench）产品方案与架构设计
 
+> **2026-10-19 产品规划更新（待设计与实现）**：五端按[统一 Roadmap](PLATFORM-ROADMAP.md)与六条产品主线推进。Buffer 插件改为可手工配置的统一范式（[#258](https://github.com/scholay/xsime/issues/258)），移动端固定入口、语音与手写纳入该范式；AI 长按转交 Mailbox 等待完整结果（[#251](https://github.com/scholay/xsime/issues/251)），桌面 Mailbox 采用鼓励右下角常驻的小屏幕形态（[#252](https://github.com/scholay/xsime/issues/252)）。发送/上屏/关闭规则（[#238](https://github.com/scholay/xsime/issues/238)）和 Capsule 个人词库场景（[#247](https://github.com/scholay/xsime/issues/247)）先统一设计；跨设备加密、中继与个人云列入后续探索（[#234](https://github.com/scholay/xsime/issues/234)）。这些规划取代旧文对应的未来范围限制；后文标注“当前”的既有实现契约，仍须逐项实现、验收并更新后才能被替换。本次仅更新规划，不改变运行时行为。
+
 版本：v0.3 决策更新 · 2026-07-19
 状态：长期路线图；缓冲窗口部分已实现
 
