@@ -1,0 +1,42 @@
+﻿{
+    "verified":  true,
+    "version":  "1.1.5-win-settings-flicker.20261019",
+    "directory":  "C:\\Program Files\\RIMES\\versions\\1.1.5-win-settings-flicker.20261019-7292d41b6ea7-bbb3fe999e5e",
+    "sourceSnapshot":  "21a99b579bad66000b343285e93166f595d29f2ba070930eb626d49a75740503",
+    "sourceFilesMatched":  5,
+    "binaryHashesMatched":  true,
+    "brokerPid":  188092,
+    "settingsUnchanged":  true,
+    "userDataRetained":  true,
+    "peripheralFilesUnchanged":  86,
+    "backupDirectory":  "C:\\Users\\young\\AppData\\Local\\RIMES\\backups\\before-settings-flicker-20261019-223234",
+    "requiresSignOut":  true,
+    "tests":  [
+                  "7 targeted CTests x64",
+                  "7 targeted CTests x86",
+                  "32 subpage repaint audit x64",
+                  "32 subpage repaint audit x86",
+                  "Native dynamic metrics/gallery/connectors x64",
+                  "Plugin importer and catalog: 7 Python tests"
+              ],
+    "nativeImages":  123,
+    "staticImages":  165,
+    "causes":  [
+                   "Unconditional 200 ms page invalidation",
+                   "Hidden legacy gallery label rewrites",
+                   "Hide/show cycles during shared layout",
+                   "Whole-page font reset on ordinary autosave"
+               ],
+    "verifiedBehaviors":  [
+                              "All 32 subpages idle without repeated paints/text writes/visibility changes",
+                              "Same-page relayout preserves visible controls",
+                              "Autosave retains focus and selection",
+                              "Changed statistics and plugin metadata still refresh",
+                              "Active typing metrics refresh only their display areas",
+                              "Connector authorization waiting/ready states",
+                              "Scrolling and theme rendering in four themes"
+                          ],
+    "auditRetryNote":  "The first x86 observation recorded two extra paints on page 10/2, with zero timer-triggered paints; unchanged serial rerun passed all 32 pages with zero idle paints. Original observation retained in audit-x86-first.json.",
+    "testNote":  "Disposable native fixture windows and isolated data; no input injected into user applications. Paint counters exercise WM_PAINT; screenshots cover layout, not animation.",
+    "verifiedAt":  "2026-10-19T22:39:03.7923847+08:00"
+}

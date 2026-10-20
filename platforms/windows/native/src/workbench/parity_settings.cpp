@@ -469,9 +469,11 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
   if (p.page != page || p.subpage != subpage) p.scroll = 0;
   p.page = page; p.subpage = subpage; p.viewport = body; p.dpi = dpi;
   p.panel = {}; p.route = {}; p.spinner = {};
+  std::set<unsigned> shown;
   for (auto [id, h] : p.controls) {
-    ShowWindow(h, SW_HIDE); SetWindowRgn(h, nullptr, FALSE);
-    SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(font), TRUE);
+    const auto desired_font = (id == 6055 || id == 6057) ? p.gateway_font : font;
+    if (reinterpret_cast<HFONT>(SendMessageW(h, WM_GETFONT, 0, 0)) != desired_font)
+      SendMessageW(h, WM_SETFONT, reinterpret_cast<WPARAM>(desired_font), FALSE);
   }
   const bool connector = page == ui::SettingsPage::kApi;
   const bool codex = p.config.connections[p.selected].kind == "codex-cli";
@@ -485,7 +487,7 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
     p.gateway_font = CreateFontW(-MulDiv(10, dpi, 96), 0, 0, 0, FW_NORMAL, FALSE, FALSE, FALSE,
         DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS, CLEARTYPE_QUALITY, FIXED_PITCH, L"Consolas");
   }
-  for (const unsigned id : {6055U, 6057U}) SendMessageW(p.H(id), WM_SETFONT, reinterpret_cast<WPARAM>(p.gateway_font), TRUE);
+  for (const unsigned id : {6055U, 6057U}) SendMessageW(p.H(id), WM_SETFONT, reinterpret_cast<WPARAM>(p.gateway_font), FALSE);
   auto put = [&](unsigned id, float left, float top, float width,
                  float height) {
     const float scale = static_cast<float>(dpi) / 96;
@@ -502,7 +504,7 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
     MoveWindow(p.H(id), static_cast<int>((x + left) * scale),
                static_cast<int>((y + top) * scale),
                static_cast<int>(width * scale),
-               static_cast<int>(height * scale), TRUE);
+               static_cast<int>(height * scale), FALSE);
     if (std::wstring(kind) == L"ComboBox") {
       SendMessageW(p.H(id), CB_SETITEMHEIGHT, static_cast<WPARAM>(-1),
                    static_cast<LPARAM>(23 * scale));
@@ -528,8 +530,9 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
       if (clipped_bottom <= clipped_top) return;
       SetWindowRgn(p.H(id), CreateRectRgn(0, static_cast<int>(clipped_top * scale),
           static_cast<int>(width * scale + 1), static_cast<int>(clipped_bottom * scale + 1)), FALSE);
-    }
-    ShowWindow(p.H(id), SW_SHOW);
+    } else SetWindowRgn(p.H(id), nullptr, FALSE);
+    shown.insert(id);
+    if (!(GetWindowLongPtrW(p.H(id), GWL_STYLE) & WS_VISIBLE)) ShowWindow(p.H(id), SW_SHOWNA);
   };
   auto row = [&](unsigned id, unsigned label, float top, bool combo = false) {
     put(label, 16, top + 5, 210, 24);
@@ -590,10 +593,12 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
     if (p.scroll_max) {
       const float scale = static_cast<float>(dpi) / 96;
       MoveWindow(p.H(6070), static_cast<int>((body.right + 6) * scale), static_cast<int>(body.top * scale),
-          MulDiv(12, dpi, 96), static_cast<int>(body.height() * scale), TRUE);
+          MulDiv(12, dpi, 96), static_cast<int>(body.height() * scale), FALSE);
       SCROLLINFO info{sizeof(info), SIF_RANGE | SIF_PAGE | SIF_POS, 0, static_cast<int>(height) - 1,
           static_cast<UINT>(body.height()), p.scroll, 0};
-      SetScrollInfo(p.H(6070), SB_CTL, &info, TRUE); ShowWindow(p.H(6070), SW_SHOW);
+      SetScrollInfo(p.H(6070), SB_CTL, &info, FALSE);
+      shown.insert(6070);
+      if (!(GetWindowLongPtrW(p.H(6070), GWL_STYLE) & WS_VISIBLE)) ShowWindow(p.H(6070), SW_SHOWNA);
     }
   } else if (page == ui::SettingsPage::kChord) {
     if (subpage == 0) {
@@ -631,6 +636,11 @@ void ParitySettings::Layout(ui::SettingsPage page, int subpage,
       row(6032, 6132, 292, true);
   } else if (page == ui::SettingsPage::kBuffer && subpage == 0)
     row(6031, 6131, 270);
+  // Retained controls stay visible and keep focus/selection during a relayout.
+  // Only controls absent from the new page need a visibility transition.
+  for (auto [id, h] : p.controls)
+    if (!shown.contains(id) && (GetWindowLongPtrW(h, GWL_STYLE) & WS_VISIBLE))
+      ShowWindow(h, SW_HIDE);
 }
 void ParitySettings::PaintFields(HDC dc, ui::ThemeId theme,
                                  unsigned dpi) const {
