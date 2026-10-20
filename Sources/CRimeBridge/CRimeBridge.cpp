@@ -773,6 +773,13 @@ int BBRimeGetInputOptions(const char* schema, BBRimeInputOption* out, int capaci
     return count;
 }
 
+bool BBRimeSchemaResetsOption(const char* schema, const char* name) {
+    std::lock_guard<std::mutex> lock(gMutex);
+    if (!gStarted || !schema || !name) return true;
+    try { return xsime::input::ResetNames<RimeConfig>(gApi, schema).count(name) != 0; }
+    catch (...) { return true; }
+}
+
 static std::vector<std::string> gSchemaIds(64);
 static std::vector<std::string> gSchemaNames(64);
 

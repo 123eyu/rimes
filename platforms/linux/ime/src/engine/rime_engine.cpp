@@ -246,6 +246,7 @@ public:
                 SetError(error, "unknown or inactive librime session");
                 return false;
             }
+            input_habits_.erase(session);
             api_->destroy_session(session);
             return true;
         } catch (...) {
@@ -262,6 +263,8 @@ public:
             if (!HasSessionLocked(session, error) || api_->select_schema == nullptr) {
                 return false;
             }
+            api_->clear_composition(session);
+            input_habits_[session].Restore(api_, session); input_habits_.erase(session);
             schema_storage_.assign(schema_id);
             if (api_->select_schema(session, schema_storage_.c_str()) == 0) {
                 SetError(error, "librime rejected schema selection");
@@ -416,6 +419,16 @@ public:
         }
     }
 
+    bool ApplyInputOptions(SessionId session, const std::string& schema, const std::map<std::string, bool>& values) noexcept {
+        try {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!HasSessionLocked(session, nullptr)) return false;
+            const auto* input = api_->get_input(session);
+            if (input && input[0]) return false;
+            input_habits_[session].Update<RimeConfig>(api_, session, schema, values);
+            return true;
+        } catch (...) { return false; }
+    }
     std::map<std::string, bool> InputOptions(SessionId session, const std::string& schema) noexcept {
         try {
             std::lock_guard<std::mutex> lock(mutex_);
@@ -689,7 +702,7 @@ private:
             for (const SessionId session : sessions_) {
                 api_->destroy_session(session);
             }
-            sessions_.clear();
+            sessions_.clear(); input_habits_.clear();
             if (initialized_ && api_->finalize != nullptr) {
                 api_->finalize();
             }
@@ -726,6 +739,7 @@ private:
     std::string schema_storage_;
     std::string option_storage_;
     std::unordered_set<SessionId> sessions_;
+    std::map<SessionId, xsime::input::SessionOverrides> input_habits_;
 };
 
 RimeEngine::RimeEngine() : impl_(std::make_unique<Impl>()) {}
@@ -778,6 +792,9 @@ bool RimeEngine::SetOption(SessionId session,
                            bool value,
                            std::string* error) noexcept {
     return impl_->SetOption(session, option, value, error);
+}
+bool RimeEngine::ApplyInputOptions(SessionId session, const std::string& schema, const std::map<std::string, bool>& values) noexcept {
+    return impl_->ApplyInputOptions(session, schema, values);
 }
 std::map<std::string, bool> RimeEngine::InputOptions(SessionId session, const std::string& schema) noexcept {
     return impl_->InputOptions(session, schema);

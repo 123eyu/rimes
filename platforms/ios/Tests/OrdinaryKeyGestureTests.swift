@@ -138,7 +138,7 @@ import RimesCore
         XCTAssertFalse(store.load().longPressSwipeSymbols); XCTAssertFalse(store.load().directSwipeSymbols)
     }
     func testNumericKeypadAndHeightFitHostWithoutChangingPinyinLayout() {
-        for width: CGFloat in [280, 393, 840] {
+        for width in [CGFloat(280), 393, 840] {
             for landscape in [false, true] {
                 for percent in [100, 115, 130] {
                     let height = StandardKeyboardGeometry.height(landscape: landscape, percent: percent)

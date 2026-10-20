@@ -268,6 +268,31 @@ int main(int argc, char** argv) {
             }
         }
     }
+    for (const auto* schema : {"wubi86", "lingxi_wubi"}) {
+        if (!engine.SelectSchema(session, schema, &error)) Die("Wubi preference schema");
+        const auto supported = engine.InputOptions(session, schema);
+        if (!supported.count("rimes_wubi_manual_commit") || !supported.count("rimes_wubi_fifth_code") || supported.count("ascii_mode")) Die("actual scheme capability discovery");
+        for (bool manual : {false, true}) for (bool fifth : {false, true}) {
+            engine.ClearComposition(session, &snapshot, &error);
+            if (!engine.ApplyInputOptions(session, schema, {{"rimes_wubi_manual_commit", manual}, {"rimes_wubi_fifth_code", fifth}})) Die("apply Wubi preferences");
+            TypeAscii(engine, session, "voni", &snapshot);
+            if (snapshot.commit_text != (manual ? "" : "灵犀")) Die("four-code override");
+            if (manual && fifth) {
+                TypeAscii(engine, session, "w", &snapshot);
+                if (snapshot.commit_text != "灵犀" || snapshot.raw_input != "w") Die("fifth-code continuation");
+            }
+            engine.ClearComposition(session, &snapshot, &error);
+            for (const char key : std::string("znihao")) {
+                TypeAscii(engine, session, std::string(1, key), &snapshot);
+                if (!snapshot.commit_text.empty()) Die("Wubi options committed a reverse lookup");
+            }
+        }
+        engine.ClearComposition(session, &snapshot, &error);
+        if (!engine.ApplyInputOptions(session, schema, {})) Die("restore Wubi defaults");
+        TypeAscii(engine, session, "voni", &snapshot);
+        if (snapshot.commit_text != "灵犀") Die("restored inherited four-code commit");
+    }
+
     engine.DestroySession(session, &error);
 
     // Later fcitx5 starts can still run a short rebuild. Dropping build/

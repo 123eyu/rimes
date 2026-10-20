@@ -82,6 +82,9 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
     std::lock_guard<std::recursive_mutex> lock(engineMutex);
     if (![self ensureSession]) return NO;
     rime_get_api()->clear_composition(_session);
+    for (const auto& name : _inputApplied) rime_get_api()->set_option(_session, name.c_str(), _inputBaseline.at(name));
+    _inputApplied.clear();
+    if (![_schema isEqualToString:schema]) _inputOptions = @{};
     rimes_lua_clear_error();
     BOOL selected = rime_get_api()->select_schema(_session, schema.UTF8String);
     if (rimes_lua_last_error() && rimes_lua_last_error()[0]) selected = NO;

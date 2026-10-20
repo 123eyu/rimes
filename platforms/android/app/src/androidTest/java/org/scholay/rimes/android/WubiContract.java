@@ -75,6 +75,20 @@ final class WubiContract {
                                             "unique fourth Wubi key only: "+base+suffix+"/"+code+"/"+typed);
                                 }
                             }
+                            for(boolean manual:new boolean[]{false,true}) for(boolean fifth:new boolean[]{false,true}) {
+                                engine.clearComposition(session);
+                                NativeRimeEngine.applyInputOptionsNative(session,base+suffix,
+                                        "{\"rimes_wubi_manual_commit\":"+manual+",\"rimes_wubi_fifth_code\":"+fifth+"}");
+                                String committed="";
+                                for(char key:"voni".toCharArray()) committed+=engine.processKey(session,key).commit;
+                                check(committed.equals(manual?"":"灵犀"),"independent four-code override");
+                                if(manual && fifth) {
+                                    RimeEngine.Snapshot next=engine.processKey(session,'w');
+                                    check(next.commit.equals("灵犀") && next.raw.equals("w"),"fifth code commits previous word and remains next input");
+                                }
+                                engine.clearComposition(session);
+                                for(char key:"znihao".toCharArray()) check(engine.processKey(session,key).commit.isEmpty(),"reverse lookup never forced by Wubi options");
+                            }
                         } finally { engine.destroySession(session); }
                     }
                 }

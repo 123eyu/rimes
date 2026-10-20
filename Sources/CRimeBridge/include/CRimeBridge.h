@@ -106,6 +106,7 @@ typedef struct {
 } BBRimeInputOption;
 // Caller-owned copied metadata. Only real two-state schema switches are returned.
 int BBRimeGetInputOptions(const char* schema, BBRimeInputOption* out, int capacity);
+bool BBRimeSchemaResetsOption(const char* schema, const char* name);
 
 // A deployed schema. Pointers are bridge-owned, valid until the next
 // BBRimeGetSchemaList call; copy immediately.

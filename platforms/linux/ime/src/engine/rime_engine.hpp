@@ -64,6 +64,7 @@ public:
     bool SelectSchema(SessionId session,
                       std::string_view schema_id,
                       std::string* error = nullptr) noexcept;
+    bool ApplyInputOptions(SessionId session, const std::string& schema, const std::map<std::string, bool>& values) noexcept;
     std::map<std::string, bool> InputOptions(SessionId session, const std::string& schema) noexcept;
     bool SetOption(SessionId session,
                    std::string_view option,
