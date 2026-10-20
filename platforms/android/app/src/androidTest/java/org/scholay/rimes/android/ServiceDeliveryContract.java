@@ -532,7 +532,10 @@ final class ServiceDeliveryContract {
             check(policy(fixture,InputType.TYPE_NULL,false,true),"TYPE_NULL live-chat editor keeps Chinese");
             check(policy(fixture,InputType.TYPE_CLASS_NUMBER,true,true),"numeric editor stays literal");
             check(policy(fixture,InputType.TYPE_CLASS_PHONE,true,true),"phone editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_DATETIME,true,true),"date/time editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_NUMBER|InputType.TYPE_NUMBER_VARIATION_PASSWORD,true,true),"numeric password editor stays literal");
             check(policy(fixture,InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD,true,true),"password editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD,true,true),"visible password editor stays literal");
             check(policy(fixture,InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,true,true),"web password editor stays literal");
         }
     }

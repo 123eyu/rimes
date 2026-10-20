@@ -123,6 +123,11 @@ jobs:
           grep -Fq 'PASS native keycaps, chord and Buffer rail rendering' .native/rendering-emulator.log
           grep -Fq 'CHORD_SURFACE checks=' .native/rendering-emulator.log
           grep -Fq 'INSTRUMENTATION_CODE: -1' .native/rendering-emulator.log
+          # Exercise real service entry points, including TYPE_NULL editor
+          # classification and private-field delivery, on Android's main Looper.
+          adb -s emulator-5554 shell am instrument -w -r -e mode delivery org.scholay.rimes.android.debug.test/org.scholay.rimes.android.EngineInstrumentation | tee .native/service-delivery.log
+          grep -Fq 'PASS service delivery checks=' .native/service-delivery.log
+          grep -Fq 'INSTRUMENTATION_CODE: -1' .native/service-delivery.log
           python3 ../../scripts/input-schemes/fetch_fixture.py .native/wanxiang-original.zip
           adb -s emulator-5554 shell run-as org.scholay.rimes.android.debug mkdir -p cache
           # Stream the unchanged archive as the debuggable app's own UID;
@@ -156,6 +161,7 @@ jobs:
             platforms/android/.native/engine-contract.log
             platforms/android/.native/emulator.log
             platforms/android/.native/rendering-emulator.log
+            platforms/android/.native/service-delivery.log
             platforms/android/.native/scheme-import-emulator.log
             platforms/android/.native/app-update.log
             platforms/android/.native/wubi-emulator.log
