@@ -8,6 +8,6 @@
 | `linux-do.png` | [LINUX DO 官方图标公告](https://linux.do/t/topic/120845)中的[原始 PNG](https://cdn3.ldstatic.com/original/3X/9/7/97ed5d6d97f4c7f3dc0670d097bf457527c375f5.png) |
 | `irime.jpg` | [iRime App Store 页面](https://apps.apple.com/app/id1142623977)的[100px 图标](https://is1-ssl.mzstatic.com/image/thumb/Purple126/v4/fb/aa/96/fbaa96ca-04df-cad2-c618-1a81ed2c6264/bluekeyAppIcon-0-0-1x_U007emarketing-0-10-0-0-85-220.png/100x100bb.jpg) |
 | `scholay.svg` | [Scholay 官网图标](https://www.scholay.com/favicon-v7.svg) |
-| `enterscholar.svg` | [恩特学术官网图标](https://enterscholar.com/uploads/default/optimized/1X/c5e85ff2f699b8087f00616b7ea1dbed03d2ba12_2_32x32.svg) |
+| `enterscholar.svg` | [恩特社区官网图标](https://enterscholar.com/uploads/default/optimized/1X/c5e85ff2f699b8087f00616b7ea1dbed03d2ba12_2_32x32.svg) |
 
 获取日期：2026-10-20。各语言 README 共用这些本地图标。
