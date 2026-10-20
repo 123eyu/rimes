@@ -11,9 +11,11 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.os.SystemClock;
+import android.text.InputType;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.inputmethod.BaseInputConnection;
+import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputBinding;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
@@ -34,6 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.scholay.rimes.core.BufferSession;
 import org.scholay.rimes.core.ChordGesture;
 import org.scholay.rimes.core.ChordLayout;
+import org.scholay.rimes.core.KeyboardLayout;
 import org.scholay.rimes.core.PluginSession;
 import org.scholay.rimes.core.RimeEngine;
 import org.scholay.rimes.core.InputEpoch;
@@ -76,6 +79,7 @@ final class ServiceDeliveryContract {
                 contract.clearReadyAndRetained();
                 for(String guard:new String[]{"disabled","not-permitted","private","connection","no-target"}) contract.clearDenied(guard);
                 contract.nineKeyCompositionProjection();
+                contract.editorClassPolicy();
                 contract.repeatDeleteAuthorization();
             } catch(Throwable error) { failure.set(error); }
         });
@@ -515,6 +519,33 @@ final class ServiceDeliveryContract {
             check(fixture.connection.attempts==0,"presentation alone never commits host text");
             set(fixture.service,"ready",false);
         }
+    }
+
+    /**
+     * Hosts such as the Douyin live-room chat box publish TYPE_NULL for their own editor while
+     * still accepting committed text. The language control must stay usable there; numeric and
+     * password fields remain literal-only.
+     */
+    private void editorClassPolicy() throws Exception {
+        try(Fixture fixture=new Fixture(false)) {
+            check(policy(fixture,InputType.TYPE_CLASS_TEXT,false,false),"ordinary text editor keeps Chinese");
+            check(policy(fixture,InputType.TYPE_NULL,false,true),"TYPE_NULL live-chat editor keeps Chinese");
+            check(policy(fixture,InputType.TYPE_CLASS_NUMBER,true,true),"numeric editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_PHONE,true,true),"phone editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_PASSWORD,true,true),"password editor stays literal");
+            check(policy(fixture,InputType.TYPE_CLASS_TEXT|InputType.TYPE_TEXT_VARIATION_WEB_PASSWORD,true,true),"web password editor stays literal");
+        }
+    }
+    private boolean policy(Fixture fixture,int inputType,boolean direct,boolean privateField) throws Exception {
+        EditorInfo info=new EditorInfo(); info.inputType=inputType;
+        invoke(fixture.service,"configure",new Class<?>[]{EditorInfo.class},info);
+        boolean actualDirect=(Boolean)get(fixture.service,"directOnly"),actualPrivate=(Boolean)get(fixture.service,"privateField");
+        KeyboardSurface.Handler handler=(KeyboardSurface.Handler)get(fixture.service,"keyHandler");
+        KeyboardLayout.Key language=null;
+        for(KeyboardLayout.Key key:KeyboardLayout.keys(360,false,KeyboardLayout.Mode.QWERTY))
+            if(key.action==KeyboardLayout.Action.LANGUAGE) language=key;
+        check(language!=null && handler.enabled(language)==!actualDirect,"language toggle follows the editor class");
+        return actualDirect==direct && actualPrivate==privateField;
     }
 
     /** The old operation is still queued when clear revokes its lease; it must not execute. */
