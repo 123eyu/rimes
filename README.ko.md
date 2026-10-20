@@ -135,8 +135,8 @@ iOS는 실제로 제공되는 스토어 버전을 확인한 뒤 App Store에서 
 - [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> RIME 입력기 엔진](https://rime.im/) — 이 프로젝트의 중국어 입력은 RIME을 기반으로 합니다.
 - [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) — 진정성 있고 친절하며 단결되고 전문적인 커뮤니티 Linux.do와 그 구성원들에게 감사합니다.
 - [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — XSIME에 대한 안내와 소개에, iRime 작성자에게 감사합니다.
-- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5)
-- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar](https://enterscholar.com/)
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5) — 최첨단 연구와 혁신에 기반한 아키텍처 지침을 제공해 주셔서 감사합니다.
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar 커뮤니티](https://enterscholar.com/) — AI 시대의 학자들을 위한 커뮤니티 플랫폼에 감사드립니다.
 
 ## 기여자
 

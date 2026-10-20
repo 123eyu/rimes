@@ -186,8 +186,8 @@ cd xsime
 - [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> RIME 输入法引擎](https://rime.im/) — 本项目的中文编码基于 RIME。
 - [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) - 感谢真诚、友善、团结、专业之社区L站及一众佬友。
 - [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — 感谢 iRime 作者对 XSIME 的指导与宣传支持。
-- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay 学术](https://www.scholay.com/t/M4ZZW8KRE5)
-- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> 恩特学术](https://enterscholar.com/)
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay 学术](https://www.scholay.com/t/M4ZZW8KRE5) — 感谢提供前沿的创新研究型架构指导。
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> 恩特社区](https://enterscholar.com/) — 感谢智能时代的学者社区平台。
 
 ## 贡献者
 

@@ -164,8 +164,8 @@ Maintainers release after all five mainline CI workflows pass. See [RELEASE.md](
 - [<img src=".github/readme/friends/rime.png" width="20" height="20" alt="" align="absmiddle"> RIME input method engine](https://rime.im/) — Chinese input in this project is based on RIME.
 - [<img src=".github/readme/friends/linux-do.png" width="20" height="20" alt="" align="absmiddle"> Linux.do](https://linux.do/) — Thanks to Linux.do, a sincere, friendly, united, and professional community, and to its members.
 - [<img src=".github/readme/friends/irime.jpg" width="20" height="20" alt="" align="absmiddle"> iRime](https://github.com/jimmy54/iRime) — Thanks to the iRime author for guidance and for helping introduce RIMES.
-- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5)
-- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar](https://enterscholar.com/)
+- [<img src=".github/readme/friends/scholay.svg" width="20" height="20" alt="" align="absmiddle"> Scholay](https://www.scholay.com/t/M4ZZW8KRE5) — Thanks for providing architectural guidance grounded in cutting-edge research and innovation.
+- [<img src=".github/readme/friends/enterscholar.svg" width="20" height="20" alt="" align="absmiddle"> EnterScholar Community](https://enterscholar.com/) — Thanks to this community platform for scholars in the age of AI.
 
 ## Contributors
 
