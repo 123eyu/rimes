@@ -290,6 +290,79 @@ enum ClipboardHistorySmoke {
         ))
     }
 
+    /// Opening Capsule must not rebuild its cards. Every hide used to drop
+    /// all card views, so each open built up to 200 new ones (and the
+    /// selection pass reloaded the pane a second time) before the panel could
+    /// appear. Reports the per-open cost so regressions are visible.
+    static func reopenPerformanceProbe() -> Bool {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(
+            "rimes-reopen-probe-\(UUID().uuidString)",
+            isDirectory: true
+        )
+        defer { try? FileManager.default.removeItem(at: root) }
+        guard let store = try? ClipboardHistoryStore(rootDirectory: root) else {
+            return false
+        }
+        let model = ClipboardHistoryModel(
+            configuration: .init(),
+            pasteboard: ClipboardHistoryPasteboardDouble(),
+            clock: Date.init,
+            sourceApplicationName: { "Safari" },
+            sourceApplicationBundleIdentifier: { "com.apple.Safari" },
+            store: store,
+            schedulesAutomaticPolling: false
+        )
+        model.start()
+        model.update(windowVisible: true, captureEnabled: true, protection: [])
+        let cardCount = ClipboardHistoryWindowMetrics.maximumRenderedCards
+        for index in 0..<cardCount {
+            _ = model.ingest("reopen probe clipboard entry \(index)")
+        }
+        let pane = ClipboardHistoryPaneView(model: model)
+        pane.frame = NSRect(
+            x: 0,
+            y: 0,
+            width: ClipboardHistoryWindowMetrics.preferredWidth,
+            height: ClipboardHistoryWindowMetrics.preferredHeight
+        )
+        let host = NSWindow(
+            contentRect: pane.frame,
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: false
+        )
+        host.contentView = pane
+        pane.layoutSubtreeIfNeeded()
+        guard pane.snapshotForSmoke().cardCount == cardCount else { return false }
+
+        let reopens = 10
+        var durations: [Double] = []
+        let creationsBefore = pane.cardCreationsForSmoke
+        let reloadsBefore = pane.reloadsForSmoke
+        for _ in 0..<reopens {
+            model.update(windowVisible: false, captureEnabled: true, protection: [])
+            guard pane.snapshotForSmoke().cardCount == 0,
+                  pane.parkedCardTextForSmoke.isEmpty,
+                  pane.parkedCardsAreHiddenForSmoke else { return false }
+            let start = Date()
+            model.update(windowVisible: true, captureEnabled: true, protection: [])
+            pane.layoutSubtreeIfNeeded()
+            durations.append(Date().timeIntervalSince(start) * 1_000)
+            guard pane.snapshotForSmoke().cardCount == cardCount else { return false }
+        }
+        let creations = pane.cardCreationsForSmoke - creationsBefore
+        let reloads = pane.reloadsForSmoke - reloadsBefore
+        let sorted = durations.sorted()
+        FileHandle.standardError.write(Data((
+            "capsule reopen: cards=\(cardCount) median=\(String(format: "%.1f", sorted[sorted.count / 2]))ms "
+                + "max=\(String(format: "%.1f", sorted.last ?? 0))ms "
+                + "cardCreations=\(creations) reloads=\(reloads) "
+                + "(\(reopens) hide/show cycles)\n"
+        ).utf8))
+        // One reload per visibility change; no card is rebuilt on reopen.
+        return creations == 0 && reloads == reopens * 2
+    }
+
     static func run() -> Bool {
         var ok = true
         func expect(_ condition: @autoclosure () -> Bool, _ message: String) {
@@ -319,6 +392,10 @@ enum ClipboardHistorySmoke {
         expect(
             capturesBandProbe(),
             "the captures tab must occupy the same band as Recent"
+        )
+        expect(
+            reopenPerformanceProbe(),
+            "reopening Capsule must reuse its cards and reload once"
         )
         expect(
             searchCaretProbe(),
