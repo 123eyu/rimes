@@ -2,7 +2,7 @@
   "purpose": "public-codex-settings",
   "schemaVersion": 1,
   "sources": {
-    "Sources/RimeBuffer/SettingsWindow.swift": "f35caf505c825a1fa0ce237685febf9cf6fb5a132ee15df9a36dd2ccfd728830"
+    "Sources/RimeBuffer/SettingsWindow.swift": "cd4e645d53489187147962b2a4a0398546512d1d05ba00e2ac834fc6b28cb72b"
   },
   "states": [
     {

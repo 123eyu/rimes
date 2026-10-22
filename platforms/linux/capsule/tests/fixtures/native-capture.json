@@ -60,7 +60,7 @@
     }
   ],
   "sources" : {
-    "Sources/RimeBuffer/Capture/CaptureHistoryView.swift" : "c40aa8b7d44e55134637378f6b14fb3fe978311e938f3617d91ea199acfb1599",
+    "Sources/RimeBuffer/Capture/CaptureHistoryView.swift" : "966bf7b525f282485ff569053b7845932a8dbcc05420634a2ba67a5868971cc3",
     "Sources/RimeBuffer/Capture/CaptureLinuxFixtures.swift" : "8bcdb7a2cb720290a2b1822f3c2250b4c5f531d03f0e52d0a271925268318dce",
     "Sources/RimeBuffer/Capture/CaptureStore.swift" : "77efe8420cb8885f5a3dcd66669a92472381e43c802d94b8082d475587cbea96"
   },
