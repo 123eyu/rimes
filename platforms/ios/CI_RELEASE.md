@@ -1,14 +1,31 @@
 # iOS GitHub Actions release
 
-Current iOS submission: **1.1.7 (63)**. On October 19, 2026 at 18:19 JST,
-App Store Connect accepted the submission and showed **Waiting for Review**.
-The uploaded build is `VALID`; approval and public availability are not yet confirmed.
+Current iOS submission: **1.1.8 (64)**. On October 22, 2026 at 22:35 JST,
+App Store Connect accepted submission `f7bd1c0a-f2d1-4d21-9bd7-307a39f37db9`
+and showed **Waiting for Review**. Build `64` is `VALID` and App Store eligible.
+It was also submitted to external TestFlight review at 22:27 JST and assigned
+to the existing **RIMES Community** group; its state is `WAITING_FOR_BETA_REVIEW`.
+Neither submission is evidence of approval or public availability.
 
-The previous **1.1.6 (62)** submission entered the queue at 13:04 JST that day.
-It was withdrawn before review to submit 1.1.7. The existing cloud-managed
-distribution certificate, both App Store provisioning profiles and upload API key
-were reused after the maintainer signed back into Xcode. No new credential was
-created. See the [1.1.7 release record](../../docs/releases/1.1.7.md) and
+The maintainer chose the **148 currently available territories**, including
+China mainland, for this release. The 27 EU territories remain unavailable
+pending the account's trader declaration; no legal classification was changed.
+Automatic App Store release after approval and automatic TestFlight notification
+remain enabled. English, Simplified Chinese and Traditional Chinese store notes
+were saved and read back; TestFlight uses the existing English and Simplified
+Chinese locales.
+
+The CI archive came from `cbe03560f7582326c1cd43f5c4f6a7a5304121e9`,
+[run 39776428911](https://github.com/scholay/xsime/actions/runs/39776428911).
+The later `851f02fc` main integration changes only three Windows files, so the
+iOS inputs are unchanged. The existing cloud-managed distribution certificate,
+both App Store profiles and upload API key were reused. There was no local
+product build, device test or installation. See the
+[1.1.8 release record](../../docs/releases/1.1.8.md).
+
+The previous **1.1.7 (63)** was confirmed `READY_FOR_SALE` on October 22.
+Its October 19 submission replaced **1.1.6 (62)** before review; see the
+[1.1.7 record](../../docs/releases/1.1.7.md) and
 [historical 1.1.6 record](../../docs/releases/1.1.6.md).
 Historical build-60 evidence remains in [its rebuild record](AppStore/release-preparation/1.1.5-build60.md).
 Build, upload, TestFlight, App Review and public availability remain separate states.
