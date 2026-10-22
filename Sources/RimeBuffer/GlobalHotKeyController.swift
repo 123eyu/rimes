@@ -504,6 +504,11 @@ final class GlobalHotKeyController {
                 }
                 IMELog.write("global hotkey toggled Mailbox action=\(action)")
             case .openSettings:
+                // Same chord, opposite state: an open Settings window closes.
+                if SettingsWindowController.shared.closeIfShownOnActiveSpace() {
+                    IMELog.write("global hotkey closed settings")
+                    break
+                }
                 RimeInputSourceSelection.open("Settings", awaitsFocus: false) {
                     _ = SettingsWindowController.shared.show()
                 }
