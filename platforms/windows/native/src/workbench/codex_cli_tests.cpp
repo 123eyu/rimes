@@ -106,11 +106,20 @@ int main(int argc, char** argv) {
   wchar_t system[MAX_PATH]{};
   Check(GetSystemDirectoryW(system, MAX_PATH) != 0, "find native Windows shell");
   std::string native_output, native_error;
-  Check(RunLocalTextProcess(std::filesystem::path(system) / L"WindowsPowerShell/v1.0/powershell.exe",
+  // The first 32-bit Windows PowerShell launch can spend over ten seconds
+  // initializing .NET on a cold CI host. This checks native process waiting,
+  // not shell startup speed; the transport timeout/cancellation tests above
+  // retain their short deadlines and the product key deadline is unchanged.
+  const auto native_started = GetTickCount64();
+  const bool native_ok = RunLocalTextProcess(std::filesystem::path(system) / L"WindowsPowerShell/v1.0/powershell.exe",
       {L"-NoProfile", L"-NonInteractive", L"-Command",
        L"if (!$env:PATHEXT -or !$env:ComSpec) { exit 12 }; & $env:ComSpec /d /c 'echo native-ready'; exit $LASTEXITCODE"},
       workspace, {}, [&](const auto& text) { native_output = text; return true; },
-      [] { return false; }, &native_error, 10000) && native_output == "native-ready\r\n",
+      [] { return false; }, &native_error, 30000);
+  if (!native_ok || native_output != "native-ready\r\n")
+    std::cerr << "Resource shell elapsed_ms=" << GetTickCount64() - native_started
+              << " error=" << native_error << " output=" << native_output << '\n';
+  Check(native_ok && native_output == "native-ready\r\n",
       "isolated resource shell waits for native subprocess completion");
   try { (void)ResolveCodex("C:/missing/codex.cmd"); } catch (...) { rejected = true; }
   Check(rejected, "explicit .cmd path fails closed without fallback");

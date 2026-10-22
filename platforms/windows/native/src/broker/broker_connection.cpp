@@ -2,6 +2,7 @@
 #include "broker_connection.hpp"
 #include "../core/buffer_keys.hpp"
 
+#include <array>
 #include <atomic>
 #include <iostream>
 #include <limits>
@@ -16,6 +17,40 @@ namespace {
 
 inline constexpr std::string_view kBrokerVersion = kProductVersion;
 inline constexpr std::size_t kMaxSessionsPerConnection = 64;
+
+// Only the isolated CI Broker records phase durations. Never log a key code,
+// composition, candidate, committed text, or a user's host application.
+class KeyLatencyTrace {
+ public:
+  void Mark(const char* phase) {
+#ifdef RIMES_E2E_TEST_IDENTITY
+    if (count_ < phases_.size()) phases_[count_++] = {phase, GetTickCount64()};
+#else
+    (void)phase;
+#endif
+  }
+  ~KeyLatencyTrace() {
+#ifdef RIMES_E2E_TEST_IDENTITY
+    const auto ended = GetTickCount64();
+    if (ended - started_ < 25) return;
+    std::clog << "RIMES key latency total_ms=" << ended - started_;
+    auto previous = started_;
+    for (std::size_t i = 0; i < count_; ++i) {
+      std::clog << ' ' << phases_[i].first << "_ms="
+                << phases_[i].second - previous;
+      previous = phases_[i].second;
+    }
+    std::clog << " reply_ms=" << ended - previous << '\n';
+#endif
+  }
+
+ private:
+#ifdef RIMES_E2E_TEST_IDENTITY
+  ULONGLONG started_ = GetTickCount64();
+  std::array<std::pair<const char*, ULONGLONG>, 7> phases_{};
+  std::size_t count_ = 0;
+#endif
+};
 
 constexpr std::uint32_t Flag(core::KeyEventFlags flag) noexcept {
   return static_cast<std::uint32_t>(flag);
@@ -376,6 +411,7 @@ ClientAction BrokerConnection::HandleCloseSession(const core::Frame& request,
 
 ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
                                               core::Frame* response) {
+  KeyLatencyTrace latency;
   core::KeyEvent key;
   if (!core::DecodeKeyEvent(request.payload, &key)) {
     MakeError(request, core::BrokerErrorCode::kMalformedPayload,
@@ -403,6 +439,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     if (!valid) return RespondPassThrough(request, key, session, response);
   }
   if (settings_) {
+    latency.Mark("request");
     const auto settings_revision = settings_->ConfigurationRevision();
     const bool capture = runtime_ && runtime_->Capturing(session.target);
     const auto input_route = runtime_ ? runtime_->InputRoute(session.target) : 0;
@@ -425,6 +462,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
       session.input_route = input_route;
     }
   }
+  latency.Mark("settings");
 
   const bool key_down =
       HasFlag(key.event_flags, Flag(core::KeyEventFlags::kKeyDown));
@@ -452,6 +490,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   // Resolve the current Rime composition before a Buffer source edit. This
   // Observation is after the actual-key/privacy gate, never OnTestKey*.
   if (settings_) settings_->Metrics()->ObserveKey(peer_process_, key, session.composing || session.chord.Pending());
+  latency.Mark("metrics");
   // is an internal engine operation, never a synthesized host key/paste.
   const auto command_modifiers = key.modifiers & ~static_cast<unsigned>(core::KeyModifiers::kCapsLock);
   const auto physical_key = TranslateWindowsKey(key);
@@ -544,6 +583,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
     return RespondPassThrough(request, key, session, response);
   }
 
+  latency.Mark("before_engine");
   engine::EngineSnapshot snapshot;
   std::string engine_error;
   bool processed = false;
@@ -581,6 +621,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
         : engine_->ProcessKey(session.engine_session_id, translated->keycode, translated->modifiers, &snapshot, &engine_error);
     snapshot.commit_text = prefix_commit + snapshot.commit_text;
   }
+  latency.Mark("engine");
   if (!processed) {
     LogEngineFailure("ProcessKey", key.session_id, engine_error);
     if (!key_down) {
@@ -605,6 +646,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   } else if (settings_ && !snapshot.commit_text.empty()) {
     ObserveCommit(settings_, peer_process_, snapshot.commit_text);
   }
+  latency.Mark("commit");
   std::uint64_t next_revision = session.revision;
   if (snapshot.handled || snapshot.modifier_snapshot) {
     ++next_revision;
@@ -632,6 +674,7 @@ ClientAction BrokerConnection::HandleKeyEvent(const core::Frame& request,
   } else if (!key_down) {
     session.handled_key_downs.reset(key.virtual_key);
   }
+  latency.Mark("state");
   return RespondWithInputState(request, std::move(state), response);
 }
 
