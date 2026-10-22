@@ -26,7 +26,7 @@ public final class KeyboardLayout {
     public static List<Key> keys(float width,boolean landscape,Mode mode) { return keys(width,landscape,mode,false); }
     /** Chinese input swaps the number and symbol rows for the marks they type; other modes ignore it. */
     public static List<Key> keys(float width,boolean landscape,Mode mode,boolean chinese) {
-        return keys(width,landscape,mode,chinese,false,false);
+        return keys(width,landscape,mode,chinese,false,true);
     }
     public static List<Key> keys(float width,boolean landscape,Mode mode,boolean chinese,boolean numericGrid,boolean wideSpace) {
         if(width<=0) throw new IllegalArgumentException("Keyboard width must be positive");
@@ -43,14 +43,15 @@ public final class KeyboardLayout {
             nine(result,Action.RETURN,"",3,2,1,2,unit,row,capUnit,capHeight,gap,rowGap);
         } else if(mode==Mode.NINE_KEY) {
             float unit=width/5,capUnit=(width-4*gap)/5;
-            nine(result,Action.PUNCTUATION,"",0,0,1,1,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.SEPARATOR,"",1,0,1,1,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.DELETE,"",4,0,1,2,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.NUMBERS,"",0,1,1,1,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.SPELLING,"",0,2,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.SYMBOLS,"",0,0,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.PUNCTUATION,"",1,0,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.DELETE,"",4,0,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.SEPARATOR,"",4,1,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.SPELLING,"",0,1,1,2,unit,row,capUnit,capHeight,gap,rowGap);
             nine(result,Action.RETURN,"",4,2,1,2,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.LANGUAGE,"",0,3,1,1,unit,row,capUnit,capHeight,gap,rowGap);
-            nine(result,Action.SPACE,"",1,3,3,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.NUMBERS,"",0,3,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.LANGUAGE,"",1,3,1,1,unit,row,capUnit,capHeight,gap,rowGap);
+            nine(result,Action.SPACE,"",2,3,2,1,unit,row,capUnit,capHeight,gap,rowGap);
             for(int digit=2;digit<=9;digit++) nine(result,Action.TEXT,String.valueOf(digit),
                     (digit-1)%3+1,(digit-1)/3,1,1,unit,row,capUnit,capHeight,gap,rowGap);
         } else {
@@ -74,8 +75,9 @@ public final class KeyboardLayout {
             Action[] footer=mode==Mode.EMOJI
                     ?new Action[]{Action.NUMBERS,Action.EMOJI,Action.LANGUAGE,Action.SPACE,Action.DELETE}
                     :mode==Mode.QWERTY && !wideSpace?new Action[]{Action.NUMBERS,Action.EMOJI,Action.PUNCTUATION,Action.SPACE,Action.PUNCTUATION,Action.LANGUAGE,Action.RETURN}
-                    :new Action[]{Action.NUMBERS,Action.EMOJI,Action.LANGUAGE,Action.SPACE,Action.RETURN};
-            float[] weights=mode==Mode.QWERTY && !wideSpace?new float[]{1.2f,1,1,3.6f,1,1,1.2f}:new float[]{1,1,1,4.8f,2.2f};
+                    :new Action[]{Action.NUMBERS,Action.LANGUAGE,Action.SPACE,Action.RETURN};
+            float[] weights=mode==Mode.QWERTY && !wideSpace?new float[]{1.2f,1,1,3.6f,1,1,1.2f}
+                    :mode==Mode.EMOJI?new float[]{1,1,1,4.8f,2.2f}:new float[]{1,1,5.8f,2.2f};
             float x=0,footerUnit=(width-(footer.length-1)*gap)/10;
             for(int i=0;i<footer.length;i++) {
                 float w=footerUnit*weights[i];

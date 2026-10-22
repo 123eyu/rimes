@@ -127,7 +127,7 @@ public final class KeyboardSettings {
     public String symbolGesture() { return text(preferences.getAll(),KEY_SYMBOL_GESTURE,values("off","hold","swipe"),"hold"); }
     public void setSymbolGesture(String mode) { preferences.edit().putString(KEY_SYMBOL_GESTURE,normalized(mode,values("off","hold","swipe"),"hold")).apply(); }
     public boolean numericGrid() { return flag(preferences.getAll(),KEY_NUMERIC_GRID,false); }
-    public boolean wideSpace() { return flag(preferences.getAll(),KEY_WIDE_SPACE,false); }
+    public boolean wideSpace() { return flag(preferences.getAll(),KEY_WIDE_SPACE,true); }
     public void setNumericGrid(boolean value) { preferences.edit().putBoolean(KEY_NUMERIC_GRID,value).apply(); }
     public void setWideSpace(boolean value) { preferences.edit().putBoolean(KEY_WIDE_SPACE,value).apply(); }
     public int heightPercent(boolean landscape) {

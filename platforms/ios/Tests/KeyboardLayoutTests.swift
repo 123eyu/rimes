@@ -1191,7 +1191,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertEqual(controller.layoutProxy.native.text, "ni")
         XCTAssertTrue(controller.developmentRaw.isEmpty)
         var time: TimeInterval = 0; controller.defaultClockNow = { time }
-        controller.developmentBuffer("A。B。"); controller.developmentAutoDelay(1)
+        controller.developmentBuffer("A。B。"); controller.developmentAutoDelay(1, manualTicks: true)
         controller.developmentAutoTick(); time = 1; controller.developmentAutoTick()
         await controller.developmentWaitForDelivery()
         XCTAssertEqual(controller.layoutProxy.native.text, "niA。")

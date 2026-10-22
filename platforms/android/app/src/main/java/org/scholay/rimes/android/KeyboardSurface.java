@@ -25,11 +25,13 @@ final class KeyboardSurface extends ViewGroup {
         default void onAlternate(String text) {}
         /** Held repeats skip a busy interval; ordinary taps keep their serial ordering. */
         default boolean canRepeatDelete() { return true; }
+        default boolean shiftLocked() { return false; }
+        default void holdShift() {}
     }
     private KeyboardLayout.Mode mode;
     private boolean chinese;
     private String symbolGesture="hold";
-    private boolean numericGrid,wideSpace;
+    private boolean numericGrid,wideSpace=true;
     private int portraitHeight=100,landscapeHeight=100;
     private List<KeyboardLayout.Key> frames;
     private final Handler handler;
@@ -61,6 +63,7 @@ final class KeyboardSurface extends ViewGroup {
             for(KeyboardLayout.Key key:frames) {
                 KeyButton button=new KeyButton(getContext());
                 button.setOnClickListener(v -> handler.press(key));
+                if(key.action==KeyboardLayout.Action.SHIFT) button.setOnLongClickListener(v -> { handler.holdShift(); return true; });
                 if(key.action==KeyboardLayout.Action.DELETE) deleteRepeats.add(new DeleteRepeatTouch(button,handler::canRepeatDelete));
                 String alternate=alternateFor(key);
                 if(alternate!=null) alternates.add(new UpwardNumberTouch(button,alternate,() -> handler.onAlternate(alternate),this::invalidate,"swipe".equals(symbolGesture)));
@@ -72,12 +75,12 @@ final class KeyboardSurface extends ViewGroup {
             KeyboardLayout.Key key=frames.get(i); KeyButton button=(KeyButton)getChildAt(i);
             boolean system=theme.id.equals("apple"),letter=key.action==KeyboardLayout.Action.TEXT;
             boolean glyph=letter || key.action==KeyboardLayout.Action.PUNCTUATION && !key.text.isEmpty();
-            boolean functional=mode!=KeyboardLayout.Mode.NINE_KEY && !letter && key.action!=KeyboardLayout.Action.SPACE;
+            boolean functional=!letter && key.action!=KeyboardLayout.Action.SPACE;
             button.appearance(functional,false,key.action==KeyboardLayout.Action.RETURN);
-            int font=glyph?(mode==KeyboardLayout.Mode.NINE_KEY?20:system?24:21)
+            int font=glyph?(mode==KeyboardLayout.Mode.NINE_KEY?20:25)
                     :key.action==KeyboardLayout.Action.LANGUAGE?18:system?18:14;
-            button.fontStyle(glyph && !system && mode!=KeyboardLayout.Mode.EMOJI,font,!system || key.action==KeyboardLayout.Action.LANGUAGE);
-            button.icon(key.action==KeyboardLayout.Action.SHIFT?(handler.selected(key)?KeyboardIcon.SHIFT_FILL:KeyboardIcon.SHIFT)
+            button.fontStyle(false,font,!glyph && (!system || key.action==KeyboardLayout.Action.LANGUAGE));
+            button.icon(key.action==KeyboardLayout.Action.SHIFT?(handler.shiftLocked()?KeyboardIcon.SHIFT_FILL:KeyboardIcon.SHIFT)
                     :key.action==KeyboardLayout.Action.DELETE?KeyboardIcon.DELETE:key.action==KeyboardLayout.Action.EMOJI && mode!=KeyboardLayout.Mode.EMOJI?KeyboardIcon.SMILE:null);
             String label=handler.label(key); if(!android.text.TextUtils.equals(button.getText(),label)) button.setText(label);
             String description=handler.description(key);
@@ -87,6 +90,8 @@ final class KeyboardSurface extends ViewGroup {
             if(button.isEnabled() && !enabled && alternateFor(key)!=null) cancelAlternates();
             button.setEnabled(enabled);
             button.setSelected(handler.selected(key)); button.theme(theme);
+            if(key.action==KeyboardLayout.Action.SHIFT && android.os.Build.VERSION.SDK_INT>=30)
+                button.setStateDescription(handler.shiftLocked()?"大写锁定":handler.selected(key)?"下一个字母大写":"小写");
         }
     }
     private void cancelDeleteRepeats() {
@@ -96,7 +101,10 @@ final class KeyboardSurface extends ViewGroup {
     private void cancelAlternates() {
         if(alternates!=null) for(UpwardNumberTouch swipe:alternates) swipe.cancel();
     }
-    private void cancelTouches() { cancelDeleteRepeats(); cancelAlternates(); }
+    private void cancelTouches() {
+        cancelDeleteRepeats(); cancelAlternates();
+        for(int i=0;i<getChildCount();i++) getChildAt(i).cancelLongPress();
+    }
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
         if(event.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN) {
             // Preserve overlapping ordinary native taps. Retire hold eligibility on

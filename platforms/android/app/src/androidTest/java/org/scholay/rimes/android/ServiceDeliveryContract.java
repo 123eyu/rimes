@@ -81,6 +81,7 @@ final class ServiceDeliveryContract {
                 contract.nineKeyCompositionProjection();
                 contract.editorClassPolicy();
                 contract.repeatDeleteAuthorization();
+                contract.ordinaryShiftDelivery();
             } catch(Throwable error) { failure.set(error); }
         });
         if(failure.get()!=null) throw new AssertionError("Service delivery contract failed",failure.get());
@@ -682,6 +683,26 @@ final class ServiceDeliveryContract {
             set(fixture.service,"target",fixture.connection); fixture.bind(new Connection(context));
             check(!(Boolean)invoke(fixture.service,"canRepeatDelete",new Class<?>[0]),"framework binding mismatch forbids repeat generation");
             check(fixture.connection.attempts==0,"availability checks never insert into a retired connection");
+        }
+    }
+
+    private void ordinaryShiftDelivery() throws Exception {
+        try(Fixture fixture=new Fixture(false)) {
+            fixture.buffer.clear();
+            KeyboardSurface.Handler handler=(KeyboardSurface.Handler)get(fixture.service,"keyHandler");
+            java.util.List<org.scholay.rimes.core.KeyboardLayout.Key> keys=org.scholay.rimes.core.KeyboardLayout.keys(
+                    392,false,org.scholay.rimes.core.KeyboardLayout.Mode.QWERTY);
+            org.scholay.rimes.core.KeyboardLayout.Key shift=keys.stream().filter(k -> k.action==org.scholay.rimes.core.KeyboardLayout.Action.SHIFT).findFirst().get();
+            java.util.function.Consumer<String> type=text -> handler.press(keys.stream().filter(k -> k.text.equals(text)).findFirst().get());
+            handler.press(shift); type.accept("a"); type.accept("b");
+            check("Ab".equals(fixture.buffer.text()),"one-shot Shift delivers only the next uppercase letter");
+            check(!handler.selected(shift) && !handler.shiftLocked(),"one-shot state clears after delivery");
+            handler.press(shift); handler.press(shift); type.accept("c"); type.accept("d");
+            check("AbCD".equals(fixture.buffer.text()) && handler.shiftLocked(),"double-tap locks real service output");
+            handler.press(shift); type.accept("e"); handler.holdShift(); type.accept("f"); type.accept("g");
+            check("AbCDeFG".equals(fixture.buffer.text()),"tap unlocks and hold locks service output");
+            invoke(fixture.service,"toggleLanguage",new Class<?>[0]);
+            check(!handler.selected(shift) && !handler.shiftLocked(),"language change clears capital lock");
         }
     }
 

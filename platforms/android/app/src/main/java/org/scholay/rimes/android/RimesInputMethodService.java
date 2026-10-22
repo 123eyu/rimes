@@ -117,6 +117,7 @@ public final class RimesInputMethodService extends InputMethodService {
     private Button bufferButton, retryButton, previous, next, insertNext;
     private final List<Button> candidates=new ArrayList<>();
     private boolean uppercase, numeric, directOnly, privateField, english, ready, failed, destroyed;
+    private final org.scholay.rimes.core.ShiftState ordinaryShift=new org.scholay.rimes.core.ShiftState();
     private boolean hostComposing;
     private int pending, selection=-1, selectionStart=-1, composingStart=-1;
     private String schema="rimes_pinyin", retained="";
@@ -190,7 +191,7 @@ public final class RimesInputMethodService extends InputMethodService {
         // but keeps the private, off-learning resources below.
         directOnly=numeric || isPassword(info);
         privateField=!allowsBuffer(info);
-        uppercase=false; symbols=false; emoji=false; appearanceOpen=false; spellingOpen=false; punctuationOpen=false; numberPageFresh=false;
+        resetShift(); symbols=false; emoji=false; appearanceOpen=false; spellingOpen=false; punctuationOpen=false; numberPageFresh=false;
         selection=info.initialSelEnd; selectionStart=info.initialSelStart;
         buffer.beginTarget(target!=null && allowsBuffer(info));
         resetEngine(); rebuildKeys(); render();
@@ -303,7 +304,7 @@ public final class RimesInputMethodService extends InputMethodService {
         boolean layoutChanged=!layout.equals(saved.layout);
         Runnable change=() -> {
             schema=saved.schema; layout=saved.layout; spellingOpen=false;
-            if(layoutChanged) { numeric=false; symbols=false; emoji=false; uppercase=false; if(chordLayout() || layout.equals("nineKey")) english=false; }
+            if(layoutChanged) { numeric=false; symbols=false; emoji=false; resetShift(); if(chordLayout() || layout.equals("nineKey")) english=false; }
         };
         if(ownsTarget()) settleAndSwitch(change); else { cancelChord(); change.run(); render(); }
     }
@@ -732,7 +733,7 @@ public final class RimesInputMethodService extends InputMethodService {
         if(selected.equals(layout) && (!selected.equals("nineKey") || schema.equals("rimes_pinyin"))
                 && (importedScheme==null || selected.equals(nineKeyEngine()?"nineKey":"qwerty"))) return;
         settleAndSwitch(() -> {
-            changeSettingsPair(() -> settings.setLayout(selected)); numeric=false; symbols=false; emoji=false; uppercase=false; spellingOpen=false;
+            changeSettingsPair(() -> settings.setLayout(selected)); numeric=false; symbols=false; emoji=false; resetShift(); spellingOpen=false;
             if(selected.equals("nineKey")) english=false;
             if(chordLayout()) english=false;
         });
@@ -754,7 +755,14 @@ public final class RimesInputMethodService extends InputMethodService {
         });
     }
     private void toggleLanguage() {
-        settleAndSwitch(() -> { english=!english; uppercase=false; spellingOpen=false; punctuationOpen=false; });
+        settleAndSwitch(() -> { english=!english; resetShift(); spellingOpen=false; punctuationOpen=false; });
+    }
+    private void resetShift() { uppercase=false; ordinaryShift.reset(); }
+    private void toggleOrdinaryShift(boolean hold) {
+        settleAndSwitch(() -> {
+            if(hold) ordinaryShift.hold(); else ordinaryShift.tap(android.os.SystemClock.uptimeMillis());
+            uppercase=ordinaryShift.uppercase();
+        });
     }
     private void toggleNumbers() {
         settleAndSwitch(() -> { numeric=!numeric; numberPageFresh=numeric; symbols=false; emoji=false; spellingOpen=false; punctuationOpen=false; });
@@ -779,8 +787,8 @@ public final class RimesInputMethodService extends InputMethodService {
             switch(key.action) {
                 case TEXT:
                     if(nineKeyVisible()) return new String[]{"ABC","DEF","GHI","JKL","MNO","PQRS","TUV","WXYZ"}[Integer.parseInt(key.text)-2];
-                    return !numeric && !emoji?key.text.toUpperCase(Locale.ROOT):key.text;
-                case SHIFT: return uppercase?"⇪":"⇧";
+                    return uppercase && !numeric && !emoji?key.text.toUpperCase(Locale.ROOT):key.text;
+                case SHIFT: return ordinaryShift.locked()?"⇪":"⇧";
                 case DELETE: return "⌫";
                 case RETURN: return returnLabel();
                 case NUMBERS: return numeric || emoji?(nineKeyEngine() && !english && !directOnly?"拼音":"ABC"):"123";
@@ -823,6 +831,8 @@ public final class RimesInputMethodService extends InputMethodService {
                     || key.action==KeyboardLayout.Action.RETURN && returnSelected();
         }
         @Override public void onAlternate(String text) { punctuate(text); }
+        @Override public boolean shiftLocked() { return ordinaryShift.locked(); }
+        @Override public void holdShift() { toggleOrdinaryShift(true); }
         @Override public boolean canRepeatDelete() { return RimesInputMethodService.this.canRepeatDelete(); }
         @Override public void press(KeyboardLayout.Key key) {
             if(punctuationOpen && key.action!=KeyboardLayout.Action.PUNCTUATION) { punctuationOpen=false; render(); }
@@ -833,9 +843,10 @@ public final class RimesInputMethodService extends InputMethodService {
                     boolean oneShot=numeric && numberPageFresh && chinesePages() && retained.isEmpty() && PunctuationLayout.returnsToLetters(text);
                     numberPageFresh=false;
                     if(chinesePages() && PunctuationLayout.STRIP.contains(text)) punctuate(text); else type(text);
+                    if(!numeric && !emoji && ordinaryShift.consumeLetter(key.text)) { uppercase=false; render(); }
                     if(oneShot) { numeric=false; symbols=false; render(); }
                     break;
-                case SHIFT: settleAndSwitch(() -> uppercase=!uppercase); break;
+                case SHIFT: toggleOrdinaryShift(false); break;
                 case DELETE: delete(); break;
                 case RETURN: enter(); break;
                 case NUMBERS:
@@ -963,6 +974,10 @@ public final class RimesInputMethodService extends InputMethodService {
         DeleteRepeatTouch chordDelete=new DeleteRepeatTouch(chords.utilityButton(ChordLayout.Action.DELETE),chords::canRepeatDelete);
         chords.setUtilityRetirementListener(chordDelete::cancel);
         appearancePanel=new KeyboardAppearancePanel(this,this::chooseLayout,settings::setTheme,this::toggleAppearance);
+        appearancePanel.action("表情", "表情", () -> {
+            appearanceOpen=false;
+            settleAndSwitch(() -> { emoji=true; numeric=false; });
+        });
         appearancePanel.schemes(schema,this::chooseSchema);
         appearancePanel.action("全部插入",getString(R.string.insert_all),() -> insert(true));
         appearancePanel.action("清空 Buffer",getString(R.string.clear),this::clearBuffer);

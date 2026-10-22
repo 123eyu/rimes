@@ -36,9 +36,11 @@ struct StandardKeyboardGeometry {
             func cell(_ column: Int, _ row: Int, columns: Int = 1, rows: Int = 1) -> CGRect {
                 rect(CGFloat(column) * (unit + gap), row, CGFloat(columns) * unit + CGFloat(columns - 1) * gap, span: rows)
             }
-            value.controls = [.numbers: cell(0, 0), .punctuation: cell(1, 0), .backspace: cell(4, 0),
-                .symbols: cell(0, 1), .separator: cell(4, 1), .language: cell(0, 2),
-                .enter: cell(4, 2, rows: 2), .emoji: cell(0, 3), .spelling: cell(1, 3),
+            // Same bottom row as QWERTY: 123 | 中/英 | space | return. No emoji
+            // key, matching Apple's layout; the system globe key offers emoji.
+            value.controls = [.symbols: cell(0, 0), .punctuation: cell(1, 0), .backspace: cell(4, 0),
+                .spelling: cell(0, 1, rows: 2), .separator: cell(4, 1),
+                .enter: cell(4, 2, rows: 2), .numbers: cell(0, 3), .language: cell(1, 3),
                 .space: cell(2, 3, columns: 2)]
             for (digit, label, column, row) in [("2", "ABC", 2, 0), ("3", "DEF", 3, 0),
                 ("4", "GHI", 1, 1), ("5", "JKL", 2, 1), ("6", "MNO", 3, 1),
@@ -55,16 +57,17 @@ struct StandardKeyboardGeometry {
             let start = (width - occupied) / 2
             for (index, letter) in letters.enumerated() {
                 let key = String(letter)
-                value.keys.append((key, key.uppercased(), rect(start + CGFloat(index) * (unit + gap), row, unit)))
+                // Lowercase by default, as on iOS; the surface capitalises while Shift is on.
+                value.keys.append((key, key, rect(start + CGFloat(index) * (unit + gap), row, unit)))
             }
         }
         let sideWidth = max(unit, width * 0.115)
         value.controls[mode == .qwerty ? .shift : .symbols] = rect(0, 2, sideWidth)
         value.controls[.backspace] = rect(width - sideWidth, 2, sideWidth)
-        // Keep a wide Space and a host-labelled Return, with explicit language
-        // and emoji controls for a keyboard that supports multiple Rime schemes.
-        let weights: [(StandardKeyControl, CGFloat)] = [(.numbers, 1), (.emoji, 1), (.language, 1), (.space, 4.8), (.enter, 2.2)]
-        let footerUnit = (width - gap * 4) / 10
+        // Keep a wide Space, explicit language switch and host-labelled Return.
+        // 123 | 中/英 | space | return, as in the nine-key layout. No emoji key.
+        let weights: [(StandardKeyControl, CGFloat)] = [(.numbers, 1), (.language, 1), (.space, 5.8), (.enter, 2.2)]
+        let footerUnit = (width - gap * CGFloat(weights.count - 1)) / 10
         var x: CGFloat = 0
         for (key, weight) in weights {
             value.controls[key] = rect(x, 3, footerUnit * weight)

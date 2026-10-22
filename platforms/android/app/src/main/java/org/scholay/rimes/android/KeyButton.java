@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
@@ -18,6 +19,7 @@ final class KeyButton extends Button {
     private Drawable iconDrawable;
     private int iconTint;
     private final RectF cap=new RectF();
+    private final Rect glyphBounds=new Rect();
     private KeyboardTheme.Palette palette;
     private KeyboardTheme currentTheme;
     private int currentUiMode=-1;
@@ -142,7 +144,7 @@ final class KeyButton extends Button {
         float x=frameX*density,y=frameY*density;
         float width=frameWidth<0?getWidth():frameWidth*density,height=frameHeight<0?getHeight():frameHeight*density;
         boolean pressed=isPressed(),selected=isSelected(); int alpha=isEnabled()?255:102;
-        float radius=(systemCaps()?5:compact?3:6)*density;
+        float radius=(compact?3:7.15f)*density;
         if(shortcut) {
             cap.set(x,y,x+width,y+height);
             paint.setColor(pressed || selected?palette.accent:(palette.ink&0xffffff)|(palette.dark?0x1a000000:0x10000000));
@@ -155,19 +157,12 @@ final class KeyButton extends Button {
             }
         } else if(systemCaps()) {
             cap.set(x,y+0.5f*density,x+width,y+height-0.5f*density);
-            cap.offset(0,density); paint.setColor(palette.dark?0x80000000:0x40000000);
-            if(!isEnabled()) paint.setAlpha(Math.round(paint.getAlpha()*0.4f));
-            canvas.drawRoundRect(cap,radius,radius,paint); cap.offset(0,-density);
             int fill=pressed?(accent && selected?palette.pressedSelected:palette.accent)
-                    :accent && selected?palette.accent:selected?palette.key:functional?palette.functional:palette.key;
+                    :accent && selected?palette.accent:palette.key;
             paint.setColor(fill); paint.setAlpha(alpha); canvas.drawRoundRect(cap,radius,radius,paint);
         } else {
             float dx=(compact?0:0.5f)*density,dy=(compact?0.75f:1.5f)*density;
             cap.set(x+dx,y+dy,x+width-dx,y+height-dy);
-            cap.offset(0,(compact?0.75f:1.5f)*density); paint.setColor(palette.dark?0xFF545458:0xFFC6C6C8); paint.setAlpha(alpha);
-            canvas.drawRoundRect(cap,radius,radius,paint);
-            cap.set(x+dx,y+dy,x+width-dx,y+height-dy);
-            cap.offset(0,(pressed?(compact?0.75f:1.5f):(compact?-0.25f:-0.5f))*density);
             paint.setColor(pressed && selected?palette.pressedSelected:pressed || selected?palette.accent:functional?palette.functional:palette.key);
             paint.setAlpha(alpha); canvas.drawRoundRect(cap,radius,radius,paint);
             paint.setColor((pressed || selected?0x26000000:0x1A000000)|(palette.dark?0x00FFFFFF:0));
@@ -179,7 +174,8 @@ final class KeyButton extends Button {
         // Button text/content descriptions still provide native accessibility and keyboard focus.
         String text=getText().toString(); Paint textPaint=getPaint(); float originalSize=textPaint.getTextSize();
         float dx=(compact?0:0.5f)*density,dy=(compact?0.75f:1.5f)*density;
-        float centreY=y+height/2+(plain || shortcut?0:pressed?(compact?0.75f:1.5f):(compact?-0.25f:-0.5f))*density;
+        // Match iOS: pressing changes the colour, never the cap or glyph position.
+        float centreY=y+height/2;
         float textWidth=textPaint.measureText(text),availableWidth=Math.max(1,plain || shortcut?width-getPaddingLeft()-getPaddingRight():width-2*dx-2*density);
         Paint.FontMetrics metrics=textPaint.getFontMetrics(); float availableHeight=Math.max(1,height-2*dy);
         if(plain && !candidateComment.isEmpty()) {
@@ -216,7 +212,13 @@ final class KeyButton extends Button {
         float scale=Math.min(1,Math.min(availableWidth/Math.max(1,textWidth),availableHeight/(metrics.descent-metrics.ascent)));
         if(scale<1) textPaint.setTextSize(originalSize*scale);
         metrics=textPaint.getFontMetrics(); textPaint.setColor(getCurrentTextColor());
-        canvas.drawText(text,x+(width-textPaint.measureText(text))/2,centreY-(metrics.ascent+metrics.descent)/2,textPaint);
+        float baseline=centreY-(metrics.ascent+metrics.descent)/2;
+        if(frameWidth>=0 && !classic && text.length()==1 && text.charAt(0)<128 && Character.isLetterOrDigit(text.charAt(0))) {
+            String reference=Character.isLowerCase(text.charAt(0))?"x":"H";
+            textPaint.getTextBounds(reference,0,1,glyphBounds);
+            baseline=centreY-(glyphBounds.top+glyphBounds.bottom)/2f;
+        }
+        canvas.drawText(text,x+(width-textPaint.measureText(text))/2,baseline,textPaint);
         textPaint.setTextSize(originalSize); canvas.restoreToCount(saved);
     }
     private void drawIcon(Canvas canvas,float left,float top,float size) {

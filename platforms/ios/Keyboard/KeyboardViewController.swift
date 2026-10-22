@@ -11,6 +11,7 @@ final class KeyboardViewController: UIInputViewController {
     var layoutProxy = LayoutTestDocumentProxy()
     var layoutNeedsInputModeSwitchKey: Bool?
     private var developmentPreferencesAreIsolated = false
+    private var developmentManualAutoTicks = false
     private var developmentPluginRoot: URL?
     var developmentAIFullAccess: Bool?
     var developmentAuthorizedAIRequest: ((String, ProviderConfiguration, KeyboardPlugin) -> Void)?
@@ -323,8 +324,12 @@ final class KeyboardViewController: UIInputViewController {
         super.viewDidLoad()
         preferences = preferencesStore.load(); surface.feedback.enabled = preferences.haptics; surface.feedback.strength = preferences.hapticStrength
         surface.feedback.soundEnabled = preferences.keySounds
-        view.backgroundColor = .systemGroupedBackground
-        gapPlaceholder.backgroundColor = view.backgroundColor
+        // Draw keys only. Hosts built with current SDKs place third-party
+        // keyboards in the system's own rounded, translucent container; an
+        // opaque fill here covered it with a mismatched colour and square
+        // corners. A clear root lets that container show in every host.
+        view.backgroundColor = .clear
+        gapPlaceholder.backgroundColor = .clear
         gapPlaceholder.onGapChange = { [weak self] in self?.heightGapDidChange($0) }
         view.addSubview(gapPlaceholder)
         // Sits directly above the content; its top follows the host container
@@ -459,6 +464,10 @@ final class KeyboardViewController: UIInputViewController {
             self?.toggleShift()
         }
         shiftButton.symbol("shift", label: L("大写切换", "Shift"))
+        // Holding Shift locks capitals, like double-tapping it.
+        let lockCapitals = UILongPressGestureRecognizer(target: self, action: #selector(shiftHeld(_:)))
+        lockCapitals.minimumPressDuration = 0.5
+        shiftButton.addGestureRecognizer(lockCapitals)
         spaceKeys.axis = .horizontal; spaceKeys.distribution = .fillEqually; spaceKeys.spacing = bottom.spacing
         spaceKeys.accessibilityIdentifier = "keyboard.spaces"
         for key in [spaceKey, chordSpaceKey] {
@@ -694,7 +703,7 @@ final class KeyboardViewController: UIInputViewController {
         breakAssociationChain(); saveAssociationHistory()
         stopDefaultAutoSend(); liveTyping.reset()
         returnKey.cancelTracking(with: nil); pressedReturn = nil
-        cancelDeletes(); surface.shifted = false; shiftButton.isSelected = false; punctuationOpen = false
+        cancelDeletes(); shiftState = .off; punctuationOpen = false
         metrics.sampleMemory(); metrics.save()
         consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
@@ -823,14 +832,14 @@ final class KeyboardViewController: UIInputViewController {
             }
         }
         scheme = selectedImported ? .pinyin : value
-        surface.profile = config.keyboardChord; surface.chordMode = scheme == .chord; surface.numeric = false; surface.shifted = false
+        surface.profile = config.keyboardChord; surface.chordMode = scheme == .chord; surface.numeric = false
         surface.chordLayout = preferences.chordLayout; surface.englishInput = directEnglish
         if !selectedImported && value != .english {
             let schema = usesNineKeyEngine ? "rimes_pinyin9"
                 : value == .chord && surface.profile.outputEncoding == .ziranma ? "rimes_ziranma" : value.schemaID
             if !engine.select(schema: schema) { status.text = L("输入引擎不可用，请切换英文或其他键盘", "Engine unavailable. Switch to English or another keyboard.") }
         }
-        shiftButton.isSelected = false; numbers.setTitle("123", for: .normal)
+        shiftState = .off; numbers.setTitle("123", for: .normal)
         refreshMoreMenu()
     }
     private func receive(_ state: EngineSnapshot, renderImmediately: Bool = true) {
@@ -895,10 +904,43 @@ final class KeyboardViewController: UIInputViewController {
         if !text.isEmpty { insert(text) }
         render()
     }
+    /// iOS Shift: one tap capitalises the next letter (filled arrow), a second
+    /// tap within the double-tap window — or holding Shift — locks capitals
+    /// (caps-lock arrow), and any tap from there returns to lowercase.
+    private enum ShiftState { case off, once, locked }
+    private var shiftState = ShiftState.off {
+        didSet {
+            surface.shifted = shiftState != .off; shiftButton.isSelected = shiftState != .off
+            let symbol = switch shiftState { case .off: "shift"; case .once: "shift.fill"; case .locked: "capslock.fill" }
+            shiftButton.setImage(UIImage(systemName: symbol), for: .normal)
+            shiftButton.accessibilityValue = switch shiftState {
+                case .off: L("小写", "Lowercase"); case .once: L("下一个字母大写", "Next letter uppercase"); case .locked: L("大写锁定", "Caps Lock") }
+        }
+    }
+    private var lastShiftTap: TimeInterval = 0
+    private static let shiftDoubleTapWindow: TimeInterval = 0.35
     private func toggleShift() {
         cancelDeletes(); surface.cancel()
-        if !surface.shifted { commitRawInput() }
-        surface.shifted.toggle(); shiftButton.isSelected = surface.shifted; render()
+        let now = ProcessInfo.processInfo.systemUptime
+        defer { lastShiftTap = now }
+        if shiftState == .off { commitRawInput() }
+        shiftState = switch shiftState {
+            case .off: .once
+            case .once: now - lastShiftTap < Self.shiftDoubleTapWindow ? .locked : .off
+            case .locked: .off
+        }
+        render()
+    }
+    @objc private func shiftHeld(_ gesture: UILongPressGestureRecognizer) {
+        guard gesture.state == .began else { return }
+        lockCapitals()
+    }
+    private func lockCapitals() {
+        guard onscreen else { return }
+        cancelDeletes(); surface.cancel()
+        if shiftState == .off { commitRawInput() }
+        surface.feedback.send(.press)
+        shiftState = .locked; render()
     }
     private func toggleLanguage() {
         guard onscreen else { return }
@@ -909,7 +951,7 @@ final class KeyboardViewController: UIInputViewController {
             preferences.toggleLanguage(); preferencesStore.save(preferences)
             if scheme != preferences.scheme { choose(preferences.scheme) }
         }
-        surface.shifted = false; shiftButton.isSelected = false
+        shiftState = .off
         surface.englishInput = directEnglish; render()
     }
     private func changeLayout(_ layout: ChordLayout) {
@@ -940,7 +982,12 @@ final class KeyboardViewController: UIInputViewController {
         guard onscreen else { return }; status.text = ""
         // Chinese number-page keys already show what they type, so they bypass the engine.
         if surface.numeric && (chineseNumberPages || usesNineKeyEngine) { typeOnNumberPage(text); return }
-        if directEnglish || surface.shifted { breakAssociationChain(); insert(surface.shifted ? text.uppercased() : text); render(); return }
+        if directEnglish || surface.shifted {
+            breakAssociationChain(); insert(surface.shifted ? text.uppercased() : text)
+            // A one-shot Shift ends after the letter it capitalised.
+            if shiftState == .once, text.rangeOfCharacter(from: .letters) != nil { shiftState = .off }
+            render(); return
+        }
         guard engine.available else { return }
         for scalar in text.unicodeScalars {
             let (state, handled) = engine.handledKey(Int32(scalar.value), generatedSeparator: chord && scalar.value == 39)
@@ -1159,13 +1206,14 @@ final class KeyboardViewController: UIInputViewController {
         if skinState != appearance {
             skinState = appearance
             surface.theme = theme
-            view.backgroundColor = theme.palette.background; view.tintColor = theme.palette.accent
-            gapPlaceholder.backgroundColor = theme.palette.background; gapPlaceholder.ink = theme.palette.ink
+            view.backgroundColor = .clear; view.tintColor = theme.palette.accent
+            gapPlaceholder.backgroundColor = .clear; gapPlaceholder.ink = theme.palette.ink
             panel.backgroundColor = theme.palette.background
             handPreview.theme = theme
             for (action, view) in standardFunctions {
                 guard let button = view as? KeycapButton else { continue }
-                button.theme = theme; button.functionalCap = !usesNineKey && action != .space
+                // Nine-key and QWERTY share one function-key style.
+                button.theme = theme; button.functionalCap = action != .space
                 button.accentCap = action == .enter
                 button.titleLabel?.font = .systemFont(ofSize: scheme != .chord && (action == .language || skin == .system) ? 18 : 14, weight: scheme != .chord && skin == .system ? .regular : .medium)
                 button.setPreferredSymbolConfiguration(.init(pointSize: scheme != .chord && skin == .system ? 21 : 17, weight: .medium), forImageIn: .normal)
@@ -1372,8 +1420,12 @@ final class KeyboardViewController: UIInputViewController {
         super.viewDidLayoutSubviews()
         let rows = layoutRows(width: view.bounds.width)
         var y = view.bounds.height - 5
+        // Measured from Apple's portrait keyboard: keys sit 6.5 pt from each side.
+        let scale = max(1, traitCollection.displayScale)
+        let keyMargin: CGFloat = view.bounds.width > 600 ? 5 : (6.5 * scale).rounded(.up) / scale
         for (item, rowHeight) in rows.reversed() {
-            y -= rowHeight; item.frame = CGRect(x: 5, y: y, width: max(0, view.bounds.width - 10), height: rowHeight); y -= item === bottom && compactTypingKeys ? 1 : 4
+            let margin = item === surface ? keyMargin : 5
+            y -= rowHeight; item.frame = CGRect(x: margin, y: y, width: max(0, view.bounds.width - 2 * margin), height: rowHeight); y -= item === bottom && compactTypingKeys ? 1 : 4
         }
         let landscape = view.bounds.width > 600
         if bufferEnabled {
@@ -1528,6 +1580,11 @@ final class KeyboardViewController: UIInputViewController {
         if autoTarget != target { stopDefaultAutoSend(); autoTarget = target }
         autoClock.synchronize(buffer.pending)
         if hasComposition || buffer.generating { autoClock.pause() }
+        #if KEYBOARD_LAYOUT_TESTS
+        // A fixture with an injected clock advances explicitly. A wall-clock
+        // timer would consume the next block while awaiting proxy callbacks.
+        if developmentManualAutoTicks { autoTimer?.invalidate(); autoTimer = nil; return }
+        #endif
         guard autoTimer == nil else { return }
         let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in self?.tickDefaultBuffer() }
         autoTimer = timer; RunLoop.main.add(timer, forMode: .common)
@@ -2437,13 +2494,18 @@ final class KeyboardViewController: UIInputViewController {
     var developmentBufferCursor: Int { buffer.cursor }
     func developmentShift() { toggleShift() }
     func developmentLanguage() { toggleLanguage() }
+    func developmentTapShift() { shiftButton.sendActions(for: .touchUpInside) }
+    func developmentHoldShift() { lockCapitals() }
+    var developmentShiftState: String { "\(shiftState)" }
     func developmentEnter() { enter() }
     func developmentSpace() { space() }
     func developmentBackspace() { backspace() }
     func developmentHostTextChanged() { hostTextChanged() }
     func developmentCaptureHostText() { captureHostText() }
     var developmentCapturePending: Bool { captureTimer != nil }
-    func developmentAutoDelay(_ delay: Double) { setDefaultDelay(delay); render() }
+    func developmentAutoDelay(_ delay: Double, manualTicks: Bool = false) {
+        developmentManualAutoTicks = manualTicks; setDefaultDelay(delay); render()
+    }
     func developmentAutoTick() { tickDefaultBuffer() }
     var developmentTypingMetrics: BufferLiveTypingMetrics { liveTyping }
     var developmentTypingSession: TypingSessionTotals { session }

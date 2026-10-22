@@ -5,6 +5,20 @@ import java.util.List;
 import static org.junit.Assert.*;
 
 public class KeyboardLayoutTest {
+    @Test public void defaultOrdinaryBottomRowsMatchIosAndKeepEveryControlReachable() {
+        for(int width:new int[]{280,392,840}) for(boolean landscape:new boolean[]{false,true})
+            for(KeyboardLayout.Mode mode:new KeyboardLayout.Mode[]{KeyboardLayout.Mode.QWERTY,KeyboardLayout.Mode.NINE_KEY}) {
+                List<KeyboardLayout.Key> keys=KeyboardLayout.keys(width,landscape,mode);
+                assertFalse(keys.stream().anyMatch(k -> k.action==KeyboardLayout.Action.EMOJI));
+                float previous=-1;
+                for(KeyboardLayout.Action action:new KeyboardLayout.Action[]{KeyboardLayout.Action.NUMBERS,
+                        KeyboardLayout.Action.LANGUAGE,KeyboardLayout.Action.SPACE,KeyboardLayout.Action.RETURN}) {
+                    KeyboardLayout.Key key=find(keys,action);
+                    assertEquals(KeyboardLayout.height(landscape),key.y+key.height,0.01);
+                    assertTrue(key.x>previous); previous=key.x;
+                }
+            }
+    }
     @Test public void optionalNumericGridAndWideSpaceKeepTheirOwnModes() {
         for(int width:new int[]{280,392,840}) for(boolean landscape:new boolean[]{false,true}) {
             List<KeyboardLayout.Key> grid=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.NUMERIC,true,true,true);
@@ -46,7 +60,7 @@ public class KeyboardLayoutTest {
             }
     }
     @Test public void qwertyLettersHaveEqualWidthAndSpaceIsReachable() {
-        List<KeyboardLayout.Key> keys=KeyboardLayout.keys(390,false,KeyboardLayout.Mode.QWERTY);
+        List<KeyboardLayout.Key> keys=KeyboardLayout.keys(390,false,KeyboardLayout.Mode.QWERTY,false,false,false);
         int letters=0;
         for(KeyboardLayout.Key key:keys) {
             if(key.action==KeyboardLayout.Action.TEXT) { letters++; assertEquals(39,key.width,0.01); }
@@ -78,20 +92,20 @@ public class KeyboardLayoutTest {
         assertEquals(59.7,z.visualX,0.01); assertEquals(108,z.visualY,0.01);
         KeyboardLayout.Key shift=find(qwerty,KeyboardLayout.Action.SHIFT),space=find(qwerty,KeyboardLayout.Action.SPACE);
         assertEquals(45.08,shift.visualWidth,0.01);
-        assertEquals(131.92,space.visualX,0.01); assertEquals(128.16,space.visualWidth,0.01);
+        assertEquals(86.8,space.visualX,0.01); assertEquals(216.92,space.visualWidth,0.01);
         assertEquals(162,space.visualY,0.01);
         List<KeyboardLayout.Key> nine=KeyboardLayout.keys(392,false,KeyboardLayout.Mode.NINE_KEY);
         KeyboardLayout.Key enter=find(nine,KeyboardLayout.Action.RETURN),nineSpace=find(nine,KeyboardLayout.Action.SPACE);
         assertEquals(318.4,enter.visualX,0.01); assertEquals(108,enter.visualY,0.01);
         assertEquals(73.6,enter.visualWidth,0.01); assertEquals(98,enter.visualHeight,0.01);
-        assertEquals(79.6,nineSpace.visualX,0.01); assertEquals(232.8,nineSpace.visualWidth,0.01);
+        assertEquals(159.2,nineSpace.visualX,0.01); assertEquals(153.2,nineSpace.visualWidth,0.01);
         List<KeyboardLayout.Key> wide=KeyboardLayout.keys(840,true,KeyboardLayout.Mode.NINE_KEY);
         assertEquals(32,wide.get(0).visualHeight,0.01);
         assertEquals(69,find(wide,KeyboardLayout.Action.RETURN).visualHeight,0.01);
     }
     @Test public void dailyControlsHaveDirectMarksCenteredSpaceAndNoBackspaceDeadZone() {
         for(int width:new int[]{280,392,840}) for(boolean landscape:new boolean[]{false,true}) {
-            List<KeyboardLayout.Key> q=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.QWERTY);
+            List<KeyboardLayout.Key> q=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.QWERTY,false,false,false);
             assertTrue(q.stream().anyMatch(key -> key.action==KeyboardLayout.Action.PUNCTUATION && key.text.equals(",")));
             assertTrue(q.stream().anyMatch(key -> key.action==KeyboardLayout.Action.PUNCTUATION && key.text.equals(".")));
             KeyboardLayout.Key delete=find(q,KeyboardLayout.Action.DELETE);
@@ -100,9 +114,9 @@ public class KeyboardLayoutTest {
             assertTrue(delete.visualWidth>=width*0.14f-0.01);
             assertEquals(width/2f,find(q,KeyboardLayout.Action.SPACE).visualX+find(q,KeyboardLayout.Action.SPACE).visualWidth/2,0.01);
             List<KeyboardLayout.Key> nine=KeyboardLayout.keys(width,landscape,KeyboardLayout.Mode.NINE_KEY);
-            assertEquals(width/2f,find(nine,KeyboardLayout.Action.SPACE).x+find(nine,KeyboardLayout.Action.SPACE).width/2,0.01);
-            assertEquals(KeyboardLayout.height(landscape)/2f,find(nine,KeyboardLayout.Action.DELETE).height,0.01);
-            assertEquals(KeyboardLayout.height(landscape)/4f,find(nine,KeyboardLayout.Action.NUMBERS).y,0.01);
+            assertEquals(width*0.6f,find(nine,KeyboardLayout.Action.SPACE).x+find(nine,KeyboardLayout.Action.SPACE).width/2,0.01);
+            assertEquals(KeyboardLayout.height(landscape)/4f,find(nine,KeyboardLayout.Action.DELETE).height,0.01);
+            assertEquals(3*KeyboardLayout.height(landscape)/4f,find(nine,KeyboardLayout.Action.NUMBERS).y,0.01);
         }
     }
     private static String text(List<KeyboardLayout.Key> keys) {

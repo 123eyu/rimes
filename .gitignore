@@ -140,3 +140,4 @@ platforms/linux/ime/.engine/
 # Pinned official article practice rules
 /platforms/linux/typing-practice/core/typing_practice_core.hpp
 /platforms/linux/typing-practice/core/typing_practice_core.cpp
+/Sources/RimeBuffer/Translation/AppleTranslationAvailabilityGate.swift

@@ -7,31 +7,45 @@ import RimesCore
 
 /// One cap geometry/palette for drawn letters and UIKit-backed controls.
 enum KeycapStyle {
+    /// Measured against Apple's keyboard (iOS 26.5 simulator, 3x screenshots).
+    /// Fitted from the top-edge corner profile: Apple 5.34 pt; ours 3.34 pt at
+    /// r = 5 and 4.97 pt at r = 6.75, which puts Apple's continuous radius at ≈ 7.15 pt.
+    static let cornerRadius: CGFloat = 7.15
+    /// Apple's caps sit on whole device pixels (adjacent keys alternate 100 and
+    /// 101 px at 3x); fractional edges smear by a pixel and read as wider keys.
+    static func pixelSnapped(_ rect: CGRect) -> CGRect {
+        let scale = max(1, UITraitCollection.current.displayScale)
+        func snap(_ value: CGFloat) -> CGFloat { (value * scale).rounded() / scale }
+        // Horizontal edges snap independently (Apple's 100/101 px alternation);
+        // the height snaps as a length so a half-point inset keeps Apple's 43 pt cap.
+        let x = snap(rect.minX), y = snap(rect.minY)
+        return CGRect(x: x, y: y, width: max(0, snap(rect.maxX) - x), height: max(0, snap(rect.height)))
+    }
+    /// Letter keys use Apple's size and the system font in every skin.
+    static let letterFontSize: CGFloat = 25
+    /// Keys are flat: no drop shadow, no raised base plate, and a press shows
+    /// by colour only, so the cap never moves.
     static func capRect(in rect: CGRect, pressed: Bool, compact: Bool = false) -> CGRect {
-        rect.insetBy(dx: compact ? 0 : 0.5, dy: compact ? 0.75 : 1.5).offsetBy(dx: 0, dy: pressed ? (compact ? 0.75 : 1.5) : (compact ? -0.25 : -0.5))
+        rect.insetBy(dx: compact ? 0 : 0.5, dy: compact ? 0.75 : 1.5)
     }
     static func draw(in rect: CGRect, pressed: Bool, selected: Bool = false, enabled: Bool = true, compact: Bool = false,
                      theme: StatusSkin = .rhino, functional: Bool = false, accent: Bool = false) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
+        let rect = pixelSnapped(rect)
         let palette = theme.palette
         if theme.keyboardStyle == .system {
-            let dark = UITraitCollection.current.userInterfaceStyle == .dark
-            let cap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5), cornerRadius: 5)
+            let cap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5), cornerRadius: cornerRadius)
             context.saveGState()
             if !enabled { context.setAlpha(0.4) }
-            context.setShadow(offset: CGSize(width: 0, height: 1), blur: 0, color: UIColor.black.withAlphaComponent(dark ? 0.5 : 0.25).cgColor)
+            // Apple's keyboard draws function keys in the same tone as letters;
+            // only an action Return (Send, Search, Go…) is tinted.
             let fill: UIColor = pressed ? (accent && selected ? palette.pressedSelected : palette.accent)
-                : accent && selected ? palette.accent : selected ? palette.key
-                : functional ? palette.functional : palette.key
+                : accent && selected ? palette.accent : palette.key
             fill.setFill(); cap.fill(); context.restoreGState(); return
         }
         context.saveGState()
         if !enabled { context.setAlpha(0.4) }
-        let base = UIBezierPath(roundedRect: rect.insetBy(dx: compact ? 0 : 0.5, dy: compact ? 0.75 : 1.5).offsetBy(dx: 0, dy: compact ? 0.75 : 1.5), cornerRadius: compact ? 3 : 6)
-        context.setShadow(offset: CGSize(width: 0, height: 0.5), blur: 1, color: UIColor.black.withAlphaComponent(0.12).cgColor)
-        UIColor.separator.setFill(); base.fill()
-        context.setShadow(offset: .zero, blur: 0, color: nil)
-        let cap = UIBezierPath(roundedRect: capRect(in: rect, pressed: pressed, compact: compact), cornerRadius: compact ? 3 : 6)
+        let cap = UIBezierPath(roundedRect: capRect(in: rect, pressed: pressed, compact: compact), cornerRadius: compact ? 3 : cornerRadius)
         (pressed && selected ? palette.pressedSelected : pressed || selected ? palette.accent : functional ? palette.functional : palette.key).setFill(); cap.fill()
         UIColor.label.withAlphaComponent(pressed || selected ? 0.15 : 0.10).setStroke()
         cap.lineWidth = 0.7; cap.stroke()
