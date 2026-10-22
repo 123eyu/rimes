@@ -304,10 +304,35 @@ enum SystemPermissionAudit {
     static func resetAccessibilityRecord(
         bundleIdentifier: String = Bundle.main.bundleIdentifier ?? ""
     ) -> Bool {
-        guard !bundleIdentifier.isEmpty else { return false }
+        resetRecord(for: .accessibility, bundleIdentifier: bundleIdentifier)
+    }
+
+    /// The `tccutil` service name for a permission this app can clear, or nil
+    /// when macOS keeps no per-app record to clear (local network).
+    static func tccService(for permission: SystemPermission) -> String? {
+        switch permission {
+        case .accessibility: return "Accessibility"
+        case .screenRecording: return "ScreenCapture"
+        case .inputMonitoring: return "ListenEvent"
+        case .camera: return "Camera"
+        case .microphone: return "Microphone"
+        case .localNetwork: return nil
+        }
+    }
+
+    /// Clears one permission's record for this app, so a stale entry left by
+    /// a previous build no longer has to be removed by hand before the app
+    /// can be added again. Only the named service and bundle are touched.
+    @discardableResult
+    static func resetRecord(
+        for permission: SystemPermission,
+        bundleIdentifier: String = Bundle.main.bundleIdentifier ?? ""
+    ) -> Bool {
+        guard !bundleIdentifier.isEmpty,
+              let service = tccService(for: permission) else { return false }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/tccutil")
-        process.arguments = ["reset", "Accessibility", bundleIdentifier]
+        process.arguments = ["reset", service, bundleIdentifier]
         let pipe = Pipe()
         process.standardOutput = pipe
         process.standardError = pipe
@@ -325,7 +350,7 @@ enum SystemPermissionAudit {
         let unknownBundle = output.contains("No such bundle")
         let ok = process.terminationStatus == 0 && !unknownBundle
         IMELog.write(
-            "permissions: reset Accessibility for \(bundleIdentifier) ok=\(ok) "
+            "permissions: reset \(service) for \(bundleIdentifier) ok=\(ok) "
                 + "status=\(process.terminationStatus) unknownBundle=\(unknownBundle)"
         )
         return ok
@@ -342,10 +367,16 @@ enum SystemPermissionAudit {
         }
         switch permission {
         case .accessibility:
-            if !report.promptWouldBeSilent {
-                ClipboardAutoPaste.requestPermission()
-                return true
+            // One window, not three. macOS's own "control this computer"
+            // alert, this app's explanation and the Settings pane all say the
+            // same thing, so the alert is never raised: the guide explains the
+            // two steps (drag the app in, flip the switch) and opens the pane
+            // itself. Every Accessibility request, whichever switch started
+            // it, lands here.
+            MainActor.assumeIsolated {
+                CapturePermissionGuide.shared.show(.accessibility)
             }
+            return true
         case .screenRecording:
             // Returns false when macOS has a recorded denial and shows
             // nothing; fall through to Settings in that case.
@@ -374,7 +405,12 @@ enum SystemPermissionAudit {
         switch permission {
         case .screenRecording: _ = CGRequestScreenCaptureAccess()
         case .inputMonitoring: _ = CGRequestListenEventAccess()
-        case .accessibility: ClipboardAutoPaste.requestPermission()
+        case .accessibility:
+            // The guide that calls this has already opened the Accessibility
+            // pane and shows the drag-in and switch steps. macOS's own
+            // "control this computer" alert would be a third window saying the
+            // same thing, over the first two. Leave authorization to the pane.
+            break
         case .camera, .microphone:
             let type: AVMediaType = permission == .camera ? .video : .audio
             if AVCaptureDevice.authorizationStatus(for: type) == .notDetermined {
