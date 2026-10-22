@@ -204,6 +204,10 @@ try {
     if ($Chord) { $typingArgs.ArgumentList = @('--chord') }
     $e2e = Start-Process @typingArgs
     $e2eExit = [int]$e2e.ExitCode
+    if ($e2eExit -eq 0 -and (Test-Path -LiteralPath $brokerStderr)) {
+        Select-String -LiteralPath $brokerStderr -Pattern 'RIMES key latency' |
+            ForEach-Object { Write-Host $_.Line }
+    }
     if ($e2eExit -ne 0) {
         Write-Host "--- broker stderr ---"
         if (Test-Path -LiteralPath $brokerStderr) {
