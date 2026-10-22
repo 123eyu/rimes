@@ -135,8 +135,8 @@ final class CaptureScrollSession {
     func start() {
         guard !running, tiles.isEmpty else { return }
         if auto.state == .on, !AXIsProcessTrusted() {
-            let key = kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String
-            _ = AXIsProcessTrustedWithOptions([key:true] as CFDictionary)
+            // The guide opens the pane and explains the steps; no system alert.
+            CapturePermissionGuide.shared.show(.accessibility)
             status.stringValue = "请授权辅助功能后重试，或取消自动滚动"; return
         }
         selectedAxis = axis.indexOfSelectedItem == 0 ? .vertical : .horizontal

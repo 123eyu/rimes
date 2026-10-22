@@ -87,7 +87,8 @@ struct PermissionGuideEnvironment {
 }
 
 /// The initiating switch opens the system pane and requests authorization in
-/// one action. Passive refresh never grants permission, resets TCC, restarts
+/// one action. Accessibility is the exception to "requests": its guide and the
+/// pane are the whole flow, so no system alert is raised on top of them. Passive refresh never grants permission, resets TCC, restarts
 /// the IME, or starts a capture. A pending capture still needs its own Continue.
 @MainActor
 final class CapturePermissionGuide {
@@ -108,6 +109,11 @@ final class CapturePermissionGuide {
     private var permission = SystemPermission.screenRecording
     private var intent = PermissionChangeIntent.enable
     private var continuation: (() -> Void)?
+    /// Permissions still to ask for after the current one. The guide walks
+    /// through them in order and moves on by itself as each is granted.
+    private var remaining: [SystemPermission] = []
+    private var queueIndex = 1
+    private var queueTotal = 1
     private var requested = false
     private var generation = UUID()
     private var observedStatus: SystemPermissionStatus?
@@ -116,6 +122,7 @@ final class CapturePermissionGuide {
     private let environment: PermissionGuideEnvironment
     private let contentWidth: CGFloat = 456
     var isPresented: Bool { panel != nil }
+    var titleForSmoke: String? { panel?.title }
 
     init(allowsSystemActions: Bool = true, environment: PermissionGuideEnvironment? = nil) {
         self.allowsSystemActions = allowsSystemActions
@@ -129,8 +136,36 @@ final class CapturePermissionGuide {
         return true
     }
 
+    /// Asks for `permissions` one after another in this one window: each is
+    /// opened, detected live as soon as it is switched on, and the guide moves
+    /// to the next without a button press. `retry` runs once after the last
+    /// one. Permissions already granted are skipped.
+    func showQueue(_ permissions: [SystemPermission], retry: (() -> Void)? = nil) {
+        let missing = permissions.filter {
+            (allowsSystemActions ? environment.status($0) : .denied) != .granted
+        }
+        guard let first = missing.first else { retry?(); return }
+        show(first, retry: retry, remaining: Array(missing.dropFirst()),
+             queueIndex: 1, queueTotal: missing.count)
+    }
+
+    private func advanceQueue() {
+        let continuation = continuation
+        var rest = remaining
+        let nextIndex = queueIndex + 1, total = queueTotal
+        while let first = rest.first,
+              environment.status(first) == .granted { rest.removeFirst() }
+        guard !rest.isEmpty else { return }
+        let next = rest.removeFirst()
+        dismiss()
+        show(next, retry: continuation, remaining: rest,
+             queueIndex: nextIndex, queueTotal: total)
+    }
+
     func show(_ permission: SystemPermission, intent: PermissionChangeIntent = .enable,
-              retry: (() -> Void)? = nil) {
+              retry: (() -> Void)? = nil,
+              remaining: [SystemPermission] = [],
+              queueIndex: Int = 1, queueTotal: Int = 1) {
         guard !IsSecureEventInputEnabled() else { return }
         if panel != nil {
             if self.permission == permission, self.intent == intent {
@@ -142,16 +177,22 @@ final class CapturePermissionGuide {
             dismiss()
         }
         self.permission = permission; self.intent = intent
+        self.remaining = remaining
+        self.queueIndex = queueIndex; self.queueTotal = max(queueTotal, queueIndex)
         continuation = retry; requested = false; generation = UUID(); observedStatus = nil
         hiddenForSecureInput = false
         check.cancel()
         let panel = CapturePanel(size: NSSize(width: 500, height: 430))
         panel.styleMask.remove(.resizable)
-        panel.title = "\(permission.title)权限"
+        panel.title = queueTotal > 1
+            ? "\(permission.title)权限（\(queueIndex)/\(queueTotal)）"
+            : "\(permission.title)权限"
         self.panel = panel
 
         let applicationURL = PermissionApplication.appURL()
-        let title = NSTextField(labelWithString: permission.title)
+        let title = NSTextField(labelWithString: queueTotal > 1
+            ? "\(permission.title)  \(queueIndex)/\(queueTotal)"
+            : permission.title)
         title.font = .systemFont(ofSize: 20, weight: .semibold)
         let status = NSTextField(labelWithString: "")
         status.font = .systemFont(ofSize: 13); status.textColor = RimeUI.textSecondary
@@ -186,7 +227,12 @@ final class CapturePermissionGuide {
                                    kind: intent == .enable ? .enable : .disable))
         if presentation.showsAddition {
             let repair = animationStep("修复示意：移除旧条目，再添加当前应用", kind: .repair)
-            let help = PermissionHelpDisclosure(details: repair, width: contentWidth)
+            // A grant left by an earlier build looks switched on but is not
+            // trusted. Clearing it here saves removing the row by hand.
+            let reset = CaptureButton("自动清除旧条目") { [weak self] in self?.resetStaleRecord() }
+            reset.toolTip = "只清除 \(ProductBrand.name) 的这一条记录，然后重新拖入图标并打开开关"
+            let repairDetails = CaptureUI.column([repair, reset], spacing: 10)
+            let help = PermissionHelpDisclosure(details: repairDetails, width: contentWidth)
             help.didToggle = { [weak self, weak help] in
                 self?.resizePanel()
                 if let help, help.expanded { help.scrollToVisible(help.bounds) }
@@ -222,7 +268,7 @@ final class CapturePermissionGuide {
             self.generation = UUID()
             self.pending?.cancel(); self.pending = nil; self.check.cancel()
             self.poll?.invalidate(); self.poll = nil
-            self.continuation = nil; self.panel = nil
+            self.continuation = nil; self.remaining = []; self.panel = nil
             self.header = nil; self.body = nil; self.scroll = nil; self.help = nil
             self.statusLabel = nil; self.continueButton = nil
             self.removeObservers(); panel?.contentView = nil
@@ -300,7 +346,7 @@ final class CapturePermissionGuide {
         if resumed {
             hiddenForSecureInput = false; panel?.orderFrontRegardless()
         }
-        if check.state == .ready, continuation == nil { dismiss(); return }
+        if check.state == .ready, continuation == nil, remaining.isEmpty { dismiss(); return }
         let latest = currentStatus
         if latest != observedStatus || resumed {
             observedStatus = latest
@@ -323,7 +369,15 @@ final class CapturePermissionGuide {
             self.refreshStatus()
             NotificationCenter.default.post(name: .systemPermissionStatusDidChange, object: nil)
             if self.check.state == .ready, !IsSecureEventInputEnabled() {
-                if continueFeature {
+                if !self.remaining.isEmpty {
+                    // Granted live; go straight to the next permission.
+                    DispatchQueue.main.async { [weak self] in self?.advanceQueue() }
+                } else if self.queueTotal > 1, let action = self.continuation {
+                    // The last of a queue: everything asked for is on, so
+                    // carry on with what the person started.
+                    self.dismiss()
+                    DispatchQueue.main.async { action() }
+                } else if continueFeature {
                     let action = self.continuation
                     self.dismiss()
                     if let action { DispatchQueue.main.async { action() } }
@@ -332,6 +386,20 @@ final class CapturePermissionGuide {
                 }
             }
         }
+    }
+
+    /// Clears this app's stale record for the current permission and returns
+    /// the guide to its first step, so the app can be dragged in afresh.
+    private func resetStaleRecord() {
+        guard allowsSystemActions, panel != nil else { return }
+        let cleared = SystemPermissionAudit.resetRecord(for: permission)
+        observedStatus = nil
+        check.cancel()
+        statusLabel?.stringValue = cleared
+            ? "已清除旧条目：拖动虚线框内的图标，再打开系统开关。"
+            : "无法清除旧条目，请在系统设置中手动移除后重新添加。"
+        NotificationCenter.default.post(name: .systemPermissionStatusDidChange, object: nil)
+        resizePanel()
     }
 
     private func refreshStatus() {

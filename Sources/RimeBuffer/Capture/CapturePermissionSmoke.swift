@@ -81,6 +81,46 @@ enum CapturePermissionSmoke {
         try require(guide.isPresented && !continued, "returning from settings never starts a delayed capture")
         guide.dismiss()
 
+        // A queue asks for several permissions in one window and moves on by
+        // itself as each is granted; permissions already on are skipped.
+        var queueStatus: [SystemPermission: SystemPermissionStatus] = [
+            .screenRecording: .granted, .inputMonitoring: .denied, .accessibility: .denied,
+        ]
+        var queueEvents: [String] = []
+        let queueGuide = CapturePermissionGuide(environment: PermissionGuideEnvironment(
+            status: { queueStatus[$0] ?? .denied },
+            openSettings: { queueEvents.append("settings:\($0.rawValue)") },
+            request: { _ in },
+            verify: { permission in if queueStatus[permission] != .granted { throw denied } }))
+        var queueFinished = false
+        func waitUntil(_ condition: () -> Bool) async {
+            for _ in 0..<300 where !condition() { try? await Task.sleep(nanoseconds: 10_000_000) }
+        }
+        queueGuide.showQueue([.screenRecording, .inputMonitoring, .accessibility]) { queueFinished = true }
+        try require(queueGuide.titleForSmoke?.contains("1/2") == true,
+                    "a queue counts only the permissions still missing")
+        try require(queueEvents == ["settings:inputMonitoring"],
+                    "a queue opens the first missing permission only")
+        queueStatus[.inputMonitoring] = .granted
+        queueGuide.refreshPermissionStatus()
+        await waitUntil { queueGuide.titleForSmoke?.contains("2/2") == true }
+        try require(queueGuide.titleForSmoke?.contains("2/2") == true,
+                    "a granted permission moves the queue on without a button press")
+        try require(queueEvents == ["settings:inputMonitoring", "settings:accessibility"] && !queueFinished,
+                    "the next permission opens its own pane and the action waits for the last")
+        queueStatus[.accessibility] = .granted
+        queueGuide.refreshPermissionStatus()
+        await waitUntil { queueFinished }
+        try require(queueFinished && !queueGuide.isPresented,
+                    "the last grant closes the guide and resumes the original action")
+        try require(SystemPermissionAudit.tccService(for: .screenRecording) == "ScreenCapture"
+                    && SystemPermissionAudit.tccService(for: .inputMonitoring) == "ListenEvent"
+                    && SystemPermissionAudit.tccService(for: .localNetwork) == nil,
+                    "stale-record repair names the right service and never targets local network")
+        try require(!SystemPermissionAudit.resetRecord(for: .localNetwork, bundleIdentifier: "x.y")
+                    && !SystemPermissionAudit.resetRecord(for: .accessibility, bundleIdentifier: ""),
+                    "repair never shells out without a service and a bundle")
+
         var networkStarted = false, networkCancelled = false, networkVerified = false
         let networkGuide = CapturePermissionGuide(environment: PermissionGuideEnvironment(
             status: { _ in .undeterminable }, openSettings: { events.append("settings:\($0.rawValue)") },

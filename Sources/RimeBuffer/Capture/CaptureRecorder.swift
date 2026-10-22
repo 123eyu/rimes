@@ -456,8 +456,10 @@ final class CaptureRecorderController {
     private func authorize() {
         guard settings != nil, !IsSecureEventInputEnabled(),
               !CapturePermissionGuide.shared.presentExisting() else { return }
-        for permission in Self.optionalPermissions(options) where SystemPermissionAudit.status(for: permission) != .granted {
-            CapturePermissionGuide.shared.show(permission) { [weak self] in self?.authorize() }
+        let missing = Self.optionalPermissions(options)
+            .filter { SystemPermissionAudit.status(for: $0) != .granted }
+        if !missing.isEmpty {
+            CapturePermissionGuide.shared.showQueue(missing) { [weak self] in self?.authorize() }
             return
         }
         settings?.close()
