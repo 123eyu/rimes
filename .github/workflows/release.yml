@@ -1847,7 +1847,7 @@ jobs:
           cat >"$notes" <<'EOF'
           ## 犀术IME / 犀術IME / XSIME VERSION_PLACEHOLDER
 
-          本版补齐五端设置中的应用更新入口，并收敛 Linux、Windows 与官方插件改动。
+          本次更新内容与各平台交付状态请参阅[版本说明](https://github.com/scholay/xsime/blob/main/docs/releases/VERSION_PLACEHOLDER.md)。
 
           ### 下载与更新
           | 平台 | 安装包 / 渠道 | 更新方式 |
@@ -1856,7 +1856,7 @@ jobs:
           | Windows（x64 / x86） | `RIMES-Windows-VERSION_PLACEHOLDER-Setup.exe` | 设置内下载并运行完整安装器，按提示注销或重启 |
           | Android | `RIMES-Android-VERSION_PLACEHOLDER.apk` | 设置内下载，Android 系统确认安装；使用原长期签名 |
           | Linux（Ubuntu 24.04 amd64） | `fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` | 设置内下载，授权系统包管理器安装后重新登录 |
-          | iOS | [App Store](https://apps.apple.com/app/id6814620242) | 通过商店更新，可用版本以商店为准 |
+          | iOS | [App Store](https://apps.apple.com/app/id6814620242) · [TestFlight](https://testflight.apple.com/join/Kdj9RB4q) | 可用版本以 Apple 页面为准；社区 IPA 与签名说明见发布资产 |
 
           旧版尚无更新入口的客户端，首次请下载本版安装包升级；之后可从设置检查、下载并安装。
           下载包会验证版本、大小及 SHA-256，打开安装器或商店不会被当作更新完成。
@@ -1868,12 +1868,12 @@ jobs:
           下载 **`RIMES-VERSION_PLACEHOLDER.pkg`** → 双击 → 按向导安装
           （输入管理员密码，装到 `/Library/Input Methods`；有普通 GUI 登录会话时会尝试注册、启用和切换）。
           安装器及内含 app 已使用 Developer ID 签名、通过 Apple 公证并附加公证票据。
-          多数情况下安装完成后可直接用输入菜单或 `Ctrl-Space` 切换到「RIMES」；
+          多数情况下安装完成后可直接用输入菜单或 `Ctrl-Space` 切换到「犀术IME」；
           若菜单暂未刷新，请先到“系统设置 → 键盘 → 输入法”确认，仍未显示再注销重登；
           不要手动终止 Apple 的输入法或菜单服务进程。
 
           ### 应用内自动更新
-          已安装并运行的正式签名版 RIMES 会检查最新 Release，下载并再次验证同一
+          已安装并运行的正式签名版 XSIME 会检查最新 Release，下载并再次验证同一
           Apple Team 签名、公证状态与包内版本；输入法菜单会显示可安装版本。确认后
           只会打开 macOS 系统安装器，由用户授权完成更新，不再用 ZIP 自替换。
 
@@ -1887,7 +1887,7 @@ jobs:
           用 `sha256sum -c fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb.sha256` 校验，
           再用 `sudo apt install ./fcitx5-rimes_VERSION_PLACEHOLDER_amd64.deb` 安装或升级。
           `sudo apt remove fcitx5-rimes` 卸载程序并保留用户词库与学习记录。
-          安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加 RIMES；
+          安装后执行 `fcitx5 -r`，在 Fcitx5 配置中添加犀术IME；
           [完整安装与卸载说明](https://github.com/scholay/xsime/blob/main/platforms/linux/ime/README.md)。
           deb 附带固定版本的 Rime/Lua 运行库，其他系统需满足包内依赖，X11/Wayland 桌面体验需单独验收。
           EOF
