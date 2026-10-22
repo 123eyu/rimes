@@ -114,9 +114,9 @@
     "plugins/statistics/plugin.json": "fd0a6abeb4628bbaa2b6c66ad8e99c1c428e4013394e29ead20ac5219572757a",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "cd28899b92f385c1e5ba296d164ab8b129c27efd580af51492ab365df7ef2594",
-    "source-map.json": "ceed07cf0a33457f56bd3d4deed51319c79d91cb6b40091f06530879be40d2af"
+    "source-map.json": "87c7058b05713b6a7d96a0eb895282e1ec3eed7cca497359354bf1b15e8efe47"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "5195b0ad431309bc37ba31437d0fb107d2190ed3",
+  "revision": "76a3a69b6d2a5545318dfaa487b6c954fc05c53a",
   "schemaVersion": 1
 }
