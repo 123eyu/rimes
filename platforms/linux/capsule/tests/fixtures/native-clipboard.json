@@ -92,7 +92,7 @@
   "sources" : {
     "OfficialPlugins/native/macos/CapsuleModules.swift" : "d78809394546e6ea3daa863eed25f29dd0824435cc68311f60ec62ac9661038e",
     "Sources/RimeBuffer/ClipboardHistoryModel.swift" : "af436199957efe7c8f3aff9ba81446f30b2c45c596f32d4f231aff8011790cf0",
-    "Sources/RimeBuffer/ClipboardHistorySmoke.swift" : "70aa71f434626c44d4a0db476689d942197e9863d4582b9a1ca7d110dce148a9",
+    "Sources/RimeBuffer/ClipboardHistorySmoke.swift" : "e1c477de4493014d7e09cf96ed239befee5f3228e0f5ede08137801dcb62b110",
     "Sources/RimeBuffer/ClipboardPasteboardArchive.swift" : "39118d473cdd5b8c98a04a5fb6556479573d01d5c7b921c28529872fee6c6229"
   }
 }
