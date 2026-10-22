@@ -14,7 +14,7 @@ final class CaptureHistoryView: NSView {
     private var generation = UUID()
     var enabled = false
     var storeProvider: () throws -> CaptureStore = { try CaptureStore.shared.get() }
-    var mediaFilter = 0 { didSet { render() } }
+    var mediaFilter = 0 { didSet { if mediaFilter != oldValue { render() } } }
     var query = "" { didSet { if query != oldValue { render() } } }
     var protected = false { didSet { if protected != oldValue { render() } } }
     override init(frame frameRect: NSRect) {
