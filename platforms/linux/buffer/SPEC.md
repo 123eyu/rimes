@@ -2,7 +2,7 @@
 
 This is the acceptance baseline for the Linux Default Buffer. It is derived
 from macOS `BufferModel`, `RimeBufferController.drainCommit`,
-`BufferDeliveryCoordinator`, and `.codex/skills/rimes-project/references/buffer-ui.md`.
+`BufferDeliveryCoordinator`, and `.codex/skills/xsime-project/references/buffer-ui.md`.
 Linux includes Default staging and the derived workspace host. Compiled
 translation/AI/stream adapters and Mailbox are tracked in `../PARITY.md`;
 unavailable adapters cannot appear in the selector. Optional music remains
