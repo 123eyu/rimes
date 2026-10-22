@@ -15,6 +15,7 @@ final class UpwardNumberTouch {
     private final Runnable insert,repaint;
     private final Handler main=new Handler(Looper.getMainLooper());
     private final float density;
+    private final boolean direct;
     private boolean active,eligible,armed,selected;
     private int pointer=-1;
     private long downTime=-1,beganAt,generation,excludedDownTime=-1;
@@ -23,6 +24,10 @@ final class UpwardNumberTouch {
     final String alternate;
 
     UpwardNumberTouch(KeyButton button,String alternate,Runnable insert,Runnable repaint) {
+        this(button,alternate,insert,repaint,false);
+    }
+    UpwardNumberTouch(KeyButton button,String alternate,Runnable insert,Runnable repaint,boolean direct) {
+        this.direct=direct;
         this.button=button; this.alternate=alternate; this.insert=insert; this.repaint=repaint;
         density=button.getResources().getDisplayMetrics().density;
         String kind=alternate.length()==1 && alternate.charAt(0)>='0' && alternate.charAt(0)<='9'?"数字 ":"符号 ";
@@ -32,7 +37,7 @@ final class UpwardNumberTouch {
             @Override public void onInitializeAccessibilityNodeInfo(View host,AccessibilityNodeInfo info) {
                 super.onInitializeAccessibilityNodeInfo(host,info);
                 info.addAction(new AccessibilityNodeInfo.AccessibilityAction(accessibilityAction,"输入"+kind+alternate));
-                info.setHintText("按住向上滑动输入"+kind+alternate);
+                info.setHintText((direct?"向上滑动输入":"按住向上滑动输入")+kind+alternate);
             }
             @Override public boolean performAccessibilityAction(View host,int action,android.os.Bundle arguments) {
                 if(action!=accessibilityAction) return super.performAccessibilityAction(host,action,arguments);
@@ -60,15 +65,20 @@ final class UpwardNumberTouch {
     }
     private boolean usable() { return button.isEnabled() && button.isShown() && button.isAttachedToWindow(); }
     private boolean arm(long at) {
-        if(!active || armed || !eligible || at-beganAt<HOLD_MILLIS || !usable() || !button.isPressed()) return false;
+        if(direct || !active || armed || !eligible || at-beganAt<HOLD_MILLIS || !usable() || !button.isPressed()) return false;
         armed=true; repaint.run(); return true;
     }
     private void move(float x,float y,long at) {
         arm(at);
+        // Native ViewGroup can defer Button's pressed state until its tap
+        // timeout. A direct upward gesture must not then look like a canceled
+        // press at ACTION_UP; the active, eligible pointer owns this feedback.
+        if(direct && eligible && y<originY && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f)) button.setPressed(true);
+        if(direct && eligible && originY-y>=18*density && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f)) armed=true;
         if(armed) {
             boolean next=originY-y>=18*density && Math.abs(x-originX)<=Math.max(24*density,button.getWidth()*0.8f);
             if(next!=selected) { selected=next; repaint.run(); }
-        } else if(Math.hypot(x-originX,y-originY)>12*density) {
+        } else if(direct?(Math.abs(x-originX)>Math.max(24*density,button.getWidth()*0.8f) || y-originY>12*density):Math.hypot(x-originX,y-originY)>12*density) {
             eligible=false;
             if(pending!=null) { main.removeCallbacks(pending); pending=null; }
         }
@@ -83,7 +93,7 @@ final class UpwardNumberTouch {
             active=true; eligible=true; pointer=event.getPointerId(0); downTime=event.getDownTime();
             beganAt=event.getEventTime(); originX=event.getX(); originY=event.getY(); long ticket=generation;
             pending=() -> { if(active && generation==ticket) { pending=null; arm(SystemClock.uptimeMillis()); } };
-            main.postAtTime(pending,beganAt+HOLD_MILLIS); return false;
+            if(!direct) main.postAtTime(pending,beganAt+HOLD_MILLIS); return false;
         }
         if(!active || event.getDownTime()!=downTime) return false;
         if(!usable() || armed && !button.isPressed()) { cancel(); return true; }
@@ -97,7 +107,9 @@ final class UpwardNumberTouch {
         if(action==MotionEvent.ACTION_MOVE) {
             move(x,y,event.getEventTime());
             // Once armed, preserve the native cap's feedback while the finger moves above it.
-            return armed;
+            // Keep an upward path starting near the cap edge alive until it
+            // reaches the threshold; native Button would otherwise cancel it.
+            return armed || (direct && eligible && y < originY);
         }
         if(action==MotionEvent.ACTION_UP) {
             move(x,y,event.getEventTime());

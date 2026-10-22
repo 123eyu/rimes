@@ -1,0 +1,5 @@
+{
+  "en-US": "Refines the keyboard layout and key appearance, with a consistent bottom row and a wider space bar. On ordinary layouts, Shift now supports one-letter capitals, double-tap Caps Lock and press-and-hold locking. Adds per-scheme input preferences, optional swipe-up numbers and punctuation, separate portrait and landscape keyboard heights, and a numeric keypad. Wubi four-code unique commit and fifth-code push can be configured independently. Preserves existing schemes and personal settings.",
+  "zh-Hans": "优化键盘布局与按键外观，统一底栏并加宽空格。普通键盘 Shift 支持单次大写、双击和长按锁定。新增按方案保存的输入习惯、可选上滑数字与标点、横竖屏独立高度和数字九宫格；五笔四码唯一上屏与第五码顶字可分别设置。保留现有方案与个人配置。",
+  "zh-Hant": "最佳化鍵盤配置與按鍵外觀，統一底列並加寬空白鍵。一般鍵盤 Shift 支援單次大寫、連點兩次和長按鎖定。新增依方案儲存的輸入習慣、可選上滑數字與標點、橫直向獨立高度和數字九宮格；五筆四碼唯一上屏與第五碼頂字可分別設定。保留現有方案與個人設定。"
+}

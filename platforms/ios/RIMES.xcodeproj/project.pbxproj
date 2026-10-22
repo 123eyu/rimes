@@ -32,6 +32,7 @@
 		3E11FAC0D97F5886CDCC43B0 /* ProxyTextDelivery.swift in Sources */ = {isa = PBXBuildFile; fileRef = FC2A712CDC7868E1C11B6DAA /* ProxyTextDelivery.swift */; };
 		3E147968371E22274FF45E11 /* KeycapButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4D3A2A8A76FA57F6693DE9 /* KeycapButton.swift */; };
 		3F6D30BE9B93765F7513FFCA /* ImportedSchemeRuntimeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 123F4B42F6E762634480E19C /* ImportedSchemeRuntimeTests.swift */; };
+		409DD4AAAD684383F089E84E /* InputHabitsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB13E0D12E6F201796E0A35 /* InputHabitsSupport.swift */; };
 		40A308237B37752BC3921A5D /* Yams in Frameworks */ = {isa = PBXBuildFile; productRef = 7142FC0CD1A3B50276E5662D /* Yams */; };
 		4961F6AE780BB5C06B8D4582 /* RimeSchemeImportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A42947E46873A8D30C3F89 /* RimeSchemeImportService.swift */; };
 		49D0B8B96EA1C4435CFC0051 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00BED878670FDB179561899 /* Settings.swift */; };
@@ -82,6 +83,7 @@
 		9ABD089AA4F808D9C5BA1339 /* OrdinaryKeyGestureTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 06C0F09B9A5EF78FFA6770D4 /* OrdinaryKeyGestureTests.swift */; };
 		9C05F8CB2F471FD771F050F1 /* CustomLayoutImportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 50AFBA8C6E253D3F6332B858 /* CustomLayoutImportTests.swift */; };
 		9DDCEEC4B5E330334E0E260B /* OrdinaryKeyGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7CCCF289C085F395EA64400A /* OrdinaryKeyGesture.swift */; };
+		9E71B58865D21BC4AE4F3A3A /* InputHabitsSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAB13E0D12E6F201796E0A35 /* InputHabitsSupport.swift */; };
 		9EFB23E60F08BF5DCF4EB5BB /* CustomLayoutStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EAE414E60D30449530F1531 /* CustomLayoutStore.swift */; };
 		9F7988AFA7A10E27BAA08DC1 /* TypingCardPhotos.swift in Sources */ = {isa = PBXBuildFile; fileRef = B7A65E8E32CA00E36C40C5E2 /* TypingCardPhotos.swift */; };
 		A1159714EFAF35148B97A0CB /* RimeSchemeInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = B5F0F1477B1FD14140DD20E9 /* RimeSchemeInstaller.swift */; };
@@ -121,6 +123,7 @@
 		E7C082A62E527CF06FCCA487 /* TextClipboardInteractionTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0166AF62B01E99472F3442D9 /* TextClipboardInteractionTests.swift */; };
 		E858892DBEC8D6E1149D9F05 /* KeyboardThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3FB5E8F813ABA8A7A97E00 /* KeyboardThemeStore.swift */; };
 		F359EC1C617DC64B36FCC428 /* KeyboardThemeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = FA3FB5E8F813ABA8A7A97E00 /* KeyboardThemeStore.swift */; };
+		F553268DAD35C52243E29957 /* InputHabitsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2E6C34C84404B467B8CBA27 /* InputHabitsView.swift */; };
 		F686A4851F036E5D6AAB61DD /* TypingStatsCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 958F4F15438623865AB6C313 /* TypingStatsCard.swift */; };
 		F6F9EC208A64EB40FE4C69D8 /* TextClipboardStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BAB30B72DA39744075D69DB9 /* TextClipboardStoreTests.swift */; };
 		F94D4DE0296412D481BA1321 /* KeycapButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE4D3A2A8A76FA57F6693DE9 /* KeycapButton.swift */; };
@@ -217,6 +220,7 @@
 		9EAE414E60D30449530F1531 /* CustomLayoutStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CustomLayoutStore.swift; sourceTree = "<group>"; };
 		A0B25EE4C04667E7ACE29BB0 /* ProductBrand.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProductBrand.swift; sourceTree = "<group>"; };
 		A1302FC599F155856408A4A0 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "zh-Hans.lproj/InfoPlist.strings"; sourceTree = "<group>"; };
+		A2E6C34C84404B467B8CBA27 /* InputHabitsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputHabitsView.swift; sourceTree = "<group>"; };
 		A4B419A120442590CD0E3351 /* RIMES.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RIMES.entitlements; sourceTree = "<group>"; };
 		A9E2AEDB4B02676AFDCA4C1D /* AssociationHistoryStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssociationHistoryStore.swift; sourceTree = "<group>"; };
 		B00BED878670FDB179561899 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
@@ -231,6 +235,7 @@
 		C382D89140A17145FACC18AB /* RIMES.app */ = {isa = PBXFileReference; includeInIndex = 0; lastKnownFileType = wrapper.application; path = RIMES.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C51625B30F552E79ED0A6F8C /* BufferPlugins.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BufferPlugins.swift; sourceTree = "<group>"; };
 		C72B7FA3BDA41A0631169E86 /* KeyboardGeometry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardGeometry.swift; sourceTree = "<group>"; };
+		CAB13E0D12E6F201796E0A35 /* InputHabitsSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputHabitsSupport.swift; sourceTree = "<group>"; };
 		CB66B9FBF335EB31A84DEEEC /* StandardKeyboardRuntimeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StandardKeyboardRuntimeTests.swift; sourceTree = "<group>"; };
 		CDCAEBF5822184603F11002A /* RimesApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RimesApp.swift; sourceTree = "<group>"; };
 		CF546DD392670D19A967F522 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = en.lproj/InfoPlist.strings; sourceTree = "<group>"; };
@@ -352,6 +357,7 @@
 				7BEEF17C48450623B6EDA9A4 /* DataManagementView.swift */,
 				89364C5C5A24F3CA907FAF2E /* DevelopmentSmoke.swift */,
 				FE341F6EF7C61004FFDE9930 /* Info.plist */,
+				A2E6C34C84404B467B8CBA27 /* InputHabitsView.swift */,
 				4B512948F71264382280A49E /* KeyboardAppearanceView.swift */,
 				F3EF7889B9E7C880F64CF004 /* OfficialPluginsView.swift */,
 				A4B419A120442590CD0E3351 /* RIMES.entitlements */,
@@ -373,6 +379,7 @@
 				C51625B30F552E79ED0A6F8C /* BufferPlugins.swift */,
 				9EAE414E60D30449530F1531 /* CustomLayoutStore.swift */,
 				8843154BA7094F00E538F6A7 /* DocumentIdentity.swift */,
+				CAB13E0D12E6F201796E0A35 /* InputHabitsSupport.swift */,
 				22C291228871A516B47926A7 /* KeyboardAppearanceStore.swift */,
 				F7F5A93D8EB1084348D7BBF9 /* KeyboardTheme.swift */,
 				FA3FB5E8F813ABA8A7A97E00 /* KeyboardThemeStore.swift */,
@@ -615,6 +622,8 @@
 				95ED71AEBE07B91599F16862 /* DataManagementView.swift in Sources */,
 				E614C97975864D22B5670551 /* DevelopmentSmoke.swift in Sources */,
 				E05C19918F44E90A49CBB47C /* DocumentIdentity.swift in Sources */,
+				9E71B58865D21BC4AE4F3A3A /* InputHabitsSupport.swift in Sources */,
+				F553268DAD35C52243E29957 /* InputHabitsView.swift in Sources */,
 				C13F6FE425476661A93F5F56 /* KeyboardAppearanceStore.swift in Sources */,
 				75BA6903D38B18DABD884E65 /* KeyboardAppearanceView.swift in Sources */,
 				69B1672DB0DA4A702CD47E8E /* KeyboardTheme.swift in Sources */,
@@ -696,6 +705,7 @@
 				C6DC870A22C6E3C67814072D /* CandidateStrip.swift in Sources */,
 				E72C1337034D54AE30ACC983 /* CustomLayoutStore.swift in Sources */,
 				802DBBE669D7024D9EB737DA /* DocumentIdentity.swift in Sources */,
+				409DD4AAAD684383F089E84E /* InputHabitsSupport.swift in Sources */,
 				A4903D0AB35165B2EC3A3B2C /* KeySurface.swift in Sources */,
 				AE09C60A0E0626DD4439C54C /* KeyboardAppearanceStore.swift in Sources */,
 				07278CA48F1961A0966D176D /* KeyboardFeedback.swift in Sources */,
@@ -842,7 +852,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 64;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				DEVELOPMENT_TEAM = 585J2TL9U6;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -864,7 +874,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../Vendor/ios-build/headers";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1010,7 +1020,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				CODE_SIGN_STYLE = Automatic;
 				COPY_PHASE_STRIP = NO;
-				CURRENT_PROJECT_VERSION = 63;
+				CURRENT_PROJECT_VERSION = 64;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 585J2TL9U6;
 				ENABLE_NS_ASSERTIONS = NO;
@@ -1026,7 +1036,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)/../../Vendor/ios-build/headers";
 				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
-				MARKETING_VERSION = 1.1.7;
+				MARKETING_VERSION = 1.1.8;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				OTHER_LDFLAGS = (

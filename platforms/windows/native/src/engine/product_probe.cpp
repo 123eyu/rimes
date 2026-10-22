@@ -352,6 +352,34 @@ int wmain(int argc, wchar_t** argv) {
       }
     }
   }
+  for (const auto* schema : {"wubi86", "lingxi_wubi"}) {
+    for (bool manual : {false, true}) for (bool fifth : {false, true}) {
+      const std::map<std::string, bool> overrides = {{"rimes_wubi_manual_commit", manual}, {"rimes_wubi_fifth_code", fifth}};
+      if (!engine.Configure(session, schema, false, false, false, &error, 9, overrides)) return 1;
+      EngineSnapshot state;
+      std::string committed;
+      for (const char key : std::string("voni")) {
+        if (!engine.ProcessKey(session, key, 0, &state, &error)) return 1;
+        committed += state.commit_text;
+      }
+      if (committed != (manual ? "" : "灵犀")) { std::cerr << "Independent four-code preference failed"; return 1; }
+      if (manual && fifth) {
+        if (!engine.ProcessKey(session, 'w', 0, &state, &error) || state.commit_text != "灵犀" || state.composition != "w") {
+          std::cerr << "Fifth-code continuation failed"; return 1;
+        }
+      }
+      if (!engine.Configure(session, schema, false, false, false, &error, 9, overrides)) return 1;
+      for (const char key : std::string("znihao")) {
+        if (!engine.ProcessKey(session, key, 0, &state, &error) || !state.commit_text.empty()) {
+          std::cerr << "Wubi preference committed reverse lookup"; return 1;
+        }
+      }
+    }
+    if (!engine.Configure(session, schema, false, false, false, &error)) return 1;
+    EngineSnapshot state;
+    for (const char key : std::string("voni")) if (!engine.ProcessKey(session, key, 0, &state, &error)) return 1;
+    if (state.commit_text != "灵犀") { std::cerr << "Reset to inherited Wubi default failed"; return 1; }
+  }
   for (const unsigned count : {1U, 5U, 9U}) {
     if (!engine.Configure(session, "rime_ice", false, false, false, &error, count)) return 1;
     EngineSnapshot page;

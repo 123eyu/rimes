@@ -649,8 +649,8 @@ void Runtime::CancelOpeningPlacement() {
   opening_at_ = 0;
   opening_caret_.reset();
 }
-void Runtime::SetImportedSchema(std::string schema) {
-  std::lock_guard lock(mutex_); imported_schema_ = std::move(schema);
+void Runtime::SetImportedSchema(std::string schema, std::string package) {
+  std::lock_guard lock(mutex_); imported_schema_ = std::move(schema); imported_package_ = std::move(package);
 }
 std::uint64_t Runtime::ConfigurationRevision() { std::lock_guard lock(mutex_); return settings_.revision; }
 void Runtime::AppearanceChanged() { std::lock_guard lock(mutex_); CaptureChanged(); Changed(); }
@@ -658,7 +658,7 @@ Settings Runtime::Configuration() {
   std::lock_guard lock(mutex_);
   auto effective = settings_;
   if (effective.schema == official::kChordSchema && plugins_.Grant(official::kChord).empty()) effective.schema = "rime_ice";
-  if (!imported_schema_.empty()) { effective.schema = imported_schema_; effective.imported_scheme = true; }
+  if (!imported_schema_.empty()) { effective.schema = imported_schema_; effective.imported_scheme = true; effective.input_scope = imported_package_; }
   return effective;
 }
 bool Runtime::Configure(Settings value, const std::wstring& key,

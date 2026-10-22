@@ -16,9 +16,11 @@
 #include "metrics.hpp"
 #include "buffer_metrics.hpp"
 #include "buffer_auto_send.hpp"
+#include "../../../../../Shared/InputHabits/rime_options.hpp"
 namespace rimes::windows::workbench {
 class Runtime {
  public:
+  std::function<std::vector<xsime::input::Switch>(const std::string&)> input_option_provider;
   using APIGenerator = std::function<bool(const Settings&, const Generation&,
       const std::function<bool(const std::string&)>&, const std::function<bool()>&, std::string*)>;
   struct TranslationResources {
@@ -55,7 +57,7 @@ class Runtime {
   Settings Configuration();
   std::uint64_t ConfigurationRevision();
   void AppearanceChanged();
-  void SetImportedSchema(std::string schema);
+  void SetImportedSchema(std::string schema, std::string package = "imported");
   bool Configure(Settings value, const std::wstring& key, bool replace_key,
                  std::string* error, const std::map<std::string, std::wstring>& secrets = {});
   void Toggle(std::uint32_t foreground_process);
@@ -131,6 +133,7 @@ class Runtime {
   std::map<std::uint64_t, Entry> sessions_;
   Model model_;
   std::string imported_schema_;
+  std::string imported_package_;
   Settings settings_;
   OfficialPluginStore plugins_;
   std::shared_ptr<metrics::Service> metrics_ = std::make_shared<metrics::Service>();

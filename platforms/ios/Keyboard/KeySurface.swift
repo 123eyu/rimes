@@ -19,6 +19,8 @@ final class KeySurface: UIView {
     var numeric = false { didSet { retire(); setNeedsLayout() } }
     var shifted = false { didSet { if oldValue != shifted { retire() }; setNeedsDisplay() } }
     var englishInput = false { didSet { if oldValue != englishInput { retire() }; updateLanguageButton(); setNeedsDisplay() } }
+    var directSwipeSymbols = false { didSet { if oldValue != directSwipeSymbols { cancel() } } }
+    var numericNineGrid = false { didSet { if oldValue != numericNineGrid { cancel(); setNeedsLayout() } } }
     var longPressSwipeSymbols = false { didSet { if oldValue != longPressSwipeSymbols { cancel(); setNeedsLayout() } } }
     var chordLayout: ChordLayout = .orthogonal { didSet { if oldValue != chordLayout { retire(); setNeedsLayout() } } }
     var resolvesChords: Bool { chordMode && !numeric && !emojiMode && !shifted && !englishInput }
@@ -158,7 +160,7 @@ final class KeySurface: UIView {
                 else if let button = customFunctionViews[item.key.action] { button.frame = frame; button.isHidden = false }
             }
         } else if usesStandardLayout, let standardMode {
-            let geometry = StandardKeyboardGeometry.make(width: bounds.width, mode: standardMode, landscape: bounds.width > 590, chinese: chineseNumberPages)
+            let geometry = StandardKeyboardGeometry.make(width: bounds.width, mode: standardMode, landscape: bounds.width > 590, chinese: chineseNumberPages, numericNineGrid: numericNineGrid, availableHeight: bounds.height)
             boxes = geometry.keys.map { ($0.text, $0.frame) }
             labels = Dictionary(uniqueKeysWithValues: geometry.keys.map { ($0.text, $0.label) })
             standardFunctionViews.values.forEach { $0.isHidden = true }
@@ -216,16 +218,24 @@ final class KeySurface: UIView {
             context.saveGState(); context.setAlpha(dimmed ? 0.30 : 1)
             let cap = KeycapStyle.capRect(in: box, pressed: active, compact: chordMode && !numeric)
             KeycapStyle.draw(in: box, pressed: active, compact: chordMode && !numeric, theme: theme)
-            let value = labels[key] ?? key.uppercased()
-            let nativeFont = !chordMode && skin == .system
-            let size: CGFloat = standardMode == .nineKey ? 20 : nativeFont ? 24 : 21
+            let base = labels[key] ?? key.uppercased()
+            let value = shifted && !numeric && base.count == 1 ? base.uppercased() : base
+            // Apple's font in every skin; chord layouts keep their compact monospaced caps.
+            let nativeFont = !chordMode
+            let size: CGFloat = standardMode == .nineKey ? 20 : nativeFont ? KeycapStyle.letterFontSize : 21
             let mark = chineseNumberPages && value.unicodeScalars.contains { $0.value > 0x7F }
             let font = mark ? UIFont.chineseMarks(ofSize: size, weight: nativeFont ? .regular : .medium)
                 : nativeFont ? UIFont.systemFont(ofSize: size) : UIFont.monospacedSystemFont(ofSize: size, weight: .medium)
             let fittedFont = font.withSize(min(size, max(1, floor(size * cap.height / font.lineHeight)), max(1, floor(size * (cap.width - 2) / max(1, value.size(withAttributes: [.font: font]).width)))))
             let attr: [NSAttributedString.Key: Any] = [.font: fittedFont, .foregroundColor: active ? theme.palette.accentInk : theme.palette.ink]
             let textSize = value.size(withAttributes: attr)
-            value.draw(at: CGPoint(x: cap.midX - textSize.width / 2, y: cap.midY - textSize.height / 2), withAttributes: attr)
+            // Apple centres a lowercase letter's x-height, and a capital's or
+            // digit's cap height, in the key, not the whole line box.
+            let glyphBox: CGFloat? = value.count != 1 || mark ? nil
+                : value.first!.isLowercase ? fittedFont.xHeight
+                : value.first!.isUppercase || value.first!.isNumber ? fittedFont.capHeight : nil
+            let y = glyphBox.map { cap.midY + $0 / 2 - fittedFont.ascender } ?? cap.midY - textSize.height / 2
+            value.draw(at: CGPoint(x: cap.midX - textSize.width / 2, y: y), withAttributes: attr)
             if let alternate = alternate(for: key) {
                 let hint: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: min(11, cap.height * 0.24)), .foregroundColor: (active ? theme.palette.accentInk : theme.palette.ink).withAlphaComponent(0.55)]
                 let hintSize = alternate.size(withAttributes: hint)
@@ -267,8 +277,8 @@ final class KeySurface: UIView {
     }
     private func beginOrdinary(_ id: ObjectIdentifier, key: String, point: CGPoint, at time: TimeInterval, scheduleHold: Bool = true) {
         let alternate = alternate(for: key)
-        ordinary[id] = .init(key: key, origin: point, at: time, alternate: alternate, keyWidth: boxes.first { $0.0 == key }?.1.width ?? 32)
-        guard alternate != nil, scheduleHold else { return }
+        ordinary[id] = .init(key: key, origin: point, at: time, alternate: alternate, keyWidth: boxes.first { $0.0 == key }?.1.width ?? 32, direct: directSwipeSymbols)
+        guard alternate != nil, scheduleHold, !directSwipeSymbols else { return }
         let timer = Timer(timeInterval: OrdinaryKeyGesture.holdDuration, repeats: false) { [weak self] _ in
             guard let self, self.ordinary[id]?.arm(at: ProcessInfo.processInfo.systemUptime) == true else { return }
             self.holdTimers.removeValue(forKey: id)

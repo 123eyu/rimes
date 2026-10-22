@@ -87,14 +87,6 @@ enum ClipboardAutoPaste {
 
     static var isAvailable: Bool { enabled && isPermitted }
 
-    /// Shows the system Accessibility prompt. Only call this from an explicit
-    /// user action, never from the paste path.
-    @discardableResult
-    static func requestPermission() -> Bool {
-        let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
-        return AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
-    }
-
     /// Schedules the paste for just after the clipboard window closes. Safe to
     /// call unconditionally; it reports what it did and does nothing else.
     ///

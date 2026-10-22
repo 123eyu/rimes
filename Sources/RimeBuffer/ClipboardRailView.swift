@@ -214,6 +214,18 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
     private let stateLabel = NSTextField(labelWithString: "")
     private let hintLabel = NSTextField(labelWithString: "")
     private var cardButtons: [UUID: ClipboardHistoryCardButton] = [:]
+    private var cardPool: [ClipboardHistoryCardButton] = []
+    /// Set while `reloadFromModel` adjusts the selection itself, so the
+    /// model's change notification does not start a second, nested reload.
+    private var isApplyingReloadSelection = false
+    /// Smoke-only: how many card views and full pane reloads were made.
+    private(set) var cardCreationsForSmoke = 0
+    private(set) var reloadsForSmoke = 0
+    /// Smoke-only: text still held by parked (pooled) cards.
+    var parkedCardTextForSmoke: [String] {
+        cardPool.flatMap(\.retainedTextForSmoke)
+    }
+    var parkedCardsAreHiddenForSmoke: Bool { cardPool.allSatisfy(\.isHidden) }
     private var modelObserver: UUID?
     private var appearanceObserver: NSObjectProtocol?
     private var viewportObserver: NSObjectProtocol?
@@ -269,7 +281,10 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
         ))
         capturesView.enabled = library.usesLiveCaptureHistory
         configureView()
-        modelObserver = model.addObserver { [weak self] in self?.reloadFromModel() }
+        modelObserver = model.addObserver { [weak self] in
+            guard let self, !self.isApplyingReloadSelection else { return }
+            self.reloadFromModel()
+        }
         library.onChange = { [weak self] in
             MainActor.assumeIsolated {
                 self?.concealCardPassword()
@@ -667,6 +682,7 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
     }
 
     func reloadFromModel() {
+        reloadsForSmoke += 1
         let protectedContent = model.isContentShielded
         if protectedContent || !model.captureState.windowVisible {
             concealCardPassword()
@@ -722,6 +738,7 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
         let visibleIDs = Set(visibleItems.map(\.id))
         let visibleSelectedIDs = model.selectedIDs.intersection(visibleIDs)
         let focusedIDIsVisible = model.selectedID.map(visibleIDs.contains) ?? false
+        isApplyingReloadSelection = true
         if visibleSelectedIDs.isEmpty {
             _ = model.select(id: visibleItems[0].id)
             selectionAnchorID = visibleItems[0].id
@@ -734,6 +751,7 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
                 focusedID: orderedSelection.first
             )
         }
+        isApplyingReloadSelection = false
         stateContainer.isHidden = true
         scrollView.isHidden = false
         reconcileCards(items: visibleItems)
@@ -1023,11 +1041,11 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
         )
         for id in savedCardButtons.keys where !validIDs.contains(id) {
             if passwordCardID == id { concealCardPassword() }
-            savedCardButtons.removeValue(forKey: id)?.removeFromSuperview()
+            recycleCard(savedCardButtons.removeValue(forKey: id))
         }
         let ordered = entries.enumerated().map { index, entry -> ClipboardHistoryCardButton in
             let button = savedCardButtons[entry.id]
-                ?? ClipboardHistoryCardButton(itemID: entry.id)
+                ?? makeCard(itemID: entry.id)
             button.target = self
             button.action = #selector(savedCardPressed(_:))
             let id = entry.id
@@ -1050,8 +1068,8 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
     private func removeAllSavedCards() {
         concealCardPassword()
         guard !savedCardButtons.isEmpty else { return }
-        savedCardButtons.values.forEach { $0.removeFromSuperview() }
-        savedCardButtons.removeAll(keepingCapacity: false)
+        savedCardButtons.values.forEach(recycleCard)
+        savedCardButtons.removeAll(keepingCapacity: true)
         visibleSavedEntryByID.removeAll(keepingCapacity: false)
         cardDocumentView.setCards([], viewportWidth: scrollView.contentSize.width)
     }
@@ -1631,10 +1649,10 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
         let validIDs = Set(items.map(\.id))
         visibleItemByID = Dictionary(uniqueKeysWithValues: items.map { ($0.id, $0) })
         for id in cardButtons.keys.filter({ !validIDs.contains($0) }) {
-            cardButtons.removeValue(forKey: id)?.removeFromSuperview()
+            recycleCard(cardButtons.removeValue(forKey: id))
         }
         let ordered = items.enumerated().map { index, item -> ClipboardHistoryCardButton in
-            let button = cardButtons[item.id] ?? ClipboardHistoryCardButton(itemID: item.id)
+            let button = cardButtons[item.id] ?? makeCard(itemID: item.id)
             button.target = self
             button.action = #selector(cardPressed(_:))
             cardButtons[item.id] = button
@@ -1668,9 +1686,36 @@ final class ClipboardHistoryPaneView: NSView, NSTextFieldDelegate {
         cardDocumentView.setCards(ordered, viewportWidth: scrollView.contentSize.width)
     }
 
+    private func makeCard(itemID: UUID) -> ClipboardHistoryCardButton {
+        if let card = cardPool.popLast() {
+            card.prepareForReuse(itemID: itemID)
+            return card
+        }
+        cardCreationsForSmoke += 1
+        return ClipboardHistoryCardButton(itemID: itemID)
+    }
+
+    /// Building a card costs a layout pass, and on macOS 27 every view added
+    /// fresh to the long-lived card document leaves AppKit dependency records
+    /// behind for the life of the process. Cards are therefore scrubbed and
+    /// parked, never dropped, so reopening the rail reuses them. A parked card
+    /// stays a hidden subview of the document: re-attaching 200 views to the
+    /// window costs more than everything else a reopen does.
+    private func recycleCard(_ card: ClipboardHistoryCardButton?) {
+        guard let card else { return }
+        card.scrubForReuse()
+        guard card.superview === cardDocumentView,
+              cardPool.count < ClipboardHistoryWindowMetrics.maximumRenderedCards else {
+            card.removeFromSuperview()
+            return
+        }
+        card.isHidden = true
+        cardPool.append(card)
+    }
+
     private func removeAllCards() {
-        cardButtons.values.forEach { $0.removeFromSuperview() }
-        cardButtons.removeAll(keepingCapacity: false)
+        cardButtons.values.forEach(recycleCard)
+        cardButtons.removeAll(keepingCapacity: true)
         visibleItemByID.removeAll(keepingCapacity: false)
         cardDocumentView.setCards([], viewportWidth: scrollView.contentSize.width)
         scrollView.isHidden = true
@@ -2039,7 +2084,10 @@ private final class ClipboardHistoryCardDocumentView: NSView {
 
     func setCards(_ cards: [ClipboardHistoryCardButton], viewportWidth: CGFloat) {
         self.cards = cards
-        cards.filter { $0.superview !== self }.forEach(addSubview)
+        for card in cards {
+            if card.superview !== self { addSubview(card) }
+            card.isHidden = false
+        }
         layoutCards(viewportWidth: viewportWidth)
     }
 
@@ -2086,7 +2134,7 @@ private final class ClipboardHistoryHorizontalScrollView: NSScrollView {
 }
 
 private final class ClipboardHistoryCardButton: NSButton {
-    let itemID: UUID
+    private(set) var itemID: UUID
     private let quickLabel = NSTextField(labelWithString: "")
     private let sourceIconView = NSImageView()
     private let sourceLabel = NSTextField(labelWithString: "")
@@ -2112,8 +2160,10 @@ private final class ClipboardHistoryCardButton: NSButton {
             needsLayout = true
         }
     }
-    private let editButton = ClipboardFirstMouseButton(title: "", target: nil, action: nil)
-    private let copyButton = ClipboardFirstMouseButton(title: "", target: nil, action: nil)
+    // `init(title:target:action:)` sizes itself to fit, which costs a full
+    // layout pass per button; these are image-only and laid out by `layout()`.
+    private let editButton = ClipboardFirstMouseButton(frame: .zero)
+    private let copyButton = ClipboardFirstMouseButton(frame: .zero)
     private let savedMarker = NSImageView()
     private var editable = false
     private var inCapsule = false
@@ -2159,6 +2209,7 @@ private final class ClipboardHistoryCardButton: NSButton {
             $0.setAccessibilityElement(false)
             addSubview($0)
         }
+        editButton.title = ""
         editButton.image = RimeUI.symbol("ellipsis", pointSize: 12, weight: .semibold)
         editButton.image?.isTemplate = true
         editButton.imagePosition = .imageOnly
@@ -2172,6 +2223,7 @@ private final class ClipboardHistoryCardButton: NSButton {
         editButton.isHidden = true
         editButton.identifier = NSUserInterfaceItemIdentifier("capsule-card-menu")
         addSubview(editButton)
+        copyButton.title = ""
         copyButton.image = RimeUI.symbol("doc.on.doc", pointSize: 12, weight: .semibold)
         copyButton.imagePosition = .imageOnly
         copyButton.isBordered = false
@@ -2197,6 +2249,45 @@ private final class ClipboardHistoryCardButton: NSButton {
 
     required init?(coder: NSCoder) { fatalError() }
     override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+
+    /// Smoke-only: every string the card shows or exposes to accessibility.
+    var retainedTextForSmoke: [String] {
+        [quickLabel.stringValue, sourceLabel.stringValue, timeLabel.stringValue,
+         previewLabel.stringValue, toolTip ?? "", accessibilityLabel() ?? "",
+         accessibilityHelp() ?? ""].filter { !$0.isEmpty }
+    }
+
+    /// Retargets a pooled card. The next `update` fills in its content.
+    func prepareForReuse(itemID: UUID) {
+        self.itemID = itemID
+    }
+
+    /// Drops everything the card shows or would act on before it is parked
+    /// in the reuse pool, so a hidden or protected rail keeps no clipboard or
+    /// Capsule content alive in its views.
+    func scrubForReuse() {
+        passwordContent = nil
+        makeActionsMenu = nil
+        onCopy = nil
+        target = nil
+        action = nil
+        [quickLabel, sourceLabel, timeLabel, previewLabel].forEach { $0.stringValue = "" }
+        setSourceIcon(nil)
+        previewImageView.image = nil
+        savedTitle = nil
+        savedPreview = nil
+        toolTip = nil
+        setAccessibilityLabel(nil)
+        setAccessibilityHelp(nil)
+        setAccessibilitySelected(false)
+        hovered = false
+        selectedItem = false
+        focusedItem = false
+        editable = false
+        inCapsule = false
+        allowsThumbnail = false
+        itemKind = .unknown
+    }
 
     /// The preview label alone covers most of the card, and a plain
     /// NSTextField consumes the click that lands on it rather than passing it

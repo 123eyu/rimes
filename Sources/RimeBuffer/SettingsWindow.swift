@@ -2,6 +2,12 @@ import Cocoa
 import CryptoKit
 import CRimeBridge
 import UniformTypeIdentifiers
+import RimesCore
+
+private final class InputHabitPicker: NSPopUpButton {
+    var schemaScope = ""
+    var optionName = ""
+}
 
 /// Native counterparts of the React SettingsSurface tokens. The Settings
 /// background intentionally sits outside `RimeThemePalette`: candidate and
@@ -930,6 +936,20 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         window?.makeKeyAndOrderFront(nil)
         window?.contentView?.layoutSubtreeIfNeeded()
         window?.contentView?.display()
+        return true
+    }
+
+    /// Closes Settings when it is open on the current Space, so the shortcut
+    /// that opens it also dismisses it. Goes through `performClose` so the
+    /// same unsaved-edit confirmation as the close button still applies; a
+    /// window left on another Space is not closed but brought here by `show()`.
+    @discardableResult
+    func closeIfShownOnActiveSpace() -> Bool {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard let window, window.isVisible, window.isOnActiveSpace else {
+            return false
+        }
+        window.performClose(nil)
         return true
     }
 
@@ -2727,7 +2747,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         default:
             if let imported = MacRimeSchemeLibrary.shared.runtimePackage {
                 return contentColumn([dictionaryWarning, sectionLabel("当前使用：\(imported.name)"),
-                    caption("从方案管理切换包或恢复内置方案；各方案包的学习词库独立保存。"), importButton])
+                    caption("从方案管理切换包或恢复内置方案；各方案包的学习词库独立保存。"), importButton,
+                    inputHabitsView(schema: MacRimeSchemeLibrary.shared.runtimeSelection?.schemaID ?? "")])
             }
             let chordStatus = chordSchemaStatusView()
             let recovery = caption(ChordKeymapActivationCoordinator.shared.recoveryMessage ?? "")
@@ -2739,11 +2760,46 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                 chordStatus,
                 recovery,
                 inputEncodingSelectionView(),
+                inputHabitsView(schema: InputConfigurationStore.shared.selectedSchemaID),
             ])
         }
     }
 
     @objc private func openSchemeManager() { MacRimeSchemeManager.shared.show() }
+
+    private func inputHabitsView(schema: String) -> NSView {
+        let values = rimeEngine.inputHabitsStore.load()
+        let scope = rimeEngine.inputHabitsScope(schema)
+        var rows: [NSView] = [sectionLabel("当前方案的输入习惯")]
+        for option in rimeEngine.inputOptions(schema: schema) {
+            let picker = InputHabitPicker(frame: .zero, pullsDown: false)
+            picker.schemaScope = scope; picker.optionName = option.name
+            picker.addItems(withTitles: ["跟随方案", option.off, option.on])
+            picker.selectItem(at: values[scope, option.name].map { $0 ? 2 : 1 } ?? 0)
+            picker.target = self; picker.action = #selector(inputHabitChanged(_:))
+            picker.identifier = .init("settings.input.habit.\(option.name)")
+            let title = NSTextField(labelWithString: option.off + " / " + option.on)
+            let row = NSStackView(views: [title, flexSpacer(), picker])
+            row.orientation = .horizontal; row.spacing = 12
+            rows.append(row)
+        }
+        rows.append(caption("只显示本方案提供的开关。修改在当前组字结束后生效；选择“跟随方案”可撤销覆盖，原方案文件保持不变。"))
+        return contentColumn(rows)
+    }
+
+    @objc private func inputHabitChanged(_ sender: InputHabitPicker) {
+        do {
+            try rimeEngine.inputHabitsStore.set(sender.indexOfSelectedItem == 0 ? nil : sender.indexOfSelectedItem == 2,
+                schema: sender.schemaScope, option: sender.optionName)
+            rimeEngine.reloadInputHabits()
+            settingsStatusLabel.stringValue = "已保存输入习惯，当前组字结束后应用"
+        } catch {
+            let previous = rimeEngine.inputHabitsStore.load()[sender.schemaScope, sender.optionName]
+            sender.selectItem(at: previous.map { $0 ? 2 : 1 } ?? 0)
+            settingsStatusLabel.stringValue = "输入习惯未保存，原设置保持不变"
+            settingsStatusLabel.textColor = .systemRed
+        }
+    }
 
     private func inputModeCard(title: String,
                                detail: String,

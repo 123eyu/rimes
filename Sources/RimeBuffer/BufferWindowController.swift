@@ -7065,8 +7065,18 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
         let fallback = screens.first { $0.frame.contains(mouse) }?.visibleFrame
             ?? NSScreen.main?.visibleFrame
             ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        // The frame still carries last session's height: a first open flips
+        // the toolbar open, switches layout mode or adds the metrics row
+        // without resizing, and `applyClampedFrame` below snaps the height to
+        // the canonical one while keeping the bottom edge. Placing against the
+        // stale height would leave the real panel overlapping the field (or
+        // detached from it) by the difference, so place against the height
+        // the panel will actually have.
+        let heightBeforeOpening = panel.frame.height
+        var placementFrame = panel.frame
+        placementFrame.size.height = canonicalPanelHeight
         let placement = BufferWindowGeometry.openingPlacement(
-            currentFrame: panel.frame,
+            currentFrame: placementFrame,
             targetRect: focusedAnchor?.rect,
             boxRect: focusedAnchor?.box,
             visibleFrames: visibleFrames,
@@ -7103,7 +7113,9 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
             + "caret=\(focusedAnchor != nil) "
             + "box=\(focusedAnchor?.box != nil) "
             + "alignPref=\(FocusedInputBoxProbe.alignmentEnabled) "
-            + "axGranted=\(FocusedInputBoxProbe.isPermitted)"
+            + "axGranted=\(FocusedInputBoxProbe.isPermitted) "
+            + "heightBefore=\(Int(heightBeforeOpening)) "
+            + "height=\(Int(canonicalPanelHeight))"
         )
     }
 

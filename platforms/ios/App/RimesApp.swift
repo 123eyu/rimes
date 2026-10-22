@@ -49,6 +49,7 @@ struct HomeView: View {
                     NavigationLink { TypingStatsCardView() } label: { Label(L("打字统计卡片", "Typing stats card"), systemImage: "square.grid.3x3") }
                 }
                 Section(L("你的输入方式", "Your typing")) {
+                    NavigationLink { InputHabitsView() } label: { Label(L("输入习惯", "Input preferences"), systemImage: "slider.horizontal.3") }
                     Picker(L("默认方案", "Default scheme"), selection: $model.value.scheme) { ForEach(InputScheme.allCases) { Text($0.title).tag($0) } }.onChange(of: model.value.scheme) { _,_ in do { try RimeSchemeStore().activate(nil); model.value.schemeSelectionRevision = UUID(); model.save() } catch { model.error = error.localizedDescription } }
                     NavigationLink { ChordProfilesView() } label: { Label(L("滑动并击与键位", "Slide chords & mappings"), systemImage: "hand.draw") }
                     NavigationLink { KeyboardAppearanceView() } label: { Label(L("键盘布局与换肤", "Keyboard layout & skins"), systemImage: "keyboard") }

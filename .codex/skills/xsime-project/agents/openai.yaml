@@ -1,0 +1,4 @@
+interface:
+  display_name: "XSIME Project"
+  short_description: "XSIME five-platform IME development guide"
+  default_prompt: "Use $xsime-project to develop XSIME on the affected platforms, verify through the platform CI workflows, and preserve compatibility identifiers, user data, and each platform's text-delivery contract."

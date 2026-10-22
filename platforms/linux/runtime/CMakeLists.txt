@@ -326,7 +326,7 @@ target_include_directories(RimesPracticeUI PUBLIC ../typing-practice/ui PRIVATE 
 target_link_libraries(RimesPracticeUI PUBLIC RimesStatisticsUI RimesPracticeCore)
 target_compile_options(RimesPracticeUI PRIVATE -Wall -Wextra -Wpedantic -Werror)
 add_executable(rimes-settings ui/settings.cpp ui/application_update.cpp)
-target_link_libraries(rimes-settings PRIVATE PkgConfig::RuntimeCurl RimesDesktopUI RimesCodex RimesClaude RimesChordUI RimesStatisticsUI RimesPracticeUI)
+target_link_libraries(rimes-settings PRIVATE PkgConfig::RuntimeCurl RimesDesktopUI RimesCodex RimesClaude RimesChordUI RimesStatisticsUI RimesPracticeUI RimesSchemeImport yaml-cpp::yaml-cpp)
 target_compile_definitions(rimes-settings PRIVATE RIMES_PRODUCT_VERSION="${RIMES_PRODUCT_VERSION}")
 add_dependencies(rimes-settings rimes-translation)
 target_compile_options(rimes-settings PRIVATE -Wall -Wextra -Wpedantic -Werror)

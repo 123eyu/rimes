@@ -51,14 +51,6 @@ enum FocusedInputBoxProbe {
     /// own panel.
     static var isPermitted: Bool { AXIsProcessTrusted() }
 
-    /// Shows the system Accessibility prompt. Only call this from an explicit
-    /// user action, never from the opening path.
-    @discardableResult
-    static func requestPermission() -> Bool {
-        let prompt = kAXTrustedCheckOptionPrompt.takeUnretainedValue()
-        return AXIsProcessTrustedWithOptions([prompt: true] as CFDictionary)
-    }
-
     /// Frame of the focused text box in Cocoa screen coordinates, or nil when
     /// alignment is off, permission is absent, the host exposes no usable text
     /// element, or the element belongs to this input method itself.

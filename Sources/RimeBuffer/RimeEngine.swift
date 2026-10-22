@@ -1,5 +1,6 @@
 import Foundation
 import CRimeBridge
+import RimesCore
 import Darwin
 
 enum RimeFileBackedCacheMissReason: String, Equatable {
@@ -441,6 +442,7 @@ final class RimeEngine {
     func createSession() -> UInt64 { BBRimeCreateSession() }
     func destroySession(_ session: UInt64) {
         guard session != 0 else { return }
+        inputHabitSessions.removeValue(forKey: session)
         BBRimeDestroySession(session)
     }
     func sessionExists(_ session: UInt64) -> Bool {
@@ -448,7 +450,8 @@ final class RimeEngine {
     }
 
     func processKey(_ keycode: Int32, mask: Int32 = 0, session: UInt64) -> Bool {
-        BBRimeProcessKey(session, keycode, mask)
+        applyPendingInputHabits(session: session)
+        return BBRimeProcessKey(session, keycode, mask)
     }
     func commitComposition(session: UInt64) -> Bool { BBRimeCommitComposition(session) }
     func clearComposition(session: UInt64) { BBRimeClearComposition(session) }
@@ -463,7 +466,70 @@ final class RimeEngine {
         name.withCString { BBRimeSetOption(session, $0, value) }
     }
     func selectSchema(_ id: String, session: UInt64) -> Bool {
-        id.withCString { BBRimeSelectSchema(session, $0) }
+        // Rime keeps switches without a reset value when changing schemes.
+        // Restore only our overrides before selecting, so they cannot leak.
+        if let previous = inputHabitSessions[session], !previous.applied.isEmpty {
+            BBRimeClearComposition(session)
+            for name in previous.applied { if let value = previous.baseline[name] { setOption(name, value, session: session) } }
+        }
+        let selected = id.withCString { BBRimeSelectSchema(session, $0) }
+        if selected { inputHabitSessions.removeValue(forKey: session); prepareInputHabits(schema: id, session: session) }
+        return selected
+    }
+
+    var inputHabitsStore: InputHabitsStore { InputHabitsStore(root: RimesPaths.userDirectory()) }
+    func inputHabitsScope(_ schema: String) -> String {
+        (MacRimeSchemeLibrary.shared.runtimePackage?.id ?? "builtin") + ":" + schema
+    }
+    func inputOptions(schema: String) -> [InputHabitOption] {
+        var values = [BBRimeInputOption](repeating: .init(), count: 128)
+        let count = schema.withCString { BBRimeGetInputOptions($0, &values, 128) }
+        return values.prefix(Int(count)).map { value in
+            var value = value
+            func text<T>(_ tuple: inout T) -> String {
+                withUnsafePointer(to: &tuple) { $0.withMemoryRebound(to: CChar.self, capacity: MemoryLayout<T>.size) { String(cString: $0) } }
+            }
+            return .init(name: text(&value.name), off: text(&value.off), on: text(&value.on))
+        }
+    }
+    private struct HabitSession {
+        var schema: String
+        var baseline: [String: Bool]
+        var applied: Set<String> = []
+        var pending = true
+    }
+    private var inputHabitSessions: [UInt64: HabitSession] = [:]
+    private var inputHabits: InputHabits?
+    func reloadInputHabits() {
+        inputHabits = inputHabitsStore.load()
+        for session in Array(inputHabitSessions.keys) {
+            inputHabitSessions[session]?.pending = true
+            applyPendingInputHabits(session: session)
+        }
+    }
+    private func prepareInputHabits(schema: String, session: UInt64) {
+        guard !schema.isEmpty, inputHabitSessions[session]?.schema != schema else { return }
+        if let previous = inputHabitSessions[session] {
+            for name in previous.applied {
+                let reset = schema.withCString { schema in name.withCString { BBRimeSchemaResetsOption(schema, $0) } }
+                if !reset, let value = previous.baseline[name] { setOption(name, value, session: session) }
+            }
+        }
+        let baseline = Dictionary(uniqueKeysWithValues: inputOptions(schema: schema).map { ($0.name, getOption($0.name, session: session)) })
+        inputHabitSessions[session] = .init(schema: schema, baseline: baseline)
+        applyPendingInputHabits(session: session)
+    }
+    private func applyPendingInputHabits(session: UInt64) {
+        guard var state = inputHabitSessions[session], state.pending,
+              getContext(session: session).preedit.isEmpty else { return }
+        if inputHabits == nil { inputHabits = inputHabitsStore.load() }
+        let values = inputHabits?.schemes[inputHabitsScope(state.schema)] ?? [:]
+        for (name, baseline) in state.baseline {
+            if let value = values[name] { setOption(name, value, session: session) }
+            else if state.applied.contains(name) { setOption(name, baseline, session: session) }
+        }
+        state.applied = Set(values.keys).intersection(state.baseline.keys); state.pending = false
+        inputHabitSessions[session] = state
     }
 
     /// One-lock, caller-owned full commit previews for a private inference
@@ -741,6 +807,10 @@ final class RimeEngine {
         var m = RimeStatusModel()
         m.schemaId = st.schemaId.map { String(cString: $0) } ?? ""
         m.schemaName = st.schemaName.map { String(cString: $0) } ?? ""
+        if inputHabitSessions[session]?.schema != m.schemaId {
+            prepareInputHabits(schema: m.schemaId, session: session)
+            _ = BBRimeGetStatus(session, &st)
+        }
         m.asciiMode = st.asciiMode
         m.fullShape = st.fullShape
         m.simplified = st.simplified

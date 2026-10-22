@@ -25,9 +25,14 @@ final class KeyboardSurface extends ViewGroup {
         default void onAlternate(String text) {}
         /** Held repeats skip a busy interval; ordinary taps keep their serial ordering. */
         default boolean canRepeatDelete() { return true; }
+        default boolean shiftLocked() { return false; }
+        default void holdShift() {}
     }
     private KeyboardLayout.Mode mode;
     private boolean chinese;
+    private String symbolGesture="hold";
+    private boolean numericGrid,wideSpace=true;
+    private int portraitHeight=100,landscapeHeight=100;
     private List<KeyboardLayout.Key> frames;
     private final Handler handler;
     private KeyboardTheme theme=KeyboardTheme.ALL[0];
@@ -36,6 +41,14 @@ final class KeyboardSurface extends ViewGroup {
     private final List<UpwardNumberTouch> alternates=new ArrayList<>();
     private final Paint hintPaint=new Paint(Paint.ANTI_ALIAS_FLAG);
     KeyboardSurface(Context context,Handler handler) { super(context); this.handler=handler; setLayoutDirection(LAYOUT_DIRECTION_LTR); }
+    void applyPreferences(KeyboardSettings settings) {
+        String gesture=settings.symbolGesture(); boolean grid=settings.numericGrid(), wide=settings.wideSpace();
+        if(!gesture.equals(symbolGesture) || grid!=numericGrid || wide!=wideSpace) { cancelTouches(); mode=null; }
+        symbolGesture=gesture; numericGrid=grid; wideSpace=wide;
+        portraitHeight=settings.heightPercent(false); landscapeHeight=settings.heightPercent(true);
+        requestLayout();
+    }
+    float desiredHeight() { return KeyboardLayout.height(landscape())*(landscape()?landscapeHeight:portraitHeight)/100f; }
     void render(KeyboardLayout.Mode mode,KeyboardTheme theme) { render(mode,false,theme); }
     void render(KeyboardLayout.Mode mode,boolean chinese,KeyboardTheme theme) {
         // Letter-key alternates also depend on language; retire them when it changes.
@@ -46,13 +59,14 @@ final class KeyboardSurface extends ViewGroup {
         themeUiMode=uiMode;
         if(rebuild) {
             this.mode=mode; this.chinese=chinese; removeAllViews(); deleteRepeats.clear(); alternates.clear();
-            frames=KeyboardLayout.keys(400,landscape(),mode,chinese);
+            frames=KeyboardLayout.keys(400,landscape(),mode,chinese,numericGrid,wideSpace);
             for(KeyboardLayout.Key key:frames) {
                 KeyButton button=new KeyButton(getContext());
                 button.setOnClickListener(v -> handler.press(key));
+                if(key.action==KeyboardLayout.Action.SHIFT) button.setOnLongClickListener(v -> { handler.holdShift(); return true; });
                 if(key.action==KeyboardLayout.Action.DELETE) deleteRepeats.add(new DeleteRepeatTouch(button,handler::canRepeatDelete));
                 String alternate=alternateFor(key);
-                if(alternate!=null) alternates.add(new UpwardNumberTouch(button,alternate,() -> handler.onAlternate(alternate),this::invalidate));
+                if(alternate!=null) alternates.add(new UpwardNumberTouch(button,alternate,() -> handler.onAlternate(alternate),this::invalidate,"swipe".equals(symbolGesture)));
                 addView(button);
             }
             requestLayout();
@@ -61,12 +75,12 @@ final class KeyboardSurface extends ViewGroup {
             KeyboardLayout.Key key=frames.get(i); KeyButton button=(KeyButton)getChildAt(i);
             boolean system=theme.id.equals("apple"),letter=key.action==KeyboardLayout.Action.TEXT;
             boolean glyph=letter || key.action==KeyboardLayout.Action.PUNCTUATION && !key.text.isEmpty();
-            boolean functional=mode!=KeyboardLayout.Mode.NINE_KEY && !letter && key.action!=KeyboardLayout.Action.SPACE;
+            boolean functional=!letter && key.action!=KeyboardLayout.Action.SPACE;
             button.appearance(functional,false,key.action==KeyboardLayout.Action.RETURN);
-            int font=glyph?(mode==KeyboardLayout.Mode.NINE_KEY?20:system?24:21)
+            int font=glyph?(mode==KeyboardLayout.Mode.NINE_KEY?20:25)
                     :key.action==KeyboardLayout.Action.LANGUAGE?18:system?18:14;
-            button.fontStyle(glyph && !system && mode!=KeyboardLayout.Mode.EMOJI,font,!system || key.action==KeyboardLayout.Action.LANGUAGE);
-            button.icon(key.action==KeyboardLayout.Action.SHIFT?(handler.selected(key)?KeyboardIcon.SHIFT_FILL:KeyboardIcon.SHIFT)
+            button.fontStyle(false,font,!glyph && (!system || key.action==KeyboardLayout.Action.LANGUAGE));
+            button.icon(key.action==KeyboardLayout.Action.SHIFT?(handler.shiftLocked()?KeyboardIcon.SHIFT_FILL:KeyboardIcon.SHIFT)
                     :key.action==KeyboardLayout.Action.DELETE?KeyboardIcon.DELETE:key.action==KeyboardLayout.Action.EMOJI && mode!=KeyboardLayout.Mode.EMOJI?KeyboardIcon.SMILE:null);
             String label=handler.label(key); if(!android.text.TextUtils.equals(button.getText(),label)) button.setText(label);
             String description=handler.description(key);
@@ -76,6 +90,8 @@ final class KeyboardSurface extends ViewGroup {
             if(button.isEnabled() && !enabled && alternateFor(key)!=null) cancelAlternates();
             button.setEnabled(enabled);
             button.setSelected(handler.selected(key)); button.theme(theme);
+            if(key.action==KeyboardLayout.Action.SHIFT && android.os.Build.VERSION.SDK_INT>=30)
+                button.setStateDescription(handler.shiftLocked()?"大写锁定":handler.selected(key)?"下一个字母大写":"小写");
         }
     }
     private void cancelDeleteRepeats() {
@@ -85,7 +101,10 @@ final class KeyboardSurface extends ViewGroup {
     private void cancelAlternates() {
         if(alternates!=null) for(UpwardNumberTouch swipe:alternates) swipe.cancel();
     }
-    private void cancelTouches() { cancelDeleteRepeats(); cancelAlternates(); }
+    private void cancelTouches() {
+        cancelDeleteRepeats(); cancelAlternates();
+        for(int i=0;i<getChildCount();i++) getChildAt(i).cancelLongPress();
+    }
     @Override public boolean onInterceptTouchEvent(MotionEvent event) {
         if(event.getActionMasked()==MotionEvent.ACTION_POINTER_DOWN) {
             // Preserve overlapping ordinary native taps. Retire hold eligibility on
@@ -114,7 +133,7 @@ final class KeyboardSurface extends ViewGroup {
         cancelTouches(); super.onDetachedFromWindow();
     }
     private String alternateFor(KeyboardLayout.Key key) {
-        return key.action==KeyboardLayout.Action.TEXT?OrdinaryKeyAlternates.text(mode,key.text,chinese):null;
+        return !"off".equals(symbolGesture) && key.action==KeyboardLayout.Action.TEXT?OrdinaryKeyAlternates.text(mode,key.text,chinese):null;
     }
     @Override protected void dispatchDraw(Canvas canvas) {
         super.dispatchDraw(canvas);
@@ -136,10 +155,10 @@ final class KeyboardSurface extends ViewGroup {
     private boolean landscape() { return getResources().getConfiguration().orientation==Configuration.ORIENTATION_LANDSCAPE; }
     @Override protected void onMeasure(int widthSpec,int heightSpec) {
         int width=MeasureSpec.getSize(widthSpec); float density=getResources().getDisplayMetrics().density;
-        int height=Math.round(KeyboardLayout.height(landscape())*density);
+        int height=Math.round(desiredHeight()*density);
         setMeasuredDimension(width,resolveSize(height,heightSpec));
         if(mode==null) return;
-        frames=KeyboardGeometry.fitHeight(KeyboardLayout.keys(Math.max(1,width/density),landscape(),mode,chinese),
+        frames=KeyboardGeometry.fitHeight(KeyboardLayout.keys(Math.max(1,width/density),landscape(),mode,chinese,numericGrid,wideSpace),
                 KeyboardLayout.height(landscape()),getMeasuredHeight()/density);
         for(int i=0;i<frames.size();i++) {
             KeyboardLayout.Key key=frames.get(i);

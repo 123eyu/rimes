@@ -421,6 +421,7 @@ class RimeEngine::Impl final {
         SetError(error, "unknown or inactive librime session");
         return false;
       }
+      input_habits_.erase(session);
       if (api_->destroy_session(session) == 0) {
         SetError(error, "librime rejected session destruction");
         return false;
@@ -577,7 +578,8 @@ class RimeEngine::Impl final {
 
   bool Configure(SessionId session, const std::string& schema, bool ascii,
                  bool traditional, bool punctuation,
-                 std::string* error, unsigned candidate_count) noexcept {
+                 std::string* error, unsigned candidate_count,
+                 const std::map<std::string, bool>& input_options) noexcept {
     try {
       std::lock_guard lock(mutex_);
       if (!healthy_ || !sessions_.contains(session) || !api_ ||
@@ -602,6 +604,8 @@ class RimeEngine::Impl final {
         return false;
       }
       api_->clear_composition(session);
+      input_habits_[session].Restore(api_, session);
+      input_habits_.erase(session);
       if (!api_->select_schema(session, schema.c_str())) {
         api_->config_close(&config);
         SetError(error, "Schema unavailable");
@@ -613,11 +617,19 @@ class RimeEngine::Impl final {
       api_->set_option(session, "ascii_mode", ascii ? 1 : 0);
       api_->set_option(session, "traditionalization", traditional ? 1 : 0);
       api_->set_option(session, "ascii_punct", punctuation ? 1 : 0);
+      input_habits_[session].Update<abi::Config>(api_, session, schema, input_options);
       return true;
     } catch (...) {
       SetError(error, "Engine configuration failed");
       return false;
     }
+  }
+
+  std::vector<xsime::input::Switch> InputOptions(const std::string& schema) noexcept {
+    try {
+      std::lock_guard lock(mutex_);
+      return healthy_ ? xsime::input::Switches<abi::Config>(api_, schema) : std::vector<xsime::input::Switch>{};
+    } catch (...) { return {}; }
   }
 
  private:
@@ -820,7 +832,7 @@ class RimeEngine::Impl final {
       for (const SessionId session : sessions_) {
         api_->destroy_session(session);
       }
-      sessions_.clear();
+      sessions_.clear(); input_habits_.clear();
       if (initialized_) {
         api_->finalize();
       }
@@ -851,6 +863,7 @@ class RimeEngine::Impl final {
   std::string user_data_dir_;
   std::string log_dir_;
   std::unordered_set<SessionId> sessions_;
+  std::map<SessionId, xsime::input::SessionOverrides> input_habits_;
 };
 
 RimeEngine::RimeEngine() : impl_(std::make_unique<Impl>()) {}
@@ -911,9 +924,13 @@ bool RimeEngine::ProcessShiftTap(SessionId session, std::int32_t keycode,
 
 bool RimeEngine::Configure(SessionId session, const std::string& schema,
                            bool ascii, bool traditional, bool punctuation,
-                           std::string* error, unsigned candidate_count) noexcept {
+                           std::string* error, unsigned candidate_count,
+                           const std::map<std::string, bool>& input_options) noexcept {
   return impl_->Configure(session, schema, ascii, traditional, punctuation,
-                          error, candidate_count);
+                          error, candidate_count, input_options);
+}
+std::vector<xsime::input::Switch> RimeEngine::InputOptions(const std::string& schema) noexcept {
+  return impl_->InputOptions(schema);
 }
 
 bool RimeEngine::IsAsciiMode(SessionId session) const noexcept {

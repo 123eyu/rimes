@@ -141,6 +141,42 @@ import RimesCore
             }
         }
     }
+    /// iOS Shift: one tap capitalises one letter, a quick second tap or a hold
+    /// locks capitals, and a tap from the lock returns to lowercase.
+    func testShiftCapitalisesOnceAndLocksOnDoubleTapOrHold() throws {
+        let (window, keyboard) = host(); defer { window.isHidden = true }
+        keyboard.developmentOrdinaryAppearance(layout: .qwerty)
+        keyboard.developmentLanguage()
+        keyboard.developmentTapShift(); keyboard.developmentType("a"); keyboard.developmentType("b")
+        XCTAssertEqual(keyboard.layoutProxy.native.text, "Ab")
+        keyboard.developmentTapShift(); keyboard.developmentTapShift()
+        XCTAssertEqual(keyboard.developmentShiftState, "locked")
+        keyboard.developmentType("c"); keyboard.developmentType("d")
+        keyboard.developmentTapShift(); keyboard.developmentType("e")
+        XCTAssertEqual(keyboard.layoutProxy.native.text, "AbCDe")
+        keyboard.developmentHoldShift()
+        keyboard.developmentType("f"); keyboard.developmentType("g")
+        XCTAssertEqual(keyboard.layoutProxy.native.text, "AbCDeFG")
+        keyboard.developmentTapShift()
+        XCTAssertEqual(keyboard.developmentShiftState, "off")
+    }
+    /// Nine-key and QWERTY share one bottom row so switching layouts keeps every
+    /// control where the thumb expects it, and neither carries an emoji key.
+    func testNineKeyAndQwertyShareTheAppleBottomRow() throws {
+        for width: CGFloat in [310, 383, 842] {
+            for mode in [StandardKeyboardMode.qwerty, .nineKey] {
+                let geometry = StandardKeyboardGeometry.make(width: width, mode: mode, landscape: width > 600)
+                XCTAssertNil(geometry.controls[.emoji], "\(mode) still has an emoji key")
+                let row = try [StandardKeyControl.numbers, .language, .space].map { try XCTUnwrap(geometry.controls[$0]) }
+                let enter = try XCTUnwrap(geometry.controls[.enter])
+                for frame in row { XCTAssertEqual(frame.maxY, geometry.height, accuracy: 0.01) }
+                XCTAssertEqual(enter.maxY, geometry.height, accuracy: 0.01)
+                XCTAssertLessThan(row[0].minX, row[1].minX)
+                XCTAssertLessThan(row[1].minX, row[2].minX)
+                XCTAssertLessThan(row[2].minX, enter.minX)
+            }
+        }
+    }
     func testNineKeyTypesSelectsSpellingAndDeletesInHostAndBuffer() throws {
         for buffered in [false, true] {
             let (window, keyboard) = host(); defer { window.isHidden = true }

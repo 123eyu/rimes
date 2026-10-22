@@ -1,5 +1,1 @@
-RIMES / Lingxi IME is now XSIME.
-
-This update unifies the app name, keyboard name, setup guidance and help text under the new brand. This is an update to the same app: your installed input schemes, learned words, settings and API credentials are retained. No uninstall or new app account is needed.
-
-Offline typing and Buffer remain free. Optional external AI still uses your own provider and API key; no AI subscription is included.
+Refines the keyboard layout and key appearance, with a consistent bottom row and a wider space bar. On ordinary layouts, Shift now supports one-letter capitals, double-tap Caps Lock and press-and-hold locking. Adds per-scheme input preferences, optional swipe-up numbers and punctuation, separate portrait and landscape keyboard heights, and a numeric keypad. Wubi four-code unique commit and fifth-code push can be configured independently. Preserves existing schemes and personal settings.

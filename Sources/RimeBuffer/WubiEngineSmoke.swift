@@ -40,6 +40,35 @@ func runWubiEngineSmokeTest(engine: RimeEngine, session: UInt64) -> Bool {
             }
         }
         engine.clearComposition(session: session)
+        for manual in [false, true] {
+            for fifth in [false, true] {
+                engine.setOption("rimes_wubi_manual_commit", manual, session: session)
+                engine.setOption("rimes_wubi_fifth_code", fifth, session: session)
+                for scalar in "voni".unicodeScalars { _ = engine.processKey(Int32(scalar.value), session: session) }
+                guard (engine.takeCommit(session: session) ?? "") == (manual ? "" : "灵犀") else { return false }
+                if manual && fifth {
+                    _ = engine.processKey(119, session: session)
+                    guard engine.takeCommit(session: session) == "灵犀", engine.getContext(session: session).preedit == "w" else { return false }
+                }
+                engine.clearComposition(session: session)
+                for scalar in "wqiy".unicodeScalars { _ = engine.processKey(Int32(scalar.value), session: session) }
+                guard (engine.takeCommit(session: session) ?? "").isEmpty else { return false }
+                if fifth {
+                    let expected = engine.getContext(session: session).candidates.first?.text
+                    _ = engine.processKey(119, session: session)
+                    guard expected != nil, engine.takeCommit(session: session) == expected,
+                          engine.getContext(session: session).preedit == "w" else { return false }
+                }
+                engine.clearComposition(session: session)
+                for scalar in "znihao".unicodeScalars {
+                    _ = engine.processKey(Int32(scalar.value), session: session)
+                    guard (engine.takeCommit(session: session) ?? "").isEmpty else { return false }
+                }
+                engine.clearComposition(session: session)
+            }
+        }
+        engine.setOption("rimes_wubi_manual_commit", false, session: session)
+        engine.setOption("rimes_wubi_fifth_code", false, session: session)
     }
     print("Wubi smoke: OK z lookup, mixed input, code hints, exact selection, four-key unique auto commit")
     return true

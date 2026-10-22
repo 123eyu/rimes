@@ -76,7 +76,7 @@ final class KeyboardAppearancePanel extends ScrollView {
     }
     void action(String title,String description,Runnable perform) {
         LinearLayout column=(LinearLayout)getChildAt(0); KeyButton button=button(row(column,48),title,perform); button.setContentDescription(description);
-        button.icon(description.equals(getResources().getString(R.string.switch_keyboard))?KeyboardIcon.GLOBE
+        button.icon(description.equals("表情")?KeyboardIcon.SMILE:description.equals(getResources().getString(R.string.switch_keyboard))?KeyboardIcon.GLOBE
                 :description.equals(getResources().getString(R.string.insert_all))?KeyboardIcon.SEND_ALL
                 :description.equals(getResources().getString(R.string.clipboard_paste))?KeyboardIcon.WRITE
                 :description.equals(getResources().getString(R.string.clipboard_history))?KeyboardIcon.STACK_LAYERS:KeyboardIcon.CLEAR,18,true);

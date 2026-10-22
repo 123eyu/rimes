@@ -106,6 +106,56 @@ import RimesCore
         XCTAssertNotEqual(store.load().revision, revision)
     }
 
+    func testDirectSwipeUsesOneAlternateAndKeepsNativeTapAndCancellation() {
+        let surface = KeySurface(frame: .init(x: 0, y: 0, width: 383, height: 206))
+        surface.standardMode = .qwerty; surface.longPressSwipeSymbols = true; surface.directSwipeSymbols = true
+        surface.layoutIfNeeded()
+        var keys: [String] = [], alternates: [String] = []
+        surface.onKey = { keys.append($0) }; surface.onAlternate = { alternates.append($0) }
+        surface.developmentOrdinaryGesture(key: "q", duration: 0.05, dy: 0)
+        surface.developmentOrdinaryGesture(key: "q", duration: 0.05)
+        XCTAssertEqual(keys, ["q"]); XCTAssertEqual(alternates, ["1"])
+        surface.developmentOrdinaryGesture(key: "q", duration: 0.05) { surface.cancel() }
+        XCTAssertEqual(alternates, ["1"])
+        var drag = OrdinaryKeyGesture(key: "a", origin: .init(x: 20, y: 40), at: 0, alternate: "，", keyWidth: 32, direct: true)
+        drag.move(to: .init(x: 60, y: 40), key: "s", at: 0.03)
+        drag.move(to: .init(x: 20, y: 15), key: "q", at: 0.06)
+        XCTAssertNil(drag.selectedAlternate, "Sideways correction cannot arm later")
+    }
+    func testNewOptionsDoNotOverwriteSeparateLayoutAndGestureEdits() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = KeyboardAppearanceStore(root: root)
+        try store.save(.init(layout: .nineKey))
+        let stale = store.load()
+        try store.saveLayoutOptions(portrait: 125, landscape: 110, numericNineGrid: true)
+        try store.saveSwipeSymbols(true, direct: true)
+        try store.save(stale)
+        XCTAssertEqual(store.load().portraitHeight, 125); XCTAssertEqual(store.load().landscapeHeight, 110)
+        XCTAssertTrue(store.load().numericNineGrid); XCTAssertTrue(store.load().directSwipeSymbols)
+        XCTAssertEqual(store.load().layout, .nineKey)
+        try store.saveSwipeSymbols(false)
+        XCTAssertFalse(store.load().longPressSwipeSymbols); XCTAssertFalse(store.load().directSwipeSymbols)
+    }
+    func testNumericKeypadAndHeightFitHostWithoutChangingPinyinLayout() {
+        for width in [CGFloat(280), 393, 840] {
+            for landscape in [false, true] {
+                for percent in [100, 115, 130] {
+                    let height = StandardKeyboardGeometry.height(landscape: landscape, percent: percent)
+                    let grid = StandardKeyboardGeometry.make(width: width, mode: .numeric, landscape: landscape, numericNineGrid: true, availableHeight: height)
+                    XCTAssertEqual(Set(grid.keys.map(\.text)), Set("1234567890.".map(String.init)))
+                    let frames = grid.keys.map(\.frame) + Array(grid.controls.values)
+                    for (i, frame) in frames.enumerated() {
+                        XCTAssertTrue(frame.minX >= 0 && frame.minY >= 0 && frame.maxX <= width + 0.01 && frame.maxY <= height + 0.01)
+                        for other in frames.dropFirst(i + 1) { XCTAssertFalse(frame.intersects(other)) }
+                    }
+                    let plain = StandardKeyboardGeometry.make(width: width, mode: .qwerty, landscape: landscape, numericNineGrid: true)
+                    XCTAssertEqual(plain.keys.count, 26)
+                }
+            }
+        }
+    }
+
     private func host() -> (UIWindow, KeyboardViewController) {
         let window = UIWindow(frame: CGRect(x: 0, y: 0, width: 393, height: 900))
         let parent = UIViewController(); window.rootViewController = parent; window.makeKeyAndVisible()

@@ -2,6 +2,7 @@
 #include <rime_api.h>
 #include <string>
 #include <mutex>
+#include "../../../Shared/InputHabits/rime_options.hpp"
 extern "C" const char *rimes_lua_last_error(void);
 extern "C" void rimes_lua_clear_error(void);
 
@@ -42,6 +43,10 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
     NSString *_resources;
     NSString *_directory;
     NSString *_schema;
+    NSDictionary<NSString *, NSNumber *> *_inputOptions;
+    std::map<std::string, bool> _inputBaseline;
+    std::set<std::string> _inputApplied;
+    BOOL _inputPending;
 }
 - (instancetype)initWithResources:(NSString *)resources userDirectory:(NSString *)directory {
     self = [super init];
@@ -65,6 +70,8 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
             return NO;
         }
     }
+    _inputBaseline.clear(); _inputApplied.clear(); _inputPending = YES;
+    [self applyInputOptions];
     return _session != 0;
 }
 - (void)dealloc {
@@ -75,11 +82,38 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
     std::lock_guard<std::recursive_mutex> lock(engineMutex);
     if (![self ensureSession]) return NO;
     rime_get_api()->clear_composition(_session);
+    for (const auto& name : _inputApplied) rime_get_api()->set_option(_session, name.c_str(), _inputBaseline.at(name));
+    _inputApplied.clear();
+    if (![_schema isEqualToString:schema]) _inputOptions = @{};
     rimes_lua_clear_error();
     BOOL selected = rime_get_api()->select_schema(_session, schema.UTF8String);
     if (rimes_lua_last_error() && rimes_lua_last_error()[0]) selected = NO;
-    if (selected) _schema = [schema copy];
+    if (selected) {
+        _schema = [schema copy]; _inputBaseline.clear(); _inputApplied.clear(); _inputPending = YES;
+        [self applyInputOptions];
+    }
     return selected;
+}
+- (void)setInputOptions:(NSDictionary<NSString *, NSNumber *> *)options {
+    std::lock_guard<std::recursive_mutex> lock(engineMutex);
+    _inputOptions = [options copy]; _inputPending = YES;
+    if (_session && _generation == engineGeneration) [self applyInputOptions];
+}
+- (void)applyInputOptions {
+    if (!_inputPending || !_session || !_schema) return;
+    auto api = rime_get_api();
+    const char *input = api->get_input(_session);
+    if (input && input[0]) return;
+    if (_inputBaseline.empty()) {
+        for (const auto& option : xsime::input::Switches<RimeConfig>(api, _schema.UTF8String))
+            _inputBaseline[option.name] = api->get_option(_session, option.name.c_str());
+    }
+    for (const auto& [name, baseline] : _inputBaseline) {
+        NSNumber *value = _inputOptions[[NSString stringWithUTF8String:name.c_str()]];
+        if (value) { api->set_option(_session, name.c_str(), value.boolValue); _inputApplied.insert(name); }
+        else if (_inputApplied.erase(name)) api->set_option(_session, name.c_str(), baseline);
+    }
+    _inputPending = NO;
 }
 + (NSDictionary *)deployResources:(NSString *)resources schemaIDs:(NSArray<NSString *> *)schemaIDs {
     std::lock_guard<std::recursive_mutex> lock(engineMutex);
@@ -180,8 +214,13 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
                 if (initials.length && [initials rangeOfString:[NSString stringWithFormat:@"%C", c]].location == NSNotFound) t9 = NO;
             }
             t9 = t9 && script && [string("speller/delimiter") containsString:@"'"];
+            NSMutableArray *switches = [NSMutableArray array];
+            for (const auto& option : xsime::input::ReadSwitches(api, config)) {
+                [switches addObject:@{@"name": [NSString stringWithUTF8String:option.name.c_str()],
+                    @"off": [NSString stringWithUTF8String:option.off.c_str()], @"on": [NSString stringWithUTF8String:option.on.c_str()]}];
+            }
             NSDictionary *result = @{@"schemaID":string("schema/schema_id"),
-                @"dictionary":string("translator/dictionary"), @"script":@(script), @"nineKey":@(t9)};
+                @"dictionary":string("translator/dictionary"), @"script":@(script), @"nineKey":@(t9), @"inputOptions": switches};
             api->config_close(&config);
             return result;
         } catch (...) {}
@@ -220,6 +259,7 @@ void activateEngine(NSString *resources, NSString *directory, bool deployment = 
 - (NSDictionary *)processKey:(int32_t)key {
     std::lock_guard<std::recursive_mutex> lock(engineMutex);
     if (![self ensureSession]) return @{@"handled": @NO, @"error": self.lastError};
+    [self applyInputOptions];
     rimes_lua_clear_error();
     BOOL handled = rime_get_api()->process_key(_session, key, 0);
     NSMutableDictionary *snapshot = [[self snapshot] mutableCopy]; snapshot[@"handled"] = @(handled);

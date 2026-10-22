@@ -23,6 +23,8 @@ final class NativeRimeEngine implements RimeEngine {
     private static native void clearNative(long session);
     private static native Snapshot snapshotNative(long session,boolean handled);
     static native String roundTripNative(String text);
+    static native String inputOptionsNative(String yaml);
+    static native void applyInputOptionsNative(long session,String schema,String json);
     /** Import process only; null means every requested schema deployed and loaded. */
     static native String deployNative(String root,String[] schemas);
 }

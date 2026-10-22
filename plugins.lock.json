@@ -24,7 +24,7 @@
     "native/linux/translation/units.cpp": "4dcef4f9db3da4588eb7b6c42f0938c21b67fdb4a60b11a2bc8bbd300878997d",
     "native/linux/translation/units.hpp": "8004f6a9fb6db113e72d83e2e2c09ac1b17b4c66dbfd527147d55378b601ae07",
     "native/linux/translation/units_tests.cpp": "8082436e049fa9d8f2d5eb78cf0152e1055d53662f84b9d05c2646be489a6d0c",
-    "native/macos/AppleTranslationPlugin.swift": "85875c9e00c53646a4a5db6bdf5634c2737424993d7c9cc046c651fd6054240d",
+    "native/macos/AppleTranslationPlugin.swift": "caa9f3a2132c32ad1bf8d1b68c4d16661d998e644301f325fa0a8938aaaef8f5",
     "native/macos/BufferMusicAudio.swift": "aeb3c9058389da56dfac156e18ebf98e8ff204b3c090fb897ecdabf3de5b0eb8",
     "native/macos/BufferMusicPlugin.swift": "8cfddc898fe976493f1e2a39488b6dc981ba5184e500c461e195e8c338b12f95",
     "native/macos/BufferMusicRhythm.swift": "c607e1ae1fc0e5ceaecf3f553c39cc65cbeb7fdbe7bdf4afcb963389e24c9134",
@@ -60,7 +60,8 @@
     "native/macos/StreamInputInferenceEngine.swift": "6d5969f63106a46dbaaaace8b9d06ddb52492d2aff896b28265778c71e5880d2",
     "native/macos/StreamInputPinyinHints.swift": "4bed73366f497408309f708ad900dcd48c291a46a4a6ca7219c1af0dc3ba3a90",
     "native/macos/StreamInputPlugin.swift": "a6f1035e43b92d8db21599525fa6d4e2d022432f4d598f6dc5060f8198c73872",
-    "native/macos/Translation/AppleTranslationSessionBridge.swift": "79c45b0e9ddb10e49d47c5d8c327d7a04a495aac8067ee5e2df6a663dbbc1fbd",
+    "native/macos/Translation/AppleTranslationAvailabilityGate.swift": "6d97c9a17082fb885e8fa862d606b0aaee02cfc5d7e94fed4e1f785187820de8",
+    "native/macos/Translation/AppleTranslationSessionBridge.swift": "a8bec450633056e880f7756807c7f5b8083dd157bbf53746fa0f2ed83a994eb6",
     "native/macos/TypingSpeedSettingsViewController.swift": "0721081da4df0e103636b4be4367df5e0972cbb1ce4ae289fb1a45f6ae72d44f",
     "native/macos/TypingSpeedStore.swift": "df84c25cfbb82c9e0fcd58ebcafa78939dc69913e073ab3de70d668a1679359b",
     "native/macos/TypingTestArticles.swift": "6767c66059be140f46c2b114321b0943340049cc75f97c97858bb7bb83d4fba6",
@@ -113,9 +114,9 @@
     "plugins/statistics/plugin.json": "fd0a6abeb4628bbaa2b6c66ad8e99c1c428e4013394e29ead20ac5219572757a",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "cd28899b92f385c1e5ba296d164ab8b129c27efd580af51492ab365df7ef2594",
-    "source-map.json": "17ce4cc62bd0d2aeb0fcb58d954630de7f3c346577ffbc8d29cc85297928fc58"
+    "source-map.json": "87c7058b05713b6a7d96a0eb895282e1ec3eed7cca497359354bf1b15e8efe47"
   },
   "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "4579678b124be731ae50c3d330ba3d05d5b3065a",
+  "revision": "76a3a69b6d2a5545318dfaa487b6c954fc05c53a",
   "schemaVersion": 1
 }

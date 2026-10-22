@@ -1,4 +1,0 @@
-interface:
-  display_name: "RIMES Project"
-  short_description: "RIMES IME development and installation guide"
-  default_prompt: "Use $rimes-project to develop RIMES, run relevant basic checks, and install the verified build while preserving IMK, librime, user-data, candidate-window, and Buffer contracts."

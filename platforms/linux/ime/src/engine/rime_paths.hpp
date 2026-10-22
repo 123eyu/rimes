@@ -10,6 +10,7 @@ struct EnginePaths {
     std::filesystem::path user_data_dir;
     std::filesystem::path log_dir;
     std::string imported_schema;
+    std::string imported_package;
 };
 
 // Resolves isolated RIMES directories. Environment overrides win:

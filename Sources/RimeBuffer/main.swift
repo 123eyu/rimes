@@ -11140,6 +11140,39 @@ func runBufferWindowSmokeTest() -> Bool {
         visibleFrames: [primary, secondary, leftSecondary],
         fallback: primary
     )
+    // A first open still holds last session's height while the panel is about
+    // to take the canonical one. Placing against the stale height used to leave
+    // the final panel overlapping the field by the difference; placing against
+    // the canonical height must leave its top edge exactly one gap below it.
+    do {
+        let canonical = BufferWindowGeometry.height(expanded: true)
+        func finalTop(placedWithHeight height: CGFloat) -> CGFloat {
+            var frame = openingFrame
+            frame.size.height = height
+            let placed = BufferWindowGeometry.openingPlacement(
+                currentFrame: frame,
+                targetRect: middleCaret,
+                visibleFrames: [primary],
+                fallback: primary
+            )
+            return BufferWindowGeometry.clampedFrame(
+                placed.frame,
+                expanded: true,
+                visibleFrames: [primary],
+                fallback: primary
+            ).maxY
+        }
+        let wantedTop = middleCaret.minY - BufferWindowGeometry.inputAnchorGap
+        guard abs(finalTop(placedWithHeight: canonical) - wantedTop) < 0.5 else {
+            print("FAILED: opening placement with the canonical height misses the field")
+            return false
+        }
+        guard BufferWindowGeometry.collapsedHeight == canonical
+                || abs(finalTop(placedWithHeight: BufferWindowGeometry.collapsedHeight) - wantedTop) > 0.5 else {
+            print("FAILED: stale-height opening no longer demonstrates the overlap it guards")
+            return false
+        }
+    }
     let runtimeHeights = [
         BufferWindowGeometry.collapsedHeight,
         BufferWindowGeometry.height(expanded: false),

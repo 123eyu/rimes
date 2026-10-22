@@ -42,6 +42,8 @@ private:
     void MoveMatrixRow(int delta);
     void UpdateUI(const rimes::linuxime::EngineSnapshot& snapshot);
     void FlushChord();
+    void ApplyInputHabits();
+    std::string input_habit_schema_, input_habit_revision_;
     void PublishChord(const rimes::linuxime::EngineSnapshot& snapshot);
     void ObserveNativeRelease(bool handled, bool last);
     bool ChordAuthority(std::uint64_t epoch, std::uint64_t revision,
