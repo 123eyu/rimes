@@ -1,11 +1,16 @@
 # iOS GitHub Actions release
 
-Current iOS submission: **1.1.8 (64)**. On October 22, 2026 at 22:35 JST,
-App Store Connect accepted submission `f7bd1c0a-f2d1-4d21-9bd7-307a39f37db9`
-and showed **Waiting for Review**. Build `64` is `VALID` and App Store eligible.
-It was also submitted to external TestFlight review at 22:27 JST and assigned
-to the existing **RIMES Community** group; its state is `WAITING_FOR_BETA_REVIEW`.
-Neither submission is evidence of approval or public availability.
+Current App Store release: **1.1.8 (64)**. App Store Connect reports
+`READY_FOR_SALE`; public Apple storefront lookups for China mainland, the United
+States and Japan all return version **1.1.8**, released October 23, 2026 at
+06:05 JST. The accepted App Review submission is
+`f7bd1c0a-f2d1-4d21-9bd7-307a39f37db9` (October 22 at 22:35 JST).
+Build `64` is `VALID`.
+
+External TestFlight remains a separate review: it was submitted October 22 at
+22:27 JST and assigned to the existing **RIMES Community** group. Its latest
+readback on October 23 is still `WAITING_FOR_BETA_REVIEW`; App Store availability
+does not establish external TestFlight availability.
 
 The maintainer chose the **148 currently available territories**, including
 China mainland, for this release. The 27 EU territories remain unavailable
