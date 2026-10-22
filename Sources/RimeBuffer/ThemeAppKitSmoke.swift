@@ -340,6 +340,17 @@ func runThemeAppKitSmokeTest() -> Bool {
 
     check(settingsWindow != nil && settingsWindow?.isVisible == true,
           "settings smoke should locate the live settings window")
+    // The Settings shortcut also dismisses an open window; a closed one stays
+    // closed (the caller then opens it) and the window reopens afterwards.
+    check(SettingsWindowController.shared.closeIfShownOnActiveSpace(),
+          "settings shortcut should close an open settings window")
+    check(settingsWindow?.isVisible == false,
+          "settings window should be hidden after the shortcut closes it")
+    check(!SettingsWindowController.shared.closeIfShownOnActiveSpace(),
+          "settings shortcut should not claim to close an already closed window")
+    SettingsWindowController.shared.show()
+    check(settingsWindow?.isVisible == true,
+          "settings window should reopen after being closed by the shortcut")
     check(SettingsWindowController.shared.validateChoiceCardHitTestingForSmoke(),
           "every theme and input-encoding card center should hit its own control")
     check(matches(settingsWindow, mode: .night),

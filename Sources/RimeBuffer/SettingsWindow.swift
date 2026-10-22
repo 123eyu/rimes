@@ -939,6 +939,20 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         return true
     }
 
+    /// Closes Settings when it is open on the current Space, so the shortcut
+    /// that opens it also dismisses it. Goes through `performClose` so the
+    /// same unsaved-edit confirmation as the close button still applies; a
+    /// window left on another Space is not closed but brought here by `show()`.
+    @discardableResult
+    func closeIfShownOnActiveSpace() -> Bool {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard let window, window.isVisible, window.isOnActiveSpace else {
+            return false
+        }
+        window.performClose(nil)
+        return true
+    }
+
     func showBufferSettings() {
         guard show() else { return }
         _ = navigation.selectRoute(SettingsCoreRoute.buffer.id,
