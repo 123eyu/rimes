@@ -904,7 +904,7 @@ final class KeyboardViewController: UIInputViewController {
         if !text.isEmpty { insert(text) }
         render()
     }
-    /// iOS Shift: one tap capitalises the next letter (filled arrow), a second
+    /// Ordinary iOS Shift: one tap capitalises the next letter (filled arrow), a second
     /// tap within the double-tap window — or holding Shift — locks capitals
     /// (caps-lock arrow), and any tap from there returns to lowercase.
     private enum ShiftState { case off, once, locked }
@@ -924,6 +924,12 @@ final class KeyboardViewController: UIInputViewController {
         let now = ProcessInfo.processInfo.systemUptime
         defer { lastShiftTap = now }
         if shiftState == .off { commitRawInput() }
+        // Chord Shift keeps literal capitals active until the next tap. Returning
+        // after one letter would unexpectedly start resolving chord input again.
+        if surface.chordMode {
+            shiftState = shiftState == .off ? .locked : .off
+            render(); return
+        }
         shiftState = switch shiftState {
             case .off: .once
             case .once: now - lastShiftTap < Self.shiftDoubleTapWindow ? .locked : .off
