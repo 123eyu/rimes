@@ -25,7 +25,7 @@ enum KeycapStyle {
     static let letterFontSize: CGFloat = 25
     /// Apple draws the digits and marks on the number and symbol pages smaller than letters.
     static let numberFontSize: CGFloat = 23
-    static let translucentKeyAlpha: CGFloat = 0.92
+    static let translucentKeyAlpha: CGFloat = 0.78
     /// Keys are flat: no drop shadow, no raised base plate, and a press shows
     /// by colour only, so the cap never moves.
     static func capRect(in rect: CGRect, pressed: Bool, compact: Bool = false) -> CGRect {
