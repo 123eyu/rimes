@@ -1216,7 +1216,14 @@ final class KeyboardViewController: UIInputViewController {
                 // Nine-key and QWERTY share one function-key style.
                 button.legacyKey = legacy; button.theme = theme; button.functionalCap = action != .space
                 button.accentCap = action == .enter
-                button.titleLabel?.font = .systemFont(ofSize: scheme != .chord && (action == .language || skin == .system) ? 18 : 14, weight: scheme != .chord && skin == .system ? .regular : .medium)
+                // Sizes measured against Apple's keyboard (iOS 26.5, 3x): its labels are smaller than 18 pt.
+                let nativeSize: CGFloat = switch action {
+                case .numbers: 15
+                case .symbols: 13
+                case .enter, .space: 16
+                default: 18
+                }
+                button.titleLabel?.font = .systemFont(ofSize: scheme != .chord && (action == .language || skin == .system) ? nativeSize : 14, weight: scheme != .chord && skin == .system ? .regular : .medium)
                 button.setPreferredSymbolConfiguration(.init(pointSize: scheme != .chord && skin == .system ? 21 : 17, weight: .medium), forImageIn: .normal)
                 button.titleHorizontalInset = scheme == .chord ? 6 : 2
                 button.titleLabel?.adjustsFontSizeToFitWidth = scheme != .chord || action == .enter
@@ -1231,7 +1238,7 @@ final class KeyboardViewController: UIInputViewController {
         if surface.usesStandardLayout && skin == .system {
             spaceKey.setImage(nil, for: .normal)
             spaceKey.setTitle(usesNineKey && !snapshot.candidates.isEmpty ? "选定" : directEnglish ? "space" : "空格", for: .normal)
-            spaceKey.titleLabel?.font = .systemFont(ofSize: 18)
+            spaceKey.titleLabel?.font = .systemFont(ofSize: 16)
         } else if spaceKey.image(for: .normal) == nil {
             spaceKey.symbol("space", label: compactTypingKeys ? L("左空格", "Left space") : L("空格", "Space"))
         }
