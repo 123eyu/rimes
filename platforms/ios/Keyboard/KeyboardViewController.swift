@@ -172,10 +172,16 @@ final class KeyboardViewController: UIInputViewController {
         return preferences.ordinaryLayout == .nineKey && customLayoutSnapshot == nil && scheme == .pinyin
     }
     private var usesNineKey: Bool { usesNineKeyEngine && !directEnglish && !surface.shifted && !surface.numeric && !surface.emojiMode }
+    /// The orthogonal two-hand grid. It is a layout, chosen separately from the scheme, and needs the chord plugin.
+    private var usesChordLayout: Bool { chordPluginOn && preferences.ordinaryLayout == .orthogonal }
+    /// Reading plugin state hashes packages, so it is sampled at presentation and on plugin changes, never per render.
+    private var chordPluginOn = false
+    /// Chord tables exist for full pinyin and Ziranma only; other schemes tap the same grid.
+    private var chordsResolve: Bool { usesChordLayout && importedSchemeSelection == nil && (scheme == .pinyin || scheme == .ziranma) }
     private var compactTypingKeys: Bool { surface.chordMode && !surface.numeric && !surface.emojiMode }
     /// Built-in Chinese input shows Chinese marks on the standard 123 and #+= pages and types
     /// them as shown. Chord keeps its own number page; imported schemes own their punctuation.
-    private var chineseNumberPages: Bool { !directEnglish && importedSchemeSelection == nil && scheme != .chord }
+    private var chineseNumberPages: Bool { !directEnglish && importedSchemeSelection == nil && !usesChordLayout }
     private let status = UILabel(), source = SingleLineTextView(), result = SingleLineTextView(), surface = KeySurface()
     private let bufferPanel = UIView(), insertionSlot = UIView(), candidatePanel = UIView()
     private let bufferButton = KeycapButton(), aiButton = KeycapButton(), moreButton = KeycapButton()
@@ -223,7 +229,6 @@ final class KeyboardViewController: UIInputViewController {
     private let globe = KeycapButton(), numbers = KeycapButton(), shiftButton = KeycapButton(), spaceKey = SpaceCursorButton()
     private let spaceKeys = UIStackView(), chordSpaceKey = SpaceCursorButton()
     private var caretSteps = 0
-    private var candidateSelectionSteps = 0
     /// Set while the left Space is extending a Buffer selection on hold.
     private var selectingText = false
     /// Associated words offered after a Chinese commit, shown while nothing is composed.
@@ -278,6 +283,7 @@ final class KeyboardViewController: UIInputViewController {
         var theme: StatusSkin
         var chord: Bool
         var nineKey: Bool
+        var legacy = false
     }
     private var skinState: SkinState?
     private var chordPreview = ""
@@ -400,15 +406,11 @@ final class KeyboardViewController: UIInputViewController {
         insertionSlot.addSubview(insertButton); insertionSlot.addSubview(stopButton)
         candidateStrip.onSelect = { [weak self] index in
             guard let self else { return }; self.collapseCandidates(); self.surface.cancel()
+            self.surface.feedback.send(.selection, combination: UUID().uuidString)
             if self.punctuationOpen { self.choosePunctuation(index) }
             else if self.showingAssociations { self.chooseAssociation(index) } else { self.receive(self.engine.candidate(index)) }
         }
         candidateStrip.onPress = { [weak self] in self?.surface.feedback.send(.press) }
-        candidateStrip.onSelectionChanged = { [weak self] in
-            guard let self else { return }
-            self.candidateSelectionSteps += 1
-            self.surface.feedback.send(.selection, combination: "candidate:\(self.candidateSelectionSteps)", minimumStrength: .strong)
-        }
         candidateStrip.onExpand = { [weak self] in self?.expanded.toggle(); self?.resize() }
         for (line, name) in [(source, "source"), (result, "result")] {
             line.accessibilityIdentifier = "keyboard.buffer.\(name)"
@@ -698,7 +700,6 @@ final class KeyboardViewController: UIInputViewController {
         awaitingProvisionalHeight = false; heightNudge = 0
         closeClipboard()
         cancelBufferImport(); pendingPaste = nil
-        candidateStrip.cancelSelection()
         dismissTypingCard(resume: false)
         breakAssociationChain(); saveAssociationHistory()
         stopDefaultAutoSend(); liveTyping.reset()
@@ -707,7 +708,7 @@ final class KeyboardViewController: UIInputViewController {
         metrics.sampleMemory(); metrics.save()
         consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { candidateStrip.cancelSelection(); cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         delivery.hostContextDidChange()
@@ -738,14 +739,12 @@ final class KeyboardViewController: UIInputViewController {
     }
     override func selectionWillChange(_ textInput: UITextInput?) {
         if !delivery.isWriting {
-            candidateStrip.cancelSelection()
             autoClock.pause()
             cancelDeletes(); abandonHostComposition()
         }
         super.selectionWillChange(textInput)
     }
     override func textWillChange(_ textInput: UITextInput?) {
-        if !delivery.isWriting { candidateStrip.cancelSelection() }
         abandonHostComposition()
         super.textWillChange(textInput)
     }
@@ -806,8 +805,13 @@ final class KeyboardViewController: UIInputViewController {
         let button = KeycapButton(); configure(button, title, action: action); return button
     }
     private func choose(_ requested: InputScheme) {
-        candidateStrip.cancelSelection()
-        let value: InputScheme = requested == .chord && officialPlugins?.isEnabled(legacyID: "chord") != true ? .pinyin : requested
+        chordPluginOn = officialPlugins?.isEnabled(legacyID: "chord") == true
+        var value = requested
+        if requested == .chord {
+            // Chord used to be a scheme. It is now the orthogonal layout over pinyin or Ziranma.
+            value = config.keyboardChord.outputEncoding == .ziranma ? .ziranma : .pinyin
+            preferences.select(value); preferences.ordinaryLayout = .orthogonal; preferencesStore.save(preferences)
+        }
         cancelDeletes()
         spellingChoicesOpen = false; symbolPage = false; punctuationOpen = false
         engine.clear(); snapshot = .init(); chordPreview = ""; surface.cancel()
@@ -832,11 +836,12 @@ final class KeyboardViewController: UIInputViewController {
             }
         }
         scheme = selectedImported ? .pinyin : value
-        surface.profile = config.keyboardChord; surface.chordMode = scheme == .chord; surface.numeric = false
+        var chordProfile = config.keyboardChord
+        chordProfile.outputEncoding = scheme == .ziranma ? .ziranma : .fullPinyin
+        surface.profile = chordProfile; surface.chordMode = usesChordLayout; surface.chordResolves = chordsResolve; surface.numeric = false
         surface.chordLayout = preferences.chordLayout; surface.englishInput = directEnglish
         if !selectedImported && value != .english {
-            let schema = usesNineKeyEngine ? "rimes_pinyin9"
-                : value == .chord && surface.profile.outputEncoding == .ziranma ? "rimes_ziranma" : value.schemaID
+            let schema = usesNineKeyEngine ? "rimes_pinyin9" : value.schemaID
             if !engine.select(schema: schema) { status.text = L("输入引擎不可用，请切换英文或其他键盘", "Engine unavailable. Switch to English or another keyboard.") }
         }
         shiftState = .off; numbers.setTitle("123", for: .normal)
@@ -926,7 +931,7 @@ final class KeyboardViewController: UIInputViewController {
         if shiftState == .off { commitRawInput() }
         // Chord Shift keeps literal capitals active until the next tap. Returning
         // after one letter would unexpectedly start resolving chord input again.
-        if surface.chordMode {
+        if surface.chordMode && surface.chordResolves {
             shiftState = shiftState == .off ? .locked : .off
             render(); return
         }
@@ -1144,8 +1149,8 @@ final class KeyboardViewController: UIInputViewController {
     }
     private func syncCustomLayout() {
         guard !syncingCustomLayout else { return }
-        let desired = scheme != .chord && !usesNineKey && !surface.numeric && !surface.emojiMode ? customLayoutSnapshot : nil
-        let standard: StandardKeyboardMode? = scheme == .chord || surface.emojiMode || desired != nil ? nil
+        let desired = !usesChordLayout && !usesNineKey && !surface.numeric && !surface.emojiMode ? customLayoutSnapshot : nil
+        let standard: StandardKeyboardMode? = usesChordLayout || surface.emojiMode || desired != nil ? nil
             : surface.numeric ? (symbolPage ? .symbols : .numeric) : usesNineKey ? .nineKey : .qwerty
         guard desired != surface.customLayout || standard != surface.standardMode else { return }
         syncingCustomLayout = true
@@ -1208,26 +1213,36 @@ final class KeyboardViewController: UIInputViewController {
     }
     private func refreshKeyboardSkin() {
         let theme = preferences.resolvedTheme, skin = theme.keyboardStyle
-        let appearance = SkinState(theme: theme, chord: scheme == .chord, nineKey: usesNineKey)
+        let legacy = preferences.keyStyle.drawsLegacy && skin == .system
+        let appearance = SkinState(theme: theme, chord: usesChordLayout, nineKey: usesNineKey, legacy: legacy)
         if skinState != appearance {
             skinState = appearance
+            surface.legacyKeys = legacy
             surface.theme = theme
-            view.backgroundColor = .clear; view.tintColor = theme.palette.accent
+            // The legacy keyboard sits on an opaque container; the flat one on the host's translucent glass.
+            view.backgroundColor = legacy ? theme.palette.background : .clear; view.tintColor = theme.palette.accent
             gapPlaceholder.backgroundColor = .clear; gapPlaceholder.ink = theme.palette.ink
             panel.backgroundColor = theme.palette.background
             handPreview.theme = theme
             for (action, view) in standardFunctions {
                 guard let button = view as? KeycapButton else { continue }
                 // Nine-key and QWERTY share one function-key style.
-                button.theme = theme; button.functionalCap = action != .space
+                button.legacyKey = legacy; button.theme = theme; button.functionalCap = action != .space
                 button.accentCap = action == .enter
-                button.titleLabel?.font = .systemFont(ofSize: scheme != .chord && (action == .language || skin == .system) ? 18 : 14, weight: scheme != .chord && skin == .system ? .regular : .medium)
-                button.setPreferredSymbolConfiguration(.init(pointSize: scheme != .chord && skin == .system ? 21 : 17, weight: .medium), forImageIn: .normal)
-                button.titleHorizontalInset = scheme == .chord ? 6 : 2
-                button.titleLabel?.adjustsFontSizeToFitWidth = scheme != .chord || action == .enter
+                // Sizes measured against Apple's keyboard (iOS 26.5, 3x): its labels are smaller than 18 pt.
+                let nativeSize: CGFloat = switch action {
+                case .numbers: 15
+                case .symbols: 13
+                case .enter, .space: 16
+                default: 18
+                }
+                button.titleLabel?.font = .systemFont(ofSize: !usesChordLayout && (action == .language || skin == .system) ? nativeSize : 14, weight: !usesChordLayout && skin == .system ? .regular : .medium)
+                button.setPreferredSymbolConfiguration(.init(pointSize: !usesChordLayout && skin == .system ? 21 : 17, weight: .medium), forImageIn: .normal)
+                button.titleHorizontalInset = usesChordLayout ? 6 : 2
+                button.titleLabel?.adjustsFontSizeToFitWidth = usesChordLayout || action == .enter
                 button.titleLabel?.minimumScaleFactor = 0.7
             }
-            for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.theme = theme }
+            for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.legacyKey = legacy; button.theme = theme }
             chordSpaceKey.theme = theme
             bufferButton.accentCap = true; insertButton.accentCap = true
         }
@@ -1236,7 +1251,7 @@ final class KeyboardViewController: UIInputViewController {
         if surface.usesStandardLayout && skin == .system {
             spaceKey.setImage(nil, for: .normal)
             spaceKey.setTitle(usesNineKey && !snapshot.candidates.isEmpty ? "选定" : directEnglish ? "space" : "空格", for: .normal)
-            spaceKey.titleLabel?.font = .systemFont(ofSize: 18)
+            spaceKey.titleLabel?.font = .systemFont(ofSize: 16)
         } else if spaceKey.image(for: .normal) == nil {
             spaceKey.symbol("space", label: compactTypingKeys ? L("左空格", "Left space") : L("空格", "Space"))
         }
@@ -1425,7 +1440,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let rows = layoutRows(width: view.bounds.width)
-        var y = view.bounds.height - 5
+        // Apple's standard keys end about 2 pt lower than a flat 5 pt inset puts ours (3x measurements).
+        var y = view.bounds.height - (surface.usesStandardLayout ? 3 : 5)
         // Measured from Apple's portrait keyboard: keys sit 6.5 pt from each side.
         let scale = max(1, traitCollection.displayScale)
         let keyMargin: CGFloat = view.bounds.width > 600 ? 5 : (6.5 * scale).rounded(.up) / scale
@@ -1536,7 +1552,6 @@ final class KeyboardViewController: UIInputViewController {
         expanded = false; candidateStrip.setNeedsLayout(); resize()
     }
     private func noteTypingKey(backspace: Bool = false) {
-        candidateStrip.cancelSelection()
         if punctuationOpen { punctuationOpen = false; render() }
         // A key press hides associations; Delete also ends the learning chain.
         if backspace { breakAssociationChain() } else { associations = [] }
@@ -1629,7 +1644,7 @@ final class KeyboardViewController: UIInputViewController {
                 self.surface.feedback.send(.commit); self.refreshMoreMenu()
             }
         })
-        var schemeActions: [UIMenuElement] = InputScheme.allCases.map { value in
+        var schemeActions: [UIMenuElement] = InputScheme.allCases.filter { $0 != .chord }.map { value in
             UIAction(title: value.title, state: importedSchemeSelection == nil && value == scheme ? .on : .off) { [weak self] _ in
                 guard let self else { return }
                 self.settle(); self.importedSchemeSelection = nil; self.saveImportedSchemeChoice()
@@ -1661,24 +1676,26 @@ final class KeyboardViewController: UIInputViewController {
             UIAction(title: theme.title, image: theme.usesDot ? UIImage(systemName: "circle.fill") : nil,
                      state: preferences.resolvedTheme == theme ? .on : .off) { [weak self] _ in self?.selectKeyboardTheme(theme) }
         }), at: 2)
-        if scheme != .chord {
-            // Keep the remembered nine-key preference for built-in Pinyin, but
-            // show QWERTY selected while the current schema cannot use nine-key.
-            let selectedLayout: OrdinaryKeyboardLayout = usesNineKeyEngine ? .nineKey : .qwerty
-            items.append(UIMenu(title: L("键位布局", "Key layout"), children: OrdinaryKeyboardLayout.allCases.map { layout in
-                let supported = importedSchemeSelection == nil
-                    ? layout != .nineKey || scheme == .pinyin
-                    : (layout == .nineKey ? importedKeyboardLayouts?.nineKeySchemaID : importedKeyboardLayouts?.qwertySchemaID) != nil
-                return UIAction(title: layout == .qwerty ? "26 键 · QWERTY" : "9 键 · 全拼",
-                         subtitle: !supported && importedSchemeSelection != nil ? L("方案包未提供此布局的编码", "The package does not include an encoder for this layout") : nil,
-                         attributes: supported ? [] : .disabled,
-                         state: selectedLayout == layout && (customLayoutSnapshot == nil || usesNineKeyEngine) ? .on : .off) { [weak self] _ in
-                    guard let self else { return }; self.settle(); self.customLayoutSnapshot = nil
-                    self.preferences.overriddenCustomLayoutRevision = CustomLayoutStore().load().revision
-                    self.preferences.ordinaryLayout = layout; self.preferencesStore.save(self.preferences)
-                    self.choose(self.preferences.scheme); self.render()
-                }
-            }))
+        // Keep the remembered nine-key preference for built-in Pinyin, but show QWERTY selected
+        // while the current schema cannot use nine-key. Orthogonal is a layout of its own.
+        let chordAvailable = chordPluginOn
+        let selectedLayout: OrdinaryKeyboardLayout = usesChordLayout ? .orthogonal : usesNineKeyEngine ? .nineKey : .qwerty
+        items.append(UIMenu(title: L("键位布局", "Key layout"), children: OrdinaryKeyboardLayout.allCases.filter { $0 != .orthogonal || chordAvailable }.map { layout in
+            let supported = layout == .orthogonal ? true : importedSchemeSelection == nil
+                ? layout != .nineKey || scheme == .pinyin
+                : (layout == .nineKey ? importedKeyboardLayouts?.nineKeySchemaID : importedKeyboardLayouts?.qwertySchemaID) != nil
+            return UIAction(title: layout == .qwerty ? "26 键 · QWERTY" : layout == .nineKey ? "9 键 · 全拼" : L("正交 · Orthogonal", "Orthogonal grid"),
+                     subtitle: !supported && importedSchemeSelection != nil ? L("方案包未提供此布局的编码", "The package does not include an encoder for this layout")
+                         : layout == .orthogonal && !chordsResolve ? L("当前方案按键输入，不使用并击", "Tap typing: this scheme has no chord table") : nil,
+                     attributes: supported ? [] : .disabled,
+                     state: selectedLayout == layout && (customLayoutSnapshot == nil || usesNineKeyEngine || usesChordLayout) ? .on : .off) { [weak self] _ in
+                guard let self else { return }; self.settle(); self.customLayoutSnapshot = nil
+                self.preferences.overriddenCustomLayoutRevision = CustomLayoutStore().load().revision
+                self.preferences.ordinaryLayout = layout; self.preferencesStore.save(self.preferences)
+                self.choose(self.preferences.scheme); self.render()
+            }
+        }))
+        if !usesChordLayout {
             items.append(UIMenu(title: L("上滑数字和符号", "Swipe symbols"), children: [
                 (L("关闭", "Off"), 0), (L("长按后上滑", "Hold then swipe"), 1), (L("直接上滑", "Swipe directly"), 2)
             ].map { title, mode in
@@ -1963,6 +1980,9 @@ final class KeyboardViewController: UIInputViewController {
             preferences.numericNineGrid = appearance.numericNineGrid; preferences.appliedLayoutOptionsRevision = revision
         }
         surface.numericNineGrid = preferences.numericNineGrid
+        if let revision = appearance.keyStyleRevision, revision != preferences.appliedKeyStyleRevision {
+            preferences.keyStyle = appearance.keyStyle; preferences.appliedKeyStyleRevision = revision; preferencesStore.save(preferences)
+        }
         let savedTheme = KeyboardThemeStore().load()
         let explicitAppTheme = savedTheme.revision != nil && savedTheme.revision != preferences.appliedKeyboardThemeRevision
         preferences.reconcileTheme(savedTheme)
@@ -2007,6 +2027,7 @@ final class KeyboardViewController: UIInputViewController {
         preferencesStore.save(preferences)
     }
     private func refreshPluginMenu() {
+        chordPluginOn = officialPlugins?.isEnabled(legacyID: "chord") == true
         enabledShortcutPlugins = Set(KeyboardPlugin.allCases.filter { pluginAuthorization($0.rawValue) != nil })
         let original = UIAction(title: "Buffer", image: UIImage(systemName: "square.stack.3d.up"), state: selectedPlugin == nil ? .on : .off) { [weak self] _ in self?.selectPlugin(nil) }
         // Each plugin stands alone; choosing one only opens it.
@@ -2434,7 +2455,12 @@ final class KeyboardViewController: UIInputViewController {
         importedSchemeSelection = nil; importedSchemeEnglish = false; importedSchemeLibrary = .init(); customLayoutSnapshot = nil
         refreshPluginMenu(); choose(.pinyin); render()
     }
-    func developmentChoose(_ value: InputScheme) { importedSchemeSelection = nil; preferences.select(value); choose(value); render() }
+    /// Mirrors the old scheme menu: picking a non-chord scheme here also leaves the orthogonal layout.
+    func developmentChoose(_ value: InputScheme) {
+        importedSchemeSelection = nil; preferences.select(value)
+        if value != .chord && preferences.ordinaryLayout == .orthogonal { preferences.ordinaryLayout = .qwerty }
+        choose(value); render()
+    }
     func developmentChooseImported(_ selection: RimeSchemeSelection, store: RimeSchemeStore? = nil) { if let store { importedSchemeStore = store }; importedSchemeSelection = selection; preferNativeImportedLayout(selection); choose(preferences.scheme); render() }
     var developmentImportedSelection: RimeSchemeSelection? { importedSchemeSelection }
     func developmentSetCustomLayout(_ layout: CustomKeyboardLayout?) {

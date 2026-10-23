@@ -137,6 +137,21 @@ import RimesCore
         try store.saveSwipeSymbols(false)
         XCTAssertFalse(store.load().longPressSwipeSymbols); XCTAssertFalse(store.load().directSwipeSymbols)
     }
+    func testKeyStyleDefaultsFlatSurvivesLayoutSavesAndBumpsItsOwnRevision() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let store = KeyboardAppearanceStore(root: root)
+        XCTAssertEqual(store.load().keyStyle, .flat); XCTAssertNil(store.load().keyStyleRevision)
+        XCTAssertEqual(KeyboardPreferences().keyStyle, .flat)
+        try store.saveKeyStyle(.legacy)
+        let revision = try XCTUnwrap(store.load().keyStyleRevision)
+        let stale = store.load()
+        try store.saveLayoutOptions(portrait: 110, landscape: 100, numericNineGrid: false)
+        try store.save(stale)
+        XCTAssertEqual(store.load().keyStyle, .legacy); XCTAssertEqual(store.load().keyStyleRevision, revision)
+        XCTAssertTrue(KeyboardKeyStyle.legacy.drawsLegacy)
+        XCTAssertFalse(KeyboardKeyStyle.auto.drawsLegacy); XCTAssertFalse(KeyboardKeyStyle.flat.drawsLegacy)
+    }
     func testNumericKeypadAndHeightFitHostWithoutChangingPinyinLayout() {
         for width in [CGFloat(280), 393, 840] {
             for landscape in [false, true] {
