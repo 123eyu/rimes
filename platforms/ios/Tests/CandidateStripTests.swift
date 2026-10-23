@@ -167,4 +167,20 @@ import UIKit
         XCTAssertTrue(later.contains { $0.map(\.maxX).max()! > 320 - CandidateLayout.controlWidth })
         XCTAssertEqual(strip.expandButton.frame.width, CandidateLayout.controlWidth)
     }
+
+    func testEmptySpaceBetweenAndAfterWordsHitsTheScrollViewSoDragsScroll() {
+        let strip = strip(width: 393, expanded: true)
+        strip.update((0..<60).map { $0 % 5 == 0 ? "这是一个比较长的候选词" : "词\($0)" })
+        strip.layoutIfNeeded()
+        var checked = 0
+        for y in stride(from: CGFloat(1), to: strip.bounds.height, by: 3) {
+            for x in stride(from: CGFloat(1), to: strip.bounds.width, by: 3) {
+                let point = CGPoint(x: x, y: y)
+                guard !strip.buttons.contains(where: { $0.convert($0.bounds, to: strip).contains(point) }),
+                      !strip.expandButton.frame.contains(point) else { continue }
+                XCTAssertTrue(strip.hitTest(point, with: nil) === strip.scroll, "\(point)"); checked += 1
+            }
+        }
+        XCTAssertGreaterThan(checked, 0)
+    }
 }

@@ -43,10 +43,19 @@ private final class CandidateScrollView: UIScrollView {
     override func touchesShouldCancel(in view: UIView) -> Bool { true }
 }
 
+/// Holds the candidate buttons. Empty space between and after the words belongs to the scroll
+/// view, so a drag that starts there scrolls like one that starts on a word.
+private final class CandidateContentView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit === self ? nil : hit
+    }
+}
+
 final class CandidateStrip: UIView {
     let scroll: UIScrollView = CandidateScrollView()
     let expandButton = CandidateButton()
-    private let content = UIView()
+    private let content = CandidateContentView()
     private(set) var buttons: [CandidateButton] = []
     private var texts: [String] = []
     private var comments: [String] = []
