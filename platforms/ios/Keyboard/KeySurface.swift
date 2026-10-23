@@ -238,8 +238,19 @@ final class KeySurface: UIView {
             let glyphBox: CGFloat? = value.count != 1 || mark ? nil
                 : value.first!.isLowercase ? fittedFont.xHeight
                 : value.first!.isUppercase || value.first!.isNumber || (numeric && nativeFont && value.first!.isASCII) ? fittedFont.capHeight : nil
-            let y = glyphBox.map { cap.midY + $0 / 2 - fittedFont.ascender } ?? cap.midY - textSize.height / 2
-            value.draw(at: CGPoint(x: cap.midX - textSize.width / 2, y: y), withAttributes: attr)
+            var origin = CGPoint(x: cap.midX - textSize.width / 2,
+                                 y: glyphBox.map { cap.midY + $0 / 2 - fittedFont.ascender } ?? cap.midY - textSize.height / 2)
+            if numeric && nativeFont && value.count == 1 && value.utf16.count == 1 {
+                // Apple centres the drawn mark itself on the key, wherever its glyph normally sits.
+                var glyph = CGGlyph(), character = UniChar(value.utf16.first!), ink = CGRect.zero
+                if CTFontGetGlyphsForCharacters(fittedFont, &character, &glyph, 1) {
+                    CTFontGetBoundingRectsForGlyphs(fittedFont, .horizontal, &glyph, &ink, 1)
+                }
+                if !ink.isNull && !ink.isEmpty {
+                    origin = CGPoint(x: cap.midX - ink.midX, y: cap.midY + ink.midY - fittedFont.ascender)
+                }
+            }
+            value.draw(at: origin, withAttributes: attr)
             if let alternate = alternate(for: key) {
                 let hint: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: min(11, cap.height * 0.24)), .foregroundColor: (active ? theme.palette.accentInk : theme.palette.ink).withAlphaComponent(0.55)]
                 let hintSize = alternate.size(withAttributes: hint)
