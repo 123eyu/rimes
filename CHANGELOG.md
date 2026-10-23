@@ -4,6 +4,72 @@
 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。
 每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/xsime/releases)。
 
+## [v1.1.8](https://github.com/scholay/xsime/releases/tag/v1.1.8) — 2026-10-22
+
+### 合并的 PR
+
+- #271
+- #267
+- #265
+- #264
+- #223
+- #263
+- #228
+
+### 新功能
+
+- **release:** align mobile keyboards and prepare XSIME 1.1.8 (c75c96ef)
+- **macos:** one-window permission guide with a queue and stale-entry repair (d61d7ec5)
+- **macos:** close Settings with the shortcut that opens it (d88ccacd)
+- **macos:** one-window permission guide with a queue and stale-entry repair (7e04c8d6)
+- **macos:** close Settings with the shortcut that opens it (7d52ea94)
+- **mobile:** add optional swipe symbols and keyboard sizing (b855f2bd)
+- **input:** add per-scheme preferences across five clients (4d735edd)
+
+### 修复
+
+- **ios:** preserve persistent Shift mode for chord layouts (00b1db63)
+- **release:** pin the validated translation helper ownership map (2b8bcf17)
+- **linux:** re-pin macOS sources in native contracts after UI changes (6f88b090)
+- **linux:** re-pin macOS sources in native contracts after UI changes (1f00721b)
+- **macos:** place the Buffer against the panel's real height on first open (6b11ee71)
+- **macos:** place the Buffer against the panel's real height on first open (658f72bb)
+- **android:** recognize quick swipes before native tap feedback (41a0eb62)
+- **android:** retain swipe gestures and pending scheme settings (ef1b562d)
+- **input:** restore owned overrides across scheme changes (b2d397e4)
+- **input:** preserve active candidates and refresh native contracts (f8f93d35)
+- **windows:** verify history controls ignore unrelated statistics (39b550ab)
+- **windows:** stop redundant settings redraws and preserve editor state (c2b30056)
+- **android:** keep Chinese input in TYPE_NULL live-chat editors (e585b61a)
+
+### 性能
+
+- **macos:** reopen Capsule from reused cards instead of rebuilding them (0cd6775e)
+- **macos:** reopen Capsule from reused cards instead of rebuilding them (cbc19e99)
+
+### 重构
+
+- **skills:** move rimes-project to xsime-project (15cba12b)
+
+### 文档
+
+- **release:** link each release to its current version and mobile channels (f33c5e43)
+- **skills:** rename the project skill to xsime-project for five platforms (1e0642f0)
+- **input:** add per-issue evidence matrix for the input-first version (37cce599)
+- **input:** record first cross-platform implementation batch (f46ed97a)
+- align EnterScholar icon credit name (55165883)
+- clarify Scholay and EnterScholar acknowledgments (b6fd9239)
+- add icons to all README community links (b34366de)
+- record branch convergence and add community links (b4e5d499)
+- organize five-platform roadmap into six product themes (e9ff58e2)
+- record verified 1.1.7 release and iOS submission (af98b8f9)
+
+### 维护
+
+- **windows:** allow cold PowerShell startup in resource fixture (d3f3bf6e)
+- **windows:** trace slow broker key phases in isolated CI (319f26b5)
+- **android:** exercise service delivery and editor policy on the emulator (948d123b)
+
 ## [v1.1.7](https://github.com/scholay/xsime/releases/tag/v1.1.7) — 2026-10-19
 
 ### 合并的 PR
