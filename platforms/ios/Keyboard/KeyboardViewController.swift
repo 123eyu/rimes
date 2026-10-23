@@ -400,6 +400,7 @@ final class KeyboardViewController: UIInputViewController {
         insertionSlot.addSubview(insertButton); insertionSlot.addSubview(stopButton)
         candidateStrip.onSelect = { [weak self] index in
             guard let self else { return }; self.collapseCandidates(); self.surface.cancel()
+            self.surface.feedback.send(.selection)
             if self.punctuationOpen { self.choosePunctuation(index) }
             else if self.showingAssociations { self.chooseAssociation(index) } else { self.receive(self.engine.candidate(index)) }
         }

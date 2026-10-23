@@ -53,7 +53,8 @@ import UIKit
                 let original = strip.buttons.map(\.frame)
                 let contentSize = strip.scroll.contentSize
                 XCTAssertEqual(strip.scroll.frame.minX, controls ? 36 : 0)
-                XCTAssertEqual(strip.scroll.frame.maxX, width - (controls ? 72 : 36))
+                // Expanded rows use the full width; only the first row steps aside for the control.
+                XCTAssertEqual(strip.scroll.frame.maxX, width - (controls ? 36 : 0))
                 let limit = max(0, contentSize.height - strip.scroll.bounds.height)
                 for proposed: CGFloat in [1, 15, 29, 30, 33, 34, 49, 68, 102, 201, 10_000, 68, 0] {
                     let offset = min(proposed, limit)
@@ -66,7 +67,8 @@ import UIKit
                         let rect = frame(button, in: strip)
                         XCTAssertGreaterThanOrEqual(rect.minX, strip.scroll.frame.minX)
                         XCTAssertLessThanOrEqual(rect.maxX, strip.scroll.frame.maxX)
-                        XCTAssertFalse(rect.intersects(strip.expandButton.frame))
+                        // The control overlays only the first row; scrolled rows pass beneath it.
+                        if offset == 0 { XCTAssertFalse(rect.intersects(strip.expandButton.frame)) }
                     }
                 }
             }
@@ -145,4 +147,24 @@ import UIKit
         XCTAssertEqual(strip.fittingHeight(width: 320), 0)
     }
 
+
+    func testNeighbouringCandidatesTouchSoNoTapFallsInADeadGap() {
+        let strip = strip()
+        let frames = strip.buttons.map(\.frame)
+        for (left, right) in zip(frames, frames.dropFirst()) where left.minY == right.minY {
+            XCTAssertEqual(left.maxX, right.minX, accuracy: 0.01)
+        }
+    }
+
+    func testExpandedRowsBelowTheFirstUseTheFullWidthWithoutAnEmptyColumn() {
+        let strip = strip(width: 320, expanded: true)
+        strip.update((0..<60).map { "候选\($0)" })
+        strip.layoutIfNeeded()
+        XCTAssertEqual(strip.scroll.frame.maxX, 320)
+        let rows = Dictionary(grouping: strip.buttons.map(\.frame), by: \.minY)
+        let first = try! XCTUnwrap(rows[0]), later = rows.filter { $0.key > 0 }.values
+        XCTAssertLessThanOrEqual(first.map(\.maxX).max()!, 320 - CandidateLayout.controlWidth)
+        XCTAssertTrue(later.contains { $0.map(\.maxX).max()! > 320 - CandidateLayout.controlWidth })
+        XCTAssertEqual(strip.expandButton.frame.width, CandidateLayout.controlWidth)
+    }
 }

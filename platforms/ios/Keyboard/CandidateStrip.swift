@@ -10,7 +10,14 @@ struct CandidateLayout {
     let height: CGFloat
     static func rowHeight(landscape: Bool) -> CGFloat { ceil(UIFont.systemFont(ofSize: landscape ? 18 : 20).lineHeight) + 6 }
     static func commentFont(landscape: Bool) -> UIFont { .systemFont(ofSize: landscape ? 12 : 13) }
-    static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool) -> CandidateLayout {
+    /// Neighbouring candidates touch: the space between words is padding inside each
+    /// hit area, so a tap between two words always lands on one of them.
+    static let gap: CGFloat = 0
+    static let padding: CGFloat = 16
+    /// Width of the expand/collapse control. Collapsed it sits beside the words; expanded it
+    /// overlays the end of the first row only, so the other rows keep the full width.
+    static let controlWidth: CGFloat = 44
+    static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool, firstRowReserve: CGFloat = 0) -> CandidateLayout {
         let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
         let rowHeight = rowHeight(landscape: landscape)
         let available = max(1, width)
@@ -18,17 +25,17 @@ struct CandidateLayout {
         for (index, text) in texts.enumerated() {
             let comment = comments.indices.contains(index) ? comments[index] : ""
             let annotationWidth = comment.isEmpty ? 0 : 4 + (comment as NSString).size(withAttributes: [.font: commentFont(landscape: landscape)]).width
-            let natural = max(32, ceil((text as NSString).size(withAttributes: [.font: font]).width + annotationWidth) + 12)
-            if expanded && x > 0 && x + natural > available {
+            let natural = max(36, ceil((text as NSString).size(withAttributes: [.font: font]).width + annotationWidth) + padding)
+            if expanded && x > 0 && x + natural > available - (row == 0 ? firstRowReserve : 0) {
                 row += 1; x = 0
             }
-            let rowWidth = available
+            let rowWidth = available - (row == 0 ? firstRowReserve : 0)
             let w = expanded ? min(max(1, rowWidth), natural) : natural
-            frames.append(CGRect(x: x, y: CGFloat(row) * (rowHeight + 4), width: w, height: rowHeight)); x += w + 4
+            frames.append(CGRect(x: x, y: CGFloat(row) * (rowHeight + gap), width: w, height: rowHeight)); x += w + gap
         }
-        let contentHeight = texts.isEmpty ? 0 : CGFloat(row) * (rowHeight + 4) + rowHeight
-        let contentWidth = expanded ? available : max(0, x - 4)
-        return CandidateLayout(frames: frames, contentSize: CGSize(width: contentWidth, height: contentHeight), height: min(contentHeight, expanded ? (landscape ? 2 : 3) * rowHeight + (landscape ? 1 : 2) * 4 : rowHeight))
+        let contentHeight = texts.isEmpty ? 0 : CGFloat(row) * (rowHeight + gap) + rowHeight
+        let contentWidth = expanded ? available : max(0, x - gap)
+        return CandidateLayout(frames: frames, contentSize: CGSize(width: contentWidth, height: contentHeight), height: min(contentHeight, expanded ? (landscape ? 2 : 3) * rowHeight + (landscape ? 1 : 2) * gap : rowHeight))
     }
 }
 
@@ -92,7 +99,8 @@ final class CandidateStrip: UIView {
     private func makeButton(at index: Int) -> CandidateButton {
         let button = CandidateButton()
         button.accessibilityIdentifier = "keyboard.candidate.\(index)"
-        button.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
+        // No feedback on touch-down: swiping the row to scroll must stay silent. The
+        // controller gives one soft tick when a word is actually chosen.
         button.addAction(UIAction { [weak self, weak button] _ in
             guard let self, self.buttons.indices.contains(index),
                   self.buttons[index] === button else { return }
@@ -102,13 +110,14 @@ final class CandidateStrip: UIView {
         return button
     }
     private var reservedInsets: UIEdgeInsets {
-        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty ? 0 : 36))
+        // Expanded rows use the full width; only the first row steps aside for the control.
+        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded ? 0 : CandidateLayout.controlWidth))
     }
     func fittingHeight(width: CGFloat) -> CGFloat {
         // A collapsed strip always has one row; measuring every candidate here
         // repeats text shaping during each host sizing/layout callback.
         guard expanded else { return texts.isEmpty ? 0 : CandidateLayout.rowHeight(landscape: landscape) }
-        return CandidateLayout.measure(texts, comments: comments, width: max(1, width - reservedInsets.left - reservedInsets.right), expanded: true, landscape: landscape).height
+        return CandidateLayout.measure(texts, comments: comments, width: max(1, width - reservedInsets.left - reservedInsets.right), expanded: true, landscape: landscape, firstRowReserve: texts.isEmpty ? 0 : CandidateLayout.controlWidth).height
     }
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -124,7 +133,7 @@ final class CandidateStrip: UIView {
         // Layout depends only on the candidate list and available width, never on
         // scroll position. Every row has the same width, including under controls.
         let layout = CandidateLayout.measure(texts, comments: comments, width: width,
-            expanded: expanded, landscape: landscape)
+            expanded: expanded, landscape: landscape, firstRowReserve: expanded && !texts.isEmpty ? CandidateLayout.controlWidth : 0)
         var offset = scroll.contentOffset
         offset.x = expanded ? 0 : min(max(0, offset.x), max(0, layout.contentSize.width - width))
         offset.y = expanded ? min(max(0, offset.y), max(0, layout.contentSize.height - bounds.height)) : 0
@@ -132,7 +141,7 @@ final class CandidateStrip: UIView {
         scroll.contentSize = layout.contentSize
         let rowHeight = layout.frames.first?.height ?? 32
         expandButton.isHidden = texts.isEmpty
-        expandButton.frame = CGRect(x: bounds.width - controlInsets.right - 32, y: 0, width: 32, height: rowHeight)
+        expandButton.frame = CGRect(x: bounds.width - controlInsets.right - CandidateLayout.controlWidth, y: 0, width: CandidateLayout.controlWidth, height: rowHeight)
         expandButton.symbol(expanded ? "chevron.down" : "chevron.up", label: expanded ? L("收起候选", "Collapse candidates") : L("展开候选", "Expand candidates"))
         for (button, frame) in zip(buttons, layout.frames) {
             button.titleLabel?.font = showsChineseMarks ? .chineseMarks(ofSize: landscape ? 18 : 20) : .systemFont(ofSize: landscape ? 18 : 20)
@@ -146,6 +155,7 @@ final class CandidateStrip: UIView {
 /// Candidates read as text, with a transient touch highlight and no keycap base.
 final class CandidateButton: UIButton {
     let commentLabel = UILabel()
+    private let highlight = UIView()
     var comment = "" {
         didSet {
             guard comment != oldValue else { return }
@@ -156,7 +166,9 @@ final class CandidateButton: UIButton {
     }
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .clear; layer.cornerRadius = 4
+        backgroundColor = .clear
+        highlight.isUserInteractionEnabled = false; highlight.layer.cornerRadius = 7; highlight.layer.cornerCurve = .continuous
+        highlight.alpha = 0; insertSubview(highlight, at: 0)
         commentLabel.font = CandidateLayout.commentFont(landscape: false)
         commentLabel.lineBreakMode = .byTruncatingTail; commentLabel.isHidden = true
         commentLabel.isUserInteractionEnabled = false; addSubview(commentLabel)
@@ -172,18 +184,18 @@ final class CandidateButton: UIButton {
     }
     override func tintColorDidChange() { super.tintColorDidChange(); updateHighlight() }
     private func updateHighlight() {
-        let accent = tintColor ?? UIColor.systemBlue
-        backgroundColor = isHighlighted ? accent : .clear
-        setTitleColor(.label, for: .normal)
-        setTitleColor(KeyboardPalette.contrastingInk(on: accent), for: .highlighted)
-        imageView?.tintColor = isHighlighted ? KeyboardPalette.contrastingInk(on: accent) : .label
-        commentLabel.textColor = isHighlighted ? KeyboardPalette.contrastingInk(on: accent) : .secondaryLabel
+        // A touch only greys the word; the blue flood was jarring while scrolling or on a mis-tap.
+        highlight.backgroundColor = .tertiarySystemFill; highlight.alpha = isHighlighted ? 1 : 0
+        setTitleColor(.label, for: .normal); setTitleColor(.label, for: .highlighted)
+        imageView?.tintColor = .label
+        commentLabel.textColor = .secondaryLabel
     }
     func symbol(_ name: String, label: String) {
         setImage(UIImage(systemName: name), for: .normal); accessibilityLabel = label
     }
     override func layoutSubviews() {
         super.layoutSubviews()
+        highlight.frame = bounds.insetBy(dx: 2, dy: 1)
         titleLabel?.transform = .identity
         let textHeight = min(bounds.height, ceil(titleLabel?.font.lineHeight ?? 0))
         titleLabel?.bounds = CGRect(x: 0, y: 0, width: max(0, bounds.width - 12), height: textHeight)

@@ -1505,7 +1505,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertEqual(frame(v.candidates).minX, frame(controller.view).minX + 5)
         XCTAssertEqual(frame(v.candidates).maxX, frame(controller.view).maxX - 5)
         XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.candidates).minX)
-        XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX - 4)
+        XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX)
         XCTAssertEqual(frame(v.candidates).height, candidateFrame.height)
         controller.developmentContent(); controller.developmentBuffer("", plugin: true); window.layoutIfNeeded()
         XCTAssertFalse(v.settings.isHidden); XCTAssertFalse(toggle.isHidden)
@@ -1579,7 +1579,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
                 XCTAssertLessThanOrEqual(expanded.height, 110)
                 let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
                 let glyphWidth = (texts[1] as NSString).size(withAttributes: [.font: font]).width
-                XCTAssertEqual(collapsed.frames[1].width, ceil(glyphWidth) + 12)
+                XCTAssertEqual(collapsed.frames[1].width, ceil(glyphWidth) + CandidateLayout.padding)
             }
         }
         XCTAssertEqual(CandidateLayout.measure([], width: 300, expanded: true, landscape: false).height, 0)
