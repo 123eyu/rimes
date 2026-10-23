@@ -159,7 +159,9 @@ import RimesCore
         keyboard.developmentChoose(.chord)
         let chordMenu = try XCTUnwrap(keyboard.layoutViews.settings.menu)
         XCTAssertFalse(chordMenu === themedMenu)
-        XCTAssertFalse(menuEntries(chordMenu).contains { $0.title == L("键位布局", "Key layout") })
+        // The layout menu stays (it is how the grid is left); swipe symbols do not apply to chords.
+        XCTAssertTrue(menuEntries(chordMenu).contains { $0.title == L("键位布局", "Key layout") })
+        XCTAssertFalse(menuEntries(chordMenu).contains { $0.title == L("上滑数字和符号", "Swipe symbols") })
         keyboard.developmentChoose(.pinyin)
         keyboard.developmentOrdinaryAppearance(layout: .nineKey)
         XCTAssertEqual((menuEntries(try XCTUnwrap(keyboard.layoutViews.settings.menu)).first { $0.title == "9 键 · 全拼" } as? UIAction)?.state, .on)

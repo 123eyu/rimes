@@ -18,11 +18,14 @@ struct KeyboardAppearanceView: View {
                 Picker("键位布局", selection: Binding(get: { value.layout }, set: { value.layout = $0; useStandard() })) {
                     Text("26 键 · QWERTY").tag(OrdinaryKeyboardLayout.qwerty)
                     Text("9 键 · 全拼").tag(OrdinaryKeyboardLayout.nineKey)
+                    Text("正交").tag(OrdinaryKeyboardLayout.orthogonal)
                 }.pickerStyle(.segmented).accessibilityIdentifier("keyboardAppearance.layout")
                 KeyboardAppearancePreview(layout: value.layout, theme: theme)
                     .padding(.vertical, 8).accessibilityIdentifier("keyboardAppearance.preview")
                 Text(value.layout == .nineKey
                     ? "9 键用于全拼：输入字母组、选拼音、分隔音节、选择候选。导入方案须在包内提供配套九键编码，例如万象的 wanxiang_t9；双拼和五笔保持原布局。"
+                    : value.layout == .orthogonal
+                    ? "正交是双手对称的方格键盘（需启用并击扩展）。全拼和自然码支持并击；其他方案在同一键盘上逐键输入。"
                     : "QWERTY 错行排列，Shift 和删除键位于第三行两侧，空格键更宽。")
                     .font(.caption).foregroundStyle(.secondary)
                 if let customName {

@@ -1492,8 +1492,9 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertGreaterThan(frame(v.candidates.scroll).minX, frame(v.settings).maxX)
         XCTAssertEqual(candidateFrame.minY, frame(controller.view).minY + 5, accuracy: 0.5)
         let schemes = try XCTUnwrap(v.settings.menu?.children.first as? UIMenu)
-        XCTAssertEqual(schemes.children.count, InputScheme.allCases.count)
-        XCTAssertEqual((schemes.children.compactMap { $0 as? UIAction }.first { $0.state == .on })?.title, InputScheme.chord.title)
+        // Chord is a layout now, not a scheme: it is no longer listed, and the scheme underneath is Ziranma.
+        XCTAssertEqual(schemes.children.count, InputScheme.allCases.count - 1)
+        XCTAssertEqual((schemes.children.compactMap { $0 as? UIAction }.first { $0.state == .on })?.title, InputScheme.ziranma.title)
         let toggle = try XCTUnwrap(v.candidates.superview?.subviews.first { $0.accessibilityIdentifier == "keyboard.buffer" })
         XCTAssertGreaterThan(frame(toggle).minX, frame(v.candidates.scroll).maxX)
         XCTAssertEqual(frame(toggle).maxX, frame(controller.view).maxX - 5)

@@ -226,6 +226,35 @@ import RimesCore
         keyboard.developmentType("64426")
         XCTAssertNotNil(descendants(keyboard.layoutViews.candidates).first { $0.accessibilityLabel == "你好" })
     }
+    func testOrthogonalGridIsALayoutAnySchemeCanUseAndOnlyPinyinFamilyResolvesChords() {
+        let (window, keyboard) = host(); defer { window.isHidden = true }
+        func orthogonal(_ scheme: InputScheme) -> KeySurface {
+            keyboard.developmentChoose(scheme)
+            keyboard.developmentOrdinaryAppearance(layout: .orthogonal); window.layoutIfNeeded()
+            return keyboard.layoutViews.keys
+        }
+        let pinyin = orthogonal(.pinyin)
+        XCTAssertTrue(pinyin.chordMode); XCTAssertTrue(pinyin.resolvesChords)
+        XCTAssertEqual(pinyin.profile.outputEncoding, .fullPinyin)
+        let ziranma = orthogonal(.ziranma)
+        XCTAssertTrue(ziranma.resolvesChords); XCTAssertEqual(ziranma.profile.outputEncoding, .ziranma)
+        let grid = ziranma.developmentKeyFrames
+        for scheme in [InputScheme.wubi86, .lingxiWubi, .english] {
+            let tap = orthogonal(scheme)
+            XCTAssertTrue(tap.chordMode, "\(scheme)"); XCTAssertFalse(tap.resolvesChords, "\(scheme)")
+            XCTAssertEqual(tap.developmentKeyFrames, grid, "\(scheme) draws the same grid")
+        }
+        // Leaving the grid is a layout choice and keeps the scheme.
+        keyboard.developmentChoose(.wubi86); keyboard.developmentOrdinaryAppearance(layout: .qwerty); window.layoutIfNeeded()
+        XCTAssertFalse(keyboard.layoutViews.keys.chordMode)
+    }
+    func testLegacyChordSchemeMigratesToOrthogonalLayoutOverItsEncoding() {
+        let (window, keyboard) = host(); defer { window.isHidden = true }
+        keyboard.developmentChoose(.chord); window.layoutIfNeeded()
+        let keys = keyboard.layoutViews.keys
+        XCTAssertTrue(keys.chordMode); XCTAssertTrue(keys.resolvesChords)
+        XCTAssertEqual(keys.profile.outputEncoding, .ziranma, "The built-in chord profile was Ziranma-encoded.")
+    }
     func testSkinChangesPreserveFramesAndChordMappingAcrossOrdinarySettings() {
         let (window, keyboard) = host(); defer { window.isHidden = true }
         keyboard.developmentOrdinaryAppearance(layout: .qwerty, skin: .system)
@@ -237,7 +266,7 @@ import RimesCore
         for layout in ChordLayout.allCases {
             keyboard.developmentChoose(.chord); keyboard.developmentSetLayout(layout); window.layoutIfNeeded()
             let chord = keyboard.layoutViews.keys.developmentKeyFrames
-            keyboard.developmentOrdinaryAppearance(layout: .nineKey, skin: .system); window.layoutIfNeeded()
+            keyboard.developmentOrdinaryAppearance(layout: .orthogonal, skin: .system); window.layoutIfNeeded()
             XCTAssertEqual(keyboard.layoutViews.keys.developmentKeyFrames, chord)
             XCTAssertTrue(keyboard.layoutViews.keys.resolvesChords)
             XCTAssertEqual(keyboard.layoutViews.keys.skin, .system)

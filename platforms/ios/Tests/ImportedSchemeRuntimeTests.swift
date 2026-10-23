@@ -175,7 +175,8 @@ import RimesCore
         controller.viewWillAppear(false)
         window.layoutIfNeeded()
         XCTAssertEqual(controller.developmentImportedSelection, selection)
-        XCTAssertFalse(controller.layoutViews.keys.chordMode)
+        // The orthogonal grid stays, but an imported scheme has no chord table: keys are tapped.
+        XCTAssertTrue(controller.layoutViews.keys.chordMode)
         XCTAssertFalse(controller.layoutViews.keys.resolvesChords)
         controller.developmentType("a")
         XCTAssertTrue(descendants(controller.layoutViews.candidates).contains { $0.accessibilityLabel == "星猫" })
@@ -223,7 +224,7 @@ import RimesCore
         try store.activate(selection)
         controller.developmentChooseImported(selection, store: store)
         controller.developmentType("a")
-        XCTAssertFalse(controller.layoutViews.keys.chordMode)
+        XCTAssertFalse(controller.layoutViews.keys.resolvesChords)
 
         controller.viewWillDisappear(false)
         try store.remove(packageID: package.id)

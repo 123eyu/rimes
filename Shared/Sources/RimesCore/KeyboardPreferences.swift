@@ -2,7 +2,9 @@ import Foundation
 
 public enum ChordLayout: String, Codable, CaseIterable { case orthogonal, splitOrthogonal }
 public enum HapticStrength: String, Codable, CaseIterable { case light, strong, strongest }
-public enum OrdinaryKeyboardLayout: String, Codable, CaseIterable { case qwerty, nineKey }
+/// Which keys are drawn, independent of the input scheme. `orthogonal` is the two-hand grid:
+/// pinyin and Ziranma resolve chords on it, every other scheme types on it by tap.
+public enum OrdinaryKeyboardLayout: String, Codable, CaseIterable { case qwerty, nineKey, orthogonal }
 public enum KeyboardSkin: String, Codable, CaseIterable { case system, rimes }
 /// How the Apple skin draws its keys. Hosts linked against an older SDK show Apple's
 /// legacy keyboard (grey function keys, a thin shadow under each key, an opaque

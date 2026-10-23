@@ -23,7 +23,9 @@ final class KeySurface: UIView {
     var numericNineGrid = false { didSet { if oldValue != numericNineGrid { cancel(); setNeedsLayout() } } }
     var longPressSwipeSymbols = false { didSet { if oldValue != longPressSwipeSymbols { cancel(); setNeedsLayout() } } }
     var chordLayout: ChordLayout = .orthogonal { didSet { if oldValue != chordLayout { retire(); setNeedsLayout() } } }
-    var resolvesChords: Bool { chordMode && !numeric && !emojiMode && !shifted && !englishInput }
+    /// False draws the orthogonal grid but types each key by tap (schemes without chord tables).
+    var chordResolves = true { didSet { if oldValue != chordResolves { retire(); setNeedsLayout() } } }
+    var resolvesChords: Bool { chordMode && chordResolves && !numeric && !emojiMode && !shifted && !englishInput }
     var hasUtilityCells: Bool { chordMode && !numeric }
     var onModeChanged: (() -> Void)?
     /// Used only by ordinary input. Chord mode, including EN/Shift, keeps its original geometry.
