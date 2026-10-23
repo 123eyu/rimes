@@ -223,7 +223,6 @@ final class KeyboardViewController: UIInputViewController {
     private let globe = KeycapButton(), numbers = KeycapButton(), shiftButton = KeycapButton(), spaceKey = SpaceCursorButton()
     private let spaceKeys = UIStackView(), chordSpaceKey = SpaceCursorButton()
     private var caretSteps = 0
-    private var candidateSelectionSteps = 0
     /// Set while the left Space is extending a Buffer selection on hold.
     private var selectingText = false
     /// Associated words offered after a Chinese commit, shown while nothing is composed.
@@ -278,6 +277,7 @@ final class KeyboardViewController: UIInputViewController {
         var theme: StatusSkin
         var chord: Bool
         var nineKey: Bool
+        var legacy = false
     }
     private var skinState: SkinState?
     private var chordPreview = ""
@@ -404,11 +404,6 @@ final class KeyboardViewController: UIInputViewController {
             else if self.showingAssociations { self.chooseAssociation(index) } else { self.receive(self.engine.candidate(index)) }
         }
         candidateStrip.onPress = { [weak self] in self?.surface.feedback.send(.press) }
-        candidateStrip.onSelectionChanged = { [weak self] in
-            guard let self else { return }
-            self.candidateSelectionSteps += 1
-            self.surface.feedback.send(.selection, combination: "candidate:\(self.candidateSelectionSteps)", minimumStrength: .strong)
-        }
         candidateStrip.onExpand = { [weak self] in self?.expanded.toggle(); self?.resize() }
         for (line, name) in [(source, "source"), (result, "result")] {
             line.accessibilityIdentifier = "keyboard.buffer.\(name)"
@@ -698,7 +693,6 @@ final class KeyboardViewController: UIInputViewController {
         awaitingProvisionalHeight = false; heightNudge = 0
         closeClipboard()
         cancelBufferImport(); pendingPaste = nil
-        candidateStrip.cancelSelection()
         dismissTypingCard(resume: false)
         breakAssociationChain(); saveAssociationHistory()
         stopDefaultAutoSend(); liveTyping.reset()
@@ -707,7 +701,7 @@ final class KeyboardViewController: UIInputViewController {
         metrics.sampleMemory(); metrics.save()
         consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
-    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { candidateStrip.cancelSelection(); cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
+    override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
     override func textDidChange(_ textInput: UITextInput?) {
         super.textDidChange(textInput)
         delivery.hostContextDidChange()
@@ -738,14 +732,12 @@ final class KeyboardViewController: UIInputViewController {
     }
     override func selectionWillChange(_ textInput: UITextInput?) {
         if !delivery.isWriting {
-            candidateStrip.cancelSelection()
             autoClock.pause()
             cancelDeletes(); abandonHostComposition()
         }
         super.selectionWillChange(textInput)
     }
     override func textWillChange(_ textInput: UITextInput?) {
-        if !delivery.isWriting { candidateStrip.cancelSelection() }
         abandonHostComposition()
         super.textWillChange(textInput)
     }
@@ -806,7 +798,6 @@ final class KeyboardViewController: UIInputViewController {
         let button = KeycapButton(); configure(button, title, action: action); return button
     }
     private func choose(_ requested: InputScheme) {
-        candidateStrip.cancelSelection()
         let value: InputScheme = requested == .chord && officialPlugins?.isEnabled(legacyID: "chord") != true ? .pinyin : requested
         cancelDeletes()
         spellingChoicesOpen = false; symbolPage = false; punctuationOpen = false
@@ -1208,18 +1199,21 @@ final class KeyboardViewController: UIInputViewController {
     }
     private func refreshKeyboardSkin() {
         let theme = preferences.resolvedTheme, skin = theme.keyboardStyle
-        let appearance = SkinState(theme: theme, chord: scheme == .chord, nineKey: usesNineKey)
+        let legacy = preferences.keyStyle.drawsLegacy && skin == .system
+        let appearance = SkinState(theme: theme, chord: scheme == .chord, nineKey: usesNineKey, legacy: legacy)
         if skinState != appearance {
             skinState = appearance
+            surface.legacyKeys = legacy
             surface.theme = theme
-            view.backgroundColor = .clear; view.tintColor = theme.palette.accent
+            // The legacy keyboard sits on an opaque container; the flat one on the host's translucent glass.
+            view.backgroundColor = legacy ? theme.palette.background : .clear; view.tintColor = theme.palette.accent
             gapPlaceholder.backgroundColor = .clear; gapPlaceholder.ink = theme.palette.ink
             panel.backgroundColor = theme.palette.background
             handPreview.theme = theme
             for (action, view) in standardFunctions {
                 guard let button = view as? KeycapButton else { continue }
                 // Nine-key and QWERTY share one function-key style.
-                button.theme = theme; button.functionalCap = action != .space
+                button.legacyKey = legacy; button.theme = theme; button.functionalCap = action != .space
                 button.accentCap = action == .enter
                 button.titleLabel?.font = .systemFont(ofSize: scheme != .chord && (action == .language || skin == .system) ? 18 : 14, weight: scheme != .chord && skin == .system ? .regular : .medium)
                 button.setPreferredSymbolConfiguration(.init(pointSize: scheme != .chord && skin == .system ? 21 : 17, weight: .medium), forImageIn: .normal)
@@ -1227,7 +1221,7 @@ final class KeyboardViewController: UIInputViewController {
                 button.titleLabel?.adjustsFontSizeToFitWidth = scheme != .chord || action == .enter
                 button.titleLabel?.minimumScaleFactor = 0.7
             }
-            for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.theme = theme }
+            for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.legacyKey = legacy; button.theme = theme }
             chordSpaceKey.theme = theme
             bufferButton.accentCap = true; insertButton.accentCap = true
         }
@@ -1536,7 +1530,6 @@ final class KeyboardViewController: UIInputViewController {
         expanded = false; candidateStrip.setNeedsLayout(); resize()
     }
     private func noteTypingKey(backspace: Bool = false) {
-        candidateStrip.cancelSelection()
         if punctuationOpen { punctuationOpen = false; render() }
         // A key press hides associations; Delete also ends the learning chain.
         if backspace { breakAssociationChain() } else { associations = [] }
@@ -1963,6 +1956,9 @@ final class KeyboardViewController: UIInputViewController {
             preferences.numericNineGrid = appearance.numericNineGrid; preferences.appliedLayoutOptionsRevision = revision
         }
         surface.numericNineGrid = preferences.numericNineGrid
+        if let revision = appearance.keyStyleRevision, revision != preferences.appliedKeyStyleRevision {
+            preferences.keyStyle = appearance.keyStyle; preferences.appliedKeyStyleRevision = revision; preferencesStore.save(preferences)
+        }
         let savedTheme = KeyboardThemeStore().load()
         let explicitAppTheme = savedTheme.revision != nil && savedTheme.revision != preferences.appliedKeyboardThemeRevision
         preferences.reconcileTheme(savedTheme)

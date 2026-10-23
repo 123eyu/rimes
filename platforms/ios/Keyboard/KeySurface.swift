@@ -38,6 +38,8 @@ final class KeySurface: UIView {
     var chineseNumberPages = false { didSet { if oldValue != chineseNumberPages { cancel(); touchIDs.removeAll(); setNeedsLayout() } } }
     var usesStandardLayout: Bool { standardMode != nil && !chordMode && !emojiMode }
     var usesManagedLayout: Bool { usesCustomLayout || usesStandardLayout }
+    /// Legacy Apple look: a thin shadow under each key (see KeyboardKeyStyle).
+    var legacyKeys = false { didSet { if oldValue != legacyKeys { for button in [emojiButton, languageButton, backButton] + emojiButtons { button.legacyKey = legacyKeys }; setNeedsDisplay() } } }
     var theme: StatusSkin = .rhino {
         didSet {
             guard oldValue != theme else { return }
@@ -217,7 +219,7 @@ final class KeySurface: UIView {
             let context = UIGraphicsGetCurrentContext()!
             context.saveGState(); context.setAlpha(dimmed ? 0.30 : 1)
             let cap = KeycapStyle.capRect(in: box, pressed: active, compact: chordMode && !numeric)
-            KeycapStyle.draw(in: box, pressed: active, compact: chordMode && !numeric, theme: theme)
+            KeycapStyle.draw(in: box, pressed: active, compact: chordMode && !numeric, theme: theme, legacy: legacyKeys)
             let base = labels[key] ?? key.uppercased()
             let value = shifted && !numeric && base.count == 1 ? base.uppercased() : base
             // Apple's font in every skin; chord layouts keep their compact monospaced caps.

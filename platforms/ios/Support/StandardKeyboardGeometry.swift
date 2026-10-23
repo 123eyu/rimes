@@ -52,7 +52,22 @@ struct StandardKeyboardGeometry {
         let unit = (width - 9 * gap) / 10
         let rows: [String] = mode == .qwerty ? ["qwertyuiop", "asdfghjkl", "zxcvbnm"]
             : PunctuationLayout.rows(symbols: mode == .symbols, chinese: chinese)
+        let sideWidth = max(unit, width * 0.115)
         for (row, letters) in rows.enumerated() {
+            // As on iOS, the punctuation row of the number and symbol pages spans the
+            // gap between the side keys: wider caps, evenly spaced, no empty ends.
+            if mode != .qwerty && row == 2 && !letters.isEmpty {
+                let count = CGFloat(letters.count), edge = gap * 2
+                let span = width - 2 * (sideWidth + edge)
+                let keyWidth = min(unit * 1.45, (span - gap * (count - 1)) / count)
+                let space = count > 1 ? (span - keyWidth * count) / (count - 1) : 0
+                let start = count > 1 ? sideWidth + edge : (width - keyWidth) / 2
+                for (index, letter) in letters.enumerated() {
+                    let key = String(letter)
+                    value.keys.append((key, key, rect(start + CGFloat(index) * (keyWidth + space), row, keyWidth)))
+                }
+                continue
+            }
             let occupied = CGFloat(letters.count) * unit + CGFloat(letters.count - 1) * gap
             let start = (width - occupied) / 2
             for (index, letter) in letters.enumerated() {
@@ -61,7 +76,6 @@ struct StandardKeyboardGeometry {
                 value.keys.append((key, key, rect(start + CGFloat(index) * (unit + gap), row, unit)))
             }
         }
-        let sideWidth = max(unit, width * 0.115)
         value.controls[mode == .qwerty ? .shift : .symbols] = rect(0, 2, sideWidth)
         value.controls[.backspace] = rect(width - sideWidth, 2, sideWidth)
         // Keep a wide Space, explicit language switch and host-labelled Return.

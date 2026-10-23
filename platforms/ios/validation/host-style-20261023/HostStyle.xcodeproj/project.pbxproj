@@ -1,0 +1,20 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1; classes = {}; objectVersion = 56;
+	objects = {
+		A1 = {isa = PBXBuildFile; fileRef = A2;};
+		A2 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HostStyleUITests/HostStyleTests.swift; sourceTree = SOURCE_ROOT;};
+		A3 = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = HostStyleUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR;};
+		A4 = {isa = PBXSourcesBuildPhase; buildActionMask = 2147483647; files = (A1,); runOnlyForDeploymentPostprocessing = 0;};
+		A5 = {isa = PBXFrameworksBuildPhase; buildActionMask = 2147483647; files = (); runOnlyForDeploymentPostprocessing = 0;};
+		A6 = {isa = PBXGroup; children = (A2, A7,); sourceTree = "<group>";};
+		A7 = {isa = PBXGroup; children = (A3,); name = Products; sourceTree = "<group>";};
+		A8 = {isa = PBXNativeTarget; buildConfigurationList = B1; buildPhases = (A4, A5,); buildRules = (); dependencies = (); name = HostStyleUITests; productName = HostStyleUITests; productReference = A3; productType = "com.apple.product-type.bundle.ui-testing";};
+		A9 = {isa = PBXProject; attributes = {LastUpgradeCheck = 2600;}; buildConfigurationList = B4; compatibilityVersion = "Xcode 14.0"; developmentRegion = en; hasScannedForEncodings = 0; knownRegions = (en, Base,); mainGroup = A6; productRefGroup = A7; projectDirPath = ""; projectRoot = ""; targets = (A8,);};
+		B1 = {isa = XCConfigurationList; buildConfigurations = (B2,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug;};
+		B2 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {PRODUCT_NAME = "$(TARGET_NAME)"; PRODUCT_BUNDLE_IDENTIFIER = org.scholay.rimes.hoststyle.uitests; SDKROOT = iphoneos; SUPPORTED_PLATFORMS = "iphonesimulator iphoneos"; IPHONEOS_DEPLOYMENT_TARGET = 17.0; SWIFT_VERSION = 5.0; GENERATE_INFOPLIST_FILE = YES; TARGETED_DEVICE_FAMILY = 1; CODE_SIGNING_ALLOWED = NO; CODE_SIGN_STYLE = Manual;};};
+		B4 = {isa = XCConfigurationList; buildConfigurations = (B5,); defaultConfigurationIsVisible = 0; defaultConfigurationName = Debug;};
+		B5 = {isa = XCBuildConfiguration; name = Debug; buildSettings = {};};
+	};
+	rootObject = A9;
+}

@@ -29,7 +29,7 @@ enum KeycapStyle {
         rect.insetBy(dx: compact ? 0 : 0.5, dy: compact ? 0.75 : 1.5)
     }
     static func draw(in rect: CGRect, pressed: Bool, selected: Bool = false, enabled: Bool = true, compact: Bool = false,
-                     theme: StatusSkin = .rhino, functional: Bool = false, accent: Bool = false) {
+                     theme: StatusSkin = .rhino, functional: Bool = false, accent: Bool = false, legacy: Bool = false) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
         let rect = pixelSnapped(rect)
         let palette = theme.palette
@@ -37,6 +37,16 @@ enum KeycapStyle {
             let cap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5), cornerRadius: cornerRadius)
             context.saveGState()
             if !enabled { context.setAlpha(0.4) }
+            if legacy {
+                // Apple's legacy keyboard: grey function keys, and the cap lifted 1 pt off a dark base.
+                let base = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: 1), cornerRadius: cornerRadius)
+                UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0, alpha: 0.6) : UIColor(red: 0.54, green: 0.54, blue: 0.56, alpha: 1) }.setFill(); base.fill()
+                let legacyCap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: -0.5), cornerRadius: cornerRadius)
+                // Only an action Return (selected accent) is tinted; other function keys are grey.
+                let tone: UIColor = accent && (selected || pressed) ? palette.accent : pressed ? (functional ? palette.key : palette.functional)
+                    : functional ? palette.functional : palette.key
+                tone.setFill(); legacyCap.fill(); context.restoreGState(); return
+            }
             // Apple's keyboard draws function keys in the same tone as letters;
             // only an action Return (Send, Search, Go…) is tinted.
             let fill: UIColor = pressed ? (accent && selected ? palette.pressedSelected : palette.accent)
@@ -56,6 +66,7 @@ enum KeycapStyle {
 class KeycapButton: UIButton {
     var theme: StatusSkin = .rhino { didSet { if oldValue != theme { updateAppearance() } } }
     var skin: KeyboardSkin { theme.keyboardStyle }
+    var legacyKey = false { didSet { if oldValue != legacyKey { setNeedsDisplay() } } }
     var functionalCap = false { didSet { if oldValue != functionalCap { setNeedsDisplay() } } }
     var accentCap = false { didSet { if oldValue != accentCap { updateAppearance() } } }
     var compactCap = false { didSet { if oldValue != compactCap { setNeedsDisplay(); setNeedsLayout() } } }
@@ -94,7 +105,7 @@ class KeycapButton: UIButton {
     }
     override func draw(_ rect: CGRect) {
         KeycapStyle.draw(in: bounds, pressed: isHighlighted, selected: isSelected, enabled: isEnabled, compact: compactCap,
-                         theme: theme, functional: functionalCap, accent: accentCap)
+                         theme: theme, functional: functionalCap, accent: accentCap, legacy: legacyKey)
     }
     override func layoutSubviews() {
         super.layoutSubviews()

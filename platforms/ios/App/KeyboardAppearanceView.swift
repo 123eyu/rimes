@@ -48,6 +48,18 @@ struct KeyboardAppearanceView: View {
             } header: { Text(L("普通键盘输入", "Standard keyboard input")) } footer: {
                 Text(L("上滑后松手输入键角的数字或符号。数字九宫格只改变数字页；高度分别保存，下次打开键盘时生效。并击和自定义布局保持原尺寸。", "Release after swiping up to insert the alternate. The numeric keypad changes only the number page. Heights are saved per orientation and applied when the keyboard opens. Chord and custom layouts keep their dimensions."))
             }
+            Section {
+                Picker(L("按键样式", "Key style"), selection: Binding(get: { value.keyStyle }, set: { style in
+                    do { try store.saveKeyStyle(style); value = store.load() }
+                    catch { self.error = error.localizedDescription }
+                })) {
+                    Text(L("自动", "Auto")).tag(KeyboardKeyStyle.auto)
+                    Text(L("扁平", "Flat")).tag(KeyboardKeyStyle.flat)
+                    Text(L("经典（灰色功能键）", "Legacy (grey function keys)")).tag(KeyboardKeyStyle.legacy)
+                }.accessibilityIdentifier("keyboardAppearance.keyStyle")
+            } header: { Text(L("按键样式", "Key style")) } footer: {
+                Text(L("部分 App 会以经典样式显示系统键盘：功能键为灰色，按键下方有细阴影。经典样式让键盘与之保持一致；自动目前等同于扁平。仅作用于苹果配色，下次打开键盘时生效。", "Some apps show the system keyboard in its legacy style: grey function keys and a thin shadow under each key. Legacy matches that look. Auto currently draws flat. Applies to the Apple theme and takes effect when the keyboard opens."))
+            }
             Section("宠物与键盘配色") {
                 Text(theme == .rhino ? "\(ProductBrand.name) 经典 · 象牙白、灰色与橙色" : "当前：\(theme.title)")
                     .font(.subheadline).fontWeight(.medium)
