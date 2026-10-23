@@ -1427,7 +1427,8 @@ final class KeyboardViewController: UIInputViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         let rows = layoutRows(width: view.bounds.width)
-        var y = view.bounds.height - 5
+        // Apple's standard keys end about 2 pt lower than a flat 5 pt inset puts ours (3x measurements).
+        var y = view.bounds.height - (surface.usesStandardLayout ? 3 : 5)
         // Measured from Apple's portrait keyboard: keys sit 6.5 pt from each side.
         let scale = max(1, traitCollection.displayScale)
         let keyMargin: CGFloat = view.bounds.width > 600 ? 5 : (6.5 * scale).rounded(.up) / scale

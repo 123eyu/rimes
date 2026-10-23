@@ -25,6 +25,7 @@ enum KeycapStyle {
     static let letterFontSize: CGFloat = 25
     /// Apple draws the digits and marks on the number and symbol pages smaller than letters.
     static let numberFontSize: CGFloat = 23
+    static let translucentKeyAlpha: CGFloat = 0.92
     /// Keys are flat: no drop shadow, no raised base plate, and a press shows
     /// by colour only, so the cap never moves.
     static func capRect(in rect: CGRect, pressed: Bool, compact: Bool = false) -> CGRect {
@@ -51,8 +52,9 @@ enum KeycapStyle {
             }
             // Apple's keyboard draws function keys in the same tone as letters;
             // only an action Return (Send, Search, Go…) is tinted.
+            // Keys let a little of the translucent keyboard background through, like Apple's.
             let fill: UIColor = pressed ? (accent && selected ? palette.pressedSelected : palette.accent)
-                : accent && selected ? palette.accent : palette.key
+                : accent && selected ? palette.accent : palette.key.withAlphaComponent(translucentKeyAlpha)
             fill.setFill(); cap.fill(); context.restoreGState(); return
         }
         context.saveGState()
