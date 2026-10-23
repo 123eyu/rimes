@@ -2,8 +2,18 @@ import Foundation
 
 public enum ChordLayout: String, Codable, CaseIterable { case orthogonal, splitOrthogonal }
 public enum HapticStrength: String, Codable, CaseIterable { case light, strong, strongest }
-public enum OrdinaryKeyboardLayout: String, Codable, CaseIterable { case qwerty, nineKey }
+/// Which keys are drawn, independent of the input scheme. `orthogonal` is the two-hand grid:
+/// pinyin and Ziranma resolve chords on it, every other scheme types on it by tap.
+public enum OrdinaryKeyboardLayout: String, Codable, CaseIterable { case qwerty, nineKey, orthogonal }
 public enum KeyboardSkin: String, Codable, CaseIterable { case system, rimes }
+/// How the Apple skin draws its keys. Hosts linked against an older SDK show Apple's
+/// legacy keyboard (grey function keys, a thin shadow under each key, an opaque
+/// container); the extension cannot detect the host, so the person chooses. `auto` is
+/// reserved for a future host signal and draws flat today.
+public enum KeyboardKeyStyle: String, Codable, CaseIterable {
+    case auto, flat, legacy
+    public var drawsLegacy: Bool { self == .legacy }
+}
 
 /// Extension-private preferences work even when shared-container writes are forbidden.
 public struct KeyboardPreferences: Codable {
@@ -21,6 +31,8 @@ public struct KeyboardPreferences: Codable {
     public var landscapeHeight = 100
     public var numericNineGrid = false
     public var appliedLayoutOptionsRevision: UUID?
+    public var keyStyle: KeyboardKeyStyle = .flat
+    public var appliedKeyStyleRevision: UUID?
     public var longPressSwipeSymbols = false
     public var appliedLongPressSwipeSymbolsRevision: UUID?
     public var keyboardSkin: KeyboardSkin = .system
@@ -49,7 +61,7 @@ public struct KeyboardPreferences: Codable {
         case scheme, appliedAppSelection, initialized, haptics, keySounds, traditional, sourceLanguage, targetLanguage
         case chordLayout, hapticStrength, lastChineseScheme, englishInput, poem, speakTranslation, statusSkin, art, statusSkinRotation, appliedSkinRevision, thinking
         case ordinaryLayout, longPressSwipeSymbols, appliedLongPressSwipeSymbolsRevision, keyboardSkin, appliedKeyboardAppearanceRevision, overriddenCustomLayoutRevision
-        case directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, appliedLayoutOptionsRevision
+        case directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, appliedLayoutOptionsRevision, keyStyle, appliedKeyStyleRevision
         case appliedKeyboardThemeRevision, keyboardThemeMigrationVersion
     }
     public init(from decoder: Decoder) throws {
@@ -67,6 +79,8 @@ public struct KeyboardPreferences: Codable {
         landscapeHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .landscapeHeight)) ?? 100))
         numericNineGrid = (try? values.decode(Bool.self, forKey: .numericNineGrid)) ?? false
         appliedLayoutOptionsRevision = try? values.decode(UUID.self, forKey: .appliedLayoutOptionsRevision)
+        keyStyle = (try? values.decode(KeyboardKeyStyle.self, forKey: .keyStyle)) ?? .flat
+        appliedKeyStyleRevision = try? values.decode(UUID.self, forKey: .appliedKeyStyleRevision)
         longPressSwipeSymbols = (try? values.decode(Bool.self, forKey: .longPressSwipeSymbols)) ?? false
         appliedLongPressSwipeSymbolsRevision = try? values.decode(UUID.self, forKey: .appliedLongPressSwipeSymbolsRevision)
         keyboardSkin = (try? values.decode(KeyboardSkin.self, forKey: .keyboardSkin)) ?? .system

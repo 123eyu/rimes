@@ -74,7 +74,7 @@ import RimesCore
         parent.addChild(keyboard); parent.view.addSubview(keyboard.view); keyboard.didMove(toParent: parent)
         for mode in 0..<4 {
             keyboard.developmentChoose(mode < 2 ? .pinyin : .chord)
-            keyboard.developmentOrdinaryAppearance(layout: mode == 1 ? .nineKey : .qwerty)
+            keyboard.developmentOrdinaryAppearance(layout: mode >= 2 ? .orthogonal : mode == 1 ? .nineKey : .qwerty)
             keyboard.developmentSetLayout(mode == 3 ? .splitOrthogonal : .orthogonal)
             keyboard.developmentType(mode == 1 ? "64" : "ni")
             window.layoutIfNeeded()

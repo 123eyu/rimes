@@ -23,7 +23,9 @@ final class KeySurface: UIView {
     var numericNineGrid = false { didSet { if oldValue != numericNineGrid { cancel(); setNeedsLayout() } } }
     var longPressSwipeSymbols = false { didSet { if oldValue != longPressSwipeSymbols { cancel(); setNeedsLayout() } } }
     var chordLayout: ChordLayout = .orthogonal { didSet { if oldValue != chordLayout { retire(); setNeedsLayout() } } }
-    var resolvesChords: Bool { chordMode && !numeric && !emojiMode && !shifted && !englishInput }
+    /// False draws the orthogonal grid but types each key by tap (schemes without chord tables).
+    var chordResolves = true { didSet { if oldValue != chordResolves { retire(); setNeedsLayout() } } }
+    var resolvesChords: Bool { chordMode && chordResolves && !numeric && !emojiMode && !shifted && !englishInput }
     var hasUtilityCells: Bool { chordMode && !numeric }
     var onModeChanged: (() -> Void)?
     /// Used only by ordinary input. Chord mode, including EN/Shift, keeps its original geometry.
@@ -38,6 +40,8 @@ final class KeySurface: UIView {
     var chineseNumberPages = false { didSet { if oldValue != chineseNumberPages { cancel(); touchIDs.removeAll(); setNeedsLayout() } } }
     var usesStandardLayout: Bool { standardMode != nil && !chordMode && !emojiMode }
     var usesManagedLayout: Bool { usesCustomLayout || usesStandardLayout }
+    /// Legacy Apple look: a thin shadow under each key (see KeyboardKeyStyle).
+    var legacyKeys = false { didSet { if oldValue != legacyKeys { for button in [emojiButton, languageButton, backButton] + emojiButtons { button.legacyKey = legacyKeys }; setNeedsDisplay() } } }
     var theme: StatusSkin = .rhino {
         didSet {
             guard oldValue != theme else { return }
@@ -217,12 +221,12 @@ final class KeySurface: UIView {
             let context = UIGraphicsGetCurrentContext()!
             context.saveGState(); context.setAlpha(dimmed ? 0.30 : 1)
             let cap = KeycapStyle.capRect(in: box, pressed: active, compact: chordMode && !numeric)
-            KeycapStyle.draw(in: box, pressed: active, compact: chordMode && !numeric, theme: theme)
+            KeycapStyle.draw(in: box, pressed: active, compact: chordMode && !numeric, theme: theme, legacy: legacyKeys)
             let base = labels[key] ?? key.uppercased()
             let value = shifted && !numeric && base.count == 1 ? base.uppercased() : base
             // Apple's font in every skin; chord layouts keep their compact monospaced caps.
             let nativeFont = !chordMode
-            let size: CGFloat = standardMode == .nineKey ? 20 : nativeFont ? KeycapStyle.letterFontSize : 21
+            let size: CGFloat = standardMode == .nineKey ? 20 : nativeFont ? (numeric ? KeycapStyle.numberFontSize : KeycapStyle.letterFontSize) : 21
             let mark = chineseNumberPages && value.unicodeScalars.contains { $0.value > 0x7F }
             let font = mark ? UIFont.chineseMarks(ofSize: size, weight: nativeFont ? .regular : .medium)
                 : nativeFont ? UIFont.systemFont(ofSize: size) : UIFont.monospacedSystemFont(ofSize: size, weight: .medium)
@@ -231,11 +235,24 @@ final class KeySurface: UIView {
             let textSize = value.size(withAttributes: attr)
             // Apple centres a lowercase letter's x-height, and a capital's or
             // digit's cap height, in the key, not the whole line box.
+            // Marks share the digits' baseline, so `.` and `,` sit low and `?` and `!` centre on the
+            // cap height, as on Apple's number pages.
             let glyphBox: CGFloat? = value.count != 1 || mark ? nil
                 : value.first!.isLowercase ? fittedFont.xHeight
-                : value.first!.isUppercase || value.first!.isNumber ? fittedFont.capHeight : nil
-            let y = glyphBox.map { cap.midY + $0 / 2 - fittedFont.ascender } ?? cap.midY - textSize.height / 2
-            value.draw(at: CGPoint(x: cap.midX - textSize.width / 2, y: y), withAttributes: attr)
+                : value.first!.isUppercase || value.first!.isNumber || (numeric && nativeFont && value.first!.isASCII) ? fittedFont.capHeight : nil
+            var origin = CGPoint(x: cap.midX - textSize.width / 2,
+                                 y: glyphBox.map { cap.midY + $0 / 2 - fittedFont.ascender } ?? cap.midY - textSize.height / 2)
+            if numeric && nativeFont && value.count == 1 && value.utf16.count == 1 {
+                // Apple centres the drawn mark itself on the key, wherever its glyph normally sits.
+                var glyph = CGGlyph(), character = UniChar(value.utf16.first!), ink = CGRect.zero
+                if CTFontGetGlyphsForCharacters(fittedFont, &character, &glyph, 1) {
+                    CTFontGetBoundingRectsForGlyphs(fittedFont, .horizontal, &glyph, &ink, 1)
+                }
+                if !ink.isNull && !ink.isEmpty {
+                    origin = CGPoint(x: cap.midX - ink.midX, y: cap.midY + ink.midY - fittedFont.ascender)
+                }
+            }
+            value.draw(at: origin, withAttributes: attr)
             if let alternate = alternate(for: key) {
                 let hint: [NSAttributedString.Key: Any] = [.font: UIFont.systemFont(ofSize: min(11, cap.height * 0.24)), .foregroundColor: (active ? theme.palette.accentInk : theme.palette.ink).withAlphaComponent(0.55)]
                 let hintSize = alternate.size(withAttributes: hint)

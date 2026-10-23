@@ -10,7 +10,14 @@ struct CandidateLayout {
     let height: CGFloat
     static func rowHeight(landscape: Bool) -> CGFloat { ceil(UIFont.systemFont(ofSize: landscape ? 18 : 20).lineHeight) + 6 }
     static func commentFont(landscape: Bool) -> UIFont { .systemFont(ofSize: landscape ? 12 : 13) }
-    static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool) -> CandidateLayout {
+    /// Neighbouring candidates touch: the space between words is padding inside each
+    /// hit area, so a tap between two words always lands on one of them.
+    static let gap: CGFloat = 0
+    static let padding: CGFloat = 16
+    /// Width of the expand/collapse control. Collapsed it sits beside the words; expanded it
+    /// overlays the end of the first row only, so the other rows keep the full width.
+    static let controlWidth: CGFloat = 44
+    static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool, firstRowReserve: CGFloat = 0) -> CandidateLayout {
         let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
         let rowHeight = rowHeight(landscape: landscape)
         let available = max(1, width)
@@ -18,17 +25,17 @@ struct CandidateLayout {
         for (index, text) in texts.enumerated() {
             let comment = comments.indices.contains(index) ? comments[index] : ""
             let annotationWidth = comment.isEmpty ? 0 : 4 + (comment as NSString).size(withAttributes: [.font: commentFont(landscape: landscape)]).width
-            let natural = max(32, ceil((text as NSString).size(withAttributes: [.font: font]).width + annotationWidth) + 12)
-            if expanded && x > 0 && x + natural > available {
+            let natural = max(36, ceil((text as NSString).size(withAttributes: [.font: font]).width + annotationWidth) + padding)
+            if expanded && x > 0 && x + natural > available - (row == 0 ? firstRowReserve : 0) {
                 row += 1; x = 0
             }
-            let rowWidth = available
+            let rowWidth = available - (row == 0 ? firstRowReserve : 0)
             let w = expanded ? min(max(1, rowWidth), natural) : natural
-            frames.append(CGRect(x: x, y: CGFloat(row) * (rowHeight + 4), width: w, height: rowHeight)); x += w + 4
+            frames.append(CGRect(x: x, y: CGFloat(row) * (rowHeight + gap), width: w, height: rowHeight)); x += w + gap
         }
-        let contentHeight = texts.isEmpty ? 0 : CGFloat(row) * (rowHeight + 4) + rowHeight
-        let contentWidth = expanded ? available : max(0, x - 4)
-        return CandidateLayout(frames: frames, contentSize: CGSize(width: contentWidth, height: contentHeight), height: min(contentHeight, expanded ? (landscape ? 2 : 3) * rowHeight + (landscape ? 1 : 2) * 4 : rowHeight))
+        let contentHeight = texts.isEmpty ? 0 : CGFloat(row) * (rowHeight + gap) + rowHeight
+        let contentWidth = expanded ? available : max(0, x - gap)
+        return CandidateLayout(frames: frames, contentSize: CGSize(width: contentWidth, height: contentHeight), height: min(contentHeight, expanded ? (landscape ? 2 : 3) * rowHeight + (landscape ? 1 : 2) * gap : rowHeight))
     }
 }
 
@@ -36,54 +43,47 @@ private final class CandidateScrollView: UIScrollView {
     override func touchesShouldCancel(in view: UIView) -> Bool { true }
 }
 
-final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDelegate {
+/// Holds the candidate buttons. Empty space between and after the words belongs to the scroll
+/// view, so a drag that starts there scrolls like one that starts on a word.
+private final class CandidateContentView: UIView {
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        let hit = super.hitTest(point, with: event)
+        return hit === self ? nil : hit
+    }
+}
+
+final class CandidateStrip: UIView {
     let scroll: UIScrollView = CandidateScrollView()
     let expandButton = CandidateButton()
-    private let content = UIView()
+    private let content = CandidateContentView()
     private(set) var buttons: [CandidateButton] = []
     private var texts: [String] = []
     private var comments: [String] = []
     private var context = ""
-    private lazy var hold = UILongPressGestureRecognizer(target: self, action: #selector(held(_:)))
-    private var selectionPoint: CGPoint?
-    private var selectionTimer: Timer?
-    private var lastSelectionTick: TimeInterval = 0
-    private(set) var selectedIndex: Int?
-    private var lastFeedbackIndex: Int?
-    private var layoutWidth: CGFloat = 0
     private var layingOutCandidates = false
     var onSelect: ((Int) -> Void)?
-    var onSelectionChanged: (() -> Void)?
     var onExpand: (() -> Void)?
     var onPress: (() -> Void)?
-    var expanded = false { didSet { if expanded != oldValue { cancelSelection(); setNeedsLayout() } } }
-    var landscape = false { didSet { if landscape != oldValue { cancelSelection(); setNeedsLayout() } } }
+    var expanded = false { didSet { if expanded != oldValue { setNeedsLayout() } } }
+    var landscape = false { didSet { if landscape != oldValue { setNeedsLayout() } } }
     /// The nine-key punctuation strip draws its marks in their Chinese forms.
     var showsChineseMarks = false { didSet { if showsChineseMarks != oldValue { setNeedsLayout() } } }
-    override var isHidden: Bool { didSet { if isHidden { cancelSelection() } } }
     /// Controls occupy fixed gutters outside the scrolling candidate content.
-    var controlInsets = UIEdgeInsets.zero { didSet { if controlInsets != oldValue { cancelSelection(); setNeedsLayout() } } }
+    var controlInsets = UIEdgeInsets.zero { didSet { if controlInsets != oldValue { setNeedsLayout() } } }
     override init(frame: CGRect) {
         super.init(frame: frame)
         addSubview(scroll); scroll.addSubview(content); addSubview(expandButton)
-        scroll.delegate = self; scroll.delaysContentTouches = false
+        scroll.delaysContentTouches = false
         scroll.showsHorizontalScrollIndicator = false; scroll.showsVerticalScrollIndicator = false; scroll.hideEdgeEffects()
-        hold.minimumPressDuration = 0.45; hold.allowableMovement = 10; hold.delegate = self
-        addGestureRecognizer(hold)
-        // A quick swipe still scrolls normally. Once the hold wins, dragging selects
-        // instead; approaching an edge scrolls without ending that same gesture.
-        scroll.panGestureRecognizer.require(toFail: hold)
         expandButton.accessibilityIdentifier = "keyboard.candidates.expand"
         expandButton.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
         expandButton.addAction(UIAction { [weak self] _ in self?.onExpand?() }, for: .touchUpInside)
     }
     required init?(coder: NSCoder) { fatalError() }
-    deinit { selectionTimer?.invalidate() }
     func update(_ values: [String], comments: [String] = [], context: String = "") {
         let sameContext = context == self.context
-        if !sameContext { cancelSelection(); self.context = context }
+        if !sameContext { self.context = context }
         guard values != texts || comments != self.comments else { return }
-        cancelSelection()
         let appending = expanded && sameContext && !texts.isEmpty && values.count >= texts.count
             && Array(values.prefix(texts.count)) == texts
             && texts.indices.allSatisfy { (comments.indices.contains($0) ? comments[$0] : "") == (self.comments.indices.contains($0) ? self.comments[$0] : "") }
@@ -108,9 +108,10 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
     private func makeButton(at index: Int) -> CandidateButton {
         let button = CandidateButton()
         button.accessibilityIdentifier = "keyboard.candidate.\(index)"
-        button.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
+        // No feedback on touch-down: swiping the row to scroll must stay silent. The
+        // controller gives one soft tick when a word is actually chosen.
         button.addAction(UIAction { [weak self, weak button] _ in
-            guard let self, self.selectionPoint == nil, self.buttons.indices.contains(index),
+            guard let self, self.buttons.indices.contains(index),
                   self.buttons[index] === button else { return }
             self.onSelect?(index)
         }, for: .touchUpInside)
@@ -118,30 +119,30 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         return button
     }
     private var reservedInsets: UIEdgeInsets {
-        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty ? 0 : 36))
+        // Expanded rows use the full width; only the first row steps aside for the control.
+        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded ? 0 : CandidateLayout.controlWidth))
     }
     func fittingHeight(width: CGFloat) -> CGFloat {
         // A collapsed strip always has one row; measuring every candidate here
         // repeats text shaping during each host sizing/layout callback.
         guard expanded else { return texts.isEmpty ? 0 : CandidateLayout.rowHeight(landscape: landscape) }
-        return CandidateLayout.measure(texts, comments: comments, width: max(1, width - reservedInsets.left - reservedInsets.right), expanded: true, landscape: landscape).height
+        return CandidateLayout.measure(texts, comments: comments, width: max(1, width - reservedInsets.left - reservedInsets.right), expanded: true, landscape: landscape, firstRowReserve: texts.isEmpty ? 0 : CandidateLayout.controlWidth).height
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        if layoutWidth != bounds.width { cancelSelection(); layoutWidth = bounds.width }
         layoutCandidates()
     }
     private func layoutCandidates() {
         guard !layingOutCandidates else { return }
         layingOutCandidates = true
-        defer { layingOutCandidates = false; refreshSelection() }
+        defer { layingOutCandidates = false }
         let insets = reservedInsets
         let width = max(1, bounds.width - insets.left - insets.right)
         scroll.frame = CGRect(x: insets.left, y: 0, width: width, height: bounds.height)
         // Layout depends only on the candidate list and available width, never on
         // scroll position. Every row has the same width, including under controls.
         let layout = CandidateLayout.measure(texts, comments: comments, width: width,
-            expanded: expanded, landscape: landscape)
+            expanded: expanded, landscape: landscape, firstRowReserve: expanded && !texts.isEmpty ? CandidateLayout.controlWidth : 0)
         var offset = scroll.contentOffset
         offset.x = expanded ? 0 : min(max(0, offset.x), max(0, layout.contentSize.width - width))
         offset.y = expanded ? min(max(0, offset.y), max(0, layout.contentSize.height - bounds.height)) : 0
@@ -149,7 +150,7 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         scroll.contentSize = layout.contentSize
         let rowHeight = layout.frames.first?.height ?? 32
         expandButton.isHidden = texts.isEmpty
-        expandButton.frame = CGRect(x: bounds.width - controlInsets.right - 32, y: 0, width: 32, height: rowHeight)
+        expandButton.frame = CGRect(x: bounds.width - controlInsets.right - CandidateLayout.controlWidth, y: 0, width: CandidateLayout.controlWidth, height: rowHeight)
         expandButton.symbol(expanded ? "chevron.down" : "chevron.up", label: expanded ? L("收起候选", "Collapse candidates") : L("展开候选", "Expand candidates"))
         for (button, frame) in zip(buttons, layout.frames) {
             button.titleLabel?.font = showsChineseMarks ? .chineseMarks(ofSize: landscape ? 18 : 20) : .systemFont(ofSize: landscape ? 18 : 20)
@@ -158,109 +159,12 @@ final class CandidateStrip: UIView, UIScrollViewDelegate, UIGestureRecognizerDel
         }
         if offset != scroll.contentOffset { scroll.contentOffset = offset }
     }
-    override func didMoveToWindow() {
-        super.didMoveToWindow()
-        if window == nil { cancelSelection() }
-    }
-    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
-        if gestureRecognizer !== hold { return super.gestureRecognizerShouldBegin(gestureRecognizer) }
-        return candidate(at: gestureRecognizer.location(in: self)) != nil
-    }
-    @objc private func held(_ gesture: UILongPressGestureRecognizer) {
-        let point = gesture.location(in: self)
-        switch gesture.state {
-        case .began: beginSelection(at: point)
-        case .changed: moveSelection(to: point)
-        case .ended: finishSelection(at: point)
-        case .cancelled, .failed: cancelSelection()
-        default: break
-        }
-    }
-    private func candidate(at point: CGPoint) -> Int? {
-        guard bounds.contains(point), !isHidden else { return nil }
-        for (index, button) in buttons.enumerated() {
-            let viewport = scroll.frame
-            guard viewport.contains(point) else { continue }
-            let visible = button.convert(button.bounds, to: self).intersection(viewport)
-            if !visible.isNull && visible.insetBy(dx: -2, dy: -2).contains(point) { return index }
-        }
-        return nil
-    }
-    private func beginSelection(at point: CGPoint) {
-        guard candidate(at: point) != nil else { return }
-        cancelSelection()
-        scroll.setContentOffset(scroll.contentOffset, animated: false)
-        selectionPoint = point; refreshSelection()
-        lastSelectionTick = CACurrentMediaTime()
-        let timer = Timer(timeInterval: 1.0 / 60, repeats: true) { [weak self] _ in
-            guard let self else { return }
-            let now = CACurrentMediaTime()
-            self.advanceSelection(by: min(0.05, now - self.lastSelectionTick))
-            self.lastSelectionTick = now
-        }
-        selectionTimer = timer; RunLoop.main.add(timer, forMode: .common)
-    }
-    private func moveSelection(to point: CGPoint) {
-        guard selectionPoint != nil else { return }
-        selectionPoint = point; refreshSelection()
-    }
-    private func finishSelection(at point: CGPoint) {
-        guard selectionPoint != nil else { return }
-        // Resolve the release against the current scroll position, not the button
-        // where the gesture began or a highlight from before the last scroll tick.
-        moveSelection(to: point)
-        let index = selectedIndex
-        cancelSelection()
-        if let index { onSelect?(index) }
-    }
-    func cancelSelection() {
-        selectionPoint = nil; selectionTimer?.invalidate(); selectionTimer = nil
-        setSelection(nil); lastFeedbackIndex = nil
-    }
-    private func setSelection(_ index: Int?) {
-        guard selectedIndex != index else { return }
-        if let old = selectedIndex, buttons.indices.contains(old) { buttons[old].isDragTarget = false }
-        selectedIndex = index
-        if let index {
-            buttons[index].isDragTarget = true
-            if lastFeedbackIndex != index { lastFeedbackIndex = index; onSelectionChanged?() }
-        }
-    }
-    private func refreshSelection() {
-        guard let point = selectionPoint else { return }
-        setSelection(candidate(at: point))
-    }
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        guard !layingOutCandidates else { return }
-        refreshSelection()
-    }
-    private func advanceSelection(by elapsed: TimeInterval) {
-        guard let point = selectionPoint, scroll.frame.contains(point) else { return }
-        let position = expanded ? point.y - scroll.frame.minY : point.x - scroll.frame.minX
-        let length = expanded ? scroll.bounds.height : scroll.bounds.width
-        let edge = min(24, length / 3)
-        guard edge > 0 else { return }
-        let velocity: CGFloat
-        if position < edge { velocity = -260 * (1 - position / edge) }
-        else if position > length - edge { velocity = 260 * (1 - (length - position) / edge) }
-        else { return }
-        let limit = max(0, expanded ? scroll.contentSize.height - length : scroll.contentSize.width - length)
-        let old = expanded ? scroll.contentOffset.y : scroll.contentOffset.x
-        let next = min(limit, max(0, old + velocity * elapsed))
-        scroll.contentOffset = expanded ? CGPoint(x: 0, y: next) : CGPoint(x: next, y: 0)
-        refreshSelection()
-    }
-    #if KEYBOARD_LAYOUT_TESTS
-    func developmentBeginSelection(at point: CGPoint) { beginSelection(at: point) }
-    func developmentMoveSelection(to point: CGPoint) { moveSelection(to: point) }
-    func developmentFinishSelection(at point: CGPoint) { finishSelection(at: point) }
-    func developmentAdvanceSelection(by elapsed: TimeInterval) { advanceSelection(by: elapsed) }
-    #endif
 }
 
 /// Candidates read as text, with a transient touch highlight and no keycap base.
 final class CandidateButton: UIButton {
     let commentLabel = UILabel()
+    private let highlight = UIView()
     var comment = "" {
         didSet {
             guard comment != oldValue else { return }
@@ -269,10 +173,11 @@ final class CandidateButton: UIButton {
             setNeedsLayout()
         }
     }
-    var isDragTarget = false { didSet { if oldValue != isDragTarget { updateHighlight(); setNeedsLayout() } } }
     override init(frame: CGRect) {
         super.init(frame: frame)
-        backgroundColor = .clear; layer.cornerRadius = 4
+        backgroundColor = .clear
+        highlight.isUserInteractionEnabled = false; highlight.layer.cornerRadius = 7; highlight.layer.cornerCurve = .continuous
+        highlight.alpha = 0; insertSubview(highlight, at: 0)
         commentLabel.font = CandidateLayout.commentFont(landscape: false)
         commentLabel.lineBreakMode = .byTruncatingTail; commentLabel.isHidden = true
         commentLabel.isUserInteractionEnabled = false; addSubview(commentLabel)
@@ -288,18 +193,18 @@ final class CandidateButton: UIButton {
     }
     override func tintColorDidChange() { super.tintColorDidChange(); updateHighlight() }
     private func updateHighlight() {
-        let accent = tintColor ?? UIColor.systemBlue
-        backgroundColor = isHighlighted || isDragTarget ? accent : .clear
-        setTitleColor(isDragTarget ? KeyboardPalette.contrastingInk(on: accent) : .label, for: .normal)
-        setTitleColor(KeyboardPalette.contrastingInk(on: accent), for: .highlighted)
-        imageView?.tintColor = isHighlighted ? KeyboardPalette.contrastingInk(on: accent) : .label
-        commentLabel.textColor = isHighlighted || isDragTarget ? KeyboardPalette.contrastingInk(on: accent) : .secondaryLabel
+        // A touch only greys the word; the blue flood was jarring while scrolling or on a mis-tap.
+        highlight.backgroundColor = .tertiarySystemFill; highlight.alpha = isHighlighted ? 1 : 0
+        setTitleColor(.label, for: .normal); setTitleColor(.label, for: .highlighted)
+        imageView?.tintColor = .label
+        commentLabel.textColor = .secondaryLabel
     }
     func symbol(_ name: String, label: String) {
         setImage(UIImage(systemName: name), for: .normal); accessibilityLabel = label
     }
     override func layoutSubviews() {
         super.layoutSubviews()
+        highlight.frame = bounds.insetBy(dx: 2, dy: 1)
         titleLabel?.transform = .identity
         let textHeight = min(bounds.height, ceil(titleLabel?.font.lineHeight ?? 0))
         titleLabel?.bounds = CGRect(x: 0, y: 0, width: max(0, bounds.width - 12), height: textHeight)
@@ -312,8 +217,6 @@ final class CandidateButton: UIButton {
             titleLabel?.frame = CGRect(x: left, y: (bounds.height - textHeight) / 2, width: titleWidth, height: textHeight)
             commentLabel.frame = CGRect(x: left + titleWidth + 4, y: 0, width: commentWidth, height: bounds.height)
         }
-        let scale = isDragTarget ? min(1.08, (bounds.width - 2) / max(1, bounds.width - 12)) : 1
-        titleLabel?.transform = CGAffineTransform(scaleX: scale, y: scale)
         if let imageView, let image = imageView.image {
             imageView.frame = CGRect(x: (bounds.width - image.size.width) / 2, y: (bounds.height - image.size.height) / 2, width: image.size.width, height: image.size.height)
         }

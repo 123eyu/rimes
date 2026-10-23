@@ -10,6 +10,8 @@ struct KeyboardAppearanceConfiguration: Codable, Equatable {
     var landscapeHeight = 100
     var numericNineGrid = false
     var layoutOptionsRevision: UUID?
+    var keyStyle: KeyboardKeyStyle = .flat
+    var keyStyleRevision: UUID?
     var longPressSwipeSymbols = false
     var longPressSwipeSymbolsRevision: UUID?
     var revision: UUID?
@@ -19,7 +21,7 @@ struct KeyboardAppearanceConfiguration: Codable, Equatable {
         self.layout = layout; self.skin = skin
         self.longPressSwipeSymbols = longPressSwipeSymbols; self.revision = revision
     }
-    private enum CodingKeys: String, CodingKey { case layout, skin, longPressSwipeSymbols, longPressSwipeSymbolsRevision, revision, directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, layoutOptionsRevision }
+    private enum CodingKeys: String, CodingKey { case layout, skin, longPressSwipeSymbols, longPressSwipeSymbolsRevision, revision, directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, layoutOptionsRevision, keyStyle, keyStyleRevision }
     init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         layout = try values.decodeIfPresent(OrdinaryKeyboardLayout.self, forKey: .layout) ?? .qwerty
@@ -31,6 +33,8 @@ struct KeyboardAppearanceConfiguration: Codable, Equatable {
         landscapeHeight = min(130, max(100, (try? values.decode(Int.self, forKey: .landscapeHeight)) ?? 100))
         numericNineGrid = (try? values.decode(Bool.self, forKey: .numericNineGrid)) ?? false
         layoutOptionsRevision = try? values.decode(UUID.self, forKey: .layoutOptionsRevision)
+        keyStyle = (try? values.decode(KeyboardKeyStyle.self, forKey: .keyStyle)) ?? .flat
+        keyStyleRevision = try? values.decode(UUID.self, forKey: .keyStyleRevision)
         revision = try values.decodeIfPresent(UUID.self, forKey: .revision)
     }
 }
@@ -57,6 +61,7 @@ final class KeyboardAppearanceStore {
         value.directSwipeSymbols = previous.directSwipeSymbols
         value.portraitHeight = previous.portraitHeight; value.landscapeHeight = previous.landscapeHeight
         value.numericNineGrid = previous.numericNineGrid; value.layoutOptionsRevision = previous.layoutOptionsRevision
+        value.keyStyle = previous.keyStyle; value.keyStyleRevision = previous.keyStyleRevision
         try write(value)
     }
     func saveSwipeSymbols(_ enabled: Bool, direct: Bool = false) throws {
@@ -69,6 +74,11 @@ final class KeyboardAppearanceStore {
         var value = load()
         value.portraitHeight = min(130, max(100, portrait)); value.landscapeHeight = min(130, max(100, landscape))
         value.numericNineGrid = numericNineGrid; value.layoutOptionsRevision = UUID()
+        try write(value)
+    }
+    func saveKeyStyle(_ style: KeyboardKeyStyle) throws {
+        var value = load()
+        value.keyStyle = style; value.keyStyleRevision = UUID()
         try write(value)
     }
     private func write(_ value: KeyboardAppearanceConfiguration) throws {

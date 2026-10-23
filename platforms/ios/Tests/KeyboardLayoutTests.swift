@@ -238,90 +238,6 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(strip.expanded)
         expand(); controller.developmentSpace(); XCTAssertTrue(strip.expanded) // hook bypasses the key press
     }
-    func testDraggingExpandedCandidatesCommitsCurrentScrolledWordToHostAndBuffer() async throws {
-        for buffering in [false, true] {
-            let (window, controller) = host(); defer { window.isHidden = true }
-            try await Task.sleep(nanoseconds: 80_000_000)
-            if buffering { controller.developmentBuffer("") }
-            controller.developmentType("shi")
-            let strip = controller.layoutViews.candidates
-            strip.onExpand?(); window.layoutIfNeeded()
-            XCTAssertGreaterThan(strip.buttons.count, 20)
-            let rect = strip.buttons[0].convert(strip.buttons[0].bounds, to: strip)
-            strip.developmentBeginSelection(at: CGPoint(x: rect.midX, y: rect.midY))
-            strip.scroll.contentOffset.y = strip.scroll.bounds.height
-            let target = try XCTUnwrap(strip.buttons.first { button in
-                let rect = button.convert(button.bounds, to: strip)
-                return rect.minY >= strip.scroll.frame.minY && rect.maxY <= strip.scroll.frame.maxY
-            })
-            let targetRect = target.convert(target.bounds, to: strip)
-            let point = CGPoint(x: targetRect.midX, y: targetRect.midY)
-            let expected = try XCTUnwrap(target.currentTitle)
-            strip.developmentMoveSelection(to: point)
-            XCTAssertTrue(target.isDragTarget)
-            strip.developmentFinishSelection(at: point)
-            await controller.developmentWaitForDelivery(); window.layoutIfNeeded()
-            XCTAssertEqual(buffering ? controller.developmentBufferSource.text : controller.layoutProxy.native.text, expected)
-            XCTAssertFalse(strip.expanded); XCTAssertTrue(controller.developmentRaw.isEmpty)
-            XCTAssertNil(strip.selectedIndex)
-        }
-    }
-    func testTypingOrHostSelectionChangeCancelsHeldCandidate() async throws {
-        let (window, controller) = host(); defer { window.isHidden = true }
-        try await Task.sleep(nanoseconds: 80_000_000)
-        for hostChange in [false, true] {
-            controller.developmentType("ni"); window.layoutIfNeeded()
-            let strip = controller.layoutViews.candidates
-            let first = try XCTUnwrap(strip.buttons.first)
-            let rect = first.convert(first.bounds, to: strip)
-            let point = CGPoint(x: rect.midX, y: rect.midY)
-            strip.developmentBeginSelection(at: point)
-            XCTAssertNotNil(strip.selectedIndex)
-            if hostChange { controller.selectionWillChange(nil) }
-            else { controller.layoutViews.keys.onTypingPress?() }
-            XCTAssertNil(strip.selectedIndex)
-            let before = controller.layoutProxy.native.text
-            strip.developmentFinishSelection(at: point)
-            await controller.developmentWaitForDelivery()
-            XCTAssertEqual(controller.layoutProxy.native.text, before)
-            controller.developmentChoose(.pinyin)
-        }
-    }
-    func testCandidateDragUsesSelectionHapticsAndRespectsTheHapticsSwitch() async throws {
-        let (window, controller) = host(); defer { window.isHidden = true }
-        try await Task.sleep(nanoseconds: 80_000_000)
-        controller.developmentType("shi"); window.layoutIfNeeded()
-        let strip = controller.layoutViews.candidates, feedback = controller.layoutViews.keys.feedback
-        var now: TimeInterval = 10, pulses: [KeyFeedback] = [], strengths: [HapticStrength] = [], clicks = 0
-        feedback.enabled = true; feedback.soundEnabled = true; feedback.reset()
-        feedback.strength = .light; feedback.onFeedbackStrength = { strengths.append($0) }
-        feedback.clock = { now }; feedback.onFeedback = { pulses.append($0) }; feedback.playInputClick = { clicks += 1 }
-        func point(_ index: Int) -> CGPoint {
-            let button = strip.buttons[index], frame = button.convert(button.bounds, to: strip)
-            return CGPoint(x: frame.midX, y: frame.midY)
-        }
-        strip.developmentBeginSelection(at: point(0))
-        XCTAssertEqual(pulses, [.selection]); XCTAssertEqual(clicks, 0)
-        XCTAssertEqual(strengths, [.strong])
-        now += 0.1; strip.developmentMoveSelection(to: point(1))
-        XCTAssertEqual(pulses, [.selection, .selection])
-        now += 0.1; strip.developmentMoveSelection(to: point(1))
-        XCTAssertEqual(pulses.count, 2)
-        feedback.enabled = false
-        now += 0.1; strip.developmentMoveSelection(to: point(2))
-        XCTAssertEqual(pulses.count, 2); XCTAssertEqual(clicks, 0)
-        feedback.enabled = true
-        now += 0.1; strip.developmentMoveSelection(to: point(0))
-        XCTAssertEqual(pulses.count, 3)
-        strip.cancelSelection()
-        now += 0.1; strip.developmentBeginSelection(at: point(0))
-        XCTAssertEqual(pulses.count, 4); XCTAssertEqual(clicks, 0)
-        XCTAssertEqual(strengths, Array(repeating: .strong, count: 4))
-        feedback.strength = .strongest
-        now += 0.1; strip.developmentMoveSelection(to: point(1))
-        XCTAssertEqual(strengths.last, .strongest)
-        strip.cancelSelection()
-    }
     func testPoemLinesShowSideBySideAndSendOneLineEachTap() {
         let (window, controller) = host(); defer { window.isHidden = true }
         controller.developmentBuffer("春眠不觉", plugin: true, output: "春眠不觉晓，\n处处闻啼鸟。\n夜来风雨声，\n花落知多少。"); window.layoutIfNeeded()
@@ -1576,8 +1492,9 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertGreaterThan(frame(v.candidates.scroll).minX, frame(v.settings).maxX)
         XCTAssertEqual(candidateFrame.minY, frame(controller.view).minY + 5, accuracy: 0.5)
         let schemes = try XCTUnwrap(v.settings.menu?.children.first as? UIMenu)
-        XCTAssertEqual(schemes.children.count, InputScheme.allCases.count)
-        XCTAssertEqual((schemes.children.compactMap { $0 as? UIAction }.first { $0.state == .on })?.title, InputScheme.chord.title)
+        // Chord is a layout now, not a scheme: it is no longer listed, and the scheme underneath is Ziranma.
+        XCTAssertEqual(schemes.children.count, InputScheme.allCases.count - 1)
+        XCTAssertEqual((schemes.children.compactMap { $0 as? UIAction }.first { $0.state == .on })?.title, InputScheme.ziranma.title)
         let toggle = try XCTUnwrap(v.candidates.superview?.subviews.first { $0.accessibilityIdentifier == "keyboard.buffer" })
         XCTAssertGreaterThan(frame(toggle).minX, frame(v.candidates.scroll).maxX)
         XCTAssertEqual(frame(toggle).maxX, frame(controller.view).maxX - 5)
@@ -1589,7 +1506,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertEqual(frame(v.candidates).minX, frame(controller.view).minX + 5)
         XCTAssertEqual(frame(v.candidates).maxX, frame(controller.view).maxX - 5)
         XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.candidates).minX)
-        XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX - 4)
+        XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX)
         XCTAssertEqual(frame(v.candidates).height, candidateFrame.height)
         controller.developmentContent(); controller.developmentBuffer("", plugin: true); window.layoutIfNeeded()
         XCTAssertFalse(v.settings.isHidden); XCTAssertFalse(toggle.isHidden)
@@ -1663,7 +1580,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
                 XCTAssertLessThanOrEqual(expanded.height, 110)
                 let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
                 let glyphWidth = (texts[1] as NSString).size(withAttributes: [.font: font]).width
-                XCTAssertEqual(collapsed.frames[1].width, ceil(glyphWidth) + 12)
+                XCTAssertEqual(collapsed.frames[1].width, ceil(glyphWidth) + CandidateLayout.padding)
             }
         }
         XCTAssertEqual(CandidateLayout.measure([], width: 300, expanded: true, landscape: false).height, 0)

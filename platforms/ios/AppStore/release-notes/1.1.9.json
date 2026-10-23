@@ -1,5 +1,5 @@
 {
-  "en-US": "Fixes an issue that could prevent saving AI configurations with OSStatus error -34018. Restores consistent access to securely stored API keys in the app and keyboard. Existing input schemes and personal settings are preserved.",
-  "zh-Hans": "修复保存 AI 配置时可能出现 OSStatus 错误 -34018 的问题，恢复主应用与键盘对安全存储的 API Key 的一致访问。保留现有输入方案与个人设置。",
-  "zh-Hant": "修復儲存 AI 設定時可能出現 OSStatus 錯誤 -34018 的問題，恢復主應用程式與鍵盤對安全儲存的 API Key 的一致存取。保留現有輸入方案與個人設定。"
+  "en-US": "Fixes OSStatus error -34018 when saving AI configurations and restores shared access to securely stored API keys. Improves candidate scrolling, tap feedback and expanded rows. Refines number and symbol keys and adds Flat and Legacy key styles. The orthogonal grid can now be selected independently of the input scheme: Pinyin and Ziranma support chords, while other schemes use tap typing. Existing chord selections migrate to the matching scheme and layout.",
+  "zh-Hans": "修复保存 AI 配置时出现 OSStatus 错误 -34018 的问题，恢复主应用与键盘对安全存储的 API Key 的共享访问。改善候选栏滚动、点选反馈和展开布局，优化数字与符号按键，新增扁平与经典按键样式。正交键盘可独立于输入方案选择：全拼和自然码支持并击，其他方案使用逐键输入；原并击选择自动迁移到对应方案与布局。",
+  "zh-Hant": "修復儲存 AI 設定時出現 OSStatus 錯誤 -34018 的問題，恢復主應用程式與鍵盤對安全儲存的 API Key 的共用存取。改善候選列捲動、點選回饋和展開配置，最佳化數字與符號按鍵，新增扁平與經典按鍵樣式。正交鍵盤可獨立於輸入方案選擇：全拼和自然碼支援並擊，其他方案使用逐鍵輸入；原並擊選擇自動遷移至對應方案與配置。"
 }
