@@ -1735,7 +1735,7 @@ Copyright 2026 scholay
 
 Core maintainer / 核心维护者: 学术海
 Maintainer homepage: https://pm.scholay.com
-Project source: https://github.com/scholay-xsime/xsime
+Project source: https://github.com/scholay/xsime
 
 RIMES provides Chinese text input using the Rime Input Method Engine (librime).
 Rime / librime: https://github.com/rime/librime
@@ -1812,8 +1812,8 @@ Copyright 2026 scholay
 
 Core maintainer / 核心维护者: 学术海
 Maintainer homepage: https://pm.scholay.com
-Plugin repository: https://github.com/scholay-xsime/xsime-plugins
-Host project: https://github.com/scholay-xsime/xsime
+Plugin repository: https://github.com/scholay/rimes-plugins
+Host project: https://github.com/scholay/xsime
 
 This repository is maintained for official free plugins for RIMES.
 RIMES provides Chinese text input using the Rime Input Method Engine (librime).
