@@ -25,11 +25,17 @@ GitHub Release 出现新版本不表示该 iOS 版本已经获批或上架。
 期间旧的公开版本与更新入口保持可用；不先公开 macOS 包再补齐其他平台，也不覆盖已有不同字节的资产。
 旧 macOS 客户端使用的 `RIMES-X.Y.Z.pkg` 文件名保持兼容。
 
+Organization 迁移后，发布与权限核验的目标是 `scholay-xsime/xsime`，插件源码为 `scholay-xsime/xsime-plugins`。
+签名更新清单里的包 URL 继续使用 `scholay/xsime/releases/download/`，插件包 URL 继续使用
+`scholay/rimes-plugins/releases/download/`，以兼容已发布客户端的严格地址校验；这些路径由 GitHub 重定向到同一仓库和资产。
+不要重建旧同名仓库或改写已有签名清单。迁移前 tag 内的旧仓库发布限制不会自动改变；新发布必须从迁移后的主线创建新 tag，
+不能移动旧 tag 来恢复发布。Pages 旧路径的维护位置见[命名与兼容规范](../development/branding.md#仓库与更新兼容)。
+
 若全部生产任务已经通过，但发布在创建 draft 前、上传中或公开后的响应/读回阶段失败，必须以原稳定 tag 手动运行
 `Complete approved release assets`，输入该 tag 的原工作流 run ID，并重新通过 `macos-publish` 的人工批准：
 
 ```bash
-gh workflow run complete-release-assets.yml --repo scholay/xsime --ref vX.Y.Z -f source_run=ORIGINAL_RUN_ID
+gh workflow run complete-release-assets.yml --repo scholay-xsime/xsime --ref vX.Y.Z -f source_run=ORIGINAL_RUN_ID
 ```
 
 恢复入口检出该 tag 的确切源码，调用者的 tag／commit 必须与原 run 一致；从 main 或其他 tag 运行会拒绝。
@@ -44,7 +50,7 @@ Android `versionCode` 必须高于前一正式版本，已公开同版本的只�
 
 macOS 的 `VERSION`、`Info.plist` 与正式 tag 必须一致。发布脚本不修改、不提交任何文件，只在 `origin/main` 上创建并推送一个 tag；
 构建、验证、发布说明和 Release 由 GitHub Actions 完成。macOS 与数据预览的发布中心是
-[`scholay/xsime`](https://github.com/scholay/xsime/releases)；iOS 独立走 App Store Connect。
+[`scholay-xsime/xsime`](https://github.com/scholay-xsime/xsime/releases)；iOS 独立走 App Store Connect。
 
 ```mermaid
 flowchart LR
@@ -113,7 +119,7 @@ git switch main && git pull --ff-only
 
 脚本在推送前逐项检查，任何一项不满足都会拒绝（`--dry-run` 只报告）：
 
-- `origin` 的 fetch / push 地址都指向 `scholay/xsime`；
+- `origin` 的 fetch / push 地址都指向 `scholay-xsime/xsime`；
 - 当前在 `main`，工作区干净，`HEAD` 等于 `origin/main`；
 - `origin/main` 这个提交的 `CI` 已通过（其中包含 macOS build/runtime smoke 与发布工具校验）；
 - 正式版还要求同一提交的 iOS checks、Android checks、Windows IME、Linux IME 全部通过；按固定 workflow ID、main push 事件和确切 SHA 检查最新运行，不能用同名或较早的成功结果替代；预览版只要求主 CI；

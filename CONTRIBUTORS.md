@@ -8,10 +8,10 @@ Core maintainer / 核心维护者: [学术海](https://pm.scholay.com) ([GitHub:
 - EboneA
 - cuihaiyang
 - pengjiebo
-- [Kindred5210](https://github.com/Kindred5210) — Liquid Glass theme design and implementation adapted from [PR #46](https://github.com/scholay/xsime/pull/46).
-- [XyTT2N2bTc](https://github.com/XyTT2N2bTc) — Windows candidate-window placement via [PR #82](https://github.com/scholay/xsime/pull/82).
-- [Sparky579](https://github.com/Sparky579) — Windows candidate-window caret fallback and regression coverage via [PR #105](https://github.com/scholay/xsime/pull/105).
-- [limingzxc](https://github.com/limingzxc) — Android Chinese input in `TYPE_NULL` chat editors and editor policy regression coverage via [PR #223](https://github.com/scholay/xsime/pull/223).
+- [Kindred5210](https://github.com/Kindred5210) — Liquid Glass theme design and implementation adapted from [PR #46](https://github.com/scholay-xsime/xsime/pull/46).
+- [XyTT2N2bTc](https://github.com/XyTT2N2bTc) — Windows candidate-window placement via [PR #82](https://github.com/scholay-xsime/xsime/pull/82).
+- [Sparky579](https://github.com/Sparky579) — Windows candidate-window caret fallback and regression coverage via [PR #105](https://github.com/scholay-xsime/xsime/pull/105).
+- [limingzxc](https://github.com/limingzxc) — Android Chinese input in `TYPE_NULL` chat editors and editor policy regression coverage via [PR #223](https://github.com/scholay-xsime/xsime/pull/223).
 
 ## AI coding assistants
 
@@ -21,7 +21,7 @@ These tools helped design, implement, and review substantial parts of XSIME:
 - **[Cursor Agent](https://github.com/cursoragent)** — Cursor editor and CLI agent workflows; [Bugbot](https://cursor.com/docs/bugbot) automated pull-request review
 - **[Codex](https://github.com/codex)** (OpenAI) — Codex CLI / desktop coding agent
 - **Grok** (xAI) — Cursor Grok agent
-- **[OpenCode](https://opencode.ai/)** — the [PR #82](https://github.com/scholay/xsime/pull/82) candidate-window contribution
+- **[OpenCode](https://opencode.ai/)** — the [PR #82](https://github.com/scholay-xsime/xsime/pull/82) candidate-window contribution
 
 ## Attribution policy
 

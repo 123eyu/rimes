@@ -29,7 +29,7 @@ import java.util.concurrent.Executors;
 /** One application-owned queue. Activities observe it; rotating never cancels an update. */
 final class AppUpdateManager {
     static final String PREFS = "application-update";
-    private static final String FEED = "https://github.com/scholay/xsime/releases/latest/download/update-manifest.json";
+    private static final String FEED = "https://github.com/scholay-xsime/xsime/releases/latest/download/update-manifest.json";
     private static AppUpdateManager instance;
     static synchronized AppUpdateManager get(Context context) {
         if (instance == null) instance = new AppUpdateManager(context.getApplicationContext());

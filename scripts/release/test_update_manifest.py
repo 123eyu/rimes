@@ -17,6 +17,11 @@ class UpdateManifestTests(unittest.TestCase):
             self.assertEqual(set(feed["platforms"]), {"macos", "windows", "android", "linux"})
             self.assertEqual(feed["platforms"]["android"]["sha256"], hashlib.sha256(b"apk").hexdigest())
             self.assertEqual(feed["platforms"]["android"]["build"], 20)
+            # Repository transfers must not strand already-installed clients,
+            # whose validators accept only the original download paths.
+            for platform, name in zip(("macos", "windows", "linux", "android"), names):
+                self.assertEqual(feed["platforms"][platform]["url"],
+                                 f"https://github.com/scholay/xsime/releases/download/v1.2.3/{name}")
             (root / names[0]).write_bytes(b"")
             with self.assertRaises(ValueError): manifest(root, "1.2.3", "a" * 40, 20)
 

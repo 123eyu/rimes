@@ -81,10 +81,10 @@ Todos los complementos de la tabla vienen con XSIME y quedan activados en una in
 
 ## Instalación
 
-La [versión 1.2.0](https://github.com/scholay/xsime/releases/tag/v1.2.0) ofrece paquetes PKG para macOS, APK/AAB para Android, EXE/ZIP para Windows y DEB para Linux (Ubuntu 24.04 / 26.04 amd64 / Fcitx5), además de un IPA de iOS sin firmar para firma propia. El paquete de macOS está firmado y notarizado; Android mantiene la clave de firma existente; el EXE de Windows no está firmado. Para iOS, consulta la [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) o la [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); las páginas de Apple muestran las versiones disponibles. Las cinco plataformas permiten importar el mismo ZIP de Rime o diccionario UTF-8 TXT/TSV con códigos de entrada. Consulta la [guía de importación](docs/portable-scheme-import.md) y el [registro de validación de 1.2.0](docs/releases/1.2.0.md). También puedes compilar desde el código fuente.
+La [versión 1.2.0](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0) ofrece paquetes PKG para macOS, APK/AAB para Android, EXE/ZIP para Windows y DEB para Linux (Ubuntu 24.04 / 26.04 amd64 / Fcitx5), además de un IPA de iOS sin firmar para firma propia. El paquete de macOS está firmado y notarizado; Android mantiene la clave de firma existente; el EXE de Windows no está firmado. Para iOS, consulta la [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) o la [invitación pública de TestFlight](https://testflight.apple.com/join/Kdj9RB4q); las páginas de Apple muestran las versiones disponibles. Las cinco plataformas permiten importar el mismo ZIP de Rime o diccionario UTF-8 TXT/TSV con códigos de entrada. Consulta la [guía de importación](docs/portable-scheme-import.md) y el [registro de validación de 1.2.0](docs/releases/1.2.0.md). También puedes compilar desde el código fuente.
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/xsime.git
+git clone --recurse-submodules https://github.com/scholay-xsime/xsime.git
 cd xsime
 ```
 
@@ -114,7 +114,7 @@ La aplicación muestra que la actualización ha terminado después de abrirse de
 
 iOS comprueba la versión disponible en la tienda y abre App Store para descargarla e instalarla. TestFlight gestiona las versiones de prueba. Publicar en GitHub no significa que la misma versión de iOS esté disponible.
 
-Los cuatro instaladores comparten una publicación `vX.Y.Z` en [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest). CI sube y vuelve a descargar todos los paquetes antes de publicar el archivo común `update-manifest.json`. Las versiones preliminares quedan fuera de este canal estable. iOS utiliza un flujo separado `ios-vX.Y.Z` para la tienda.
+Los cuatro instaladores comparten una publicación `vX.Y.Z` en [`scholay-xsime/xsime`](https://github.com/scholay-xsime/xsime/releases/latest). CI sube y vuelve a descargar todos los paquetes antes de publicar el archivo común `update-manifest.json`. Las versiones preliminares quedan fuera de este canal estable. iOS utiliza un flujo separado `ios-vX.Y.Z` para la tienda.
 
 Los mantenedores publican cuando pasan los cinco flujos de CI de main. Consulta [docs/release/README.md](docs/release/README.md) y [CHANGELOG.md](CHANGELOG.md):
 
@@ -141,8 +141,8 @@ Quien mantiene el proyecto en el centro es gerente de producto para usuarios fin
 
 ## Problemas conocidos
 
-- **Linux: salir de Fcitx5 antes de que termine un despliegue puede dejar el proceso varios minutos.** Un despliegue de librime inicial o en segundo plano no se puede cancelar a medias, y se nota más con un diccionario grande. Véase [#43](https://github.com/scholay/xsime/issues/43).
-- **Linux: hacer clic en otro campo justo después de arrastrar la barra de Buffer puede dejar la captura activa.** Solo se ha reproducido en Firefox sobre X11, si el clic cae en otro campo de la misma ventana en unos 10 ms tras soltar. Otro clic o Esc lo recupera. Véase [#44](https://github.com/scholay/xsime/issues/44).
+- **Linux: salir de Fcitx5 antes de que termine un despliegue puede dejar el proceso varios minutos.** Un despliegue de librime inicial o en segundo plano no se puede cancelar a medias, y se nota más con un diccionario grande. Véase [#43](https://github.com/scholay-xsime/xsime/issues/43).
+- **Linux: hacer clic en otro campo justo después de arrastrar la barra de Buffer puede dejar la captura activa.** Solo se ha reproducido en Firefox sobre X11, si el clic cae en otro campo de la misma ventana en unos 10 ms tras soltar. Otro clic o Esc lo recupera. Véase [#44](https://github.com/scholay-xsime/xsime/issues/44).
 
 ## Licencia y terceros
 
@@ -150,4 +150,4 @@ El código propio de XSIME usa [Apache License 2.0](LICENSE). El alcance y las a
 
 La entrada de chino se basa en el [motor Rime (librime)](https://github.com/rime/librime). Véanse [NOTICE](NOTICE) para las atribuciones y [ATTRIBUTION.md](ATTRIBUTION.md) para ejemplos de reconocimiento voluntario. Estas recomendaciones no añaden condiciones a la licencia.
 
-Los componentes de terceros, esquemas, diccionarios y datos de Lua/OpenCC conservan sus propias licencias y atribuciones; véanse [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [LICENSES](LICENSES) y `rime-data/licenses/`. Los plugins oficiales gratuitos se mantienen en [rimes-plugins](https://github.com/scholay/rimes-plugins).
+Los componentes de terceros, esquemas, diccionarios y datos de Lua/OpenCC conservan sus propias licencias y atribuciones; véanse [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [LICENSES](LICENSES) y `rime-data/licenses/`. Los plugins oficiales gratuitos se mantienen en [rimes-plugins](https://github.com/scholay-xsime/xsime-plugins).

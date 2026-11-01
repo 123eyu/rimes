@@ -149,7 +149,7 @@ is pending. Once the IME receives `drag_end`, the next activation retires
 capture without a grace period. The GTK workbench normally detects physical
 release by polling every 50 ms; a click before the IME receives that message
 can still consume the pending drag. The 0–10 ms physical-release case in
-[#44](https://github.com/scholay/xsime/issues/44) was accepted by the maintainer
+[#44](https://github.com/scholay-xsime/xsime/issues/44) was accepted by the maintainer
 on 2026-10-16. The Fcitx regression covers command receipt, not physical pointer
 release. See the timing matrix in [`docs/platforms/linux/acceptance.md#buffer`](../../../docs/platforms/linux/acceptance.md#buffer).
 
@@ -190,7 +190,7 @@ Release `.deb` packages include this private Rime/Lua build with a distinct libr
 ## Install and upgrade (Debian / Ubuntu: recommended)
 
 Use the `fcitx5-rimes_<version>_amd64.deb` and matching `.sha256` attached to
-the project's [GitHub Release](https://github.com/scholay/xsime/releases).
+the project's [GitHub Release](https://github.com/scholay-xsime/xsime/releases).
 Older releases may not have a deb; until a release with this asset is
 published, build one locally using the packaging instructions below.
 The release workflow builds on Ubuntu 24.04 amd64 and validates the same DEB

@@ -14,8 +14,8 @@ class RecoveryTests(unittest.TestCase):
     def setUp(self):
         commit = "a" * 40
         self.args = [
-            {"id": 123, "repository": {"full_name": "scholay/xsime"},
-             "head_repository": {"full_name": "scholay/xsime"},
+            {"id": 123, "repository": {"full_name": "scholay-xsime/xsime"},
+             "head_repository": {"full_name": "scholay-xsime/xsime"},
              "path": ".github/workflows/release.yml", "event": "push",
              "status": "completed", "conclusion": "success", "head_branch": "v1.1.6",
              "head_sha": commit},
@@ -95,7 +95,7 @@ class RecoveryTests(unittest.TestCase):
 
     def test_recovery_dispatch_requires_original_tag_commit_and_repository(self):
         run = self.args[0]
-        environment = {"GITHUB_REPOSITORY": "scholay/xsime", "GITHUB_EVENT_NAME": "workflow_dispatch",
+        environment = {"GITHUB_REPOSITORY": "scholay-xsime/xsime", "GITHUB_EVENT_NAME": "workflow_dispatch",
                        "GITHUB_REF": "refs/tags/v1.1.6", "GITHUB_REF_NAME": "v1.1.6", "GITHUB_SHA": "a" * 40}
         verify_recovery_context(run, environment)
         for field, value in (("GITHUB_REPOSITORY", "someone/fork"),

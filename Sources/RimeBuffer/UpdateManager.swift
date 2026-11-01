@@ -270,7 +270,8 @@ enum UpdateStatus: Equatable {
 final class UpdateManager {
     static let shared = UpdateManager()
 
-    // Source of truth for the repo; matches .github/workflows and README.
+    // Compatibility namespace used by published signed-manifest asset URLs.
+    // The feed and release page use the organization's canonical repository.
     private let githubOwner = "scholay"
     private let githubRepo = "xsime"
 
@@ -429,7 +430,7 @@ final class UpdateManager {
 
     private func checkForUpdates(completion: @escaping () -> Void) {
         setStatus(.checking)
-        var request = URLRequest(url: URL(string: "https://github.com/scholay/xsime/releases/latest/download/update-manifest.json")!)
+        var request = URLRequest(url: URL(string: "https://github.com/scholay-xsime/xsime/releases/latest/download/update-manifest.json")!)
         request.timeoutInterval = 30
         request.setValue("XSIME-updater/1", forHTTPHeaderField: "User-Agent")
         session.dataTask(with: request) { [weak self] data, response, error in
@@ -685,7 +686,7 @@ final class UpdateManager {
     // MARK: - Helpers
 
     func openReleasesPage() {
-        if let url = URL(string: "https://github.com/\(githubOwner)/\(githubRepo)/releases") {
+        if let url = URL(string: "https://github.com/scholay-xsime/xsime/releases") {
             NSWorkspace.shared.open(url)
         }
     }

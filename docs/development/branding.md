@@ -6,7 +6,7 @@
 | 繁体中文显示名 | 犀術IME |
 | 英文及其他语言默认显示名 | XSIME |
 | 项目与架构名称 | XSIME |
-| 仓库 | `scholay/xsime` |
+| 仓库 | `scholay-xsime/xsime` |
 | 官网 | `https://xsime.com` |
 
 品牌标语为“心有灵犀，落笔见术”（繁体“心有靈犀，落筆見術”）。标语中的“灵犀”保留原文。Rime / librime 是上游引擎名称，保持原名、版权和来源说明。RIMES、灵犀输入法、Lingxi IME 只用于兼容标识或历史迁移说明。
@@ -29,6 +29,10 @@ macOS 连接名使用 `com.scholay.inputmethod.isaac_Connection`，遵循既有 
 
 更新器使用固定仓库身份，并对官方新旧仓库 URL、包身份、版本和签名进行校验。旧版本内置更新器可能拒绝仓库重定向；受影响用户可从官方 Release 手动升级一次，保留 `~/Library/RIMES` 等用户目录。
 
-不重新建立 `scholay/rimes` 占用旧地址，不因品牌调整改变既有安装包身份。官网迁移仅调整产品入口；已发布的帮助与隐私页面路径、上游版权链接和维护者主页按各自用途保留。
+本体仓库位于 `scholay-xsime/xsime`，官方插件位于 `scholay-xsime/xsime-plugins`。五端仍在本体的单一 `main` 集成；Organization 不改变客户端、插件与用户数据的职责边界。
+
+不重新建立 `scholay/rimes`、`scholay/xsime` 或 `scholay/rimes-plugins` 占用旧地址，这会破坏 GitHub 仓库与下载重定向。已安装客户端的严格 URL 校验仍依赖旧地址，因此正式签名更新清单和插件目录继续使用旧的 `/releases/download/` 路径；发布 API、CI 仓库检查、源码链接和新客户端的更新清单入口使用新地址。不得把下载兼容路径当成遗漏而统一替换，亦不得改写已发布清单、资产或签名。
+
+GitHub Pages 不随仓库转移重定向。`scholay/scholay.github.io` 兼容站保留 `/rimes/ios/` 及 `/xsime/`、`/xsime/ios/` 的公开页面；新项目 Pages 地址为 `https://scholay-xsime.github.io/xsime/`，产品官网继续使用 `https://xsime.com`。已发布的商店帮助、隐私路径、安装包身份和上游版权链接按原用途保留。
 
 商店、TestFlight 和备案名称按各渠道实际流程更新。源码中的展示名称不能作为商店已更新的依据，也不能改写旧发布记录中的事实。

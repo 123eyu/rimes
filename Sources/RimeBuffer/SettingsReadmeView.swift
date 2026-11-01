@@ -14,7 +14,7 @@ final class SettingsReadmeView: NSStackView {
         Language(code: "ja", title: "日本語"), Language(code: "ko", title: "한국어"),
         Language(code: "es", title: "Español"),
     ]
-    static let repositoryBase = "https://github.com/scholay/xsime/blob/main/"
+    static let repositoryBase = "https://github.com/scholay-xsime/xsime/blob/main/"
 
     private let body = NSStackView()
     private let picker = NSSegmentedControl()
@@ -77,7 +77,7 @@ final class SettingsReadmeView: NSStackView {
         for url in candidates {
             if let text = try? String(contentsOf: url, encoding: .utf8), !text.isEmpty { return text }
         }
-        return "未能读取随应用附带的 README。完整文档见 https://github.com/scholay/xsime"
+        return "未能读取随应用附带的 README。完整文档见 https://github.com/scholay-xsime/xsime"
     }
 
     // MARK: Markdown → views

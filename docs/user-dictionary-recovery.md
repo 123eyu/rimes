@@ -14,7 +14,7 @@
 
 ## 外部工具的压缩格式兼容
 
-[#130](https://github.com/scholay/xsime/issues/130) 的报告环境中，外部工具使用了
+[#130](https://github.com/scholay-xsime/xsime/issues/130) 的报告环境中，外部工具使用了
 启用 Snappy 的 LevelDB，而输入法运行库不能读取该压缩格式，出现
 `corrupted compressed block contents`。此报错也可能来自实际损坏，不能仅
 凭日志就断定是压缩选项不一致。

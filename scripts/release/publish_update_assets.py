@@ -10,6 +10,7 @@ import subprocess
 import tempfile
 
 from release_guard import GitHub, REPO, require, source_commit, stable_version, verify_android_build
+from update_manifest import DOWNLOAD_REPO
 
 MAX_ASSET = 512 * 1024 * 1024
 IDENTITY_PREFIX = "<!-- xsime-release-source:"
@@ -108,7 +109,7 @@ def prepare_assets(root, version, commit, run_id, verify_feed=None):
     for platform, name in targets.items():
         target = payload.get("platforms", {}).get(platform, {})
         file = sources[name]
-        require(target.get("url") == f"https://github.com/{REPO}/releases/download/v{version}/{name}"
+        require(target.get("url") == f"https://github.com/{DOWNLOAD_REPO}/releases/download/v{version}/{name}"
                 and target.get("size") == file.stat().st_size and target.get("sha256") == digest(file),
                 f"Signed update feed does not identify the staged {platform} package")
     sources[feed.name] = feed

@@ -39,7 +39,7 @@ permissions:
 jobs:
   sign:
     name: Sign complete update manifest
-    if: github.repository == 'scholay/xsime' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+    if: github.repository == 'scholay-xsime/xsime' && github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     environment: macos-release

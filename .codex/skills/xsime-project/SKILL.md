@@ -7,7 +7,7 @@ description: XSIME (犀术IME) five-platform input method development guide for 
 
 ## Start Here
 
-Use this skill in the `scholay/xsime` checkout. Resolve paths from the current repository root, not a previous developer's workspace.
+Use this skill in the `scholay-xsime/xsime` checkout. Resolve paths from the current repository root, not a previous developer's workspace.
 
 1. Read `docs/README.md`, `docs/architecture/system.md`, and `docs/development/maintenance.md` for the current structure and working rules.
 2. Identify the platform and layer: key routing, composition, candidates, engine bridge, scheme import/preferences, settings, Buffer/Capsule/plugins, permissions, installation, release, or docs. Read its implementation before changing behavior.

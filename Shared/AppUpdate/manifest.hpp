@@ -7,7 +7,7 @@
 #include <string>
 
 namespace rimes::updates {
-inline constexpr const char* kFeed = "https://github.com/scholay/xsime/releases/latest/download/update-manifest.json";
+inline constexpr const char* kFeed = "https://github.com/scholay-xsime/xsime/releases/latest/download/update-manifest.json";
 inline constexpr std::uint64_t kMaximumPackage = 512ull * 1024 * 1024;
 inline std::array<unsigned, 3> Version(const std::string& value) {
     static const std::regex valid("(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})\\.(0|[1-9][0-9]{0,8})");

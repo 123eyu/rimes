@@ -110,7 +110,7 @@
 
 ## 安装
 
-[1.2.0 全平台发布页](https://github.com/scholay/xsime/releases/tag/v1.2.0)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB 和 iOS 社区 IPA。本版同步移动端助手、键盘手势与 Buffer 操作，并完善桌面设置、EPUB 素材和双轨跟打。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；方案 ZIP 上限为 2 GiB，格式与边界见[导入指南](docs/portable-scheme-import.md)。
+[1.2.0 全平台发布页](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0)集中提供 macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB 和 iOS 社区 IPA。本版同步移动端助手、键盘手势与 Buffer 操作，并完善桌面设置、EPUB 素材和双轨跟打。五端均提供第三方 Rime 方案导入入口，支持同一份标准 ZIP 及带编码的 UTF-8 TXT／TSV；方案 ZIP 上限为 2 GiB，格式与边界见[导入指南](docs/portable-scheme-import.md)。
 
 | 平台 | 版本与安装入口 |
 |---|---|
@@ -118,16 +118,16 @@
 | Android | [1.2.0 APK](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk)，版本码 23，沿用长期签名 |
 | Windows | [1.2.0 EXE](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
 | Linux | [1.2.0 DEB](https://github.com/scholay/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb)，Ubuntu 24.04 / 26.04 amd64／Fcitx5 |
-| iOS | [1.2.0 社区 IPA 与签名说明](https://github.com/scholay/xsime/releases/tag/v1.2.0)，需自行签名；[App Store](https://apps.apple.com/app/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)，可用版本及审核状态以 Apple 页面为准 |
+| iOS | [1.2.0 社区 IPA 与签名说明](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0)，需自行签名；[App Store](https://apps.apple.com/app/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)，可用版本及审核状态以 Apple 页面为准 |
 
 本轮构建、导入测试与安装验收范围见[1.2.0 发布记录](docs/releases/1.2.0.md)。
 
-macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay/xsime/issues/90)。
+macOS 27 有用户报告：安装后在 App Store 沙盒版微信、QQ 中切换到 XSIME，宿主应用可能闪退。若遇到这一情况，先切回其他输入法，参考[按应用备份输入源缓存的恢复指引](docs/macos/input-source-cache-recovery.md)。安装器不会清理其他应用的缓存；重启应用或退出登录并不保证解决此问题。调查进度见 [#90](https://github.com/scholay-xsime/xsime/issues/90)。
 
 也可以拉取源码和固定版本的官方插件，在本机构建：
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/xsime.git
+git clone --recurse-submodules https://github.com/scholay-xsime/xsime.git
 cd xsime
 ```
 
@@ -163,7 +163,7 @@ cd xsime
 
 旧版尚未提供完整更新入口时，请先从上方下载表手动升级一次。GitHub 发布新版本不代表 iOS 同版已上架，以 Apple 页面为准。
 
-四端正式安装包统一发布在 [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest) 的 `vX.Y.Z` Release。CI 上传并读回全部安装包后，最后发布共同的 `update-manifest.json`；预览版不进入正式更新通道。iOS 使用独立的 `ios-vX.Y.Z` 商店发布流程。
+四端正式安装包统一发布在 [`scholay-xsime/xsime`](https://github.com/scholay-xsime/xsime/releases/latest) 的 `vX.Y.Z` Release。CI 上传并读回全部安装包后，最后发布共同的 `update-manifest.json`；预览版不进入正式更新通道。iOS 使用独立的 `ios-vX.Y.Z` 商店发布流程。
 
 维护者在五端主线 CI 通过后发布，步骤见 [docs/release/README.md](docs/release/README.md)，版本变化见 [CHANGELOG.md](CHANGELOG.md)：
 
@@ -190,8 +190,8 @@ cd xsime
 
 ## 已知问题
 
-- **Linux：部署还没结束就退出 Fcitx5，进程可能要几分钟才退出。** 首次或后台的 librime 部署无法中途取消，词库较大时更明显。见 [#43](https://github.com/scholay/xsime/issues/43)。
-- **Linux：拖完 Buffer 工具条后立刻点另一个输入框，捕获可能还开着。** 目前只在 X11 的 Firefox 里复现，松开后约 10 毫秒内点到同一窗口的另一个输入框就会碰上。再点一次或按 Esc 即可恢复。见 [#44](https://github.com/scholay/xsime/issues/44)。
+- **Linux：部署还没结束就退出 Fcitx5，进程可能要几分钟才退出。** 首次或后台的 librime 部署无法中途取消，词库较大时更明显。见 [#43](https://github.com/scholay-xsime/xsime/issues/43)。
+- **Linux：拖完 Buffer 工具条后立刻点另一个输入框，捕获可能还开着。** 目前只在 X11 的 Firefox 里复现，松开后约 10 毫秒内点到同一窗口的另一个输入框就会碰上。再点一次或按 Esc 即可恢复。见 [#44](https://github.com/scholay-xsime/xsime/issues/44)。
 
 ## 许可证与第三方
 
@@ -199,4 +199,4 @@ XSIME 自有代码采用 [Apache License 2.0](LICENSE)，具体范围及历史 M
 
 中文输入基于 [Rime 输入法引擎（librime）](https://github.com/rime/librime)。来源声明见 [NOTICE](NOTICE)；我们倡议衍生版本说明 Rime、XSIME 及修改者的关系，示例见[来源与署名](ATTRIBUTION.md)。该展示倡议不增加许可证之外的限制。
 
-第三方组件、方案、词库和 Lua/OpenCC 数据保留各自的许可与署名，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、[LICENSES](LICENSES) 和 `rime-data/licenses/`。官方免费插件在 [rimes-plugins](https://github.com/scholay/rimes-plugins) 仓库维护。
+第三方组件、方案、词库和 Lua/OpenCC 数据保留各自的许可与署名，见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、[LICENSES](LICENSES) 和 `rime-data/licenses/`。官方免费插件在 [rimes-plugins](https://github.com/scholay-xsime/xsime-plugins) 仓库维护。

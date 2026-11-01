@@ -88,6 +88,8 @@ def prepare(root, source, update_lock=False):
                    "notice": (source / "NOTICE").read_text(encoding="utf-8")}
         data = canonical(package)
         asset = f"preset-plugin-{package['id']}-{package['version']}.json"
+        # Existing hosts validate this legacy path; GitHub redirects the same
+        # immutable assets to scholay-xsime/xsime-plugins after the transfer.
         packages.append({**package, "sha256": digest(data), "downloadAssetName": asset,
                          "downloadURL": f"https://github.com/scholay/rimes-plugins/releases/download/v{release_version}/{asset}"})
         imports[f"Shared/Sources/RimesCore/Resources/OfficialPlugins/{asset}"] = data
@@ -141,7 +143,7 @@ def prepare(root, source, update_lock=False):
             raise ValueError("Commit reviewed changes in the plugin repository before updating its source lock")
         subprocess.run(["git", "-C", str(source), "ls-files", "--error-unmatch", *sorted(input_names)],
                        check=True, stdout=subprocess.DEVNULL)
-    expected_lock = {"schemaVersion": 1, "repository": "https://github.com/scholay/rimes-plugins",
+    expected_lock = {"schemaVersion": 1, "repository": "https://github.com/scholay-xsime/xsime-plugins",
                      "revision": revision, "files": inputs}
     if not update_lock:
         if not lock_path.is_file() or json.loads(lock_path.read_bytes()) != expected_lock:

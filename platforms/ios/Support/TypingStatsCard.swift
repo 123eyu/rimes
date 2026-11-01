@@ -64,12 +64,12 @@ enum TypingStatsText {
         let title = chinese ? "\(ProductBrand.name) · 免费开源输入法" : "\(ProductBrand.name) · Free & open source"
         let legend = chinese ? "📝字数 · 📊均速 · 🚀峰速（字/分）\n⌨️码长（键/字）· ⏱️击键（键/秒）"
             : "📝characters · 📊avg · 🚀peak (cpm)\n⌨️keys/char · ⏱️keys/sec"
-        return title + "\n" + matrix + "\n" + legend + "\nhttps://github.com/scholay/xsime"
+        return title + "\n" + matrix + "\n" + legend + "\nhttps://github.com/scholay-xsime/xsime"
     }
 }
 
 @MainActor enum TypingStatsCard {
-    static let github = "https://github.com/scholay/xsime"
+    static let github = "https://github.com/scholay-xsime/xsime"
     static func render(_ stats: TypingCardSnapshot, chinese: Bool = L("zh", "en") == "zh") throws -> Data {
         let format = UIGraphicsImageRendererFormat(); format.scale = 1; format.opaque = true
         let renderer = UIGraphicsImageRenderer(size: CGSize(width: 1024, height: 1024), format: format)
@@ -113,7 +113,7 @@ enum TypingStatsText {
             metric(block(3, 4, 3, 3, gray), TypingCardSnapshot.number(stats.codeLength, decimals: 2), chinese ? "平均码长" : "KEYS / CHAR", chinese ? "键 / 字" : "keys / character", size: 106)
             metric(block(6, 4, 2, 3, orange), TypingCardSnapshot.number(stats.keysPerSecond, decimals: 1), chinese ? "击键频率" : "KEY RATE", chinese ? "键 / 秒" : "keys / sec", size: 90)
             let footer = block(0, 7, 8, 1, ivory)
-            text("github.com/scholay/xsime", in: footer.insetBy(dx: 28, dy: 0), size: 44, weight: .medium)
+            text("github.com/scholay-xsime/xsime", in: footer.insetBy(dx: 28, dy: 0), size: 44, weight: .medium)
             ink.setStroke(); cg.setLineWidth(6); cg.stroke(CGRect(x: 32, y: 32, width: 960, height: 960))
         }
         guard let data = image.pngData() else { throw TypingCardError.render }; return data
