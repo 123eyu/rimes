@@ -270,7 +270,8 @@ enum UpdateStatus: Equatable {
 final class UpdateManager {
     static let shared = UpdateManager()
 
-    // Source of truth for the repo; matches .github/workflows and README.
+    // Compatibility namespace used by published signed-manifest asset URLs.
+    // The feed and release page use the organization's canonical repository.
     private let githubOwner = "scholay"
     private let githubRepo = "xsime"
 

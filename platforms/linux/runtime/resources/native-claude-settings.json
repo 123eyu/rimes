@@ -2,7 +2,7 @@
   "purpose": "public-claude-settings",
   "schemaVersion": 1,
   "sources": {
-    "Sources/RimeBuffer/SettingsWindow.swift": "99d72d6da1c8d5f3b046768b9fb70001a76908bb4a548ec6afa1b06cc69e195f"
+    "Sources/RimeBuffer/SettingsWindow.swift": "4c8e2b74037a590dbd05d779b2334f1808b9b3952dfec52f7ed6a13e438b384a"
   },
   "states": [
     {
