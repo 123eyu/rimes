@@ -14,7 +14,7 @@ import subprocess
 import sys
 import tempfile
 
-REPOSITORY = "scholay/xsime"
+REPOSITORY = "scholay-xsime/xsime"
 TAG = re.compile(r"v((?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)\.(?:0|[1-9][0-9]*)(?:-preview\.[1-9][0-9]*)?)")
 
 

@@ -1588,8 +1588,8 @@ void TestBrandHome() {
   Check(shown(415), "down from the default home selects input settings");
   SendMessageW(window, WM_KEYDOWN, VK_UP, 0);
   Check(!shown(415), "up from input returns to home");
-  const wchar_t* expected[] = {L"https://xsime.com", L"mailto:pm@scholay.com", L"https://github.com/scholay/xsime",
-      L"https://github.com/scholay/xsime/blob/main/README.md", L"https://github.com/scholay/xsime/blob/main/LICENSE"};
+  const wchar_t* expected[] = {L"https://xsime.com", L"mailto:pm@scholay.com", L"https://github.com/scholay-xsime/xsime",
+      L"https://github.com/scholay-xsime/xsime/blob/main/README.md", L"https://github.com/scholay-xsime/xsime/blob/main/LICENSE"};
   Check(ui::SettingsTabCount(ui::SettingsPage::kHome) == 3, "home has About, README and License tabs");
   for (int link = 0; link < 5; ++link) {
     const auto button = GetDlgItem(window, 6200 + link);

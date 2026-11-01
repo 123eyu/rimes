@@ -1,7 +1,7 @@
 # XSIME Native Windows Foundation
 
 Published installers are listed in
-[GitHub Releases](https://github.com/scholay/xsime/releases?q=windows&expanded=true);
+[GitHub Releases](https://github.com/scholay-xsime/xsime/releases?q=windows&expanded=true);
 a source change or CI artifact does not establish a public release or desktop
 acceptance. Preview packages include their source commit, checksums and
 `ACCEPTANCE-WINDOWS.md`. Use that checklist and the
@@ -29,7 +29,7 @@ TSF still must not load `librime` or do network I/O. Broker failure fail-opens.
 
 ## Sandboxed and UI-less hosts
 
-The development source for [#133](https://github.com/scholay/xsime/issues/133)
+The development source for [#133](https://github.com/scholay-xsime/xsime/issues/133)
 adds `IMMERSIVESUPPORT` and `UIELEMENTENABLED` registration. Candidate UI uses
 TSF Begin/Update/End negotiation: a host can render the list itself and suppress
 the popup, including when no Win32 caret is available. Host selection/finalize

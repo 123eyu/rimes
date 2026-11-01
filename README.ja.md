@@ -81,10 +81,10 @@
 
 ## インストール
 
-[1.2.0 リリース](https://github.com/scholay/xsime/releases/tag/v1.2.0)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 / 26.04 amd64／Fcitx5）と再署名用の未署名 iOS IPA をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.2.0 の検証記録](docs/releases/1.2.0.md)を参照してください。ソースからのローカルビルドも可能です。
+[1.2.0 リリース](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0)から、macOS PKG、Android APK／AAB、Windows EXE／ZIP、Linux DEB（Ubuntu 24.04 / 26.04 amd64／Fcitx5）と再署名用の未署名 iOS IPA をダウンロードできます。macOS は署名・公証済み、Android は従来の長期署名鍵を使用し、Windows EXE は未署名です。iOS は [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242)／[TestFlight 公開招待](https://testflight.apple.com/join/Kdj9RB4q)を利用してください。インストール可能なバージョンは Apple のページに表示されます。5つのプラットフォームで共通の Rime ZIP やコード付き UTF-8 TXT／TSV 辞書を読み込めます。[インポートガイド](docs/portable-scheme-import.md)と[1.2.0 の検証記録](docs/releases/1.2.0.md)を参照してください。ソースからのローカルビルドも可能です。
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/xsime.git
+git clone --recurse-submodules https://github.com/scholay-xsime/xsime.git
 cd xsime
 ```
 
@@ -114,7 +114,7 @@ cd xsime
 
 iOS は実際に提供されているストア版を確認し、App Store でダウンロード・インストールします。テスト版は TestFlight が管理します。GitHub の公開だけでは iOS の公開を意味しません。
 
-4つのインストーラは [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest) の同じ `vX.Y.Z` Release に公開します。CI はすべての配布ファイルをアップロードして読み戻した後、最後に共通の `update-manifest.json` を公開します。プレビュー版は正式更新の対象外です。iOS は独立した `ios-vX.Y.Z` のストア向け手順を使います。
+4つのインストーラは [`scholay-xsime/xsime`](https://github.com/scholay-xsime/xsime/releases/latest) の同じ `vX.Y.Z` Release に公開します。CI はすべての配布ファイルをアップロードして読み戻した後、最後に共通の `update-manifest.json` を公開します。プレビュー版は正式更新の対象外です。iOS は独立した `ios-vX.Y.Z` のストア向け手順を使います。
 
 保守担当者は5つのプラットフォームの main CI が通過してから公開します。[docs/release/README.md](docs/release/README.md) と [CHANGELOG.md](CHANGELOG.md) を参照してください。
 
@@ -141,8 +141,8 @@ iOS は実際に提供されているストア版を確認し、App Store でダ
 
 ## 既知の問題
 
-- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay/xsime/issues/43) を参照。
-- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay/xsime/issues/44) を参照。
+- **Linux：デプロイが終わる前に Fcitx5 を終了すると、プロセスが数分残ることがある。** 初回またはバックグラウンドの librime デプロイは途中で取り消せません。辞書が大きいほど顕著です。[#43](https://github.com/scholay-xsime/xsime/issues/43) を参照。
+- **Linux：Buffer のツールバーをドラッグした直後に別の入力欄をクリックすると、キャプチャが開いたままになることがある。** 今のところ X11 の Firefox だけで再現します。離してから約 10 ミリ秒以内に、同じウィンドウの別の入力欄を押した場合です。もう一度クリックするか Esc で戻ります。[#44](https://github.com/scholay-xsime/xsime/issues/44) を参照。
 
 ## ライセンスと第三者
 
@@ -150,4 +150,4 @@ XSIME 自身のコードは [Apache License 2.0](LICENSE) を採用していま�
 
 中国語入力には [Rime 入力エンジン（librime）](https://github.com/rime/librime)を使用しています。[NOTICE](NOTICE) に帰属情報、[ATTRIBUTION.md](ATTRIBUTION.md) に任意の表示例を記載しています。表示の推奨は追加のライセンス条件ではありません。
 
-第三者のコンポーネント、方案、辞書、Lua/OpenCC データはそれぞれのライセンスとクレジットを保ちます。[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、[LICENSES](LICENSES)、`rime-data/licenses/` を参照してください。公式の無料プラグインは [rimes-plugins](https://github.com/scholay/rimes-plugins) で管理します。
+第三者のコンポーネント、方案、辞書、Lua/OpenCC データはそれぞれのライセンスとクレジットを保ちます。[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)、[LICENSES](LICENSES)、`rime-data/licenses/` を参照してください。公式の無料プラグインは [rimes-plugins](https://github.com/scholay-xsime/xsime-plugins) で管理します。

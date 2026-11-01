@@ -429,7 +429,7 @@ final class UpdateManager {
 
     private func checkForUpdates(completion: @escaping () -> Void) {
         setStatus(.checking)
-        var request = URLRequest(url: URL(string: "https://github.com/scholay/xsime/releases/latest/download/update-manifest.json")!)
+        var request = URLRequest(url: URL(string: "https://github.com/scholay-xsime/xsime/releases/latest/download/update-manifest.json")!)
         request.timeoutInterval = 30
         request.setValue("XSIME-updater/1", forHTTPHeaderField: "User-Agent")
         session.dataTask(with: request) { [weak self] data, response, error in
@@ -685,7 +685,7 @@ final class UpdateManager {
     // MARK: - Helpers
 
     func openReleasesPage() {
-        if let url = URL(string: "https://github.com/\(githubOwner)/\(githubRepo)/releases") {
+        if let url = URL(string: "https://github.com/scholay-xsime/xsime/releases") {
             NSWorkspace.shared.open(url)
         }
     }

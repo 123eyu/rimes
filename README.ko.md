@@ -81,10 +81,10 @@
 
 ## 설치
 
-[1.2.0 릴리스](https://github.com/scholay/xsime/releases/tag/v1.2.0)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 / 26.04 amd64 / Fcitx5)와 재서명용 미서명 iOS IPA를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.2.0 검증 기록](docs/releases/1.2.0.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
+[1.2.0 릴리스](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0)에서 macOS PKG, Android APK/AAB, Windows EXE/ZIP, Linux DEB(Ubuntu 24.04 / 26.04 amd64 / Fcitx5)와 재서명용 미서명 iOS IPA를 받을 수 있습니다. macOS는 서명 및 공증되었고 Android는 기존 장기 서명 키를 사용하며 Windows EXE는 서명되지 않았습니다. iOS는 [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [TestFlight 공개 초대](https://testflight.apple.com/join/Kdj9RB4q)를 이용하세요. 설치 가능한 버전은 Apple 페이지에 표시됩니다. 다섯 플랫폼 모두 동일한 Rime ZIP 또는 입력 코드가 포함된 UTF-8 TXT/TSV 사전을 가져올 수 있습니다. [가져오기 안내](docs/portable-scheme-import.md)와 [1.2.0 검증 기록](docs/releases/1.2.0.md)을 참고하세요. 소스를 받아 로컬에서 빌드할 수도 있습니다.
 
 ```bash
-git clone --recurse-submodules https://github.com/scholay/xsime.git
+git clone --recurse-submodules https://github.com/scholay-xsime/xsime.git
 cd xsime
 ```
 
@@ -114,7 +114,7 @@ cd xsime
 
 iOS는 실제로 제공되는 스토어 버전을 확인한 뒤 App Store에서 다운로드하고 설치합니다. 테스트 버전은 TestFlight에서 업데이트합니다. GitHub에 새 버전이 올라왔다고 같은 iOS 버전이 출시된 것은 아닙니다.
 
-네 플랫폼의 설치 파일은 [`scholay/xsime`](https://github.com/scholay/xsime/releases/latest)의 같은 `vX.Y.Z` Release에 게시됩니다. CI가 모든 파일을 업로드하고 다시 내려받아 확인한 뒤 마지막으로 공통 `update-manifest.json`을 게시합니다. 미리보기 버전은 정식 업데이트에 포함되지 않습니다. iOS는 별도의 `ios-vX.Y.Z` 스토어 배포 절차를 사용합니다.
+네 플랫폼의 설치 파일은 [`scholay-xsime/xsime`](https://github.com/scholay-xsime/xsime/releases/latest)의 같은 `vX.Y.Z` Release에 게시됩니다. CI가 모든 파일을 업로드하고 다시 내려받아 확인한 뒤 마지막으로 공통 `update-manifest.json`을 게시합니다. 미리보기 버전은 정식 업데이트에 포함되지 않습니다. iOS는 별도의 `ios-vX.Y.Z` 스토어 배포 절차를 사용합니다.
 
 관리자는 다섯 플랫폼의 main CI가 통과한 뒤 배포합니다. [docs/release/README.md](docs/release/README.md)와 [CHANGELOG.md](CHANGELOG.md)를 참고하세요.
 
@@ -141,8 +141,8 @@ iOS는 실제로 제공되는 스토어 버전을 확인한 뒤 App Store에서 
 
 ## 알려진 문제
 
-- **Linux: 배포가 끝나기 전에 Fcitx5를 끝내면 프로세스가 몇 분 동안 남을 수 있다.** 처음이거나 백그라운드의 librime 배포는 도중에 취소할 수 없고, 사전이 클수록 더 두드러집니다. [#43](https://github.com/scholay/xsime/issues/43)을 보십시오.
-- **Linux: Buffer 도구 막대를 드래그한 직후 다른 입력칸을 누르면 캡처가 켜진 채로 남을 수 있다.** 지금은 X11의 Firefox에서만 재현됩니다. 손을 뗀 뒤 약 10밀리초 안에 같은 창의 다른 입력칸을 누를 때입니다. 한 번 더 누르거나 Esc로 돌아옵니다. [#44](https://github.com/scholay/xsime/issues/44)를 보십시오.
+- **Linux: 배포가 끝나기 전에 Fcitx5를 끝내면 프로세스가 몇 분 동안 남을 수 있다.** 처음이거나 백그라운드의 librime 배포는 도중에 취소할 수 없고, 사전이 클수록 더 두드러집니다. [#43](https://github.com/scholay-xsime/xsime/issues/43)을 보십시오.
+- **Linux: Buffer 도구 막대를 드래그한 직후 다른 입력칸을 누르면 캡처가 켜진 채로 남을 수 있다.** 지금은 X11의 Firefox에서만 재현됩니다. 손을 뗀 뒤 약 10밀리초 안에 같은 창의 다른 입력칸을 누를 때입니다. 한 번 더 누르거나 Esc로 돌아옵니다. [#44](https://github.com/scholay-xsime/xsime/issues/44)를 보십시오.
 
 ## 라이선스와 제3자
 
@@ -150,4 +150,4 @@ XSIME 자체 코드는 [Apache License 2.0](LICENSE)을 따릅니다. 적용 범
 
 중국어 입력은 [Rime 입력 엔진(librime)](https://github.com/rime/librime)을 사용합니다. 출처 정보는 [NOTICE](NOTICE), 권장 표시 예시는 [ATTRIBUTION.md](ATTRIBUTION.md)에 있습니다. 표시 권고는 추가 라이선스 조건이 아닙니다.
 
-제3자 구성 요소, 방안, 사전, Lua/OpenCC 데이터는 각자의 라이선스와 저작권 표시를 유지합니다. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [LICENSES](LICENSES), `rime-data/licenses/`를 참고하십시오. 공식 무료 플러그인은 [rimes-plugins](https://github.com/scholay/rimes-plugins)에서 관리합니다.
+제3자 구성 요소, 방안, 사전, Lua/OpenCC 데이터는 각자의 라이선스와 저작권 표시를 유지합니다. [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md), [LICENSES](LICENSES), `rime-data/licenses/`를 참고하십시오. 공식 무료 플러그인은 [rimes-plugins](https://github.com/scholay-xsime/xsime-plugins)에서 관리합니다.

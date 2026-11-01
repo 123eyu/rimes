@@ -122,7 +122,7 @@
     "plugins/typing-speed/plugin.json": "cd28899b92f385c1e5ba296d164ab8b129c27efd580af51492ab365df7ef2594",
     "source-map.json": "55c05b279cf11a7808481faf5cc5f88041981dbc612b0760f08219eee83707a5"
   },
-  "repository": "https://github.com/scholay/rimes-plugins",
-  "revision": "8709e06d229b28d63ba068abb391aac22a7f380a",
+  "repository": "https://github.com/scholay-xsime/xsime-plugins",
+  "revision": "5a7fa1acdc9d4634378b730f077e3871a3edff06",
   "schemaVersion": 1
 }

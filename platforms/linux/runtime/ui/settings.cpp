@@ -357,9 +357,9 @@ struct Settings {
       Add(body, Label(std::string("版本 ") + RIMES_PRODUCT_VERSION + " · 学术海 · librime", "caption"));
       for (const auto& link : std::vector<std::pair<const char*, const char*>>{
             {"官网 · xsime.com", "https://xsime.com"}, {"邮箱 · pm@scholay.com", "mailto:pm@scholay.com"},
-            {"开源项目 · scholay / xsime", "https://github.com/scholay/xsime"},
-            {"README", "https://github.com/scholay/xsime/blob/main/README.md"},
-            {"Apache License 2.0", "https://github.com/scholay/xsime/blob/main/LICENSE"}})
+            {"开源项目 · scholay / xsime", "https://github.com/scholay-xsime/xsime"},
+            {"README", "https://github.com/scholay-xsime/xsime/blob/main/README.md"},
+            {"Apache License 2.0", "https://github.com/scholay-xsime/xsime/blob/main/LICENSE"}})
         Add(body, gtk_link_button_new_with_label(link.second, link.first));
       Add(body, Button("检查更新…", [this] { ShowApplicationUpdate(GTK_WINDOW(window)); }));
     } else if (route == "core.maintenance" && subpage == "logs-data") {

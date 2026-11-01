@@ -160,12 +160,12 @@
   "provenanceGroups": {
     "rimes-wubi-autocommit": {
       "license": "Apache-2.0",
-      "source": "https://github.com/scholay/xsime",
+      "source": "https://github.com/scholay-xsime/xsime",
       "files": ["lua/rimes_wubi_autocommit.lua"]
     },
     "rimes-authored": {
       "license": "MIT",
-      "source": "https://github.com/scholay/xsime",
+      "source": "https://github.com/scholay-xsime/xsime",
       "files": [
         "default.custom.yaml",
         "english.schema.yaml",

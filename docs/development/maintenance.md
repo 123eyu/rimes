@@ -36,7 +36,7 @@ Windows/Linux 的 C++ 与 Android 的 Java 适配层不直接共享 Swift 实现
 
 ## 官方插件依赖
 
-官方插件源码由独立仓库 `scholay/rimes-plugins` 管理。本体的 `OfficialPlugins` 子模块与 `plugins.lock.json` 固定同一个已审查提交；原生源码随本体编译和签名。下载包只提供宿主支持的声明、提示词和资源。
+官方插件源码由独立仓库 `scholay-xsime/xsime-plugins` 管理。本体的 `OfficialPlugins` 子模块与 `plugins.lock.json` 固定同一个已审查提交；原生源码随本体编译和签名。下载包只提供宿主支持的声明、提示词和资源。
 
 首次检出以及切换依赖提交后运行：
 

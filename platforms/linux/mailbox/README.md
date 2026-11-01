@@ -4,7 +4,7 @@
 
 窗口包含终端、对话、收件三个官方模块入口、收件未读角标、列表搜索和筛选。支持查看已有对话/收件、重命名、归档/恢复和本地备注；备注只保存在本机。窗口正常大小为 1000×700，最小 680×500；窄窗口通过顶部侧栏按钮展开列表，点击正文外侧或 Escape 收起。显示并激活的收件才标记已读。窗口尺寸与最后模块自动保存；未发送草稿按模块/会话保留在当前进程，退出进程不持久化草稿，与当前 macOS 行为一致。
 
-宿主与收件流转分别对应 [#168](https://github.com/scholay/xsime/issues/168)、[#169](https://github.com/scholay/xsime/issues/169)。本地 HTTP/MCP 来源接入对应 [#170](https://github.com/scholay/xsime/issues/170)，CLI 渠道在 #171/#172，AI 对话在 [#173](https://github.com/scholay/xsime/issues/173)；PTY 终端见 [#174](https://github.com/scholay/xsime/issues/174)。
+宿主与收件流转分别对应 [#168](https://github.com/scholay-xsime/xsime/issues/168)、[#169](https://github.com/scholay-xsime/xsime/issues/169)。本地 HTTP/MCP 来源接入对应 [#170](https://github.com/scholay-xsime/xsime/issues/170)，CLI 渠道在 #171/#172，AI 对话在 [#173](https://github.com/scholay-xsime/xsime/issues/173)；PTY 终端见 [#174](https://github.com/scholay-xsime/xsime/issues/174)。
 
 ## PTY 终端
 

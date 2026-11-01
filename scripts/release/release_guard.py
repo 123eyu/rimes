@@ -6,7 +6,7 @@ import json
 import re
 import subprocess
 
-REPO = "scholay/xsime"
+REPO = "scholay-xsime/xsime"
 WORKFLOWS = ("ci.yml", "ios.yml", "android.yml", "windows-ime.yml", "linux-ime.yml")
 
 

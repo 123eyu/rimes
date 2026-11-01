@@ -38,7 +38,7 @@ usage() {
 }
 
 REMOTE="origin"
-EXPECTED_REPO="scholay/xsime"
+EXPECTED_REPO="scholay-xsime/xsime"
 # Exact workflow IDs/events and versions are checked by release_guard.py.
 
 github_repo_from_url() {

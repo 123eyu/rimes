@@ -2642,8 +2642,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private func rimesReadmePage() -> NSView {
         contentColumn([
             sectionLabel("项目地址"),
-            infoRow("源码", "github.com/scholay/xsime", url: "https://github.com/scholay/xsime", id: "source"),
-            infoRow("发布页", "github.com/scholay/xsime/releases", url: "https://github.com/scholay/xsime/releases", id: "releases"),
+            infoRow("源码", "github.com/scholay-xsime/xsime", url: "https://github.com/scholay-xsime/xsime", id: "source"),
+            infoRow("发布页", "github.com/scholay-xsime/xsime/releases", url: "https://github.com/scholay-xsime/xsime/releases", id: "releases"),
             spacer(6),
             SettingsReadmeView(),
         ])

@@ -6,6 +6,10 @@ import json
 from pathlib import Path
 import re
 
+# Published clients validate this exact path. GitHub redirects it to the
+# transferred repository; keep signed feed URLs compatible with those clients.
+DOWNLOAD_REPO = "scholay/xsime"
+
 
 def manifest(root: Path, version: str, commit: str, android_build: int):
     if not re.fullmatch(r"(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)", version):
@@ -23,7 +27,7 @@ def manifest(root: Path, version: str, commit: str, android_build: int):
         digest = hashlib.sha256()
         with file.open("rb") as stream:
             for block in iter(lambda: stream.read(1024 * 1024), b""): digest.update(block)
-        result["platforms"][platform] = {"url": f"https://github.com/scholay/xsime/releases/download/v{version}/{name}",
+        result["platforms"][platform] = {"url": f"https://github.com/{DOWNLOAD_REPO}/releases/download/v{version}/{name}",
                                         "size": file.stat().st_size, "sha256": digest.hexdigest()}
     result["platforms"]["macos"].update(architecture="universal", minimumOS="13.0")
     result["platforms"]["windows"].update(architecture="x64-x86", minimumOS="10.0")

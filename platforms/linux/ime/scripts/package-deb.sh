@@ -109,7 +109,7 @@ cat > "$WORKDIR/debian/control" <<'EOF'
 Source: fcitx5-rimes
 Section: utils
 Priority: optional
-Maintainer: XSIME contributors <https://github.com/scholay/xsime>
+Maintainer: XSIME contributors <https://github.com/scholay-xsime/xsime>
 Homepage: https://xsime.com
 
 Package: fcitx5-rimes
@@ -133,7 +133,7 @@ Architecture: $ARCH
 Installed-Size: $SIZE
 Depends: pkexec, fcitx5, fcitx5-frontend-gtk3, python3 (>= 3.12), gstreamer1.0-plugins-base, gstreamer1.0-plugins-good, gstreamer1.0-pipewire, xdg-desktop-portal, $DEPS
 Recommends: xdg-desktop-portal-gtk, libgtk-layer-shell0, wl-clipboard, fonts-inter, fonts-noto-cjk, fonts-noto-color-emoji
-Maintainer: XSIME contributors <https://github.com/scholay/xsime>
+Maintainer: XSIME contributors <https://github.com/scholay-xsime/xsime>
 Homepage: https://xsime.com
 Description: XSIME input method frontend for Fcitx 5
  A librime frontend owned by XSIME. It deploys the reviewed XSIME rime-data
