@@ -23,7 +23,7 @@
     "native/linux/translation/test_runtime.py": "5558784f38ff1da2aee94e4f2e3992062c175d252c5fa039db15de6b457f30ad",
     "native/linux/translation/units.cpp": "4dcef4f9db3da4588eb7b6c42f0938c21b67fdb4a60b11a2bc8bbd300878997d",
     "native/linux/translation/units.hpp": "8004f6a9fb6db113e72d83e2e2c09ac1b17b4c66dbfd527147d55378b601ae07",
-    "native/linux/translation/units_tests.cpp": "8082436e049fa9d8f2d5eb78cf0152e1055d53662f84b9d05c2646be489a6d0c",
+    "native/linux/translation/units_tests.cpp": "1fc4445a48fffef2516b2dbfa05b56ea13055fc542970b2421679e86fd5b0daa",
     "native/macos/AppleTranslationPlugin.swift": "caa9f3a2132c32ad1bf8d1b68c4d16661d998e644301f325fa0a8938aaaef8f5",
     "native/macos/BufferMusicAudio.swift": "aeb3c9058389da56dfac156e18ebf98e8ff204b3c090fb897ecdabf3de5b0eb8",
     "native/macos/BufferMusicPlugin.swift": "8cfddc898fe976493f1e2a39488b6dc981ba5184e500c461e195e8c338b12f95",
@@ -123,6 +123,6 @@
     "source-map.json": "55c05b279cf11a7808481faf5cc5f88041981dbc612b0760f08219eee83707a5"
   },
   "repository": "https://github.com/scholay-xsime/xsime-plugins",
-  "revision": "5a7fa1acdc9d4634378b730f077e3871a3edff06",
+  "revision": "b8b79be7ea8e0b90dbb53c82a60163d27790c8c1",
   "schemaVersion": 1
 }
