@@ -114,10 +114,10 @@
 
 | 平台 | 版本与安装入口 |
 |---|---|
-| macOS | [1.2.0 PKG](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg)，Apple Silicon／Intel，已签名和公证 |
-| Android | [1.2.0 APK](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk)，版本码 23，沿用长期签名 |
-| Windows | [1.2.0 EXE](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
-| Linux | [1.2.0 DEB](https://github.com/scholay/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb)，Ubuntu 24.04 / 26.04 amd64／Fcitx5 |
+| macOS | [1.2.0 PKG](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg)，Apple Silicon／Intel，已签名和公证 |
+| Android | [1.2.0 APK](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk)，版本码 23，沿用长期签名 |
+| Windows | [1.2.0 EXE](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe)，x64 系统，包含 x64／x86 TSF；EXE 未签名 |
+| Linux | [1.2.0 DEB](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb)，Ubuntu 24.04 / 26.04 amd64／Fcitx5 |
 | iOS | [1.2.0 社区 IPA 与签名说明](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0)，需自行签名；[App Store](https://apps.apple.com/app/id6814620242) / [TestFlight 公开邀请](https://testflight.apple.com/join/Kdj9RB4q)，可用版本及审核状态以 Apple 页面为准 |
 
 本轮构建、导入测试与安装验收范围见[1.2.0 发布记录](docs/releases/1.2.0.md)。
