@@ -48,8 +48,9 @@ private enum UpdateNetworkRules {
     static let repositoryID = "1327328463"
     static let releaseAPI = "https://api.github.com/repositories/\(repositoryID)/releases/latest"
     static func repositoryAliases(owner: String, repository: String) -> [String] {
-        guard owner == "scholay", ["rimes", "xsime"].contains(repository) else { return [] }
-        return ["rimes", "xsime"]
+        let aliases = ["scholay/rimes", "scholay/xsime", "scholay-xsime/xsime"]
+        guard aliases.contains("\(owner)/\(repository)") else { return [] }
+        return aliases
     }
     static func stableVersionComponents(_ version: String) -> [Int]? {
         let components = version.split(separator: ".", omittingEmptySubsequences: false)
@@ -100,7 +101,7 @@ private enum UpdateNetworkRules {
                                      repository: String) -> Bool {
         let aliases = repositoryAliases(owner: owner, repository: repository)
         guard !aliases.isEmpty, isSafeHTTPSURL(url) else { return false }
-        let expected = aliases.map { "https://api.github.com/repos/\(owner)/\($0)/releases/latest" }
+        let expected = aliases.map { "https://api.github.com/repos/\($0)/releases/latest" }
         return (expected + [releaseAPI]).contains(url.absoluteString)
     }
 
@@ -112,7 +113,7 @@ private enum UpdateNetworkRules {
             return false
         }
         let expected = repositoryAliases(owner: owner, repository: repository).map {
-            "https://github.com/\(owner)/\($0)/releases/download/v\(version)/\(packageName)"
+            "https://github.com/\($0)/releases/download/v\(version)/\(packageName)"
         }
         return isSafeHTTPSURL(url) && expected.contains(url.absoluteString)
     }
@@ -270,9 +271,9 @@ enum UpdateStatus: Equatable {
 final class UpdateManager {
     static let shared = UpdateManager()
 
-    // Compatibility namespace used by published signed-manifest asset URLs.
-    // The feed and release page use the organization's canonical repository.
-    private let githubOwner = "scholay"
+    // Canonical repository; UpdateNetworkRules also accepts the two explicit
+    // historical paths used by published signed-manifest asset URLs.
+    private let githubOwner = "scholay-xsime"
     private let githubRepo = "xsime"
 
     static let changed = Notification.Name("XSIMEApplicationUpdateChanged")
@@ -1136,7 +1137,8 @@ func runUpdatePackageMetadataSmokeTest() -> Bool {
     }
     let acceptedAPIs = [UpdateNetworkRules.releaseAPI,
         "https://api.github.com/repos/scholay/rimes/releases/latest",
-        "https://api.github.com/repos/scholay/xsime/releases/latest"]
+        "https://api.github.com/repos/scholay/xsime/releases/latest",
+        "https://api.github.com/repos/scholay-xsime/xsime/releases/latest"]
     let rejectedAPIs = [
         "https://api.github.com/repositories/1327328464/releases/latest",
         "https://api.github.com/repos/attacker/xsime/releases/latest",
@@ -1144,17 +1146,26 @@ func runUpdatePackageMetadataSmokeTest() -> Bool {
         "http://api.github.com/repos/scholay/xsime/releases/latest",
         "https://api.github.com/repos/scholay/xsime/releases/latest?override=true",
         "https://api.github.com/repos/scholay/xsime/releases/latest#fragment"]
-    for raw in acceptedAPIs + rejectedAPIs {
-        guard UpdateNetworkRules.isExactReleaseAPIURL(URL(string: raw)!, owner: "scholay", repository: "xsime") == acceptedAPIs.contains(raw) else {
-            print("FAILED: update repository API allowlist"); return false
+    for authority in [("scholay", "rimes"), ("scholay", "xsime"), ("scholay-xsime", "xsime")] {
+        for raw in acceptedAPIs + rejectedAPIs + [
+            "https://api.github.com/repos/scholay-xsime/rimes/releases/latest",
+            "https://api.github.com/repos/scholay-xsime/xsime-fork/releases/latest",
+            "https://api.github.com/repos/scholay-xsime/xsime/releases/latest?override=true"
+        ] {
+            guard UpdateNetworkRules.isExactReleaseAPIURL(URL(string: raw)!, owner: authority.0, repository: authority.1) == acceptedAPIs.contains(raw) else {
+                print("FAILED: update repository API allowlist"); return false
+            }
         }
-    }
-    for repo in ["rimes", "xsime", "xsime-fork"] {
-        let url = URL(string: "https://github.com/scholay/\(repo)/releases/download/v1.2.3/RIMES-1.2.3.pkg")!
-        guard UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "scholay", repository: "xsime", version: "1.2.3") == (repo != "xsime-fork"),
-              !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "attacker", repository: "xsime", version: "1.2.3"),
-              !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "scholay", repository: "xsime", version: "1.2.4") else {
-            print("FAILED: update repository asset allowlist"); return false
+        let acceptedRepositories = ["scholay/rimes", "scholay/xsime", "scholay-xsime/xsime"]
+        for repo in acceptedRepositories + ["scholay/xsime-fork", "scholay-xsime/rimes", "scholay-xsime/xsime-fork", "attacker/xsime"] {
+            let url = URL(string: "https://github.com/\(repo)/releases/download/v1.2.3/RIMES-1.2.3.pkg")!
+            guard UpdateNetworkRules.isExactReleaseAssetURL(url, owner: authority.0, repository: authority.1, version: "1.2.3") == acceptedRepositories.contains(repo),
+                  !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "attacker", repository: "xsime", version: "1.2.3"),
+                  !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: "scholay-xsime", repository: "rimes", version: "1.2.3"),
+                  !UpdateNetworkRules.isExactReleaseAssetURL(url, owner: authority.0, repository: authority.1, version: "1.2.4"),
+                  !UpdateNetworkRules.isExactReleaseAssetURL(URL(string: url.absoluteString + "?override=true")!, owner: authority.0, repository: authority.1, version: "1.2.3") else {
+                print("FAILED: update repository asset allowlist"); return false
+            }
         }
     }
     let distribution = Data("""
