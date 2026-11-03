@@ -21,7 +21,8 @@ int main(int argc, char** argv) {
             const auto text = item.at("text").get<std::string>();
             Check(CharacterCount(text) == item.at("count").get<std::size_t>(),
                   "native grapheme count");
-            Check(CharacterPrefix(text, 1) == item.at("prefix"), "native grapheme boundary");
+            Check(CharacterPrefix(text, 1) == item.at("prefix").get<std::string>(),
+                  "native grapheme boundary");
         }
         for (const auto& item : fixture.at("grammar")) {
             const auto body = item.at("body").get<std::string>();
@@ -38,10 +39,12 @@ int main(int argc, char** argv) {
             Check(actual == item.at("sections"),
                   "native grammar mismatch: " + body + "\n" + actual.dump());
             if (!item.at("summary").is_null())
-                Check(NoteSummary(body) == item.at("summary"), "native summary");
+                Check(NoteSummary(body) == item.at("summary").get<std::string>(),
+                      "native summary");
         }
         for (const auto& item : fixture.at("summaries"))
-            Check(NormalizeSummary(item.at("input").get<std::string>()) == item.at("normalized"),
+            Check(NormalizeSummary(item.at("input").get<std::string>()) ==
+                      item.at("normalized").get<std::string>(),
                   "native summary normalization");
         for (const auto& item : fixture.at("headers")) {
             const auto parsed = ParseFrontMatter(item.at("lines").get<std::vector<std::string>>());
@@ -60,8 +63,8 @@ int main(int argc, char** argv) {
             auto toggled = ToggleBullet(line);
             Check((toggled ? Json(*toggled) : Json(nullptr)) == item.at("toggle"),
                   "native checkbox toggle");
-            Check(IndentBullet(line, false) == item.at("indent") &&
-                      IndentBullet(line, true) == item.at("outdent"),
+            Check(IndentBullet(line, false) == item.at("indent").get<std::string>() &&
+                      IndentBullet(line, true) == item.at("outdent").get<std::string>(),
                   "native indent");
         }
         Json exported = Json::array();
@@ -71,9 +74,9 @@ int main(int argc, char** argv) {
             const auto decoded = ReadRichText(*original);
             Check(decoded.has_value(), "native RTFD decode");
             Check(decoded->editable, "native example unexpectedly unsupported");
-            Check(decoded->PlainText() == item.at("text"),
+            Check(decoded->PlainText() == item.at("text").get<std::string>(),
                   "native RTFD text: " + decoded->PlainText());
-            Check(decoded->Markdown() == item.at("markdown"),
+            Check(decoded->Markdown() == item.at("markdown").get<std::string>(),
                   "native RTFD projection: " + decoded->Markdown());
             const auto encoded = WriteRichText(*decoded);
             Check(encoded.has_value(), "RTFD encode");

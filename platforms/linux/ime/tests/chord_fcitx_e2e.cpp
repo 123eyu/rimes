@@ -325,7 +325,7 @@ int main(int argc, char** argv) {
                                     const auto list = ic->inputPanel().candidateList();
                                     Check(list && list->size() &&
                                               list->candidate(0).text().toStringForCommit() ==
-                                                  trace.at("firstCandidate"),
+                                                  trace.at("firstCandidate").get<std::string>(),
                                           "native Fcitx candidate differs: " + profile.SchemaID());
                                 }
                                 tap(first, "Escape");

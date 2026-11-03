@@ -140,7 +140,7 @@ int main() {
         const auto fixtures = nlohmann::json::parse(fixture_input);
         for (const auto& sample : fixtures.at("durations"))
             Check(CaptureDuration(std::stod(sample.at("input").get<std::string>())) ==
-                      sample.at("label"),
+                      sample.at("label").get<std::string>(),
                   "native duration drift");
         for (const auto& sample : fixtures.at("cards")) {
             CaptureRecord r;
@@ -152,8 +152,9 @@ int main() {
             if (sample.at("favorite"))
                 r.collection_id = NewUuidV4();
             const auto card = CaptureCard(r);
-            Check(CharacterPrefix(card.title, 25) == sample.at("labels").at(0) &&
-                      card.preview == sample.at("labels").at(1),
+            Check(CharacterPrefix(card.title, 25) ==
+                      sample.at("labels").at(0).get<std::string>() &&
+                      card.preview == sample.at("labels").at(1).get<std::string>(),
                   "native capture card label drift");
         }
         CaptureControl gate;

@@ -91,6 +91,15 @@ std::vector<std::string> Environment(const std::filesystem::path& executable,
                                  "COLORTERM=truecolor", "LANG=C.UTF-8"});
     return result;
 }
+// VTE 0.84 deprecated vte_terminal_get_window_title(); read the xterm title
+// termprop where the newer API is available.
+const char* TerminalWindowTitle(VteTerminal* view) {
+#if VTE_CHECK_VERSION(0, 78, 0)
+    return vte_terminal_get_termprop_string(view, VTE_TERMPROP_XTERM_TITLE, nullptr);
+#else
+    return vte_terminal_get_window_title(view);
+#endif
+}
 } // namespace
 struct TerminalSession::State {
     std::string id = capsule::NewUuidV4(), kind, title, error;
@@ -163,7 +172,7 @@ TerminalSession::TerminalSession(std::string kind, std::filesystem::path directo
     g_signal_connect(terminal, "window-title-changed",
                      G_CALLBACK(+[](VteTerminal* view, gpointer p) {
                          auto& state = *static_cast<State*>(p);
-                         const char* title = vte_terminal_get_window_title(view);
+                         const char* title = TerminalWindowTitle(view);
                          if (title && *title)
                              state.title = capsule::OneLine(capsule::CharacterPrefix(title, 100));
                          state.Changed();

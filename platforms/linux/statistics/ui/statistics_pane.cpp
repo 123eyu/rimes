@@ -612,15 +612,18 @@ struct StatisticsPane::Impl {
         const auto summary_text =
             history ? std::to_string(key_days.size()) + " 个记录日" : selected + " · 日常输入";
         gtk_label_set_text(GTK_LABEL(summary), summary_text.c_str());
-        for (int i = 0; i < 2; ++i)
-            for (const auto& pair : {std::make_pair(metric_buttons[i], speed == bool(i)),
-                                     std::make_pair(range_buttons[i], (range == 30) == bool(i))}) {
+        for (int i = 0; i < 2; ++i) {
+            const std::pair<GtkWidget*, bool> pairs[] = {
+                std::make_pair(metric_buttons[i], speed == bool(i)),
+                std::make_pair(range_buttons[i], (range == 30) == bool(i))};
+            for (const auto& pair : pairs) {
                 auto* style = gtk_widget_get_style_context(pair.first);
                 if (pair.second)
                     gtk_style_context_add_class(style, "selected");
                 else
                     gtk_style_context_remove_class(style, "selected");
             }
+        }
         gtk_widget_set_sensitive(clear_keys, snapshot.at("issues").value("keys", "").empty() &&
                                                  (history ? !key_days.empty() : !keys.empty()));
         gtk_widget_set_sensitive(clear_activity,
