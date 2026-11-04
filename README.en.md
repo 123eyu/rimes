@@ -100,10 +100,10 @@ The [1.2.0 release](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0) 
 
 | Platform | Installation |
 |---|---|
-| macOS | [1.2.0 PKG](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg), Apple Silicon and Intel, signed and notarized |
-| Android | [1.2.0 APK](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk), version code 23, signed with the existing long-term key |
-| Windows | [1.2.0 EXE](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
-| Linux | [1.2.0 DEB](https://github.com/scholay/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb), Ubuntu 24.04 / 26.04 amd64 / Fcitx5 |
+| macOS | [1.2.0 PKG](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg), Apple Silicon and Intel, signed and notarized |
+| Android | [1.2.0 APK](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk), version code 23, signed with the existing long-term key |
+| Windows | [1.2.0 EXE](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
+| Linux | [1.2.0 DEB](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb), Ubuntu 24.04 / 26.04 amd64 / Fcitx5 |
 | iOS | [1.2.0 community IPA and signing notes](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0); [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q). Apple’s pages show the currently available builds. |
 
 See the [1.2.0 release record](docs/releases/1.2.0.md) for build, import, and installation validation.
