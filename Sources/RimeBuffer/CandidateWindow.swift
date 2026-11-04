@@ -467,6 +467,12 @@ enum CandidatePanelGeometry {
         return NSPoint(x: x, y: y)
     }
 
+    /// A caret hugging the screen's left edge is what hosts report before
+    /// their text layout exists; real carets sit inside a window chrome/margin.
+    static func isEdgeGluedAnchor(_ anchor: NSRect, screenFrame: NSRect) -> Bool {
+        anchor.minX <= screenFrame.minX + 12
+    }
+
     static func originIfAvailable(anchor: NSRect,
                                   panelSize: NSSize,
                                   visibleFrame: NSRect,
@@ -994,7 +1000,45 @@ final class CandidateWindow {
         }
         preeditPill.isHidden = preeditLabel.stringValue.isEmpty
         renderCandidates()
+        // Hosts often publish caret geometry a beat after marked text is set,
+        // so the first rect of a composition can still be a stale/default one
+        // glued to the screen's left edge. Do not reveal the panel there; the
+        // controller re-queries shortly and `reanchor` shows it at the settled
+        // position instead of flashing at the wrong place and jumping.
+        if presentation == .caret,
+           !panel.isVisible,
+           lastGoodCaretRect == nil,
+           isUnsettledFirstAnchor(caretRect) {
+            IMELog.write("candidate first anchor held unsettled rect=\(NSStringFromRect(caretRect))")
+            return
+        }
         layoutAndShowAccordingToPresentation()
+    }
+
+    /// True while the panel is on screen for the current composition.
+    var isPanelShowing: Bool { panel.isVisible }
+
+    /// Re-place a host-anchored panel from a freshly queried caret rect.
+    /// `final` forces the panel up with whatever plausible rect we have, so a
+    /// host that never settles still gets candidates.
+    func reanchor(caretRect: NSRect, owner: FocusToken, final: Bool) {
+        guard ownerToken == owner,
+              presentationMode == .caret,
+              InputFocusCoordinator.shared.isCurrent(owner),
+              !currentContext.candidates.isEmpty || !projectionPreedit.isEmpty,
+              isPlausible(caretRect) else { return }
+        if !final, isUnsettledFirstAnchor(caretRect) { return }
+        if panel.isVisible,
+           abs(caretRect.minX - lastCaretRect.minX) < 0.5,
+           abs(caretRect.minY - lastCaretRect.minY) < 0.5 { return }
+        lastCaretRect = caretRect
+        layoutAndShowAccordingToPresentation()
+    }
+
+    private func isUnsettledFirstAnchor(_ rect: NSRect) -> Bool {
+        guard isPlausible(rect) else { return true }
+        guard let frame = screen(containing: rect)?.frame else { return false }
+        return CandidatePanelGeometry.isEdgeGluedAnchor(rect, screenFrame: frame)
     }
 
     func hide(owner: FocusToken) {

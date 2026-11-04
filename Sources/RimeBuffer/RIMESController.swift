@@ -7427,17 +7427,52 @@ final class RIMESController: IMKInputController {
             candidateWindow.update(ctx,
                                    caretRect: anchor,
                                    bundleId: bid,
+            let firstFrame = !candidateWindow.isPanelShowing
                                    showPreedit: showPreeditInPanel,
                                    owner: focusToken,
                                    presentation: .caret)
         } else {
             candidateWindow.hide(owner: focusToken)
         }
+            if firstFrame {
+                IMELog.write("candidate first caret rect=\(NSStringFromRect(anchor)) bundle=\(bid)")
+                scheduleCaretSettle(lease: lease, client: client, owner: focusToken)
+            }
     }
 
     private func uiTransactionStillCurrent(
         lease: FocusLease,
         client: IMKTextInput,
+    /// The first caret query of a composition can precede the host's own
+    /// geometry update (WeChat, Finder, Electron). Re-ask a few times and let
+    /// the candidate window move to, or first appear at, the settled rect.
+    private func scheduleCaretSettle(lease: FocusLease,
+                                     client: IMKTextInput,
+                                     owner: FocusToken) {
+        let delays: [TimeInterval] = [0.03, 0.08, 0.18]
+        for (i, delay) in delays.enumerated() {
+            DispatchQueue.main.asyncAfter(deadline: .now() + delay) { [weak self] in
+                guard let self,
+                      self.uiTransactionStillCurrent(
+                        lease: lease,
+                        client: client,
+                        secureInput: IsSecureEventInputEnabled()
+                      ) else { return }
+                let rect = self.caretRect(for: client)
+                guard self.uiTransactionStillCurrent(
+                    lease: lease,
+                    client: client,
+                    secureInput: IsSecureEventInputEnabled()
+                ) else { return }
+                candidateWindow.reanchor(
+                    caretRect: rect,
+                    owner: owner,
+                    final: i == delays.count - 1
+                )
+            }
+        }
+    }
+
         secureInput: Bool
     ) -> Bool {
         RimeInputSourceAuthority.currentSourceIsOwn()

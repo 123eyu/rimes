@@ -7747,14 +7747,14 @@ func runBufferWindowSmokeTest() -> Bool {
 
     guard workbenchHotKey.keyCode == UInt32(kVK_ANSI_B),
           workbenchHotKey.modifiers == UInt32(cmdKey | shiftKey),
-          workbenchHotKey.registrationOptions == OptionBits(kEventHotKeyNoOptions),
+          workbenchHotKey.registrationOptions == OptionBits(kEventHotKeyExclusive),
           clipboardHotKey.keyCode == UInt32(kVK_ANSI_C),
           clipboardHotKey.modifiers == UInt32(cmdKey | shiftKey),
           clipboardHotKey.registrationOptions
             == OptionBits(kEventHotKeyExclusive),
           settingsHotKey.keyCode == UInt32(kVK_ANSI_S),
           settingsHotKey.modifiers == UInt32(cmdKey | shiftKey),
-          settingsHotKey.registrationOptions == OptionBits(kEventHotKeyNoOptions),
+          settingsHotKey.registrationOptions == OptionBits(kEventHotKeyExclusive),
           mailboxHotKey.keyCode == UInt32(kVK_ANSI_M),
           mailboxHotKey.modifiers == UInt32(cmdKey | shiftKey),
           mailboxHotKey.registrationOptions == OptionBits(kEventHotKeyExclusive),

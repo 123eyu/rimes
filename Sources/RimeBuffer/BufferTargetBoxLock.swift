@@ -174,6 +174,33 @@ final class BufferTargetBoxLock {
         return true
     }
 
+    /// The lease's application answered that nothing in it has focus: it
+    /// draws its own composer, whose frame no query can read.
+    func exposesNoBoxes(for lease: FocusLease) -> Bool {
+        dispatchPrecondition(condition: .onQueue(.main))
+        if let sample, sample.token == lease.token {
+            // A sample for this exact focus is authoritative and teaches the
+            // next opening in the same app.
+            switch sample.box {
+            case .wholeSession?:
+                selfDrawnComposerBundles.insert(lease.bundleID)
+                return true
+            case .element?:
+                selfDrawnComposerBundles.remove(lease.bundleID)
+                return false
+            case nil:
+                return false
+            }
+        }
+        // The first sample of a fresh focus lands a few milliseconds after the
+        // workbench opens. Placing it from what this app answered before keeps
+        // the opening from landing on the composer and then jumping off it.
+        return selfDrawnComposerBundles.contains(lease.bundleID)
+    }
+
+    /// Apps known (seeded) or observed to answer "nothing in me has focus".
+    private var selfDrawnComposerBundles: Set<String> = ["com.tencent.xinWeChat"]
+
     /// Checked immediately before every block is sent, without querying
     /// Accessibility on the main thread.
     func permitsDelivery(to lease: FocusLease) -> Bool {
