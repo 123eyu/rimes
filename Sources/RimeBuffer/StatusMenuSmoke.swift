@@ -117,7 +117,7 @@ func runStatusMenuSmokeTest() -> Bool {
 
     let maintenanceMenu = StatusMenu.makeMaintenanceMenu(target: spy, pendingVersion: nil)
     let maintenanceTitles = [
-        "检查更新…", "打开日志 (~/rimebuffer.log)", "重新部署并重启",
+        "检查更新…", "打开日志 (~/Library/Logs/RIMES)", "重新部署并重启",
         "重新安装输入法…", "重启输入法进程"
     ]
     guard maintenanceMenu.title == "维护",

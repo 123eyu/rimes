@@ -55,4 +55,4 @@ Follow `docs/development/branding.md`. Display names are 犀术IME / 犀術IME /
 
 ## Debugging
 
-macOS behavior logs live at `~/rimebuffer.log`; librime logs live under `~/Library/RIMES/`. For typing failures record the host identity, schema, key route, engine handled flag, commit path, composition state, candidate-rect source and Buffer state, without collecting text or secrets.
+macOS behavior logs live at `~/Library/Logs/RIMES/rimebuffer.log` (1.2.0 and earlier: `~/rimebuffer.log`); librime logs live under `~/Library/RIMES/`. For typing failures record the host identity, schema, key route, engine handled flag, commit path, composition state, candidate-rect source and Buffer state, without collecting text or secrets.
