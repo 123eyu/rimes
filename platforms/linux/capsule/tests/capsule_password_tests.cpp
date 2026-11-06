@@ -79,8 +79,10 @@ int main(int argc, char** argv) {
             const auto id = doc.at("id").get<std::string>();
             const auto raw = doc.at("document").get<std::string>();
             auto value = store.Read(id, rimes::runtime::Sha256(raw));
-            Check(value.body == doc.at("body") && value.title == doc.at("title") &&
-                      value.summary == doc.at("summary") && value.category == doc.at("category"),
+            Check(value.body == doc.at("body").get<std::string>() &&
+                      value.title == doc.at("title").get<std::string>() &&
+                      value.summary == doc.at("summary").get<std::string>() &&
+                      value.category == doc.at("category").get<std::string>(),
                   "native encrypted record mismatch");
             Check(PasswordCard(value).payload.empty() && PasswordCard(value).kind == Kind::Password,
                   "secret entered card payload");
@@ -246,7 +248,8 @@ int main(int argc, char** argv) {
                 for (const auto& sample : item.at("samples")) {
                     const auto code =
                         TotpCode(*parameters, sample.at("seconds").get<std::int64_t>());
-                    Check(code.first == sample.at("code") && code.second == sample.at("remaining"),
+                    Check(code.first == sample.at("code").get<std::string>() &&
+                              code.second == sample.at("remaining").get<int>(),
                           "native TOTP value drift");
                     ++code_count;
                 }

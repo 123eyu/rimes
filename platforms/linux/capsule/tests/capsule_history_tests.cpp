@@ -46,8 +46,9 @@ int main() {
                     {representation.at("type"),
                      *Base64Decode(representation.at("base64").get<std::string>())});
             const auto projection = ProjectClipboard(archive);
-            Check(projection.kind == fixture.at("kind") && projection.text == fixture.at("text") &&
-                      projection.filter == fixture.at("filter"),
+            Check(projection.kind == fixture.at("kind").get<std::string>() &&
+                      projection.text == fixture.at("text").get<std::string>() &&
+                      projection.filter == fixture.at("filter").get<std::string>(),
                   "native clipboard classification/projection differs");
         }
         ClipboardCaptureGate gate;

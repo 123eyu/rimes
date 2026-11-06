@@ -47,6 +47,16 @@ function(rimes_harden target)
         -Werror
         -Wno-missing-field-initializers
     )
+    # GCC 16's new lifetime analysis reports false positives on initializer-list
+    # temporaries that live until the end of the full expression. Keep -Werror
+    # for the remaining diagnostics.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+        target_compile_options(${target} PRIVATE
+            -Wno-error=dangling-pointer
+            -Wno-error=dangling-reference
+            -Wno-error=array-bounds
+        )
+    endif()
 endfunction()
 
 add_library(RimesBufferCore STATIC
