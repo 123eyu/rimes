@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <unordered_set>
 #include <utility>
 #include <vector>
@@ -440,6 +441,38 @@ public:
         } catch (...) { return {}; }
     }
 
+    bool SchemaSpaceChord(std::string_view schema_id) noexcept {
+        try {
+            std::lock_guard<std::mutex> lock(mutex_);
+            if (!healthy_ || api_ == nullptr || schema_id.empty() ||
+                api_->schema_open == nullptr || api_->config_close == nullptr ||
+                api_->config_get_string == nullptr) {
+                return false;
+            }
+            const std::string id(schema_id);
+            if (const auto it = space_chord_schemas_.find(id);
+                it != space_chord_schemas_.end()) {
+                return it->second;
+            }
+            bool result = false;
+            RimeConfig config{nullptr};
+            if (api_->schema_open(id.c_str(), &config)) {
+                char alphabet[512]{};
+                if (api_->config_get_string(&config,
+                                            "chord_composer/alphabet",
+                                            alphabet,
+                                            sizeof(alphabet))) {
+                    result = std::string(alphabet).find(' ') != std::string::npos;
+                }
+                api_->config_close(&config);
+            }
+            space_chord_schemas_[id] = result;
+            return result;
+        } catch (...) {
+            return false;
+        }
+    }
+
 private:
     bool HasSessionLocked(SessionId session, std::string* error) const noexcept {
         if (!healthy_ || api_ == nullptr || session == 0 ||
@@ -510,6 +543,8 @@ private:
         api_->destroy_session(smoke);
         healthy_ = true;
         deploying_ = false;
+        // 部署可能改写方案配置，清空空格和弦判定缓存。
+        space_chord_schemas_.clear();
         ReleaseBuildHeap();
         return true;
     }
@@ -742,6 +777,7 @@ private:
     std::string option_storage_;
     std::unordered_set<SessionId> sessions_;
     std::map<SessionId, xsime::input::SessionOverrides> input_habits_;
+    std::unordered_map<std::string, bool> space_chord_schemas_;
 };
 
 RimeEngine::RimeEngine() : impl_(std::make_unique<Impl>()) {}
@@ -800,6 +836,10 @@ bool RimeEngine::ApplyInputOptions(SessionId session, const std::string& schema,
 }
 std::map<std::string, bool> RimeEngine::InputOptions(SessionId session, const std::string& schema) noexcept {
     return impl_->InputOptions(session, schema);
+}
+
+bool RimeEngine::SchemaSpaceChord(std::string_view schema_id) noexcept {
+    return impl_->SchemaSpaceChord(schema_id);
 }
 
 bool RimeEngine::ProcessKey(SessionId session,
