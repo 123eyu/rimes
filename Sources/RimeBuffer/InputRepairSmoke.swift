@@ -17,6 +17,46 @@ func runInputRepairSmokeTest() -> Bool {
             }
         }
     }
+    let backgroundHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: "Browser"
+    )
+    let unnamedHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: nil
+    )
+    let anonymousHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: nil, name: nil
+    )
+    guard SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 501),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: nil,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("Browser"),
+          SecureInputNoticeRules.detail(
+            holder: unnamedHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("app.browser"),
+          SecureInputNoticeRules.detail(
+            holder: anonymousHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("501"),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.foregroundDetail,
+          SecureInputNoticeRules.detail(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.unknownHolderDetail
+    else { return fail("secure input notice wording") }
     let symbols: [(String, UInt16)] = [("?",44),("^",22),("!",18),(":",41),("(",25),(")",29),("<",43),(">",47)]
     for (text, key) in symbols {
         guard MacShiftKeyRouting.directText(for: event(text, key: key)) == nil,

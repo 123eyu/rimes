@@ -2978,6 +2978,7 @@ final class RIMESController: IMKInputController {
     /// of consuming it in Rime and rejecting its commit at Delivery.
     private func rejectProtectedInput(client: IMKTextInput?) -> Bool {
         guard ProtectedInput.isActive(client: client) else { return false }
+        SecureInputDiagnostics.noteProtectedRejection()
         if let lease = InputFocusCoordinator.shared.invalidateAll(reason: "protected input") {
             lease.controller?.finalizeProtectedSession(lease, reason: "protected input")
         }
