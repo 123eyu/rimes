@@ -102,11 +102,21 @@ Team ID 和临时路径传给后续步骤；P12 导入后立即删除，公证�
 ## 三、自包含 librime（[`scripts/fetch-rime.sh`](../../scripts/fetch-rime.sh)）
 
 librime 是**静态链接**的（依赖只有系统 libSystem/libc++），所以自包含只需三样：
-`librime.1.dylib` + 3 个插件 + `SharedSupport`（默认方案/词库）。fetch-rime 从 Squirrel
-官方 `.pkg` 提取这些到 `Vendor/rime/`。1.1.2 的 URL、字节长度、SHA-256、Developer ID
-Installer 身份/Team、公证票据，以及四个 universal dylib 的独立 SHA-256 都固定在脚本中；
-任何一项漂移都会在展开和 RIMES 重签之前 fail-closed。发布工作流总是 `--force` 下载，
-不信任 runner 上已有的 `Vendor/` 缓存。升级 Squirrel 必须在 PR 中重新审计并更新 allowlist。
+`librime.1.dylib` + 3 个插件 + `SharedSupport`（默认方案/词库）。fetch-rime 把它们放到
+`Vendor/rime/`，来源分两处：
+
+- **librime 与插件**：librime 官方 Release `1.17.0` 的 `rime-33e7814-macOS-universal.tar.bz2`，
+  与 iOS、Windows、Android 使用同一版本。包长度、SHA-256、`version-info.txt` 中 librime 与
+  lua/octagram/predict 的提交号，以及四个 universal dylib 的独立 SHA-256 都固定在脚本中。
+  官方包只在 arm64 切片带链接器 ad-hoc 签名、x86_64 切片无签名，所以**固定哈希就是信任锚**；
+  复制后脚本对四个 dylib 重新 ad-hoc 签名，组装 app 时再由 RIMES 签名覆盖。归档内出现绝对
+  路径、`..` 或意外顶层路径时拒绝解包。
+- **SharedSupport**：仍取自 Squirrel 1.1.2 官方 `.pkg`，其 URL、字节长度、SHA-256、Developer ID
+  Installer 身份/Team 与公证票据都固定在脚本中。不再使用 Squirrel 的 dylib。
+
+任何一项漂移都会在替换 `Vendor/rime` 之前 fail-closed。发布工作流总是 `--force` 下载，
+不信任 runner 上已有的 `Vendor/` 缓存。升级 librime 或 Squirrel 数据都必须在 PR 中重新审计并
+更新脚本里的固定值；librime 版本应与其他平台的锁定文件一起升级。
 
 简体 Octagram 模型保持为已审计的 40,925,228-byte compact 字节。获取时先复用
 `RB_OCTAGRAM_MODEL_PATH` 指定文件或 `Vendor/.cache`（两者都重新校验长度和 SHA-256），
