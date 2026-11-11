@@ -3,10 +3,15 @@
 # 拉取 librime 运行时到 Vendor/rime/，用于把 RimeBuffer 打成自包含 app
 # （装一个就能用，无需单独安装 Squirrel）。
 #
-# 来源：Squirrel 官方 .pkg + 官方 rime-octagram-data 固定版本。librime 是
-# 静态链接的（依赖只有系统 libSystem/libc++），所以取 librime.1.dylib、
-# 3 个插件、SharedSupport（默认词库/方案）与已校验的简体语言模型。
-# 不取 Sparkle（那是 Squirrel 自己的更新器，RimeBuffer 用自己的自动更新）。
+# 来源（三处，均固定版本）：
+#   - librime 官方 Release 的 macOS universal 包：librime.1.dylib 与 3 个插件。
+#     与 iOS/Windows/Android 使用同一 librime 1.17.0（33e7814）。官方包只有
+#     ad-hoc 签名，信任锚是这里固定的包长度、SHA-256、四个 dylib 的 SHA-256
+#     与 version-info.txt 中的提交号；分发前由 RIMES 自己的签名覆盖。
+#   - Squirrel 官方 .pkg：只取 SharedSupport（默认词库/方案/OpenCC 数据），
+#     保留其 Developer ID、公证与 SHA 校验。不取 Squirrel 的 dylib 与 Sparkle。
+#   - 官方 rime-octagram-data：已校验的简体语言模型。
+# librime 是静态链接的（依赖只有系统 libSystem/libc++）。
 #
 # Vendor/ 是 gitignore 的——不把二进制提交进仓库，构建时按审计过的
 # 版本、长度、SHA-256 与 Developer ID 身份拉取。
@@ -26,6 +31,17 @@ SQUIRREL_PACKAGE_SHA256="614746013212937623d5bbab9901e9c43d1ec937aa32307d6b6092a
 SQUIRREL_TEAM_ID="28HU5A7B46"
 SQUIRREL_INSTALLER_IDENTITY="Developer ID Installer: Yuncao Liu (${SQUIRREL_TEAM_ID})"
 SQUIRREL_BUNDLE_ID="im.rime.inputmethod.Squirrel"
+LIBRIME_VERSION="1.17.0"
+LIBRIME_COMMIT="33e7814"
+LIBRIME_ASSET="rime-${LIBRIME_COMMIT}-macOS-universal.tar.bz2"
+LIBRIME_ASSET_BYTES="3999581"
+LIBRIME_ASSET_SHA256="11d8dc663c6ec06d5ccb6111ba664a9e7b631b703ac6acd07cffbac664021850"
+# version-info.txt 的完整内容：librime 与插件的源码提交。
+LIBRIME_VERSION_INFO="RIME_PLUGINS=hchunhui/librime-lua lotem/librime-octagram rime/librime-predict
+librime 33e7814
+hchunhui/librime-lua ec52e48
+lotem/librime-octagram dfcc151
+rime/librime-predict 920bd41"
 OCTAGRAM_RELEASE_TAG="20260712"
 OCTAGRAM_RELEASE_ASSET="zh-hans-t-essay-bgw-compact.gram"
 OCTAGRAM_REVISION="f8ce3b534733e489a8470a7c2adf5a154e8ea069"
@@ -36,6 +52,7 @@ DEST="Vendor/rime"
 FORCE="${1:-}"
 CACHE_DIR="Vendor/.cache"
 CACHE_PKG="$CACHE_DIR/Squirrel-${SQUIRREL_VERSION}.pkg"
+CACHE_LIBRIME="$CACHE_DIR/$LIBRIME_ASSET"
 
 die() {
     echo "fetch-rime: $*" >&2
@@ -158,17 +175,70 @@ SRC="$TMP/expand/Payload/Squirrel.app/Contents"
 /usr/bin/codesign --verify --deep --strict --verbose=2 "${SRC%/Contents}" \
     || die "expanded Squirrel app signature is invalid"
 
+[[ -d "$SRC/SharedSupport" && ! -L "$SRC/SharedSupport" ]] \
+    || die "Squirrel SharedSupport is missing"
+
+librime_archive_is_valid() {
+    local candidate="$1"
+    [[ -f "$candidate" && ! -L "$candidate" ]] \
+        && [[ "$(/usr/bin/stat -f%z "$candidate")" == "$LIBRIME_ASSET_BYTES" ]] \
+        && [[ "$(/usr/bin/shasum -a 256 "$candidate" | /usr/bin/awk '{print $1}')" \
+            == "$LIBRIME_ASSET_SHA256" ]]
+}
+
+echo "==> 获取 librime ${LIBRIME_VERSION}（${LIBRIME_COMMIT}）官方 macOS 包"
+librime_archive="$TMP/$LIBRIME_ASSET"
+librime_used_cache=false
+if [[ "$FORCE" != "--force" ]] && librime_archive_is_valid "$CACHE_LIBRIME"; then
+    echo "==> 使用已校验字节的本地 librime 缓存"
+    /usr/bin/ditto "$CACHE_LIBRIME" "$librime_archive"
+    librime_used_cache=true
+else
+    librime_url="https://github.com/rime/librime/releases/download/${LIBRIME_VERSION}/${LIBRIME_ASSET}"
+    echo "==> 下载 $librime_url"
+    effective_url="$(
+        curl --fail --location --show-error --silent \
+            --retry 2 --retry-delay 1 --retry-all-errors \
+            --retry-max-time 300 \
+            --connect-timeout 10 --max-time 300 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
+            --output "$librime_archive" \
+            --write-out '%{url_effective}' \
+            "$librime_url"
+    )" || die "librime download failed"
+    case "$effective_url" in
+        https://github.com/*|https://*.githubusercontent.com/*) ;;
+        *) die "librime download left the reviewed GitHub HTTPS hosts: $effective_url" ;;
+    esac
+fi
+librime_archive_is_valid "$librime_archive" \
+    || die "librime archive size or SHA-256 mismatch"
+
+# Refuse absolute paths and parent traversal before anything is extracted.
+while IFS= read -r entry; do
+    case "$entry" in
+        /*|*..*) die "unsafe path in librime archive: $entry" ;;
+        dist/*|version-info.txt) ;;
+        *) die "unexpected path in librime archive: $entry" ;;
+    esac
+done < <(/usr/bin/tar -tjf "$librime_archive")
+/bin/mkdir -p "$TMP/librime"
+/usr/bin/tar -xjf "$librime_archive" -C "$TMP/librime"
+[[ "$(/bin/cat "$TMP/librime/version-info.txt")" == "$LIBRIME_VERSION_INFO" ]] \
+    || die "librime version-info.txt does not match the reviewed commits"
+
+LIB="$TMP/librime/dist/lib"
 runtime_files=(
-    "$SRC/Frameworks/librime.1.dylib"
-    "$SRC/Frameworks/rime-plugins/librime-lua.dylib"
-    "$SRC/Frameworks/rime-plugins/librime-octagram.dylib"
-    "$SRC/Frameworks/rime-plugins/librime-predict.dylib"
+    "$LIB/librime.${LIBRIME_VERSION}.dylib"
+    "$LIB/rime-plugins/librime-lua.dylib"
+    "$LIB/rime-plugins/librime-octagram.dylib"
+    "$LIB/rime-plugins/librime-predict.dylib"
 )
 expected_runtime_sha256=(
-    abb06aa5b3f53de375bc401512b49a7a31b7ed5ee62b2ef7a438512abee5958f
-    a0862901b4d36d35aba7012f05c132dd087890cca564609c5d1ea3ba9de7c12b
-    70f587ca908e1b857f4180dc50584b8843ec0852dbc2013248badc5fb0571525
-    78ba33a2e1d6fd6b7ee456ebfe8d57e3b16f7185d80fd1181600d6cc5fb7ad3f
+    1adb725a081b0accc1451034f6f1bb78cbfe8252a65245f1511f4b3f2038c487
+    9e5086f73b90481530bb2aa08a615044c90242eee4b98eef12fcdd1a1c391e68
+    5b2e07a8faa2ab68f551c9de2ce9c3a4925f533c1369a2cc598ee8c486f13a6c
+    bacf19a2931fb83c4ebb9e14e231dd3d7fc110fd67526018fad0a514c68366a6
 )
 for index in "${!runtime_files[@]}"; do
     runtime="${runtime_files[$index]}"
@@ -183,20 +253,25 @@ for index in "${!runtime_files[@]}"; do
     /usr/bin/lipo "$runtime" -verify_arch arm64 \
         && /usr/bin/lipo "$runtime" -verify_arch x86_64 \
         || die "runtime is not universal: $runtime"
-    /usr/bin/codesign --verify --strict --verbose=2 "$runtime" \
-        || die "runtime signature is invalid: $runtime"
-    runtime_signature="$(/usr/bin/codesign --display --verbose=4 "$runtime" 2>&1)"
-    printf '%s\n' "$runtime_signature" \
-        | /usr/bin/grep -F "TeamIdentifier=$SQUIRREL_TEAM_ID" > /dev/null \
-        || die "runtime Team ID mismatch: $runtime"
+    # No signature check here: the official build carries only the linker's
+    # ad-hoc signature on arm64 and none on x86_64. The pinned SHA-256 above
+    # is the trust anchor; the copies are ad-hoc signed after extraction and
+    # RIMES's own signature replaces that when the app is assembled.
 done
 
 plugin_files=()
 while IFS= read -r plugin_file; do
     plugin_files+=("$plugin_file")
-done < <(/usr/bin/find "$SRC/Frameworks/rime-plugins" -type f -maxdepth 1 -print | /usr/bin/sort)
+done < <(/usr/bin/find "$LIB/rime-plugins" -mindepth 1 -maxdepth 1 -print | /usr/bin/sort)
 [[ "${#plugin_files[@]}" -eq 3 ]] \
     || die "unexpected files in the reviewed rime-plugins directory"
+if [[ "$librime_used_cache" != true ]]; then
+    /bin/mkdir -p "$CACHE_DIR"
+    librime_cache_tmp="$(/usr/bin/mktemp "$CACHE_DIR/.librime.XXXXXX")"
+    /usr/bin/ditto "$librime_archive" "$librime_cache_tmp"
+    /bin/chmod 600 "$librime_cache_tmp"
+    /bin/mv -f "$librime_cache_tmp" "$CACHE_LIBRIME"
+fi
 
 echo "==> 获取已审计的简体 Octagram 模型"
 octagram_cache="$CACHE_DIR/$OCTAGRAM_MODEL"
@@ -236,13 +311,22 @@ fi
 echo "==> 提取到 $DEST"
 rm -rf "$DEST"
 mkdir -p "$DEST/Frameworks"
-cp "${runtime_files[0]}" "$DEST/Frameworks/"
+# Copy the real file under the install name; the archive's librime.1.dylib is a symlink.
+cp "${runtime_files[0]}" "$DEST/Frameworks/librime.1.dylib"
 mkdir -p "$DEST/Frameworks/rime-plugins"
 cp "${runtime_files[@]:1}" "$DEST/Frameworks/rime-plugins/"
+# Give both slices a valid signature so strict verification passes before
+# the assembled app is signed.
+for staged in "$DEST/Frameworks/librime.1.dylib" "$DEST/Frameworks/rime-plugins/"*.dylib; do
+    /usr/bin/codesign --force --sign - "$staged" \
+        || die "ad-hoc signing failed: $staged"
+    /usr/bin/codesign --verify --strict --all-architectures "$staged" \
+        || die "staged runtime signature is invalid: $staged"
+done
 cp -R "$SRC/SharedSupport" "$DEST/SharedSupport"
 
 /usr/bin/ditto "$octagram_tmp" "$DEST/SharedSupport/$OCTAGRAM_MODEL"
 /bin/chmod 0644 "$DEST/SharedSupport/$OCTAGRAM_MODEL"
 
-echo "==> 完成（Squirrel ${SQUIRREL_VERSION}）："
+echo "==> 完成（librime ${LIBRIME_VERSION} ${LIBRIME_COMMIT} + Squirrel ${SQUIRREL_VERSION} 数据）："
 du -sh "$DEST/Frameworks" "$DEST/SharedSupport"
