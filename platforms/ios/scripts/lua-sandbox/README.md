@@ -5,6 +5,12 @@
 the Lua plugin into each librime library. The module is named `lua`. Runtime native
 plugin loading remains disabled. There is no Lua JIT or runtime native code download.
 
+The Lua archive is fetched over HTTPS from the lock's `url`, then its `mirrors`
+(the official PUC-Rio mirror), with a timeout and three attempts per source. Only
+bytes matching the locked `sha256` are kept; any other download is discarded.
+Network-free tests of this fallback are in
+`platforms/linux/ime/tests/test_lua_download.py`, run by the Linux IME checks.
+
 Sources:
 
 - [librime-lua](https://github.com/hchunhui/librime-lua/tree/6f30968058a3ca83c47949308ef0ddc51a11a264)
