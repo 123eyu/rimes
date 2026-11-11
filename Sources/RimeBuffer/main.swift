@@ -9826,6 +9826,26 @@ func runBufferWindowSmokeTest() -> Bool {
             bundlePath: "/System/Library/CoreServices/Spotlight.app"
           ),
           FocusHostRules.isTrustedNonactivatingSystemOverlay(
+            bundleID: FocusHostRules.systemSearchHostBundleID,
+            bundlePath: FocusHostRules.systemSearchHostBundlePath
+          ),
+          !FocusHostRules.isTrustedNonactivatingSystemOverlay(
+            bundleID: FocusHostRules.systemSearchHostBundleID,
+            bundlePath: "/Applications/Siri AI.app"
+          ),
+          FocusHostRules.isTransientSystemSurfaceBundle(
+            FocusHostRules.systemSearchHostBundleID
+          ),
+          !FocusHostRules.mayUseOrdinaryProcessBoundFallback(
+            FocusHostRules.systemSearchHostBundleID
+          ),
+          FocusHostRules.uniqueTrustedOverlayProcessIdentifier(
+            bundleID: FocusHostRules.systemSearchHostBundleID,
+            runningCandidates: [
+                (813, FocusHostRules.systemSearchHostBundlePath),
+            ]
+          ) == 813,
+          FocusHostRules.isTrustedNonactivatingSystemOverlay(
             bundleID: pasteBundleID,
             bundlePath: pastePath
           ),
