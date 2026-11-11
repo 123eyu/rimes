@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """Pinned Android-only librime build. Never modifies iOS resources or its build cache."""
-import argparse, hashlib, importlib.util, json, os, pathlib, platform, shutil, subprocess, sys, tarfile, urllib.request
+import argparse, hashlib, importlib.util, json, os, pathlib, platform, shutil, subprocess, sys, tarfile
 ROOT = pathlib.Path(__file__).resolve().parents[3]
 ANDROID = ROOT / 'platforms/android'
 WORK = ANDROID / '.native'
 LOCK = json.loads((ROOT / 'platforms/ios/dependencies.lock.json').read_text())
+# HTTPS only, retried, and kept only on a SHA-256 match; shared with the iOS bootstrap.
+spec = importlib.util.spec_from_file_location('rimes_pinned_download', ROOT/'platforms/ios/scripts/pinned_download.py')
+PINNED = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(PINNED)
 NDK = '29.0.14206865'
 CMAKE = '3.22.1'
 SCHEMAS = ('rimes_pinyin', 'rimes_pinyin9', 'rimes_ziranma', 'rimes_wubi', 'lingxi_wubi')
@@ -14,13 +18,9 @@ def schema_source(name):
 def run(*args, **kw):
     subprocess.run([str(a) for a in args], check=True, **kw)
 def sha(path): return hashlib.sha256(path.read_bytes()).hexdigest()
-def download(url, path, digest):
-    if not path.exists() or sha(path) != digest:
-        path.parent.mkdir(parents=True, exist_ok=True)
-        temp = path.with_suffix('.download')
-        urllib.request.urlretrieve(url, temp)
-        if sha(temp) != digest: raise RuntimeError('Checksum mismatch: ' + url)
-        temp.replace(path)
+def download(item, path, **options):
+    """Fetch a lock entry; a cached copy that does not match is discarded and fetched again."""
+    return PINNED.fetch(item, path, **options)
 def export_git(source, destination, revision):
     actual = subprocess.check_output(['git', '-C', str(source), 'rev-parse', 'HEAD'], text=True).strip()
     if actual != revision: raise RuntimeError('Wrong cached revision: ' + str(source))
@@ -52,7 +52,7 @@ def bootstrap(cache):
     run(sys.executable, ROOT/'scripts/input-schemes/repair-rime-table.py', src)
     archive = WORK/'boost.tar.bz2'
     if cache and not archive.exists(): shutil.copy2(cache/'boost.tar.bz2', archive)
-    download(LOCK['boost']['url'], archive, LOCK['boost']['sha256'])
+    download(LOCK['boost'], archive)
     if not (WORK/'boost_1_86_0/boost/version.hpp').exists():
         with tarfile.open(archive) as tar: tar.extractall(WORK, filter='data')
     # Use the same pinned Lua interpreter and capability boundary as iOS. Each
@@ -123,7 +123,7 @@ def prepare_data():
         (stage/(schema+'_private.schema.yaml')).write_text(private)
     for item in LOCK['data']:
         if item['path'].endswith('.dict.yaml'):
-            download(item['url'],WORK/'downloads'/pathlib.Path(item['path']).name,item['sha256'])
+            download(item,WORK/'downloads'/pathlib.Path(item['path']).name)
             shutil.copy2(WORK/'downloads'/pathlib.Path(item['path']).name,stage)
     # Merge reviewed Android additions into the original dictionary identity. Keeping
     # pinyin_simp preserves the existing user dictionary shared by all Pinyin layouts.

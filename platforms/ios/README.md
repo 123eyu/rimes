@@ -191,7 +191,9 @@ From the repository root:
 platforms/ios/scripts/build.sh
 ```
 
-The bootstrap verifies source revisions and archive SHA-256 values. librime 1.17.0
+The bootstrap verifies source revisions and archive SHA-256 values. Downloads use
+HTTPS only and are retried; a file is kept only when it matches the lock, and a
+committed file that does not match is reported instead of replaced. librime 1.17.0
 and pinned dependencies compile locally for arm64 iPhone and arm64 Simulator;
 no macOS binaries are repackaged as iOS libraries. Logging and external plugin
 loading are disabled. Dictionary deployment runs on the Mac build host, never on

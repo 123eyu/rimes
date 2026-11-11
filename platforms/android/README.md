@@ -289,6 +289,8 @@ licenses, plus the Android-owned nine-key resources in `resources/`. It never in
 cache, generated assets and ABI libraries are ignored. Optional
 `--source-cache /path/to/Vendor/ios-build` exports the exact pinned Git commits and
 checks the Boost archive checksum; it does not copy source modifications or builds.
+Boost and the dictionaries are fetched over HTTPS with retries, and a download is
+kept only when its SHA-256 matches the lock.
 Both `arm64-v8a` and `x86_64` are built by default. Gradle fails if assets, native
 inputs, receipts or library alignment do not match.
 
