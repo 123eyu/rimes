@@ -1484,12 +1484,12 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             "雾凇拼音", "五笔86", "Easy English",
         ]
         var lexiconOK = expectedLexiconTitles.isSubset(of: lexiconLabels)
-            && lexiconButtons.count == UserLexiconKind.allCases.count * 2
+            && lexiconButtons.count == UserLexiconKind.allCases.count * 3
         for kind in UserLexiconKind.allCases {
             let actions = lexiconButtons.filter { $0.lexiconKind == kind }
             lexiconOK = lexiconOK
-                && actions.count == 2
-                && Set(actions.map(\.title)) == ["导入学习…", "导出学习…"]
+                && actions.count == 3
+                && Set(actions.map(\.title)) == ["回顾…", "导入学习…", "导出学习…"]
         }
         if !lexiconOK {
             print("settings lexicon card smoke: missing or misrouted dictionary actions")
@@ -3176,13 +3176,20 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         exportButton.controlSize = .small
         exportButton.isEnabled = status.hasLearningDatabase
 
+        let reviewButton = SettingsLexiconButton(title: "回顾…",
+                                                  target: self,
+                                                  action: #selector(reviewUserLexicon(_:)))
+        reviewButton.lexiconKind = kind
+        reviewButton.controlSize = .small
+        reviewButton.toolTip = "按天查看新学的词；只读，不改动学习词库"
+
         let header = NSStackView(views: [name, statusLabel])
         header.orientation = .horizontal
         header.alignment = .firstBaseline
         header.spacing = 6
         header.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let actions = NSStackView(views: [importButton, exportButton])
+        let actions = NSStackView(views: [reviewButton, importButton, exportButton])
         actions.orientation = .horizontal
         actions.alignment = .centerY
         actions.spacing = 6
@@ -6492,6 +6499,10 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         } catch {
             showLexiconError(error, operation: "导入")
         }
+    }
+
+    @objc private func reviewUserLexicon(_ sender: SettingsLexiconButton) {
+        LearnedWordsReviewWindowController.shared.show(kind: sender.lexiconKind)
     }
 
     @objc private func exportUserLexicon(_ sender: SettingsLexiconButton) {

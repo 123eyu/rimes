@@ -412,6 +412,7 @@ final class RimeEngine {
         started = BBRimeStart(sharedDataDir, userDataDir, logDir, frameworksDir)
         if started {
             UserDictionaryHealth.shared.watch(directory: userDataDir)
+            LearnedWordsLedger.shared.startDailyCapture()
             _ = schemaList()
             IMELog.write("rime start OK shared=\(sharedDataDir) fw=\(frameworksDir) user=\(userDataDir)")
         } else {
