@@ -463,6 +463,7 @@ if StandaloneRimeCommandRules.requiresIsolatedUserDir(
         || CommandLine.arguments.contains("shift-punctuation-smoke")
         || CommandLine.arguments.contains("candidate-pagination-smoke")
         || CommandLine.arguments.contains("user-lexicon-bridge-smoke")
+        || CommandLine.arguments.contains("learned-words-ledger-engine-smoke")
         || CommandLine.arguments.contains("external-schema-engine-smoke")
         || CommandLine.arguments.contains("scheme-import-smoke")
         || CommandLine.arguments.contains("chord-keymap-engine-smoke")
@@ -1324,6 +1325,12 @@ if CommandLine.arguments.contains("input-telemetry-smoke") {
 }
 if CommandLine.arguments.contains("user-lexicon-smoke") {
     exit(runUserLexiconServiceSmokeTest() ? 0 : 1)
+}
+if CommandLine.arguments.contains("learned-words-ledger-engine-smoke") {
+    exit(runLearnedWordsLedgerEngineSmokeTest() ? 0 : 1)
+}
+if CommandLine.arguments.contains("learned-words-ledger-smoke") {
+    exit(runLearnedWordsLedgerSmokeTest() ? 0 : 1)
 }
 if CommandLine.arguments.contains("user-lexicon-bridge-smoke") {
     exit(runRimeUserLexiconBridgeSmokeTest() ? 0 : 1)
