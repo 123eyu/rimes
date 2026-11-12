@@ -17,6 +17,110 @@ func runInputRepairSmokeTest() -> Bool {
             }
         }
     }
+    let backgroundHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: "Browser"
+    )
+    let unnamedHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: nil
+    )
+    let anonymousHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: nil, name: nil
+    )
+    guard SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 501),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: nil,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("Browser"),
+          SecureInputNoticeRules.detail(
+            holder: unnamedHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("app.browser"),
+          SecureInputNoticeRules.detail(
+            holder: anonymousHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("501"),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.foregroundDetail,
+          SecureInputNoticeRules.detail(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.unknownHolderDetail
+    else { return fail("secure input notice wording") }
+
+    // Secure input held by another background Dock app no longer pauses
+    // composition, but only on positive identification of that holder.
+    func heldBy(_ pid: pid_t, _ bundle: String?, regular: Bool = true) -> SecureInputHolder {
+        SecureInputHolder(processIdentifier: pid, bundleID: bundle,
+                          name: "Holder", isRegularApplication: regular)
+    }
+    func elsewhere(_ holder: SecureInputHolder?, front: pid_t? = 777,
+                   frontBundle: String? = "app.front") -> Bool {
+        SecureInputScopeRules.holderIsElsewhere(
+            holder: holder, frontmostProcessIdentifier: front,
+            frontmostBundleID: frontBundle, ownProcessIdentifier: 42,
+            ownBundleID: "own.ime")
+    }
+    func protects(_ holder: SecureInputHolder?, client: String? = "app.front",
+                  secure: Bool = true) -> Bool {
+        SecureInputScopeRules.protectsField(
+            secureInput: secure, holder: holder, frontmostProcessIdentifier: 777,
+            frontmostBundleID: "app.front", clientBundleID: client,
+            ownProcessIdentifier: 42, ownBundleID: "own.ime")
+    }
+    let terminal = heldBy(501, "app.terminal")
+    guard elsewhere(terminal),
+          !protects(terminal),
+          !protects(terminal, client: "app.panel"),
+          !protects(nil, secure: false),
+          // Every doubt keeps the pause.
+          protects(nil),
+          protects(terminal, client: nil),
+          protects(terminal, client: "app.terminal"),
+          protects(terminal, client: ProtectedInput.loginWindowBundleID),
+          !elsewhere(heldBy(501, "app.helper", regular: false)),
+          !elsewhere(heldBy(501, nil)),
+          !elsewhere(heldBy(777, "app.front")),
+          !elsewhere(heldBy(502, "app.front")),
+          !elsewhere(heldBy(42, "own.ime")),
+          !elsewhere(heldBy(503, "own.ime")),
+          !elsewhere(heldBy(501, ProtectedInput.loginWindowBundleID)),
+          !elsewhere(heldBy(0, "app.terminal")),
+          !elsewhere(terminal, front: nil),
+          !elsewhere(terminal, frontBundle: nil),
+          !elsewhere(terminal, frontBundle: ProtectedInput.loginWindowBundleID),
+          // The loginwindow boundary is independent of the holder.
+          !ProtectedInput.blocksIME(secureInput: true, clientBundleID: "app.front",
+              frontmostBundleID: "app.front", secureInputHeldElsewhere: true),
+          ProtectedInput.blocksIME(secureInput: true,
+              clientBundleID: ProtectedInput.loginWindowBundleID,
+              frontmostBundleID: "app.front", secureInputHeldElsewhere: true),
+          ProtectedInput.blocksIME(secureInput: false, clientBundleID: "app.front",
+              frontmostBundleID: ProtectedInput.loginWindowBundleID,
+              secureInputHeldElsewhere: true),
+          // The menu says what stays paused instead of "Chinese paused".
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: true, ownProcessIdentifier: 42).first
+              == SecureInputNoticeRules.backgroundHeadline,
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: true, ownProcessIdentifier: 42).last?
+              .contains("中文输入照常") == true,
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: false, ownProcessIdentifier: 42)
+              == [SecureInputNoticeRules.headline,
+                  SecureInputNoticeRules.detail(holder: terminal,
+                      frontmostProcessIdentifier: 777, ownProcessIdentifier: 42)]
+    else { return fail("secure input held elsewhere") }
     let symbols: [(String, UInt16)] = [("?",44),("^",22),("!",18),(":",41),("(",25),(")",29),("<",43),(">",47)]
     for (text, key) in symbols {
         guard MacShiftKeyRouting.directText(for: event(text, key: key)) == nil,
