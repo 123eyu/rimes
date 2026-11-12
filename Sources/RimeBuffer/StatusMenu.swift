@@ -144,7 +144,7 @@ final class StatusMenu {
         menu.addItem(checkUpdate)
 
         let log = NSMenuItem(
-            title: "打开日志 (~/rimebuffer.log)",
+            title: "打开日志 (~/Library/Logs/RIMES)",
             action: #selector(RIMESController.openLogFromInputMenu(_:)),
             keyEquivalent: "")
         log.target = target
@@ -253,8 +253,7 @@ final class StatusMenu {
 
     func openLog() {
         IMELog.write("input menu: log requested")
-        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("rimebuffer.log")
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open(IMELog.url)
     }
 
     func deployAndRestart() {

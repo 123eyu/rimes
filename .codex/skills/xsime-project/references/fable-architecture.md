@@ -40,6 +40,6 @@ Fable's version turned the prototype into a real macOS input method instead of a
 
 - `swift build -c debug`
 - `.build/debug/RimeBuffer smoke` when bridge/Rime/schema/key code changed.
-- `tail -f ~/rimebuffer.log` during manual typing tests.
+- `tail -f ~/Library/Logs/RIMES/rimebuffer.log` during manual typing tests.
 - Manual tests for IME changes: Safari, Electron/Codex, terminal, WeChat or another hostile field.
 - Verify candidate window tracks caret, raw letters do not leak, F4/Ctrl-grave switcher works, buffer mode still routes commits through the same drain path.
