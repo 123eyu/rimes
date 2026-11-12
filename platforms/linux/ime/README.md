@@ -144,6 +144,13 @@ build directories. The inherited lock also prevents a new
 XSIME process from writing while a worker survives an unexpected parent exit.
 This lock does not coordinate stock fcitx5-rime, IBus, or external deploy tools.
 
+Stock `fcitx5-rime` can be installed alongside the deb and loads in the same
+Fcitx5 process. The deb ships its Rime, glog and gflags libraries under private
+SONAMEs (`librimes-*`), so neither engine shares the other's logging state; a
+shared glog aborts Fcitx5 with "You called InitGoogleLogging() twice!". A
+source install links the distro's glog and still has that conflict: disable or
+remove `fcitx5-rime` there, or use the deb.
+
 Buffer preserves capture for one same-IC activation while a toolbar drag
 is pending. Once the IME receives `drag_end`, the next activation retires
 capture without a grace period. The GTK workbench normally detects physical
