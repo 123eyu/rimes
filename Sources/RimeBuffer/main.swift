@@ -1705,6 +1705,8 @@ let connectionName = (Bundle.main.infoDictionary?["InputMethodConnectionName"] a
     ?? "\(Bundle.main.bundleIdentifier ?? RimesIdentity.bundleIdentifier)_Connection"
 
 NSApplication.shared.setActivationPolicy(.accessory)   // background app; panels can float above others
+// No app menu here, so Settings text fields get Edit shortcuts through a relay.
+StandardEditShortcutRelay.install()
 CapsuleCloudSyncController.shared.start()
 
 // Held for the process lifetime so the IMK connection stays up.
