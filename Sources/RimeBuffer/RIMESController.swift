@@ -5713,7 +5713,9 @@ final class RIMESController: IMKInputController {
                                   expectedLease: FocusLease? = nil) -> Bool {
         // Secure fields keep native host handling. If secure input appears
         // later in this transaction, fail closed instead of retaining text.
-        guard !IsSecureEventInputEnabled() else { return false }
+        // Only a holder in another background app leaves this field typable;
+        // the capture branches below still refuse under any secure input.
+        guard !ProtectedInput.isActive(client: client) else { return false }
         let capturesInClipboardSearch = shouldCaptureClipboardSearchCommit(
             from: client
         )
@@ -7156,6 +7158,13 @@ final class RIMESController: IMKInputController {
         let capturesRimeCommits = shouldCaptureCommit(from: client)
             || clipboardSearchActive
         let secureInput = IsSecureEventInputEnabled()
+        // Inline preedit may continue only for plain typing into a field that
+        // secure input held elsewhere does not protect; Buffer and clipboard
+        // search keep hiding it under any secure input.
+        let secureInputHidesComposition = secureInput
+            && (logicalControlsActive
+                || capturesRimeCommits
+                || ProtectedInput.isActive(client: client))
 
         // Host isolation cannot depend on a healthy Rime session. In fallback
         // mode there is no semantic composition, but the exact external buffer
@@ -7166,7 +7175,7 @@ final class RIMESController: IMKInputController {
                 bufferControlsActive: logicalControlsActive,
                 capturesRimeCommits: capturesRimeCommits,
                 rimeComposing: false,
-                secureInput: secureInput
+                secureInput: secureInputHidesComposition
             )
             let guardActive: Bool
             guard uiTransactionStillCurrent(
@@ -7265,7 +7274,7 @@ final class RIMESController: IMKInputController {
             bufferControlsActive: logicalControlsActive,
             capturesRimeCommits: capturesRimeCommits,
             rimeComposing: compositionActive,
-            secureInput: secureInput,
+            secureInput: secureInputHidesComposition,
             stagedChordGuardActive: stagedChordGuardActive
         )
         let guardActive: Bool

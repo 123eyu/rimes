@@ -1425,7 +1425,7 @@ final class CandidateWindow {
             return
         }
         guard CandidatePanelSecurityRules.mayOrderFront(
-            secureInputEnabled: IsSecureEventInputEnabled()
+            secureInputEnabled: secureInputHidesCandidates()
         ) else {
             hidePanel(reason: "secure-input-before-level",
                       clearsPresentation: true)
@@ -1480,9 +1480,22 @@ final class CandidateWindow {
                            retiredPresentation: clearsPresentation)
     }
 
+    /// Candidates follow composition's secure-input scope: hidden under any
+    /// secure input while Buffer or clipboard search owns the keys, otherwise
+    /// only while secure input protects the field being typed in.
+    private func secureInputHidesCandidates() -> Bool {
+        guard IsSecureEventInputEnabled() else { return false }
+        guard let lease = InputFocusCoordinator.shared.interactionTarget(),
+              !BufferModel.shared.capturesInput(for: lease.token),
+              !ClipboardHistoryWindowController.shared.isVisible else {
+            return true
+        }
+        return ProtectedInput.isActive(clientBundleID: lease.bundleID)
+    }
+
     private func showPanel(reason: String) {
         guard CandidatePanelSecurityRules.mayOrderFront(
-            secureInputEnabled: IsSecureEventInputEnabled()
+            secureInputEnabled: secureInputHidesCandidates()
         ) else {
             hidePanel(reason: "secure-input-before-show", clearsPresentation: true)
             return

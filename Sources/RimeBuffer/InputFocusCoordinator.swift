@@ -1762,6 +1762,9 @@ final class InputFocusCoordinator {
                                  requireExternal: Bool,
                                  forceOverlayVisibilityRefresh: Bool) -> FocusLease? {
         guard !ProtectedInput.isActive(clientBundleID: owner?.bundleID) else { return nil }
+        // Typing may continue while another background app holds secure input,
+        // but nothing is captured or delivered later until it is released.
+        guard !(requireExternal && IsSecureEventInputEnabled()) else { return nil }
         // Utility windows may call focus probes while another input method is
         // active. A frozen RIMES lease is then bookkeeping only; never resolve
         // or inspect either IMK proxy under foreign input-source authority.
