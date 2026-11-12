@@ -9172,6 +9172,7 @@ func runBufferWindowSmokeTest() -> Bool {
                        expectedTokenMatches: Bool = true,
                        externalTarget: Bool = true,
                        deliveryTrusted: Bool = true,
+                       bufferedDeliveryPermitted: Bool = true,
                        controllerAlive: Bool = true,
                        clientAlive: Bool = true,
                        clientIdentityMatches: Bool = true,
@@ -9184,6 +9185,7 @@ func runBufferWindowSmokeTest() -> Bool {
             expectedTokenMatches: expectedTokenMatches,
             externalTarget: externalTarget,
             deliveryTrusted: deliveryTrusted,
+            bufferedDeliveryPermitted: bufferedDeliveryPermitted,
             controllerAlive: controllerAlive,
             clientAlive: clientAlive,
             clientIdentityMatches: clientIdentityMatches,
@@ -9199,6 +9201,7 @@ func runBufferWindowSmokeTest() -> Bool {
         targetAllowed(expectedTokenMatches: false),
         targetAllowed(externalTarget: false),
         targetAllowed(deliveryTrusted: false),
+        targetAllowed(bufferedDeliveryPermitted: false),
         targetAllowed(controllerAlive: false),
         targetAllowed(clientAlive: false),
         targetAllowed(clientIdentityMatches: false),
@@ -10224,6 +10227,235 @@ func runBufferWindowSmokeTest() -> Bool {
             resolvedIdentityWasVerified: true
           ) else {
         print("FAILED: focus event ordering/background callback gate")
+        return false
+    }
+
+    // An unlisted accessory app's floating panel composes only on proof from
+    // the key being typed, and never becomes a buffered-delivery target.
+    let accessoryPanelHost = FocusHostRules.resolveKnownFrontmost(
+        incomingBundleID: "panel.app",
+        frontmostBundleID: "app.a",
+        frontmostProcessIdentifier: 101,
+        trustedOverlayProcessIdentifier: nil,
+        accessoryPanelProcessIdentifier: 505
+    )
+    let accessoryPanelLease = FocusHostResolution(
+        kind: .accessoryApplicationPanel,
+        clientProcessIdentifier: 505,
+        foregroundAnchorBundleID: "app.a",
+        foregroundAnchorProcessIdentifier: 101
+    )
+    func accessoryPanelAuthority(
+        frontmostBundleID: String = "app.a",
+        frontmostProcessIdentifier: pid_t = 101,
+        panelProcessIdentifier: pid_t? = 505,
+        panelOpen: Bool = true
+    ) -> (bundle: Bool, process: Bool) {
+        FocusHostRules.applicationAuthorityMatches(
+            kind: .accessoryApplicationPanel,
+            leaseBundleID: "panel.app",
+            leaseProcessIdentifier: 505,
+            foregroundAnchorBundleID: "app.a",
+            foregroundAnchorProcessIdentifier: 101,
+            currentFrontmostBundleID: frontmostBundleID,
+            currentFrontmostProcessIdentifier: frontmostProcessIdentifier,
+            currentTrustedOverlayProcessIdentifier: panelProcessIdentifier,
+            trustedSurfaceAuthority: panelOpen
+        )
+    }
+    func accessoryPanelProcess(
+        _ candidates: [(processIdentifier: pid_t, isAccessory: Bool)],
+        bundleID: String = "panel.app",
+        frontmostProcessIdentifier: pid_t? = 101
+    ) -> pid_t? {
+        FocusHostRules.uniqueAccessoryPanelProcessIdentifier(
+            bundleID: bundleID,
+            runningCandidates: candidates,
+            frontmostProcessIdentifier: frontmostProcessIdentifier,
+            ownBundleID: "own.ime",
+            ownProcessIdentifier: 42
+        )
+    }
+    func accessoryPanelWindow(owner: pid_t = 505,
+                              layer: Int = Int(CGWindowLevelForKey(.floatingWindow)),
+                              alpha: Double = 1,
+                              width: Double = 640,
+                              height: Double = 360) -> FocusPanelWindowSample {
+        FocusPanelWindowSample(
+            ownerProcessIdentifier: owner,
+            layer: layer,
+            alpha: alpha,
+            width: width,
+            height: height
+        )
+    }
+    func accessoryPanelOpen(_ windows: [FocusPanelWindowSample]) -> Bool {
+        FocusAccessoryPanelWindowRules.ownsVisiblePanelWindow(
+            processIdentifier: 505,
+            windows: windows
+        )
+    }
+    let statusLevel = Int(CGWindowLevelForKey(.statusWindow))
+    let openPanelAuthority = accessoryPanelAuthority()
+    let closedPanelAuthority = accessoryPanelAuthority(panelOpen: false)
+    let replacedPanelAuthority = accessoryPanelAuthority(
+        panelProcessIdentifier: 506
+    )
+    let movedAnchorAuthority = accessoryPanelAuthority(
+        frontmostBundleID: "app.b",
+        frontmostProcessIdentifier: 102
+    )
+    guard accessoryPanelHost == accessoryPanelLease,
+          // A frontmost match and every allowlisted surface outrank the rule,
+          // and without a resolved accessory process nothing changes.
+          FocusHostRules.resolveKnownFrontmost(
+            incomingBundleID: "app.a",
+            frontmostBundleID: "app.a",
+            frontmostProcessIdentifier: 101,
+            trustedOverlayProcessIdentifier: nil,
+            accessoryPanelProcessIdentifier: 505
+          )?.kind == .frontmostApplication,
+          FocusHostRules.resolveKnownFrontmost(
+            incomingBundleID: "com.apple.Spotlight",
+            frontmostBundleID: "app.a",
+            frontmostProcessIdentifier: 101,
+            trustedOverlayProcessIdentifier: nil,
+            accessoryPanelProcessIdentifier: 505
+          ) == nil,
+          FocusHostRules.resolveKnownFrontmost(
+            incomingBundleID: savePanelBundleID,
+            frontmostBundleID: "app.a",
+            frontmostProcessIdentifier: 101,
+            trustedOverlayProcessIdentifier: nil,
+            accessoryPanelProcessIdentifier: 505
+          ) == nil,
+          FocusHostRules.resolveKnownFrontmost(
+            incomingBundleID: "panel.app",
+            frontmostBundleID: "app.a",
+            frontmostProcessIdentifier: 101,
+            trustedOverlayProcessIdentifier: nil
+          ) == nil,
+          FocusHostRules.resolveKnownFrontmost(
+            incomingBundleID: "panel.app",
+            frontmostBundleID: "app.a",
+            frontmostProcessIdentifier: 505,
+            trustedOverlayProcessIdentifier: nil,
+            accessoryPanelProcessIdentifier: 505
+          ) == nil,
+          // Lifecycle callbacks alone never establish or preheat the lease.
+          !FocusHostRules.callbackMayUseResolution(
+            kind: .accessoryApplicationPanel,
+            explicitActivation: true,
+            eventCanEstablishTransientSurface: false,
+            continuesExactLease: false,
+            trustedSurfaceAuthority: true
+          ),
+          FocusHostRules.callbackMayUseResolution(
+            kind: .accessoryApplicationPanel,
+            explicitActivation: false,
+            eventCanEstablishTransientSurface: true,
+            continuesExactLease: false,
+            trustedSurfaceAuthority: true
+          ),
+          FocusHostRules.callbackMayUseResolution(
+            kind: .accessoryApplicationPanel,
+            explicitActivation: true,
+            eventCanEstablishTransientSurface: false,
+            continuesExactLease: true,
+            trustedSurfaceAuthority: true
+          ),
+          !FocusHostRules.callbackMayUseResolution(
+            kind: .accessoryApplicationPanel,
+            explicitActivation: false,
+            eventCanEstablishTransientSurface: true,
+            continuesExactLease: false,
+            trustedSurfaceAuthority: false
+          ),
+          !FocusHostRules.callbackMayUseResolution(
+            kind: .accessoryApplicationPanel,
+            explicitActivation: false,
+            eventCanEstablishTransientSurface: false,
+            continuesExactLease: true,
+            trustedSurfaceAuthority: false
+          ),
+          // Exactly one live accessory process; never a Dock app, a second
+          // instance, the frontmost process, RIMES or an allowlisted surface.
+          accessoryPanelProcess([(505, true)]) == 505,
+          accessoryPanelProcess([(505, true)],
+                                frontmostProcessIdentifier: nil) == 505,
+          accessoryPanelProcess([(505, false)]) == nil,
+          accessoryPanelProcess([(505, true), (506, true)]) == nil,
+          accessoryPanelProcess([]) == nil,
+          accessoryPanelProcess([(101, true)]) == nil,
+          accessoryPanelProcess([(42, true)]) == nil,
+          accessoryPanelProcess([(505, true)], bundleID: "own.ime") == nil,
+          accessoryPanelProcess([(505, true)],
+                                bundleID: "com.apple.Spotlight") == nil,
+          accessoryPanelProcess([(505, true)],
+                                bundleID: savePanelBundleID) == nil,
+          // The panel must be open: a visible window of that process above
+          // the desktop that is not the menu bar's own strip.
+          accessoryPanelOpen([accessoryPanelWindow()]),
+          accessoryPanelOpen([accessoryPanelWindow(layer: 0)]),
+          accessoryPanelOpen([accessoryPanelWindow(layer: statusLevel)]),
+          !accessoryPanelOpen([]),
+          !accessoryPanelOpen([accessoryPanelWindow(owner: 506)]),
+          !accessoryPanelOpen([accessoryPanelWindow(alpha: 0)]),
+          !accessoryPanelOpen([accessoryPanelWindow(layer: -2_147_483_601)]),
+          !accessoryPanelOpen([accessoryPanelWindow(
+            layer: Int(CGWindowLevelForKey(.mainMenuWindow))
+          )]),
+          !accessoryPanelOpen([accessoryPanelWindow(layer: statusLevel,
+                                                    width: 28,
+                                                    height: 24)]),
+          !accessoryPanelOpen([accessoryPanelWindow(width: 1, height: 1)]),
+          // Same process and anchor authority as an overlay lease.
+          openPanelAuthority.bundle,
+          openPanelAuthority.process,
+          !closedPanelAuthority.bundle,
+          !closedPanelAuthority.process,
+          !replacedPanelAuthority.bundle,
+          !replacedPanelAuthority.process,
+          !movedAnchorAuthority.bundle,
+          !movedAnchorAuthority.process,
+          FocusHostKind.accessoryApplicationPanel.requiresTransientSurfaceAuthority,
+          !FocusHostKind.accessoryApplicationPanel.permitsPendingModifierBaselineSync,
+          !FocusHostKind.accessoryApplicationPanel.permitsBufferedDelivery,
+          FocusHostKind.frontmostApplication.permitsBufferedDelivery,
+          FocusHostKind.nonactivatingSystemOverlay.permitsBufferedDelivery,
+          FocusHostKind.appKitOpenSavePanel.permitsBufferedDelivery,
+          FocusHostRules.frontmostChangeInvalidatesLease(
+            hostKind: .accessoryApplicationPanel,
+            leaseBundleID: "panel.app",
+            leaseProcessIdentifier: 505,
+            foregroundAnchorBundleID: "app.a",
+            foregroundAnchorProcessIdentifier: 101,
+            activatedBundleID: "app.a",
+            activatedProcessIdentifier: 101
+          ),
+          FocusHostRules.displacedLeaseRequiresNoClientCleanup(
+            hostKind: .accessoryApplicationPanel
+          ),
+          FocusEventRules.mayCacheClientProcess(
+            hostKind: .accessoryApplicationPanel,
+            resolvedIdentityWasVerified: true
+          ),
+          !FocusEventRules.mayRebindKnownClientProcess(
+            hostKind: .accessoryApplicationPanel,
+            resolvedIdentityWasVerified: true
+          ),
+          // Typing may use the lease; Buffer, clipboard and plug-ins may not.
+          targetAllowed(
+            frontmostApplicationMatches: openPanelAuthority.bundle,
+            frontmostProcessMatches: openPanelAuthority.process
+          ),
+          !targetAllowed(
+            bufferedDeliveryPermitted:
+                FocusHostKind.accessoryApplicationPanel.permitsBufferedDelivery,
+            frontmostApplicationMatches: openPanelAuthority.bundle,
+            frontmostProcessMatches: openPanelAuthority.process
+          ) else {
+        print("FAILED: accessory application panel focus gate")
         return false
     }
     guard FocusActivationRules.shouldConfirmProvisional(
