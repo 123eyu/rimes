@@ -20,6 +20,9 @@ enum BufferInlineMetrics {
     static let pagerButtonSize: CGFloat = 24
     static let maximumAlternativeCount = 5
     static let trailingActionSafetyGap: CGFloat = 6
+    /// Narrowest the composing field gets once source text overflows the
+    /// rail: its own hint (about 142pt at 13pt) plus the start of a phrase.
+    static let composingFieldMinimumWidth: CGFloat = 160
 
     /// Width used by repeated block chrome, excluding text and the rail edge.
     static func packedBlockChromeWidth(blockCount: Int,
@@ -306,11 +309,16 @@ struct BufferBlockUnderlineSnapshot {
 /// Empty-source copy is a placeholder, not part of the logical input value.
 /// Once Buffer owns keyboard input, the placeholder leaves the hierarchy and
 /// the caret occupies the empty insertion point by itself.
+///
+/// A composing field shown in the row is that input under another input
+/// method, and it carries its own hint. Keeping the source copy beside it
+/// left two hints in one row and pushed the field into a sliver.
 enum BufferInputPlaceholderRules {
     static func shouldShow(contentIsEmpty: Bool,
                            preeditIsEmpty: Bool,
-                           inputActive: Bool) -> Bool {
-        contentIsEmpty && preeditIsEmpty && !inputActive
+                           inputActive: Bool,
+                           composingFieldShown: Bool = false) -> Bool {
+        contentIsEmpty && preeditIsEmpty && !inputActive && !composingFieldShown
     }
 }
 
@@ -889,6 +897,9 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         let loadingActive: Bool
         let translation: TranslationRailSnapshot?
         let presentationStyle: BufferDerivedPresentationStyle
+        /// Decides the source placeholder and the source row's layout, so an
+        /// input method switch alone must not be skipped as an unchanged render.
+        let composingFieldEnabled: Bool
         let shielded: Bool
         let appearance: RimeAppearanceMode
     }
@@ -914,6 +925,23 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         .constraint(greaterThanOrEqualToConstant: 0)
     private lazy var sourceTrailingClearanceConstraint = translationSourceSpacer.widthAnchor
         .constraint(greaterThanOrEqualToConstant: 0)
+    /// The source document otherwise shrinks to its fitting width, leaving
+    /// no remainder for the composing field to fill.
+    private lazy var composingFieldRowFill: NSLayoutConstraint = {
+        let fill = translationSourceRow.widthAnchor.constraint(
+            greaterThanOrEqualTo: translationSourceScroll.contentView.widthAnchor
+        )
+        fill.priority = NSLayoutConstraint.Priority(999)
+        return fill
+    }()
+    /// Keeps the spacer at its clearance so the remainder goes to the field.
+    /// Below every content hugging priority, so source chips never stretch.
+    private lazy var composingFieldSpacerPreference: NSLayoutConstraint = {
+        let preference = translationSourceSpacer.widthAnchor
+            .constraint(lessThanOrEqualToConstant: 0)
+        preference.priority = NSLayoutConstraint.Priority(240)
+        return preference
+    }()
     private let caretView = NSView()
     private let preeditView = BufferInlinePreeditView(frame: .zero)
     private let emptyLabel = NSTextField(labelWithString: "等待暂存内容")
@@ -1019,8 +1047,21 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             (composingField.superview as? NSStackView)?
                 .removeArrangedSubview(composingField)
             composingField.removeFromSuperview()
+            syncComposingFieldRowLayout()
         }
         needsLayout = true
+    }
+
+    /// An editable text field has no intrinsic width and the source document
+    /// shrinks to its fitting width, so a field appended there was laid out
+    /// as a sliver. While the field shares the source row, the row spans at
+    /// least the visible rail and the spacer keeps only its clearance, which
+    /// leaves the remainder to the field. Off whenever the field is elsewhere,
+    /// so rails without it lay out exactly as before.
+    private func syncComposingFieldRowLayout() {
+        let hosted = composingField.superview === translationSourceRow
+        composingFieldRowFill.isActive = hosted
+        composingFieldSpacerPreference.isActive = hosted
     }
 
     @discardableResult
@@ -1054,6 +1095,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         guard composingFieldEnabled,
               composingField.superview !== chipRow else { return }
         chipRow.addArrangedSubview(composingField)
+        syncComposingFieldRowLayout()
         layoutSubtreeIfNeeded()
     }
 
@@ -1518,6 +1560,145 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         return passed
     }
 
+    /// Under another input method the composing field is where the user
+    /// types. In a live-translation source rail it used to follow the source
+    /// placeholder with no width of its own, so typing showed in a sliver
+    /// about one character wide.
+    static func runComposingFieldSourceRowProbe() -> Bool {
+        let host = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 80))
+        let view = BufferInlineView(
+            frame: NSRect(x: 8, y: 8, width: 504, height: 64)
+        )
+        host.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: 8),
+            view.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -8),
+            view.topAnchor.constraint(equalTo: host.topAnchor, constant: 8),
+            view.bottomAnchor.constraint(equalTo: host.bottomAnchor, constant: -8),
+        ])
+        host.layoutSubtreeIfNeeded()
+        let field = view.composingField
+        let row = view.translationSourceRow
+        let clip = view.translationSourceScroll.contentView
+        let minimum = BufferInlineMetrics.composingFieldMinimumWidth
+        let safetyGap = BufferInlineMetrics.trailingActionSafetyGap
+        var failures: [String] = []
+
+        func settle() {
+            host.layoutSubtreeIfNeeded()
+            view.layoutSubtreeIfNeeded()
+        }
+        // No IMK capture exists under another input method, so the logical
+        // Buffer input is inactive while the field holds the caret.
+        func render(source: String, output: Bool) {
+            _ = view.renderTranslationForPreview(
+                TranslationRailSnapshot(
+                    sourceText: source,
+                    outputBlocks: output
+                        ? [TranslationOutputBlock(id: UUID(), text: "translated result")]
+                        : [],
+                    phase: output ? .ready : .idle
+                ),
+                active: false
+            )
+            settle()
+        }
+        // The field replaces the placeholder, follows any source content, and
+        // ends where the visible rail does, less the spacer's clearance. It is
+        // fully on screen and never narrower than its minimum.
+        func checkFills(_ label: String, clearance: CGFloat) {
+            let arranged = row.arrangedSubviews
+            guard field.superview === row,
+                  arranged.count >= 2,
+                  arranged[arranged.count - 1] === view.translationSourceSpacer,
+                  arranged[arranged.count - 2] === field,
+                  view.translationSourceEmptyLabel.superview !== row,
+                  !view.renderedInputPlaceholderVisible else {
+                failures.append("\(label): placement")
+                return
+            }
+            let box = row.convert(field.alignmentRect(forFrame: field.frame), to: clip)
+            let visible = clip.bounds.intersection(box).width
+            let trailingGap = clip.bounds.maxX - box.maxX
+            let expectedGap = row.spacing + clearance
+            if box.width < minimum - 0.5
+                || visible < box.width - 0.5
+                || abs(trailingGap - expectedGap) > 1 {
+                failures.append(
+                    "\(label): width=\(box.width) visible=\(visible) "
+                        + "gap=\(trailingGap) expected=\(expectedGap)"
+                )
+            }
+        }
+
+        if BufferInputPlaceholderRules.shouldShow(
+            contentIsEmpty: true, preeditIsEmpty: true, inputActive: false,
+            composingFieldShown: true
+        ) || !BufferInputPlaceholderRules.shouldShow(
+            contentIsEmpty: true, preeditIsEmpty: true, inputActive: false
+        ) {
+            failures.append("placeholder rule")
+        }
+
+        view.setComposingFieldEnabled(true)
+        render(source: "", output: false)
+        checkFills("empty source", clearance: 0)
+        // A lone source rail owns the action overlay's clearance.
+        view.setTrailingActionExclusion(width: 28)
+        settle()
+        checkFills("empty source beside the actions", clearance: 28 + safetyGap)
+        view.setTrailingActionExclusion(width: 0)
+
+        render(source: "原文", output: true)
+        checkFills("short source", clearance: 0)
+        view.setSourceTrailingActionExclusion(width: 22)
+        settle()
+        checkFills("short source beside its overlay", clearance: 22 + safetyGap)
+        view.setSourceTrailingActionExclusion(width: 0)
+
+        // Source wider than the rail scrolls; the field keeps its minimum at
+        // the visible end instead of being squeezed to nothing.
+        render(source: String(repeating: "很长的原文", count: 40), output: true)
+        checkFills("source wider than the rail", clearance: 0)
+        if row.frame.width <= clip.bounds.width + 0.5 {
+            failures.append("long source did not overflow the rail")
+        }
+
+        // Without the field (RIMES owns the keyboard) the rail is unchanged:
+        // the placeholder returns and the row rules are off.
+        view.setComposingFieldEnabled(false)
+        render(source: "", output: false)
+        if field.superview != nil
+            || view.translationSourceEmptyLabel.superview !== row
+            || !view.renderedInputPlaceholderVisible
+            || view.composingFieldRowFill.isActive
+            || view.composingFieldSpacerPreference.isActive {
+            failures.append("rail without the field changed")
+        }
+
+        // Switching input method changes only the field, so the refresh that
+        // follows must still render it rather than skip an unchanged rail.
+        let unchanged = TranslationRailSnapshot(
+            sourceText: "", outputBlocks: [], phase: .idle
+        )
+        _ = view.refresh(shielded: false, translationSnapshot: unchanged)
+        view.setComposingFieldEnabled(true)
+        _ = view.refresh(shielded: false, translationSnapshot: unchanged)
+        settle()
+        if field.superview !== row {
+            failures.append("enabling the field did not re-render the rail")
+        }
+        view.setComposingFieldEnabled(false)
+
+        if !failures.isEmpty {
+            print(
+                "FAILED: composing field must fill the source rail:",
+                failures.joined(separator: "; ")
+            )
+        }
+        return failures.isEmpty
+    }
+
     override init(frame frameRect: NSRect) {
         super.init(frame: frameRect)
         translatesAutoresizingMaskIntoConstraints = false
@@ -1613,6 +1794,16 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         composingField.delegate = self
         composingField.isHidden = true
         composingField.translatesAutoresizingMaskIntoConstraints = false
+        // The field, never its neighbours, takes a row's remaining width, and
+        // a long source can only push it to the minimum, not to nothing.
+        composingField.setContentHuggingPriority(
+            NSLayoutConstraint.Priority(1), for: .horizontal
+        )
+        let minimumFieldWidth = composingField.widthAnchor.constraint(
+            greaterThanOrEqualToConstant: BufferInlineMetrics.composingFieldMinimumWidth
+        )
+        minimumFieldWidth.priority = NSLayoutConstraint.Priority(999)
+        minimumFieldWidth.isActive = true
 
         addSubview(normalRailContainer)
 
@@ -1963,6 +2154,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             loadingActive: model.transientLoadingActive,
             translation: translation,
             presentationStyle: presentationStyle,
+            composingFieldEnabled: composingFieldEnabled,
             shielded: false,
             appearance: RimeUI.appearance
         )
@@ -2096,6 +2288,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             loadingActive: false,
             translation: nil,
             presentationStyle: .liveExpand,
+            composingFieldEnabled: false,
             shielded: true,
             appearance: RimeUI.appearance
         )
@@ -2194,6 +2387,11 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         renderedAlternativeCount = showsTargetRail ? alternativeCount : 0
         renderedAlternativeIndex = showsTargetRail ? activeAlternativeIndex : 0
 
+        // Under another input method the composing field is the source input,
+        // so it takes the placeholder's place instead of squeezing in beside it.
+        let hostsComposingField = sourceReplacementView == nil
+            && composingFieldEnabled
+            && renderedShowsSourceRail
         var sourceViews: [NSView] = []
         if let replacement = sourceReplacementView, renderedShowsSourceRail {
             sourceViews.append(replacement)
@@ -2201,7 +2399,8 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
            BufferInputPlaceholderRules.shouldShow(
             contentIsEmpty: snapshot.sourceText.isEmpty && !snapshot.sourceRailPinned,
             preeditIsEmpty: preedit.isEmpty,
-            inputActive: active
+            inputActive: active,
+            composingFieldShown: hostsComposingField
         ) {
             translationSourceEmptyLabel.stringValue = snapshot.sourceEmptyText
             sourceViews.append(translationSourceEmptyLabel)
@@ -2244,11 +2443,12 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
                 sourceViews.append(caretView)
             }
         }
-        if sourceReplacementView == nil, composingFieldEnabled, renderedShowsSourceRail {
+        if hostsComposingField {
             sourceViews.append(composingField)
         }
         sourceViews.append(translationSourceSpacer)
         reconcileArrangedSubviews(sourceViews, in: translationSourceRow)
+        syncComposingFieldRowLayout()
         if let replacement = sourceReplacementView, replacement.superview != nil,
            sourceReplacementWidth == nil {
             // Fill the visible rail rather than growing the scroll document.
@@ -2784,6 +2984,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         clearArrangedSubviews(of: chipRow)
         standardBlockViews.removeAll()
         clearArrangedSubviews(of: translationSourceRow)
+        syncComposingFieldRowLayout()
         for rail in translationTargetRails.values {
             rail.onCopy = nil
             clearArrangedSubviews(of: rail.row)
@@ -2995,6 +3196,10 @@ func runBufferInlineNoLeadingControlProbe() -> Bool {
 
 func runBufferInlineTrailingActionExclusionProbe() -> Bool {
     BufferInlineView.runTrailingActionExclusionProbe()
+}
+
+func runBufferInlineComposingFieldSourceRowProbe() -> Bool {
+    BufferInlineView.runComposingFieldSourceRowProbe()
 }
 
 /// A button that works on the first click inside a never-key panel.
