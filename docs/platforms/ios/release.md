@@ -41,6 +41,22 @@ Profiles 必须匹配代码中的团队、bundle 与共享组，并在有效期�
 
 上传、Apple 处理、外部 TestFlight 审核、App Review 和商店可用是独立状态。处理超时后先读回 Apple 状态；重跑会产生新的构建号。清理签名材料的工作流仅用于一次性 GitHub 托管 runner。
 
+## 本机 API key 上传
+
+没有配齐 `ios-app-store` Secrets 时，维护者可在本机用 App Store Connect API key 上传，不经浏览器或 Xcode Organizer：
+
+```sh
+ASC_KEY_ID=<key id> ASC_ISSUER_ID=<issuer id> ASC_KEY_PATH=<仓库外的 AuthKey_<id>.p8> \
+  platforms/ios/scripts/upload-app-store.sh --build <新构建号> [--submit]
+```
+
+[`upload-app-store.sh`](../../../platforms/ios/scripts/upload-app-store.sh) 先检查：已跟踪文件无未提交改动、HEAD 已在 `origin/main`、iOS 版本规则与三语更新说明、分发审计、构建号格式，以及 key 位于仓库外且权限为 600。`--check-only` 只做这些检查。之后依次运行 `build.sh` 与 hosted 模拟器测试（`--skip-tests` 可跳过测试），用该 key 让 `xcodebuild` 自动签名归档并以云签名导出 App Store Connect IPA，经 `verify-release-ipa.py` 校验后，用 `altool --validate-app` 和 `altool --upload-package --wait` 上传同一个已校验的 IPA 并等待 Apple 处理。产物和不含凭据的 `receipt.json` 位于 `platforms/ios/build/local-release/<version>-<build>/`。
+
+- 云签名需要 key 具备证书管理权限，通常为 Admin 角色。key 只在 App Store Connect 的 Users and Access → Integrations 生成，且只能下载一次；脚本只把路径交给 Apple 工具，不复制、不打印、不写入回执。
+- 构建号由维护者指定，必须是该 App 未用过的号；Apple 按数字段比较，CI 的 `(run+100).attempt.0` 高于本机常用的单段号。
+- `--submit` 在处理完成后调用 Fastlane `submit_local_upload`，与 CI 共用同一套保护：不打断审核中或待发布的版本，不替换其他版本草稿；附三语更新说明并提交审核、批准后自动发布，回执为同目录的 `submission.json`。Fastfile 锁定的 Fastlane 需要 Ruby 3.x（系统 Ruby 2.6 不可用）。
+- 不带 `--submit` 时只完成上传与处理，审核提交另行进行。上传、处理、审核与上架仍是独立状态，以 Apple 读回为准。
+
 ## GitHub 社区 IPA
 
 从原始未签名 CI 归档打包 `Payload/RIMES.app`，包含键盘扩展并保留执行权限和符号链接。附带 SHA-256、源码/CI 来源和自行签名说明；公开文件的可执行内容应与原归档一致。不要发布开发签名副本、设备 profiles 或凭据。

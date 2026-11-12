@@ -10,6 +10,40 @@ def version_state(version)
 end
 TEAM = '585J2TL9U6'
 BUNDLE = 'org.scholay.rimes.ios'
+APP_ID = '6814620242'
+
+# Refuse to touch App Store Connect state that another release owns.
+def require_submittable_app(version)
+  app = Spaceship::ConnectAPI::App.find(BUNDLE)
+  UI.user_error!('Unexpected App Store app') unless app && app.id == APP_ID
+  active = app.get_app_store_versions(filter: { platform: 'IOS' }, limit: 10).find { |v| %w[WAITING_FOR_REVIEW IN_REVIEW PENDING_DEVELOPER_RELEASE PENDING_APPLE_RELEASE].include?(version_state(v)) }
+  UI.user_error!("Version #{active.version_string} is #{version_state(active)}; will not interrupt it") if active
+  editing = app.get_edit_app_store_version(platform: 'IOS')
+  if editing && !%w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED REJECTED METADATA_REJECTED].include?(version_state(editing))
+    UI.user_error!("Existing version #{editing.version_string} is #{version_state(editing)}; will not withdraw or replace it")
+  end
+  if editing && editing.version_string != version
+    UI.user_error!("Another draft version #{editing.version_string} exists; resolve it first")
+  end
+  existing = app.get_app_store_versions(filter: { versionString: version, platform: 'IOS' }).first
+  if existing && %w[WAITING_FOR_REVIEW IN_REVIEW PENDING_DEVELOPER_RELEASE READY_FOR_SALE READY_FOR_DISTRIBUTION].include?(version_state(existing))
+    UI.user_error!("Version #{version} already submitted/released; refusing duplicate submission")
+  end
+  app
+end
+
+# Attach an already processed build plus release notes, submit it for App
+# Review with automatic release, and write a receipt without credentials.
+def submit_processed_build(api:, app:, version:, build:, notes:, work_dir:, receipt_path:, commit:)
+  FileUtils.mkdir_p(File.join(work_dir, 'empty-metadata'))
+  upload_to_app_store(api_key: api, app_identifier: BUNDLE, app_version: version, build_number: build, skip_binary_upload: true, skip_screenshots: true, skip_metadata: false, metadata_path: File.join(work_dir, 'empty-metadata'), release_notes: notes, submit_for_review: true, automatic_release: true, force: true, reject_if_possible: false, run_precheck_before_submit: false, submission_information: { export_compliance_uses_encryption: false, content_rights_contains_third_party_content: true, content_rights_has_rights: true })
+  submitted = app.get_app_store_versions(filter: { versionString: version, platform: 'IOS' }).first
+  receipt = { version: version, build: build, commit: commit, app_store_state: submitted && version_state(submitted), app_store_version_id: submitted&.id }
+  FileUtils.mkdir_p(File.dirname(receipt_path))
+  File.write(receipt_path, JSON.pretty_generate(receipt))
+  UI.user_error!("Submission did not reach Apple review queue; inspect #{receipt_path}") unless submitted && %w[WAITING_FOR_REVIEW IN_REVIEW].include?(version_state(submitted))
+end
+
 default_platform(:ios)
 platform :ios do
   desc 'Build, upload and submit the exact ios-v* tag; release after Apple approval'
@@ -21,21 +55,7 @@ platform :ios do
     missing = RimesRelease::SECRETS.select { |key| ENV[key].to_s.empty? }
     UI.user_error!("Missing GitHub Secrets: #{missing.join(', ')}") unless missing.empty?
     api = app_store_connect_api_key(key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'), key_content: ENV.fetch('ASC_PRIVATE_KEY_BASE64'), is_key_content_base64: true, in_house: false)
-    app = Spaceship::ConnectAPI::App.find(BUNDLE)
-    UI.user_error!('Unexpected App Store app') unless app && app.id == '6814620242'
-    active = app.get_app_store_versions(filter: { platform: 'IOS' }, limit: 10).find { |v| %w[WAITING_FOR_REVIEW IN_REVIEW PENDING_DEVELOPER_RELEASE PENDING_APPLE_RELEASE].include?(version_state(v)) }
-    UI.user_error!("Version #{active.version_string} is #{version_state(active)}; will not interrupt it") if active
-    editing = app.get_edit_app_store_version(platform: 'IOS')
-    if editing && !%w[PREPARE_FOR_SUBMISSION DEVELOPER_REJECTED REJECTED METADATA_REJECTED].include?(version_state(editing))
-      UI.user_error!("Existing version #{editing.version_string} is #{version_state(editing)}; will not withdraw or replace it")
-    end
-    if editing && editing.version_string != version
-      UI.user_error!("Another draft version #{editing.version_string} exists; resolve it first")
-    end
-    existing = app.get_app_store_versions(filter: { versionString: version, platform: 'IOS' }).first
-    if existing && %w[WAITING_FOR_REVIEW IN_REVIEW PENDING_DEVELOPER_RELEASE READY_FOR_SALE READY_FOR_DISTRIBUTION].include?(version_state(existing))
-      UI.user_error!("Version #{version} already submitted/released; refusing duplicate submission")
-    end
+    app = require_submittable_app(version)
     keychain = File.join(ENV.fetch('RUNNER_TEMP'), 'rimes-ios-signing.keychain-db')
     password = SecureRandom.hex(32)
     installed_profiles = []
@@ -59,16 +79,24 @@ platform :ios do
         ipa = build_app(project: File.join(ROOT, 'RIMES.xcodeproj'), scheme: 'RIMES', configuration: 'Release', clean: true, destination: 'generic/platform=iOS', output_directory: File.join(ROOT, 'build/ci-release'), output_name: 'RIMES.ipa', export_method: 'app-store', export_options: { method: 'app-store-connect', signingStyle: 'manual', teamID: TEAM, provisioningProfiles: profiles, manageAppVersionAndBuildNumber: false }, xcargs: "MARKETING_VERSION=#{version} CURRENT_PROJECT_VERSION=#{build}")
         sh('python3', File.join(ROOT, 'scripts/verify-release-ipa.py'), ipa, version, build)
         upload_to_testflight(api_key: api, ipa: ipa, app_identifier: BUNDLE, skip_submission: true, submit_beta_review: false, distribute_external: false, skip_waiting_for_build_processing: false, wait_processing_timeout_duration: 2400)
-        FileUtils.mkdir_p(File.join(dir, 'empty-metadata'))
-        upload_to_app_store(api_key: api, app_identifier: BUNDLE, app_version: version, build_number: build, skip_binary_upload: true, skip_screenshots: true, skip_metadata: false, metadata_path: File.join(dir, 'empty-metadata'), release_notes: notes, submit_for_review: true, automatic_release: true, force: true, reject_if_possible: false, run_precheck_before_submit: false, submission_information: { export_compliance_uses_encryption: false, content_rights_contains_third_party_content: true, content_rights_has_rights: true })
-        submitted = app.get_app_store_versions(filter: { versionString: version, platform: 'IOS' }).first
-        receipt = { version: version, build: build, commit: ENV['GITHUB_SHA'], app_store_state: submitted && version_state(submitted), app_store_version_id: submitted&.id }
-        File.write(File.join(ROOT, 'build/ci-release/submission.json'), JSON.pretty_generate(receipt))
-        UI.user_error!('Submission did not reach Apple review queue; inspect submission.json') unless submitted && %w[WAITING_FOR_REVIEW IN_REVIEW].include?(version_state(submitted))
+        submit_processed_build(api: api, app: app, version: version, build: build, notes: notes, work_dir: dir, receipt_path: File.join(ROOT, 'build/ci-release/submission.json'), commit: ENV['GITHUB_SHA'])
       end
     ensure
       installed_profiles.compact.each { |path| File.delete(path) if File.file?(path) }
       delete_keychain(keychain_path: keychain) if File.exist?(keychain)
+    end
+  end
+
+  desc 'Submit a build that scripts/upload-app-store.sh already uploaded and Apple processed'
+  lane :submit_local_upload do
+    version = ENV.fetch('RIMES_IOS_VERSION')
+    RimesRelease.require_ios_target(version, ROOT)
+    build = ENV.fetch('RIMES_IOS_BUILD')
+    notes = RimesRelease.notes(ROOT, version)
+    api = app_store_connect_api_key(key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'), key_filepath: ENV.fetch('ASC_KEY_PATH'), in_house: false)
+    app = require_submittable_app(version)
+    Dir.mktmpdir('rimes-submit-') do |dir|
+      submit_processed_build(api: api, app: app, version: version, build: build, notes: notes, work_dir: dir, receipt_path: ENV.fetch('RIMES_IOS_SUBMISSION_RECEIPT'), commit: ENV['RIMES_IOS_COMMIT'])
     end
   end
 end
