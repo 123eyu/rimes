@@ -6549,8 +6549,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     @objc private func openRuntimeLog() {
-        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("rimebuffer.log")
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open(IMELog.url)
     }
 
     @objc private func restartInputMethod() {

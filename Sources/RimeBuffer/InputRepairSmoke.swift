@@ -17,6 +17,110 @@ func runInputRepairSmokeTest() -> Bool {
             }
         }
     }
+    let backgroundHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: "Browser"
+    )
+    let unnamedHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: "app.browser", name: nil
+    )
+    let anonymousHolder = SecureInputHolder(
+        processIdentifier: 501, bundleID: nil, name: nil
+    )
+    guard SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 501),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: backgroundHolder, frontmostProcessIdentifier: nil,
+            ownProcessIdentifier: 42),
+          !SecureInputNoticeRules.holderIsInBackground(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("Browser"),
+          SecureInputNoticeRules.detail(
+            holder: unnamedHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("app.browser"),
+          SecureInputNoticeRules.detail(
+            holder: anonymousHolder, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42).contains("501"),
+          SecureInputNoticeRules.detail(
+            holder: backgroundHolder, frontmostProcessIdentifier: 501,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.foregroundDetail,
+          SecureInputNoticeRules.detail(
+            holder: nil, frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42) == SecureInputNoticeRules.unknownHolderDetail
+    else { return fail("secure input notice wording") }
+
+    // Secure input held by another background Dock app no longer pauses
+    // composition, but only on positive identification of that holder.
+    func heldBy(_ pid: pid_t, _ bundle: String?, regular: Bool = true) -> SecureInputHolder {
+        SecureInputHolder(processIdentifier: pid, bundleID: bundle,
+                          name: "Holder", isRegularApplication: regular)
+    }
+    func elsewhere(_ holder: SecureInputHolder?, front: pid_t? = 777,
+                   frontBundle: String? = "app.front") -> Bool {
+        SecureInputScopeRules.holderIsElsewhere(
+            holder: holder, frontmostProcessIdentifier: front,
+            frontmostBundleID: frontBundle, ownProcessIdentifier: 42,
+            ownBundleID: "own.ime")
+    }
+    func protects(_ holder: SecureInputHolder?, client: String? = "app.front",
+                  secure: Bool = true) -> Bool {
+        SecureInputScopeRules.protectsField(
+            secureInput: secure, holder: holder, frontmostProcessIdentifier: 777,
+            frontmostBundleID: "app.front", clientBundleID: client,
+            ownProcessIdentifier: 42, ownBundleID: "own.ime")
+    }
+    let terminal = heldBy(501, "app.terminal")
+    guard elsewhere(terminal),
+          !protects(terminal),
+          !protects(terminal, client: "app.panel"),
+          !protects(nil, secure: false),
+          // Every doubt keeps the pause.
+          protects(nil),
+          protects(terminal, client: nil),
+          protects(terminal, client: "app.terminal"),
+          protects(terminal, client: ProtectedInput.loginWindowBundleID),
+          !elsewhere(heldBy(501, "app.helper", regular: false)),
+          !elsewhere(heldBy(501, nil)),
+          !elsewhere(heldBy(777, "app.front")),
+          !elsewhere(heldBy(502, "app.front")),
+          !elsewhere(heldBy(42, "own.ime")),
+          !elsewhere(heldBy(503, "own.ime")),
+          !elsewhere(heldBy(501, ProtectedInput.loginWindowBundleID)),
+          !elsewhere(heldBy(0, "app.terminal")),
+          !elsewhere(terminal, front: nil),
+          !elsewhere(terminal, frontBundle: nil),
+          !elsewhere(terminal, frontBundle: ProtectedInput.loginWindowBundleID),
+          // The loginwindow boundary is independent of the holder.
+          !ProtectedInput.blocksIME(secureInput: true, clientBundleID: "app.front",
+              frontmostBundleID: "app.front", secureInputHeldElsewhere: true),
+          ProtectedInput.blocksIME(secureInput: true,
+              clientBundleID: ProtectedInput.loginWindowBundleID,
+              frontmostBundleID: "app.front", secureInputHeldElsewhere: true),
+          ProtectedInput.blocksIME(secureInput: false, clientBundleID: "app.front",
+              frontmostBundleID: ProtectedInput.loginWindowBundleID,
+              secureInputHeldElsewhere: true),
+          // The menu says what stays paused instead of "Chinese paused".
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: true, ownProcessIdentifier: 42).first
+              == SecureInputNoticeRules.backgroundHeadline,
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: true, ownProcessIdentifier: 42).last?
+              .contains("中文输入照常") == true,
+          SecureInputNoticeRules.lines(holder: terminal, frontmostProcessIdentifier: 777,
+              holderIsElsewhere: false, ownProcessIdentifier: 42)
+              == [SecureInputNoticeRules.headline,
+                  SecureInputNoticeRules.detail(holder: terminal,
+                      frontmostProcessIdentifier: 777, ownProcessIdentifier: 42)]
+    else { return fail("secure input held elsewhere") }
     let symbols: [(String, UInt16)] = [("?",44),("^",22),("!",18),(":",41),("(",25),(")",29),("<",43),(">",47)]
     for (text, key) in symbols {
         guard MacShiftKeyRouting.directText(for: event(text, key: key)) == nil,
@@ -35,6 +139,56 @@ func runInputRepairSmokeTest() -> Bool {
               MacShiftKeyRouting.directText(for: event("A", key: 0, flags: [.shift, modifier])) == nil
         else { return fail("modified shortcut") }
     }
+
+    // An input-method process has no app menu, so its own text fields rely on
+    // a relay in the window's key-equivalent pass for the Edit shortcuts.
+    guard StandardEditShortcutRules.action(characters: "v", modifierFlags: [.command])
+            == #selector(NSText.paste(_:)),
+          StandardEditShortcutRules.action(characters: "V", modifierFlags: [.command, .capsLock])
+            == #selector(NSText.paste(_:)),
+          StandardEditShortcutRules.action(characters: "c", modifierFlags: [.command])
+            == #selector(NSText.copy(_:)),
+          StandardEditShortcutRules.action(characters: "x", modifierFlags: [.command])
+            == #selector(NSText.cut(_:)),
+          StandardEditShortcutRules.action(characters: "a", modifierFlags: [.command])
+            == #selector(NSText.selectAll(_:)),
+          StandardEditShortcutRules.action(characters: "z", modifierFlags: [.command])
+            == Selector(("undo:")),
+          StandardEditShortcutRules.action(characters: "z", modifierFlags: [.command, .shift])
+            == Selector(("redo:")),
+          StandardEditShortcutRules.action(characters: "v", modifierFlags: [.control]) == nil,
+          StandardEditShortcutRules.action(characters: "v", modifierFlags: [.command, .option]) == nil,
+          StandardEditShortcutRules.action(characters: "v", modifierFlags: []) == nil,
+          StandardEditShortcutRules.action(characters: "b", modifierFlags: [.command]) == nil,
+          StandardEditShortcutRules.action(characters: nil, modifierFlags: [.command]) == nil
+    else { return fail("standard edit shortcut mapping") }
+    _ = NSApplication.shared
+    let editWindow = NSWindow(
+        contentRect: NSRect(x: -4000, y: -4000, width: 300, height: 60),
+        styleMask: [.titled], backing: .buffered, defer: false
+    )
+    editWindow.isReleasedWhenClosed = false
+    let editField = NSTextField(string: "hello world")
+    editField.frame = NSRect(x: 10, y: 10, width: 200, height: 24)
+    editWindow.contentView?.addSubview(editField)
+    guard editWindow.makeFirstResponder(editField),
+          let fieldEditor = editWindow.firstResponder as? NSTextView
+    else { return fail("text field could not take focus") }
+    fieldEditor.setSelectedRange(NSRange(location: 0, length: 0))
+    guard !editWindow.performKeyEquivalent(with: event("a", key: 0, flags: .command)),
+          fieldEditor.selectedRange().length == 0
+    else { return fail("a plain window must not already deliver Command-A") }
+    StandardEditShortcutRelay.attach(to: editWindow)
+    StandardEditShortcutRelay.attach(to: editWindow)
+    guard editWindow.contentView?.subviews.count == 2
+    else { return fail("the edit shortcut relay must attach exactly once") }
+    guard editWindow.performKeyEquivalent(with: event("a", key: 0, flags: .command)),
+          fieldEditor.selectedRange().length == editField.stringValue.count,
+          !editWindow.performKeyEquivalent(with: event("b", key: 11, flags: .command))
+    else { return fail("Command-A must reach a text field without an app menu") }
+    guard editWindow.makeFirstResponder(nil),
+          !editWindow.performKeyEquivalent(with: event("a", key: 0, flags: .command))
+    else { return fail("edit shortcuts must only target a text responder") }
 
     let root = FileManager.default.temporaryDirectory.appendingPathComponent("rimes-health-\(UUID().uuidString)")
     defer { try? FileManager.default.removeItem(at: root) }

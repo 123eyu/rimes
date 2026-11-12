@@ -15,13 +15,23 @@ struct FocusToken: Hashable, CustomStringConvertible {
 /// number of explicitly trusted nonactivating surfaces are hosted out of process
 /// and leave the application underneath them frontmost. Keep those exceptions
 /// bundle/path verified instead of weakening the foreground gate for every
-/// accessory application or XPC service.
+/// accessory application or XPC service. Every other accessory application
+/// gets only `accessoryApplicationPanel`: typing proven key by key, and no
+/// buffered delivery.
 enum FocusHostKind: Equatable {
     case frontmostApplication
     case nonactivatingSystemOverlay
     /// AppKit's open/save ViewService owns the IMK client while its window is
     /// composited under the initiating frontmost application's PID.
     case appKitOpenSavePanel
+    /// A field in a floating panel of an accessory (LSUIElement) application
+    /// that leaves another application frontmost, such as a launcher or a
+    /// clipboard search. No allowlist names these applications, so the lease
+    /// rests on per-key proof: a fresh keyDown for this exact client, one live
+    /// accessory process for its bundle, and an open panel window. That proof
+    /// covers composing and committing what the user types into the panel; it
+    /// never makes the panel a target for text delivered later.
+    case accessoryApplicationPanel
 
     var requiresTransientSurfaceAuthority: Bool {
         self != .frontmostApplication
@@ -29,6 +39,13 @@ enum FocusHostKind: Equatable {
 
     var permitsPendingModifierBaselineSync: Bool {
         self == .nonactivatingSystemOverlay
+    }
+
+    /// Buffer capture and delivery, clipboard paste and plug-ins act through
+    /// `liveTarget` after the key that established focus. Only identities
+    /// verified independently of that key may receive them.
+    var permitsBufferedDelivery: Bool {
+        self != .accessoryApplicationPanel
     }
 }
 
@@ -42,9 +59,18 @@ struct FocusHostResolution: Equatable {
 enum FocusHostRules {
     static let iShotBundleID = "cn.better365.ishot"
     static let iShotBundlePath = "/Applications/iShot.app"
+    /// macOS 27 draws the Spotlight search field in Siri AI.app (launchd label
+    /// `com.apple.campo`). Its launch agent replaces `com.apple.Spotlight`
+    /// whenever the system enables the IntelligenceFlow/Campo feature flag, so
+    /// the legacy identity never owns the field there. Both bundles live on the
+    /// sealed system volume and pass through the same unique-PID and
+    /// visible-window gates.
+    static let systemSearchHostBundleID = "com.apple.campo"
+    static let systemSearchHostBundlePath = "/System/Applications/Siri AI.app"
 
     private static let trustedNonactivatingSystemOverlayPaths = [
         "com.apple.Spotlight": "/System/Library/CoreServices/Spotlight.app",
+        systemSearchHostBundleID: systemSearchHostBundlePath,
         // Paste is an LSUIElement app whose search field owns the IMK client
         // without becoming NSWorkspace's frontmost application. It has no stable
         // TeamIdentifier on the observed release, so its narrow trust identity is
@@ -154,7 +180,8 @@ enum FocusHostRules {
                                       frontmostBundleID: String,
                                       frontmostProcessIdentifier: pid_t,
         trustedOverlayProcessIdentifier: pid_t?,
-        trustedSystemPanelAvailable: Bool = false) -> FocusHostResolution? {
+        trustedSystemPanelAvailable: Bool = false,
+        accessoryPanelProcessIdentifier: pid_t? = nil) -> FocusHostResolution? {
         if isNonactivatingSystemOverlayBundle(incomingBundleID) {
             guard incomingBundleID != frontmostBundleID,
                   let trustedOverlayProcessIdentifier else { return nil }
@@ -187,7 +214,42 @@ enum FocusHostRules {
                 foregroundAnchorProcessIdentifier: frontmostProcessIdentifier
             )
         }
+        // Only the runtime's unique accessory process for this bundle can name
+        // a background panel, and it never outranks the matches above.
+        if let accessoryPanelProcessIdentifier,
+           accessoryPanelProcessIdentifier != frontmostProcessIdentifier {
+            return FocusHostResolution(
+                kind: .accessoryApplicationPanel,
+                clientProcessIdentifier: accessoryPanelProcessIdentifier,
+                foregroundAnchorBundleID: frontmostBundleID,
+                foregroundAnchorProcessIdentifier: frontmostProcessIdentifier
+            )
+        }
         return nil
+    }
+
+    /// The single live accessory process that may own a background panel
+    /// client. Ambiguity rejects: a second instance, a regular (Dock) app, the
+    /// frontmost process or RIMES itself never qualify, and the allowlisted
+    /// system surfaces keep their own stricter rules.
+    static func uniqueAccessoryPanelProcessIdentifier(
+        bundleID: String,
+        runningCandidates: [(processIdentifier: pid_t, isAccessory: Bool)],
+        frontmostProcessIdentifier: pid_t?,
+        ownBundleID: String,
+        ownProcessIdentifier: pid_t
+    ) -> pid_t? {
+        guard !isTransientSystemSurfaceBundle(bundleID),
+              bundleID != ownBundleID,
+              runningCandidates.count == 1,
+              let candidate = runningCandidates.first,
+              candidate.isAccessory,
+              candidate.processIdentifier > 0,
+              candidate.processIdentifier != ownProcessIdentifier,
+              candidate.processIdentifier != frontmostProcessIdentifier else {
+            return nil
+        }
+        return candidate.processIdentifier
     }
 
     static func callbackMayUseResolution(kind: FocusHostKind,
@@ -207,6 +269,13 @@ enum FocusHostRules {
                 || (trustedSurfaceAuthority
                     && (eventCanEstablishTransientSurface
                         || continuesExactLease))
+        case .accessoryApplicationPanel:
+            // A background accessory app may activate an input context at any
+            // time, so no lifecycle callback can establish or preheat this
+            // lease. Only a fresh keyDown with the panel open, or the exact
+            // lease such a key created, is accepted.
+            return trustedSurfaceAuthority
+                && (eventCanEstablishTransientSurface || continuesExactLease)
         }
     }
 
@@ -245,7 +314,10 @@ enum FocusHostRules {
                 currentFrontmostBundleID.map { $0 == leaseBundleID } ?? true,
                 currentFrontmostProcessIdentifier == leaseProcessIdentifier
             )
-        case .nonactivatingSystemOverlay:
+        case .nonactivatingSystemOverlay,
+             .accessoryApplicationPanel:
+            // Both own their client process; the frontmost application is
+            // only the anchor captured when the lease was established.
             let overlayProcessMatches = trustedSurfaceAuthority
                 && currentTrustedOverlayProcessIdentifier == leaseProcessIdentifier
             let anchorBundleMatches = currentFrontmostBundleID.map {
@@ -411,6 +483,42 @@ enum FocusSystemPanelWindowRules {
     }
 }
 
+struct FocusPanelWindowSample: Equatable {
+    let ownerProcessIdentifier: pid_t
+    let layer: Int
+    let alpha: Double
+    let width: Double
+    let height: Double
+}
+
+/// Accessory applications keep no on-screen window while their panel is
+/// closed, so a visible window of the client's own process is what says the
+/// panel is open. The menu bar's own strip does not count: older releases
+/// attribute status-item windows to the application that owns them.
+enum FocusAccessoryPanelWindowRules {
+    /// Taller than any menu bar, including the one beside a camera notch.
+    static let statusStripMaximumHeight: Double = 50
+    static let minimumPanelSide: Double = 16
+
+    static func ownsVisiblePanelWindow(
+        processIdentifier: pid_t,
+        windows: [FocusPanelWindowSample]
+    ) -> Bool {
+        let mainMenuLevel = Int(CGWindowLevelForKey(.mainMenuWindow))
+        let statusLevel = Int(CGWindowLevelForKey(.statusWindow))
+        return windows.contains {
+            $0.ownerProcessIdentifier == processIdentifier
+                && $0.alpha > 0
+                && $0.layer >= 0
+                && $0.layer != mainMenuLevel
+                && !($0.layer == statusLevel
+                    && $0.height <= statusStripMaximumHeight)
+                && $0.width >= minimumPanelSide
+                && $0.height >= minimumPanelSide
+        }
+    }
+}
+
 /// Pure epoch state used by the runtime coordinator and the CLI smoke test.
 struct FocusEpochState {
     private(set) var generation: UInt64 = 0
@@ -460,6 +568,7 @@ enum FocusTargetRules {
                        expectedTokenMatches: Bool,
                        externalTarget: Bool,
                        deliveryTrusted: Bool,
+                       bufferedDeliveryPermitted: Bool = true,
                        controllerAlive: Bool,
                        clientAlive: Bool,
                        clientIdentityMatches: Bool,
@@ -471,6 +580,7 @@ enum FocusTargetRules {
             && expectedTokenMatches
             && externalTarget
             && deliveryTrusted
+            && bufferedDeliveryPermitted
             && controllerAlive
             && clientAlive
             && clientIdentityMatches
@@ -845,6 +955,89 @@ final class InputFocusCoordinator {
         return visible
     }
 
+    /// Kept apart from the overlay sample because the panel check uses a
+    /// stricter window predicate.
+    private var accessoryPanelVisibilitySample: OverlayVisibilitySample?
+
+    /// Re-resolved on every check, like the overlay identity: a restart, a
+    /// second instance or a change of activation policy revokes the lease
+    /// instead of letting it inherit authority.
+    private func resolveAccessoryPanelProcess(
+        for bundleID: String,
+        frontmostProcessIdentifier: pid_t?,
+        boundProcessIdentifier: pid_t? = nil
+    ) -> pid_t? {
+        let candidates = NSRunningApplication.runningApplications(
+            withBundleIdentifier: bundleID
+        ).filter { !$0.isTerminated }.map {
+            (processIdentifier: $0.processIdentifier,
+             isAccessory: $0.activationPolicy == .accessory)
+        }
+        guard let resolved = FocusHostRules.uniqueAccessoryPanelProcessIdentifier(
+            bundleID: bundleID,
+            runningCandidates: candidates,
+            frontmostProcessIdentifier: frontmostProcessIdentifier,
+            ownBundleID: Bundle.main.bundleIdentifier
+                ?? RimesIdentity.bundleIdentifier,
+            ownProcessIdentifier: ProcessInfo.processInfo.processIdentifier
+        ) else { return nil }
+        if let boundProcessIdentifier,
+           resolved != boundProcessIdentifier {
+            return nil
+        }
+        return resolved
+    }
+
+    /// The panel-is-open check, cached like the overlay sample so the several
+    /// target checks made by one key event share one WindowServer read.
+    private func accessoryPanelHasVisibleWindow(
+        processIdentifier: pid_t,
+        forceRefresh: Bool = false
+    ) -> Bool {
+        let now = ProcessInfo.processInfo.systemUptime
+        if !forceRefresh,
+           let sample = accessoryPanelVisibilitySample,
+           sample.processIdentifier == processIdentifier,
+           now - sample.checkedAtUptime >= 0,
+           now - sample.checkedAtUptime <= 0.010 {
+            return sample.visible
+        }
+        let options: CGWindowListOption = [
+            .optionOnScreenOnly,
+            .excludeDesktopElements,
+        ]
+        let windows = (CGWindowListCopyWindowInfo(options, kCGNullWindowID)
+            as? [[String: Any]] ?? []).compactMap { window -> FocusPanelWindowSample? in
+            guard let ownerPID = window[kCGWindowOwnerPID as String] as? NSNumber,
+                  ownerPID.int32Value == processIdentifier,
+                  let layer = window[kCGWindowLayer as String] as? NSNumber,
+                  let bounds = window[kCGWindowBounds as String] as? NSDictionary,
+                  let frame = CGRect(
+                    dictionaryRepresentation: bounds as CFDictionary
+                  ) else {
+                return nil
+            }
+            return FocusPanelWindowSample(
+                ownerProcessIdentifier: ownerPID.int32Value,
+                layer: layer.intValue,
+                alpha: (window[kCGWindowAlpha as String] as? NSNumber)?
+                    .doubleValue ?? 1,
+                width: Double(frame.width),
+                height: Double(frame.height)
+            )
+        }
+        let visible = FocusAccessoryPanelWindowRules.ownsVisiblePanelWindow(
+            processIdentifier: processIdentifier,
+            windows: windows
+        )
+        accessoryPanelVisibilitySample = OverlayVisibilitySample(
+            processIdentifier: processIdentifier,
+            checkedAtUptime: now,
+            visible: visible
+        )
+        return visible
+    }
+
     private func suspendReusedTransientSurfaceOwnerIfNeeded(
         reusesExactOwner: Bool,
         reason: String
@@ -1006,6 +1199,13 @@ final class InputFocusCoordinator {
                   owner?.hostKind == .nonactivatingSystemOverlay else { return nil }
             return owner?.processIdentifier
         }()
+        // A background accessory panel is considered only for the key that
+        // can prove it, or to continue the exact lease such a key created.
+        let continuesAccessoryPanel = reusesExactOwner
+            && owner?.hostKind == .accessoryApplicationPanel
+        let accessoryPanelCandidate = !overlayBundle
+            && !openSavePanelBundle
+            && (eventCanEstablishTransientSurface || continuesAccessoryPanel)
         var trustedSurfaceAuthority = false
         var pendingSystemPanelWindowNumber: CGWindowID?
         var resolvedClientProcessIdentityWasVerified = false
@@ -1030,18 +1230,35 @@ final class InputFocusCoordinator {
             }
             let systemPanelAvailable = openSavePanelBundle
                 && trustedAppKitOpenSavePanelServiceIsAvailable(for: bundleID)
+            var accessoryPanelProcessIdentifier: pid_t?
+            if accessoryPanelCandidate, bundleID != frontmostBundleID {
+                accessoryPanelProcessIdentifier = resolveAccessoryPanelProcess(
+                    for: bundleID,
+                    frontmostProcessIdentifier: frontmostProcessIdentifier,
+                    boundProcessIdentifier: continuesAccessoryPanel
+                        ? owner?.processIdentifier
+                        : nil
+                )
+                if let accessoryPanelProcessIdentifier {
+                    trustedSurfaceAuthority = accessoryPanelHasVisibleWindow(
+                        processIdentifier: accessoryPanelProcessIdentifier,
+                        forceRefresh: explicitActivation || eventType != nil
+                    )
+                }
+            }
             guard let resolved = FocusHostRules.resolveKnownFrontmost(
                 incomingBundleID: bundleID,
                 frontmostBundleID: frontmostBundleID,
                 frontmostProcessIdentifier: frontmostProcessIdentifier,
                 trustedOverlayProcessIdentifier: overlayProcessIdentifier,
-                trustedSystemPanelAvailable: systemPanelAvailable
+                trustedSystemPanelAvailable: systemPanelAvailable,
+                accessoryPanelProcessIdentifier: accessoryPanelProcessIdentifier
             ) else {
                 suspendReusedTransientSurfaceOwnerIfNeeded(
                     reusesExactOwner: reusesExactOwner,
                     reason: "transient surface provenance/anchor unavailable"
                 )
-                IMELog.write("focus background callback rejected bundle=\(bundleID) frontmost=\(frontmostBundleID)")
+                IMELog.write("focus background callback rejected bundle=\(bundleID) frontmost=\(frontmostBundleID) type=\(eventType?.rawValue ?? 0)")
                 return nil
             }
             hostResolution = resolved
@@ -1182,6 +1399,36 @@ final class InputFocusCoordinator {
                 foregroundAnchorBundleID: foregroundAnchorBundleID,
                 foregroundAnchorProcessIdentifier: foregroundAnchorProcessIdentifier
             )
+        } else if continuesAccessoryPanel, let owner {
+            // As for overlays: while the frontmost bundle is unavailable, only
+            // the exact panel lease may continue, under its frozen anchor PID.
+            guard let foregroundAnchorBundleID = owner.foregroundAnchorBundleID,
+                  let foregroundAnchorProcessIdentifier =
+                    owner.foregroundAnchorProcessIdentifier,
+                  frontmostProcessIdentifier == foregroundAnchorProcessIdentifier,
+                  resolveAccessoryPanelProcess(
+                    for: bundleID,
+                    frontmostProcessIdentifier: foregroundAnchorProcessIdentifier,
+                    boundProcessIdentifier: owner.processIdentifier
+                  ) == owner.processIdentifier else {
+                suspendReusedTransientSurfaceOwnerIfNeeded(
+                    reusesExactOwner: reusesExactOwner,
+                    reason: "accessory panel foreground anchor unavailable"
+                )
+                IMELog.write("focus accessory panel callback rejected; foreground anchor unavailable bundle=\(bundleID)")
+                return nil
+            }
+            trustedSurfaceAuthority = accessoryPanelHasVisibleWindow(
+                processIdentifier: owner.processIdentifier,
+                forceRefresh: explicitActivation || eventType != nil
+            )
+            hostResolution = FocusHostResolution(
+                kind: .accessoryApplicationPanel,
+                clientProcessIdentifier: owner.processIdentifier,
+                foregroundAnchorBundleID: foregroundAnchorBundleID,
+                foregroundAnchorProcessIdentifier: foregroundAnchorProcessIdentifier
+            )
+            resolvedClientProcessIdentityWasVerified = true
         } else {
             guard FocusHostRules.mayUseOrdinaryProcessBoundFallback(bundleID) else {
                 suspendReusedTransientSurfaceOwnerIfNeeded(
@@ -1559,6 +1806,8 @@ final class InputFocusCoordinator {
             hostDescription = "overlay"
         case .appKitOpenSavePanel:
             hostDescription = "open-save-panel"
+        case .accessoryApplicationPanel:
+            hostDescription = "accessory-panel"
         }
         IMELog.write("focus activate token=\(token) bundle=\(bundleID) host=\(hostDescription) anchor=\(hostResolution.foregroundAnchorBundleID ?? "unknown") suspended=\(newOwner.deliverySuspended) external=\(isExternalTarget)")
         onChange?()
@@ -1735,6 +1984,21 @@ final class InputFocusCoordinator {
                 )
             } ?? false
             trustedSurfaceAuthority = serviceAvailable && windowAvailable
+        case .accessoryApplicationPanel:
+            currentTrustedOverlayProcessIdentifier =
+                resolveAccessoryPanelProcess(
+                    for: lease.bundleID,
+                    frontmostProcessIdentifier:
+                        frontmostApplication?.processIdentifier,
+                    boundProcessIdentifier: lease.processIdentifier
+                )
+            trustedSurfaceAuthority =
+                currentTrustedOverlayProcessIdentifier
+                    == lease.processIdentifier
+                && accessoryPanelHasVisibleWindow(
+                    processIdentifier: lease.processIdentifier,
+                    forceRefresh: true
+                )
         }
         let authority = FocusHostRules.applicationAuthorityMatches(
             kind: lease.hostKind,
@@ -1762,6 +2026,9 @@ final class InputFocusCoordinator {
                                  requireExternal: Bool,
                                  forceOverlayVisibilityRefresh: Bool) -> FocusLease? {
         guard !ProtectedInput.isActive(clientBundleID: owner?.bundleID) else { return nil }
+        // Typing may continue while another background app holds secure input,
+        // but nothing is captured or delivered later until it is released.
+        guard !(requireExternal && IsSecureEventInputEnabled()) else { return nil }
         // Utility windows may call focus probes while another input method is
         // active. A frozen RIMES lease is then bookkeeping only; never resolve
         // or inspect either IMK proxy under foreign input-source authority.
@@ -1833,6 +2100,35 @@ final class InputFocusCoordinator {
                     reason: "open/save panel window unavailable"
                 )
             }
+        case .accessoryApplicationPanel:
+            currentTrustedOverlayProcessIdentifier =
+                resolveAccessoryPanelProcess(
+                    for: owner.bundleID,
+                    frontmostProcessIdentifier:
+                        frontmostApplication?.processIdentifier,
+                    boundProcessIdentifier: owner.processIdentifier
+                )
+            if currentTrustedOverlayProcessIdentifier == owner.processIdentifier {
+                trustedSurfaceAuthority = accessoryPanelHasVisibleWindow(
+                    processIdentifier: owner.processIdentifier,
+                    forceRefresh: forceOverlayVisibilityRefresh
+                )
+            }
+            // A closed panel or a changed process suspends the lease; only the
+            // next proven key can restore it.
+            if currentTrustedOverlayProcessIdentifier
+                != owner.processIdentifier {
+                suspendDelivery(
+                    token: owner.token,
+                    reason: "accessory panel process unavailable"
+                )
+            } else if !trustedSurfaceAuthority,
+                      !owner.deliverySuspended {
+                suspendDelivery(
+                    token: owner.token,
+                    reason: "accessory panel window unavailable"
+                )
+            }
         }
         // A normal running application can briefly expose a PID before its
         // bundle ID. A trusted overlay instead validates its own system process
@@ -1862,7 +2158,8 @@ final class InputFocusCoordinator {
                 currentFrontmostProcessIdentifier:
                     frontmostApplication?.processIdentifier,
                 currentTrustedOverlayProcessIdentifier:
-                    owner.hostKind == .nonactivatingSystemOverlay
+                    (owner.hostKind == .nonactivatingSystemOverlay
+                        || owner.hostKind == .accessoryApplicationPanel)
                         ? owner.processIdentifier
                         : nil,
                 trustedSurfaceAuthority: true
@@ -1886,6 +2183,8 @@ final class InputFocusCoordinator {
             expectedTokenMatches: token == nil || owner.token == token,
             externalTarget: !requireExternal || owner.isExternalTarget,
             deliveryTrusted: !owner.deliverySuspended,
+            bufferedDeliveryPermitted: !requireExternal
+                || owner.hostKind.permitsBufferedDelivery,
             controllerAlive: owner.controller != nil,
             clientAlive: client != nil,
             clientIdentityMatches: client.map { ObjectIdentifier($0 as AnyObject) == owner.clientIdentity } ?? false,
@@ -1914,7 +2213,9 @@ final class InputFocusCoordinator {
     }
 
     /// Returns a target only while the exact external app/client lease is live.
-    /// There is deliberately no recent-controller or last-client fallback.
+    /// There is deliberately no recent-controller or last-client fallback, and
+    /// an accessory panel lease is never returned: it serves only the keys
+    /// that prove it.
     func liveTarget(
         expected token: FocusToken? = nil,
         forceOverlayVisibilityRefresh: Bool = false

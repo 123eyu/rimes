@@ -100,6 +100,32 @@ func runStatusMenuSmokeTest() -> Bool {
         return fail("engine health warning must precede the unchanged main commands")
     }
 
+    let secureNotice = [
+        SecureInputNoticeRules.headline,
+        SecureInputNoticeRules.detail(
+            holder: SecureInputHolder(processIdentifier: 501,
+                                      bundleID: "app.browser",
+                                      name: "Browser"),
+            frontmostProcessIdentifier: 777,
+            ownProcessIdentifier: 42
+        ),
+    ]
+    let secureMenu = StatusMenu.makeInputSourceMenu(target: spy, state: InputSourceMenuState(
+        healthy: true,
+        bufferTitle: state.bufferTitle,
+        clipboardTitle: state.clipboardTitle,
+        mailboxTitle: state.mailboxTitle,
+        secureInputNotice: secureNotice
+    ))
+    guard secureMenu.items.count == sourceTitles.count + 3,
+          secureMenu.items[0].title == SecureInputNoticeRules.headline,
+          secureMenu.items[1].title.contains("Browser"),
+          secureMenu.items[0...1].allSatisfy({ !$0.isEnabled && $0.action == nil }),
+          secureMenu.items[2].isSeparatorItem,
+          secureMenu.items.dropFirst(3).map(\.title) == sourceTitles else {
+        return fail("secure input notice must name the holder ahead of the unchanged main commands")
+    }
+
     let refreshedState = InputSourceMenuState(
         healthy: true,
         bufferTitle: "Buffer…（⇧⌘B）",
@@ -117,7 +143,7 @@ func runStatusMenuSmokeTest() -> Bool {
 
     let maintenanceMenu = StatusMenu.makeMaintenanceMenu(target: spy, pendingVersion: nil)
     let maintenanceTitles = [
-        "检查更新…", "打开日志 (~/rimebuffer.log)", "重新部署并重启",
+        "检查更新…", "打开日志 (~/Library/Logs/RIMES)", "重新部署并重启",
         "重新安装输入法…", "重启输入法进程"
     ]
     guard maintenanceMenu.title == "维护",
