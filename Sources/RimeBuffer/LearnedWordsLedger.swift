@@ -90,14 +90,14 @@ final class LearnedWordsLedger {
     static let directoryName = "lexicon-review"
     private static let stateFileName = "state.tsv"
     private static let daysDirectoryName = "days"
-    private static let maxStateBytes = 64 * 1_024 * 1_024
+    static let maxStateBytes = 64 * 1_024 * 1_024
     private static let maxDayBytes = 16 * 1_024 * 1_024
     private static let checkInterval: TimeInterval = 30 * 60
     private static let firstCheckDelay: TimeInterval = 120
 
-    private let engine: UserLexiconEngine
-    private let fileManager: FileManager
-    private let root: URL
+    let engine: UserLexiconEngine
+    let fileManager: FileManager
+    let root: URL
     private let preferences: LearnedWordsReviewPreferences
     private let calendar: Calendar
     private var timer: Timer?
@@ -154,14 +154,7 @@ final class LearnedWordsLedger {
 
     @discardableResult
     func capture(_ kind: UserLexiconKind, now: Date = Date()) throws -> LearnedWordsCaptureResult {
-        guard engine.isHealthy else { throw LearnedWordsLedgerError.engineUnavailable }
-        let directory = try ensureDirectory(dictionaryDirectory(for: kind))
-        let exportURL = directory.appendingPathComponent(".export-\(UUID().uuidString).tsv")
-        defer { try? fileManager.removeItem(at: exportURL) }
-        guard engine.exportUserDictionary(named: kind.dictionaryName, to: exportURL) >= 0 else {
-            throw LearnedWordsLedgerError.exportFailed
-        }
-        let current = try Self.parseExport(readText(exportURL, limit: Self.maxStateBytes))
+        let current = Self.parseExport(try exportText(kind))
         let day = dayString(for: now)
 
         guard let previous = try loadState(for: kind) else {
@@ -210,6 +203,19 @@ final class LearnedWordsLedger {
         try saveState(current, day: day, at: now, for: kind)
         return .recorded(day: day, added: newlyAdded, reused: newlyReused,
                          entryCount: current.count)
+    }
+
+    /// The raw librime export of one learning dictionary. Tombstones are not
+    /// part of it: librime's exporter skips entries with a negative count.
+    func exportText(_ kind: UserLexiconKind) throws -> String {
+        guard engine.isHealthy else { throw LearnedWordsLedgerError.engineUnavailable }
+        let directory = try ensureDirectory(dictionaryDirectory(for: kind))
+        let exportURL = directory.appendingPathComponent(".export-\(UUID().uuidString).tsv")
+        defer { try? fileManager.removeItem(at: exportURL) }
+        guard engine.exportUserDictionary(named: kind.dictionaryName, to: exportURL) >= 0 else {
+            throw LearnedWordsLedgerError.exportFailed
+        }
+        return try readText(exportURL, limit: Self.maxStateBytes)
     }
 
     // MARK: Reading
@@ -278,13 +284,13 @@ final class LearnedWordsLedger {
         daysDirectory(for: kind).appendingPathComponent("\(day).json")
     }
 
-    private func loadState(for kind: UserLexiconKind) throws -> [LearnedWordKey: Int]? {
+    func loadState(for kind: UserLexiconKind) throws -> [LearnedWordKey: Int]? {
         let url = stateURL(for: kind)
         guard fileManager.fileExists(atPath: url.path) else { return nil }
         return Self.parseExport(try readText(url, limit: Self.maxStateBytes))
     }
 
-    private func stateHeader(for kind: UserLexiconKind) throws -> (day: String, date: Date?)? {
+    func stateHeader(for kind: UserLexiconKind) throws -> (day: String, date: Date?)? {
         let url = stateURL(for: kind)
         guard fileManager.fileExists(atPath: url.path) else { return nil }
         try requireRegularFile(url)
@@ -304,7 +310,7 @@ final class LearnedWordsLedger {
         return day.map { ($0, date) }
     }
 
-    private func saveState(_ entries: [LearnedWordKey: Int], day: String, at date: Date,
+    func saveState(_ entries: [LearnedWordKey: Int], day: String, at date: Date,
                            for kind: UserLexiconKind) throws {
         var lines = [
             "# RIMES learned-word review state",
@@ -352,7 +358,7 @@ final class LearnedWordsLedger {
 
     // MARK: File safety
 
-    private func ensureDirectory(_ url: URL) throws -> URL {
+    func ensureDirectory(_ url: URL) throws -> URL {
         let owner = root.deletingLastPathComponent()
         do {
             try fileManager.createDirectory(at: owner, withIntermediateDirectories: true)
@@ -387,14 +393,14 @@ final class LearnedWordsLedger {
         return url
     }
 
-    private func requireRegularFile(_ url: URL) throws {
+    func requireRegularFile(_ url: URL) throws {
         let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey, .isRegularFileKey])
         guard values?.isSymbolicLink != true, values?.isRegularFile == true else {
             throw LearnedWordsLedgerError.unsafePath(url.path)
         }
     }
 
-    private func readText(_ url: URL, limit: Int) throws -> String {
+    func readText(_ url: URL, limit: Int) throws -> String {
         try requireRegularFile(url)
         let size = (try? fileManager.attributesOfItem(atPath: url.path)[.size] as? NSNumber)?.intValue ?? 0
         guard size <= limit else { throw LearnedWordsLedgerError.fileTooLarge(url.path) }
@@ -405,7 +411,7 @@ final class LearnedWordsLedger {
         return text
     }
 
-    private func writeAtomically(_ data: Data, to url: URL) throws {
+    func writeAtomically(_ data: Data, to url: URL) throws {
         _ = try ensureDirectory(url.deletingLastPathComponent())
         if let values = try? url.resourceValues(forKeys: [.isSymbolicLinkKey]),
            values.isSymbolicLink == true {

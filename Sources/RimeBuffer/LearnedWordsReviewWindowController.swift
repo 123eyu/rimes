@@ -1,7 +1,7 @@
 import AppKit
 
-/// Read-only review of learned words, grouped by the day they were learned.
-/// Step 1 of docs/plans/learned-words-review.md: it shows, it never deletes.
+/// Review of learned words, grouped by the day they were learned, with
+/// deletion and undo (steps 1–2 of docs/plans/learned-words-review.md).
 final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
                                                 NSTableViewDataSource, NSTableViewDelegate {
     static let shared = LearnedWordsReviewWindowController(ledger: .shared)
@@ -9,6 +9,7 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
     enum Section: Equatable {
         case day(String)
         case all
+        case deletion(String)
     }
 
     enum Filter: Int, CaseIterable {
@@ -37,6 +38,9 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
         let count: Int
         let change: String
         let isNew: Bool
+        var isDeleted = false
+
+        var key: LearnedWordKey { LearnedWordKey(word: word, code: code) }
     }
 
     private let ledger: LearnedWordsLedger
@@ -48,6 +52,10 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
     private(set) var filter: Filter = .everything
     private var allRows: [WordRow] = []
     private var days: [LearnedWordsDay] = []
+    private var rounds: [LearnedWordsDeletionRound] = []
+    private var deletedKeys: Set<LearnedWordKey> = []
+    /// Result of the last delete or undo, shown in the footer.
+    private(set) var notice: String?
     private var observers: [NSObjectProtocol] = []
 
     private let dictionaryPopUp = NSPopUpButton()
@@ -59,7 +67,11 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
     private let countLabel = NSTextField(labelWithString: "")
     private let emptyLabel = NSTextField(wrappingLabelWithString: "")
     private let sectionTable = NSTableView()
-    private let wordTable = NSTableView()
+    private let wordTable = LearnedWordsTableView()
+    private let deleteButton = NSButton(title: "删除所选…", target: nil, action: nil)
+    private let undoButton = NSButton(title: "撤销这一轮", target: nil, action: nil)
+    private let footerLabel = NSTextField(labelWithString: "")
+    private static let defaultFooter = "选中词后按 Delete 键或点“删除所选…”。删除前会自动备份，可以撤销。"
 
     init(ledger: LearnedWordsLedger,
          preferences: LearnedWordsReviewPreferences = .shared) {
@@ -78,6 +90,7 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
     }
 
     func select(kind: UserLexiconKind) {
+        if kind != self.kind { notice = nil }
         self.kind = kind
         if let index = UserLexiconKind.allCases.firstIndex(of: kind) {
             dictionaryPopUp.selectItem(at: index)
@@ -87,8 +100,16 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
 
     // MARK: Data
 
+    var selectedSection: Section? {
+        sections.indices.contains(sectionTable.selectedRow)
+            ? sections[sectionTable.selectedRow].section : nil
+    }
+
     func reload() {
+        let previous = selectedSection
         days = ledger.days(for: kind)
+        rounds = ledger.deletionRounds(for: kind)
+        deletedKeys = ledger.currentlyDeleted(for: kind)
         let entries = ledger.currentEntries(for: kind)
         var built = days.map { day in
             SectionRow(section: .day(day.day),
@@ -99,12 +120,20 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
             built.append(SectionRow(section: .all, title: "全部学习词",
                                     detail: "\(entries.count.formatted()) 个"))
         }
+        built += rounds.map { round in
+            SectionRow(section: .deletion(round.id),
+                       title: "删除 · \(Self.timestampFormatter.string(from: round.deletedAt))",
+                       detail: round.isUndone ? "已撤销 · \(round.words.count.formatted()) 个词"
+                                              : "\(round.words.count.formatted()) 个词")
+        }
         sections = built
         recordSwitch.state = preferences.recordsDaily ? .on : .off
         updateStatus()
         sectionTable.reloadData()
-        if !sections.isEmpty {
-            sectionTable.selectRowIndexes(IndexSet(integer: 0), byExtendingSelection: false)
+        let index = previous.flatMap { section in sections.firstIndex { $0.section == section } }
+            ?? (sections.isEmpty ? nil : 0)
+        if let index {
+            sectionTable.selectRowIndexes(IndexSet(integer: index), byExtendingSelection: false)
         }
         showSelectedSection()
     }
@@ -132,19 +161,34 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
         case .day(let name):
             guard let day = days.first(where: { $0.day == name }) else { allRows = []; break }
             let added = day.added.map {
-                WordRow(word: $0.word, code: $0.code, count: $0.count, change: "新学", isNew: true)
+                markDeleted(WordRow(word: $0.word, code: $0.code, count: $0.count,
+                                    change: "新学", isNew: true))
             }
             let reused = day.reused.map {
-                WordRow(word: $0.word, code: $0.code, count: $0.toCount,
-                        change: "\($0.fromCount) → \($0.toCount)", isNew: false)
+                markDeleted(WordRow(word: $0.word, code: $0.code, count: $0.toCount,
+                                    change: "\($0.fromCount) → \($0.toCount)", isNew: false))
             }
             allRows = added.sorted(by: Self.byWord) + reused.sorted(by: Self.byWord)
         case .all:
             allRows = ledger.currentEntries(for: kind)
                 .map { WordRow(word: $0.word, code: $0.code, count: $0.count, change: "", isNew: false) }
                 .sorted { ($0.count, $0.word) < ($1.count, $1.word) }
+        case .deletion(let id):
+            guard let round = rounds.first(where: { $0.id == id }) else { allRows = []; break }
+            allRows = round.words.map { word in
+                let deleted = deletedKeys.contains(word.key)
+                let change = round.isUndone ? "已撤销" : (deleted ? "已删除" : "已重新学会")
+                return WordRow(word: word.word, code: word.code, count: word.count,
+                               change: change, isNew: false, isDeleted: deleted)
+            }.sorted(by: Self.byWord)
         }
         applyFilter()
+    }
+
+    private func markDeleted(_ row: WordRow) -> WordRow {
+        guard deletedKeys.contains(row.key) else { return row }
+        return WordRow(word: row.word, code: row.code, count: row.count,
+                       change: "已删除", isNew: false, isDeleted: true)
     }
 
     private func applyFilter() {
@@ -160,7 +204,37 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
         countLabel.stringValue = "\(rows.count.formatted()) 个词"
         emptyLabel.stringValue = emptyMessage()
         emptyLabel.isHidden = !rows.isEmpty
+        footerLabel.stringValue = notice ?? Self.defaultFooter
+        updateActionButtons()
     }
+
+    private func updateActionButtons() {
+        var roundIsOpen: Bool?
+        if case .deletion(let id)? = selectedSection {
+            roundIsOpen = rounds.first(where: { $0.id == id }).map { !$0.isUndone } ?? false
+        }
+        deleteButton.isHidden = roundIsOpen != nil
+        deleteButton.isEnabled = !deletableSelection().isEmpty
+        undoButton.isHidden = roundIsOpen == nil
+        undoButton.isEnabled = roundIsOpen == true
+    }
+
+    private func deletableSelection() -> [LearnedWordKey] {
+        if case .deletion? = selectedSection { return [] }
+        return wordTable.selectedRowIndexes.compactMap { index in
+            rows.indices.contains(index) && !rows[index].isDeleted ? rows[index].key : nil
+        }
+    }
+
+    // MARK: Selection (also used by the smoke test)
+
+    func selectWords(at indexes: IndexSet) {
+        wordTable.selectRowIndexes(indexes, byExtendingSelection: false)
+        updateActionButtons()
+    }
+
+    var canDeleteSelection: Bool { !deleteButton.isHidden && deleteButton.isEnabled }
+    var canUndoSelectedRound: Bool { !undoButton.isHidden && undoButton.isEnabled }
 
     private func emptyMessage() -> String {
         if sections.isEmpty {
@@ -168,7 +242,7 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
                 ? "还没有记录。点“立即记录”建立第一份记录；之后每天会自动比较一次。"
                 : "打开上方的开关后，每天会把新学的词记下来。词语只保存在本机，不会发送到任何地方。"
         }
-        if allRows.isEmpty { return "这一天没有新学或再用的词。" }
+        if allRows.isEmpty { return "这里没有词。" }
         return "没有符合筛选条件的词。"
     }
 
@@ -244,10 +318,58 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
         setFilter(Filter(rawValue: sender.selectedSegment) ?? .everything)
     }
 
-    private func presentError(_ error: Error) {
+    @objc private func deleteButtonPressed(_ sender: Any?) {
+        requestDeletion(skipConfirmation: false)
+    }
+
+    /// Asks first unless `skipConfirmation` is set (the smoke test does).
+    func requestDeletion(skipConfirmation: Bool) {
+        let keys = deletableSelection()
+        guard !keys.isEmpty else { return }
+        if skipConfirmation {
+            performDeletion(keys)
+            return
+        }
         guard let window else { return }
         let alert = NSAlert()
-        alert.messageText = "无法记录学习词"
+        alert.messageText = "删除 \(keys.count.formatted()) 个学习词？"
+        alert.informativeText = "删除前会自动备份当前学习词库，之后可以在左侧的“删除”记录里撤销。\n以后再输入这些词时，Rime 会按原来的次数把它们恢复。"
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "删除").hasDestructiveAction = true
+        alert.addButton(withTitle: "取消")
+        alert.beginSheetModal(for: window) { [weak self] response in
+            if response == .alertFirstButtonReturn { self?.performDeletion(keys) }
+        }
+    }
+
+    private func performDeletion(_ keys: [LearnedWordKey]) {
+        do {
+            let result = try ledger.delete(keys, from: kind)
+            var text = "已删除 \(result.round.words.count.formatted()) 个词，可以在左侧“删除”记录里撤销。"
+            if result.notFound > 0 { text += "另有 \(result.notFound) 个已不在学习词库里。" }
+            if result.notDeleted > 0 { text += "还有 \(result.notDeleted) 个没有删掉，请再试一次。" }
+            notice = text
+        } catch {
+            presentError(error, title: "无法删除学习词")
+        }
+        reload()
+    }
+
+    @objc func undoSelectedRound(_ sender: Any?) {
+        guard case .deletion(let id)? = selectedSection else { return }
+        do {
+            let round = try ledger.undo(roundID: id, for: kind)
+            notice = "已恢复 \(round.words.count.formatted()) 个词，次数和删除前一样。"
+        } catch {
+            presentError(error, title: "无法撤销删除")
+        }
+        reload()
+    }
+
+    private func presentError(_ error: Error, title: String = "无法记录学习词") {
+        guard let window else { return }
+        let alert = NSAlert()
+        alert.messageText = title
         alert.informativeText = error.localizedDescription
         alert.alertStyle = .warning
         alert.beginSheetModal(for: window)
@@ -274,8 +396,9 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
             case "change": cell.textField?.stringValue = item.change
             default: cell.textField?.stringValue = item.word
             }
-            cell.textField?.textColor = identifier.rawValue == "change" && item.isNew
-                ? RimeUI.accentTextColor : RimeUI.textPrimary
+            cell.textField?.textColor = item.isDeleted ? RimeUI.textMuted
+                : (identifier.rawValue == "change" && item.isNew ? RimeUI.accentTextColor
+                                                                 : RimeUI.textPrimary)
         }
         return cell
     }
@@ -285,8 +408,11 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
     }
 
     func tableViewSelectionDidChange(_ notification: Notification) {
-        guard (notification.object as? NSTableView) === sectionTable else { return }
-        showSelectedSection()
+        if (notification.object as? NSTableView) === sectionTable {
+            showSelectedSection()
+        } else {
+            updateActionButtons()
+        }
     }
 
     func tableView(_ tableView: NSTableView, sortDescriptorsDidChange oldDescriptors: [NSSortDescriptor]) {
@@ -388,7 +514,17 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
 
         countLabel.font = .systemFont(ofSize: 11)
         countLabel.textColor = RimeUI.textMuted
-        let toolbar = NSStackView(views: [filterControl, NSView(), countLabel])
+        for (button, action, id) in [(deleteButton, #selector(deleteButtonPressed(_:)), "delete"),
+                                     (undoButton, #selector(undoSelectedRound(_:)), "undo")] {
+            button.target = self
+            button.action = action
+            button.controlSize = .small
+            button.bezelStyle = .rounded
+            button.identifier = NSUserInterfaceItemIdentifier("lexicon-review.\(id)")
+        }
+        undoButton.isHidden = true
+        wordTable.onDelete = { [weak self] in self?.requestDeletion(skipConfirmation: false) }
+        let toolbar = NSStackView(views: [filterControl, NSView(), countLabel, deleteButton, undoButton])
         toolbar.orientation = .horizontal
         toolbar.alignment = .centerY
         toolbar.views[1].setContentHuggingPriority(.defaultLow, for: .horizontal)
@@ -407,12 +543,12 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
             emptyLabel.widthAnchor.constraint(lessThanOrEqualTo: wordScroll.widthAnchor, constant: -60),
         ])
 
-        let footer = NSTextField(labelWithString:
-            "这里只用来查看。删除、评分会在后续版本加入；学习词库本身没有被改动。")
-        footer.font = .systemFont(ofSize: 10)
-        footer.textColor = RimeUI.textMuted
+        footerLabel.font = .systemFont(ofSize: 10)
+        footerLabel.textColor = RimeUI.textMuted
+        footerLabel.lineBreakMode = .byTruncatingTail
+        footerLabel.stringValue = Self.defaultFooter
 
-        let right = NSStackView(views: [toolbar, wordScroll, footer])
+        let right = NSStackView(views: [toolbar, wordScroll, footerLabel])
         right.orientation = .vertical
         right.alignment = .leading
         right.spacing = 8
@@ -489,5 +625,18 @@ final class LearnedWordsReviewWindowController: NSObject, NSWindowDelegate,
         scroll.layer?.cornerRadius = 8
         scroll.translatesAutoresizingMaskIntoConstraints = false
         return scroll
+    }
+}
+
+/// Lets the Delete and Forward Delete keys act on the selected words.
+final class LearnedWordsTableView: NSTableView {
+    var onDelete: (() -> Void)?
+
+    override func keyDown(with event: NSEvent) {
+        if event.keyCode == 51 || event.keyCode == 117, let onDelete {
+            onDelete()
+            return
+        }
+        super.keyDown(with: event)
     }
 }
