@@ -42,9 +42,18 @@ struct FocusHostResolution: Equatable {
 enum FocusHostRules {
     static let iShotBundleID = "cn.better365.ishot"
     static let iShotBundlePath = "/Applications/iShot.app"
+    /// macOS 27 draws the Spotlight search field in Siri AI.app (launchd label
+    /// `com.apple.campo`). Its launch agent replaces `com.apple.Spotlight`
+    /// whenever the system enables the IntelligenceFlow/Campo feature flag, so
+    /// the legacy identity never owns the field there. Both bundles live on the
+    /// sealed system volume and pass through the same unique-PID and
+    /// visible-window gates.
+    static let systemSearchHostBundleID = "com.apple.campo"
+    static let systemSearchHostBundlePath = "/System/Applications/Siri AI.app"
 
     private static let trustedNonactivatingSystemOverlayPaths = [
         "com.apple.Spotlight": "/System/Library/CoreServices/Spotlight.app",
+        systemSearchHostBundleID: systemSearchHostBundlePath,
         // Paste is an LSUIElement app whose search field owns the IMK client
         // without becoming NSWorkspace's frontmost application. It has no stable
         // TeamIdentifier on the observed release, so its narrow trust identity is
