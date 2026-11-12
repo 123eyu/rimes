@@ -7955,6 +7955,7 @@ func runBufferWindowSmokeTest() -> Bool {
           runBufferAutoSendLifecycleProbe(),
           runBufferInlineNoLeadingControlProbe(),
           runBufferInlineTrailingActionExclusionProbe(),
+          runBufferInlineComposingFieldSourceRowProbe(),
           BufferWorkbenchPointerRules.state(
             enabled: true, hovered: false, pressed: false
           ) == .idle,
