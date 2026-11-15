@@ -430,6 +430,31 @@ enum BufferEnterGestureRules {
     }
 }
 
+/// The delivery source a physical Return was pressed against. A plugin or
+/// workspace switch during the press must never deliver a different
+/// workspace. Generation drift alone is only fatal for sources that deliver
+/// one finished result: incremental sources (translation, Morse) keep
+/// appending ready blocks in the background, and a segment landing during a
+/// 0.6 s hold must not turn send-all into a silent no-op. The coordinator
+/// re-snapshots the generation and validates every block itself.
+struct BufferEnterDeliverySourcePin: Equatable {
+    let pluginOwner: PluginKey?
+    let workspaceID: String
+    let sourceIdentity: ObjectIdentifier
+    let generation: UInt64
+
+    func stillMatches(pluginOwner currentPluginOwner: PluginKey?,
+                      workspaceID currentWorkspaceID: String,
+                      sourceIdentity currentSourceIdentity: ObjectIdentifier,
+                      generation currentGeneration: UInt64,
+                      supportsIncrementalDelivery: Bool) -> Bool {
+        guard currentPluginOwner == pluginOwner,
+              currentWorkspaceID == workspaceID,
+              currentSourceIdentity == sourceIdentity else { return false }
+        return supportsIncrementalDelivery || currentGeneration == generation
+    }
+}
+
 enum BufferEnterCallbackDecision: Equatable {
     case consumeOwned
     case routeFresh
@@ -5418,13 +5443,22 @@ final class RIMESController: IMKInputController {
                                         expectedOwner: FocusToken?,
                                         source: String) -> Bool {
         let currentDeliverySource = BufferDeliveryContentRouter.current()
-        guard BufferPluginSelectionStore.shared.activeKey == bufferEnterPluginOwner,
-              let expectedWorkspaceID = bufferEnterDeliveryWorkspaceID,
+        guard let expectedWorkspaceID = bufferEnterDeliveryWorkspaceID,
               let expectedSourceIdentity = bufferEnterDeliverySourceIdentity,
               let expectedGeneration = bufferEnterDeliveryGeneration,
-              currentDeliverySource.deliveryWorkspaceID == expectedWorkspaceID,
-              ObjectIdentifier(currentDeliverySource) == expectedSourceIdentity,
-              currentDeliverySource.deliveryGeneration == expectedGeneration else {
+              BufferEnterDeliverySourcePin(
+                pluginOwner: bufferEnterPluginOwner,
+                workspaceID: expectedWorkspaceID,
+                sourceIdentity: expectedSourceIdentity,
+                generation: expectedGeneration
+              ).stillMatches(
+                pluginOwner: BufferPluginSelectionStore.shared.activeKey,
+                workspaceID: currentDeliverySource.deliveryWorkspaceID,
+                sourceIdentity: ObjectIdentifier(currentDeliverySource),
+                generation: currentDeliverySource.deliveryGeneration,
+                supportsIncrementalDelivery:
+                    currentDeliverySource.supportsIncrementalDelivery
+              ) else {
             IMELog.write("buffer enter \(source) consumed without delivery; delivery source changed")
             return true
         }
