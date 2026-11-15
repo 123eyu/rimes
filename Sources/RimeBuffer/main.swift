@@ -7963,6 +7963,7 @@ func runBufferWindowSmokeTest() -> Bool {
           runBufferInlineNoLeadingControlProbe(),
           runBufferInlineTrailingActionExclusionProbe(),
           runBufferInlineComposingFieldSourceRowProbe(),
+          runBufferInlineLongRailAndLoadingProbe(),
           BufferWorkbenchPointerRules.state(
             enabled: true, hovered: false, pressed: false
           ) == .idle,
@@ -8064,6 +8065,23 @@ func runBufferWindowSmokeTest() -> Bool {
             style: .liveExpand,
             snapshot: statusWaitingSnapshot
           ) == BufferDerivedRailVisibility(showsSource: true, showsTarget: true),
+          // One wait, one indicator: the toolbar spins only while the
+          // output rail (which draws its own) is hidden, never when protected.
+          BufferDerivedPresentationRules.toolbarShowsLoading(
+            style: .liveExpand,
+            snapshot: emptyLiveWaitingSnapshot,
+            contentProtected: false
+          ),
+          !BufferDerivedPresentationRules.toolbarShowsLoading(
+            style: .liveExpand,
+            snapshot: emptyLiveWaitingSnapshot,
+            contentProtected: true
+          ),
+          !BufferDerivedPresentationRules.toolbarShowsLoading(
+            style: .liveExpand,
+            snapshot: statusWaitingSnapshot,
+            contentProtected: false
+          ),
           BufferDerivedPresentationRules.layoutMode(
             style: .singleExchange,
             snapshot: exchangeSourceSnapshot

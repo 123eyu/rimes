@@ -20,6 +20,10 @@ enum BufferInlineMetrics {
     static let pagerButtonSize: CGFloat = 24
     static let maximumAlternativeCount = 5
     static let trailingActionSafetyGap: CGFloat = 6
+    /// Widest one rail chip grows before eliding its oldest text: about 460
+    /// CJK characters at 12pt, and under 16384px at 2x so the label's layer
+    /// stays drawable.
+    static let railChipMaximumWidth: CGFloat = 6000
     /// Narrowest the composing field gets once source text overflows the
     /// rail: its own hint (about 142pt at 13pt) plus the start of a phrase.
     static let composingFieldMinimumWidth: CGFloat = 160
@@ -380,6 +384,10 @@ private final class TranslationRailChipView: NSStackView {
     private var autoSendProgress: Double = 0
     private(set) var renderedRetainedTailStart: Int?
     var acceptsPointerActivation: Bool { activationHandler != nil }
+    /// True while the whole text is laid out, i.e. nothing is elided.
+    var renderedTextFits: Bool {
+        valueLabel.frame.width + 0.5 >= valueLabel.intrinsicContentSize.width
+    }
 
     init(target: Bool) {
         self.target = target
@@ -393,13 +401,16 @@ private final class TranslationRailChipView: NSStackView {
         underline.attach(to: self)
 
         valueLabel.font = .systemFont(ofSize: 12)
-        valueLabel.lineBreakMode = .byTruncatingTail
+        // The whole source (and each streamed segment) is one chip. A tight
+        // cap elided the text being typed and left the rail nothing more to
+        // scroll to. Past the layer-safe cap, drop the oldest text instead.
+        valueLabel.lineBreakMode = .byTruncatingHead
         valueLabel.maximumNumberOfLines = 1
         valueLabel.translatesAutoresizingMaskIntoConstraints = false
         addArrangedSubview(valueLabel)
         NSLayoutConstraint.activate([
             valueLabel.widthAnchor.constraint(
-                lessThanOrEqualToConstant: target ? 900 : 1200
+                lessThanOrEqualToConstant: BufferInlineMetrics.railChipMaximumWidth
             ),
             heightAnchor.constraint(equalToConstant: BufferInlineMetrics.itemHeight),
         ])
@@ -1132,9 +1143,12 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
 
     var renderedTargetStatusDescriptions: [String] {
         renderedTranslationTargetRowKeys.flatMap { key -> [String] in
-            guard let rail = translationTargetRails[key],
-                  !rail.statusOverlay.isHidden else { return [] }
-            return rail.statusOverlay.arrangedSubviews.compactMap(\.toolTip)
+            guard let rail = translationTargetRails[key] else { return [] }
+            // The loading indicator flows in the row; other status overlays it.
+            let inRow = loadingIndicator.superview === rail.row
+                ? [loadingIndicator.toolTip].compactMap { $0 } : []
+            guard !rail.statusOverlay.isHidden else { return inRow }
+            return inRow + rail.statusOverlay.arrangedSubviews.compactMap(\.toolTip)
         }
     }
 
@@ -1564,6 +1578,111 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
     /// types. In a live-translation source rail it used to follow the source
     /// placeholder with no width of its own, so typing showed in a sliver
     /// about one character wide.
+    /// Long rail content must stay scrollable to its end, and the output
+    /// rail's single loading indicator must flow in the row (left when the
+    /// row is empty, right after the newest result otherwise) rather than
+    /// float over the result on a backing plate.
+    static func runLongRailAndLoadingProbe() -> Bool {
+        let host = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 80))
+        let view = BufferInlineView(
+            frame: NSRect(x: 8, y: 8, width: 504, height: 64)
+        )
+        host.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: 8),
+            view.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -8),
+            view.topAnchor.constraint(equalTo: host.topAnchor, constant: 8),
+            view.bottomAnchor.constraint(equalTo: host.bottomAnchor, constant: -8),
+        ])
+        host.layoutSubtreeIfNeeded()
+        func settle() {
+            host.layoutSubtreeIfNeeded()
+            view.layoutSubtreeIfNeeded()
+            view.updateTranslationDocumentSizes()
+        }
+        func endVisible(_ row: NSView, in scroll: NSScrollView) -> Bool {
+            row.frame.width > scroll.contentSize.width + 1
+                && scroll.contentView.bounds.maxX + 1 >= row.frame.width
+        }
+
+        // About 300 CJK characters: well past the rail and past the old
+        // per-chip caps (1200pt source, 900pt target).
+        let longText = String(repeating: "长段原文继续输入", count: 38)
+        _ = view.renderTranslationForPreview(
+            TranslationRailSnapshot(
+                sourceText: longText,
+                outputBlocks: [TranslationOutputBlock(id: UUID(), text: longText)],
+                phase: .translating
+            )
+        )
+        settle()
+        view.scrollTranslationRails(for: .translating)
+        let sourceFits = view.translationSourceChipView?.renderedTextFits == true
+        let sourceScrollsToEnd = endVisible(view.translationSourceRow,
+                                            in: view.translationSourceScroll)
+        let targetChip = view.translationTargetChipViews.values.first
+        let targetFits = targetChip?.renderedTextFits == true
+        let targetRail = view.translationTargetRails.values.first
+        let targetScrollsToEnd = targetRail.map {
+            endVisible($0.row, in: $0.scroll)
+        } ?? false
+
+        // Waiting for the first result: the indicator leads the empty row.
+        _ = view.renderTranslationForPreview(
+            TranslationRailSnapshot(sourceText: "原文", outputBlocks: [],
+                                    phase: .translating)
+        )
+        settle()
+        let emptyRail = view.translationTargetRails.values.first
+        let emptyLeads = emptyRail.map {
+            view.loadingIndicator.superview === $0.row
+                && $0.row.arrangedSubviews.first === view.loadingIndicator
+                && $0.statusOverlay.isHidden
+        } ?? false
+
+        // Updating existing results: it follows the newest chip and never
+        // overlaps a result, and no plate is drawn over the row.
+        _ = view.renderTranslationForPreview(
+            TranslationRailSnapshot(
+                sourceText: "原文",
+                outputBlocks: [
+                    TranslationOutputBlock(id: UUID(), text: "first result"),
+                    TranslationOutputBlock(id: UUID(), text: "second result"),
+                ],
+                phase: .translating
+            )
+        )
+        settle()
+        let updatingRail = view.translationTargetRails.values.first
+        let updatingFollows: Bool
+        if let rail = updatingRail,
+           let index = rail.row.arrangedSubviews.firstIndex(of: view.loadingIndicator),
+           index > 0 {
+            let chips = rail.row.arrangedSubviews.filter { $0 is TranslationRailChipView }
+            let indicatorFrame = view.loadingIndicator.frame
+            updatingFollows = rail.row.arrangedSubviews[index - 1] === chips.last
+                && !chips.contains { $0.frame.intersects(indicatorFrame) }
+                && rail.statusOverlay.isHidden
+        } else {
+            updatingFollows = false
+        }
+
+        let passed = sourceFits && sourceScrollsToEnd && targetFits
+            && targetScrollsToEnd && emptyLeads && updatingFollows
+        if !passed {
+            print(
+                "FAILED: buffer long rail scroll and loading indicator",
+                "sourceFits=\(sourceFits)",
+                "sourceEnd=\(sourceScrollsToEnd)",
+                "targetFits=\(targetFits)",
+                "targetEnd=\(targetScrollsToEnd)",
+                "emptyLeads=\(emptyLeads)",
+                "updatingFollows=\(updatingFollows)"
+            )
+        }
+        return passed
+    }
+
     static func runComposingFieldSourceRowProbe() -> Bool {
         let host = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 80))
         let view = BufferInlineView(
@@ -2572,6 +2691,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             if alternativeCount > 1 {
                 targetViews.append(translationPagerView)
             }
+            let contentStart = targetViews.count
             if snapshot.outputBlocks.isEmpty, rowIndex == 0 {
                 // Reasoning summaries are presentation-only and never become
                 // target blocks that copy or delivery can consume.
@@ -2646,13 +2766,24 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             } else {
                 rail.onCopy = nil
             }
-            if rowIndex == rowSnapshots.count - 1 {
-                if loading { statusViews.append(loadingIndicator) }
+            let lastRow = rowIndex == rowSnapshots.count - 1
+            // The one loading indicator flows in the row: at the left while
+            // the row is empty, then right after the newest result, where the
+            // next text lands and where the end-following scroll keeps it in
+            // view. It never floats over results on a plate.
+            if lastRow, loading {
+                if snapshot.outputBlocks.isEmpty {
+                    targetViews.insert(loadingIndicator, at: contentStart)
+                } else {
+                    targetViews.append(loadingIndicator)
+                }
+            }
+            if lastRow {
                 if let messageView = translationMessageView,
                    message != nil, !loading {
                     statusViews.append(messageView)
                 }
-                if statusViews.isEmpty, snapshot.outputBlocks.isEmpty {
+                if statusViews.isEmpty, !loading, snapshot.outputBlocks.isEmpty {
                     translationTargetEmptyIcon.toolTip = snapshot.targetEmptyText
                     translationTargetEmptyIcon.setAccessibilityLabel(
                         snapshot.targetEmptyText
@@ -3200,6 +3331,10 @@ func runBufferInlineTrailingActionExclusionProbe() -> Bool {
 
 func runBufferInlineComposingFieldSourceRowProbe() -> Bool {
     BufferInlineView.runComposingFieldSourceRowProbe()
+}
+
+func runBufferInlineLongRailAndLoadingProbe() -> Bool {
+    BufferInlineView.runLongRailAndLoadingProbe()
 }
 
 /// A button that works on the first click inside a never-key panel.
