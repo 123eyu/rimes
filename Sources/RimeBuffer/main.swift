@@ -8873,6 +8873,48 @@ func runBufferWindowSmokeTest() -> Bool {
         return false
     }
 
+    // A translation segment that lands during a hold bumps the incremental
+    // source's generation; send-all must still deliver the ready blocks.
+    // A plugin/workspace/source switch, or drift on a one-shot source, still
+    // consumes the press without delivery.
+    final class EnterPinSource {}
+    let pinnedSource = EnterPinSource()
+    let otherSource = EnterPinSource()
+    let translationKey = PluginKey(domain: .builtIn, rawID: "translation")
+    let enterPin = BufferEnterDeliverySourcePin(
+        pluginOwner: translationKey,
+        workspaceID: "translation-target",
+        sourceIdentity: ObjectIdentifier(pinnedSource),
+        generation: 7
+    )
+    func enterPinMatches(_ plugin: PluginKey?,
+                         _ workspace: String,
+                         _ source: AnyObject,
+                         _ generation: UInt64,
+                         incremental: Bool) -> Bool {
+        enterPin.stillMatches(pluginOwner: plugin,
+                              workspaceID: workspace,
+                              sourceIdentity: ObjectIdentifier(source),
+                              generation: generation,
+                              supportsIncrementalDelivery: incremental)
+    }
+    let pinWorkspace = "translation-target"
+    guard enterPinMatches(translationKey, pinWorkspace, pinnedSource, 7,
+                          incremental: false),
+          enterPinMatches(translationKey, pinWorkspace, pinnedSource, 9,
+                          incremental: true),
+          !enterPinMatches(translationKey, pinWorkspace, pinnedSource, 9,
+                           incremental: false),
+          !enterPinMatches(nil, pinWorkspace, pinnedSource, 9,
+                           incremental: true),
+          !enterPinMatches(translationKey, "buffer", pinnedSource, 7,
+                           incremental: true),
+          !enterPinMatches(translationKey, pinWorkspace, otherSource, 7,
+                           incremental: true) else {
+        print("FAILED: buffer Enter hold tolerates incremental generation drift only")
+        return false
+    }
+
     // Sending the final transient block makes buffer routing pass-through
     // immediately, but the keyUp and newline command from that already-owned
     // physical press must remain consumed independently of model state.
