@@ -742,6 +742,8 @@ final class KeyboardViewController: UIInputViewController {
         }
         if !hasFullAccess && selectedPlugin?.isAI == true { cancelRequest(); render() }
         refreshBufferImports()
+        // Text can arrive without our keys (dictation, paste, the host itself); Return follows the document.
+        refreshReturnKey()
     }
     override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)
@@ -752,6 +754,7 @@ final class KeyboardViewController: UIInputViewController {
             captureTimer?.invalidate(); captureTimer = nil; hostSnapshot = nil
         }
         if !delivery.isImportingHostText { refreshBufferImports() }
+        refreshReturnKey()
     }
     override func selectionWillChange(_ textInput: UITextInput?) {
         if !delivery.isWriting {
@@ -1162,8 +1165,12 @@ final class KeyboardViewController: UIInputViewController {
             hint = L("使用当前输入框的回车操作", "Use the current field's Return action")
             selected = bufferEnabled || hostReturnTitle != nil
             // Like Apple's keyboard: a field that asks for it keeps Return (Search, Go…) disabled while empty.
-            enabled = !(onscreen && textDocumentProxy.enablesReturnKeyAutomatically == true && !textDocumentProxy.hasText
-                        && snapshot.preedit.isEmpty && (!bufferEnabled || bufferIsEmpty))
+            // "Empty" is what the document holds, not what these keys typed: dictation and paste count too.
+            enabled = !onscreen || Self.hostReturnEnabled(
+                enablesAutomatically: textDocumentProxy.enablesReturnKeyAutomatically == true,
+                hasText: textDocumentProxy.hasText,
+                before: textDocumentProxy.documentContextBeforeInput, after: textDocumentProxy.documentContextAfterInput,
+                composing: !snapshot.preedit.isEmpty || (bufferEnabled && !bufferIsEmpty))
         }
         returnKey.setImage(nil, for: .normal); returnKey.setTitle(title, for: .normal)
         returnKey.accessibilityLabel = title; returnKey.accessibilityHint = hint
@@ -1172,6 +1179,13 @@ final class KeyboardViewController: UIInputViewController {
         returnHold.isEnabled = returnAction == .insertBuffer && enabled
         if returnAction != .insertBuffer { holdBar.cancel() }
         insertButton.isSelected = bufferEnabled && insertButton.isEnabled
+    }
+    /// Whether the host's own Return may be pressed. A field with `enablesReturnKeyAutomatically`
+    /// disables it only while the document is really empty. Some hosts report `hasText` late or
+    /// never for text the system wrote (dictation, paste), so any visible context also counts.
+    static func hostReturnEnabled(enablesAutomatically: Bool, hasText: Bool, before: String?, after: String?, composing: Bool) -> Bool {
+        guard enablesAutomatically else { return true }
+        return composing || hasText || !(before ?? "").isEmpty || !(after ?? "").isEmpty
     }
     private func backspace() {
         guard onscreen, currentDocument == DocumentIdentity.read(textDocumentProxy) else { cancelDeletes(); return }
