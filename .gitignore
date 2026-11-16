@@ -153,6 +153,7 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 /Sources/RimeBuffer/LearnedWordsDeletion.swift
 /Sources/RimeBuffer/LearnedWordsLedger.swift
 /Sources/RimeBuffer/LearnedWordsReviewWindowController.swift
+/Sources/RimeBuffer/LearnedWordsScoring.swift
 /Sources/RimeBuffer/LexiconReviewPlugin.swift
 /Sources/RimeBuffer/Mailbox/MailboxModules.swift
 /Sources/RimeBuffer/MorseCode.swift

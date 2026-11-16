@@ -46,8 +46,9 @@
     "native/macos/KeyboardHeatmapView.swift": "2184969c9436ce04ef97b9672fe404ce5f1a5cd810adce14b98e94c44f8b4b87",
     "native/macos/LearnedWordsDeletion.swift": "5a2ec2f6c436275bc1c5d20cb0ebbbf2f8a09bbaf0fb8bb0163338a4e1949a57",
     "native/macos/LearnedWordsLedger.swift": "028c14e90e3d94a9bce505929ba1fb0e54fd3debfc391498843e4041c5de083f",
-    "native/macos/LearnedWordsReviewWindowController.swift": "81f7d06caeb7728050686648b8414e414e42ce5a07ea089c84e9f81a13806e46",
-    "native/macos/LexiconReviewPlugin.swift": "0e25af15ac145a8f977ba8965f89d34388163c98cc06ed1bbc1a2a374e1a045e",
+    "native/macos/LearnedWordsReviewWindowController.swift": "cad04267ed330a4a5fd5c31aa22509b88c6672eea789bbac4be74252e4d75037",
+    "native/macos/LearnedWordsScoring.swift": "d073a460e626eba2724e04fe57edf719d287318d19eb750b0c0a355fd74c22df",
+    "native/macos/LexiconReviewPlugin.swift": "9d600a8daa973bb2358e6eff5a252e3d5c0133e3fff6148a4c489b367b675f37",
     "native/macos/Mailbox/MailboxModules.swift": "9d03fa00da11812b5aa31d8dcbcc0aeba13087c348cfc2ebc25d3b54f4b8b77f",
     "native/macos/MorseCode.swift": "3f9ba61f6a9452205c0e88ef47cf6fa61a4e3dab174e411b73065dc3461abf2d",
     "native/macos/MorseInputBarView.swift": "63e73111e99f1b6d3671131cebed603cd59d7a6097e5bf8dd5f41f850ddb90a6",
@@ -112,7 +113,7 @@
     "plugins/codex-cli/plugin.json": "58f6be64bf0977eebbd400b214f18d1b31ff4c8157752f04dbdef43ea5ee6b84",
     "plugins/fly-chord-learning/plugin.json": "356d3ffa4ec9409da5cf4d32a49a7fb674e31bd6619a7e6b66d08d9ec2ed8869",
     "plugins/latex/plugin.json": "8ef6044b827f00dbe876d2c351002804ee5d05603af59d5a8181b99bb69fd8f4",
-    "plugins/lexicon-review/plugin.json": "84cdcea13dedf5ff5bc06b4dc6463288a3ed3f75881aab676b47b7f964c2cd96",
+    "plugins/lexicon-review/plugin.json": "0fba669c6e67319e106c703b31c17bf9606dd09a820c60b8240a33ccec5de59d",
     "plugins/mailbox.chat/plugin.json": "6f3f9391c59d6edb8251494b098638335a68f60a467e7ff843a7bf705217e1e5",
     "plugins/mailbox.inbox/plugin.json": "91801be8a90c5e39657e807b5220c518998e4c8ad774da240857b604582fbd9d",
     "plugins/mailbox.terminal/plugin.json": "21bd7f24002fde11d19972abe74c88fc2f7946a05ac5f22ed7e9f4db3a909088",
@@ -125,9 +126,9 @@
     "plugins/statistics/plugin.json": "fd0a6abeb4628bbaa2b6c66ad8e99c1c428e4013394e29ead20ac5219572757a",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "cd28899b92f385c1e5ba296d164ab8b129c27efd580af51492ab365df7ef2594",
-    "source-map.json": "0f91d76f94a5a6ebeda0b8b6f172a09075c81b65ac48e433c78a091b9e447507"
+    "source-map.json": "6dcf116604f17b3aa689f23a05ea504f8df09b435a7775ed0a2671d97bd7b2dc"
   },
   "repository": "https://github.com/scholay-xsime/xsime-plugins",
-  "revision": "8a8a493560965d60b17ae2f9c54f86fcd483e1de",
+  "revision": "cea969cc49a589b69301a35d8e8474e9f6055f35",
   "schemaVersion": 1
 }

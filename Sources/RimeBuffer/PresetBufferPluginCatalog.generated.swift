@@ -138,14 +138,14 @@ enum PresetBufferPluginCatalog {
             id: "builtin.lexicon-review",
             nameZH: "词库学习",
             nameEN: "Lexicon learning",
-            version: "1.0.0",
+            version: "1.1.0",
             summaryZH: "词库学习官方插件；学习词由 RIMES 宿主的 Rime 用户词典保存，回顾记录只存本机。",
             summaryEN: "Lexicon learning official plugin; learned words stay in the RIMES host's Rime user dictionaries and review records stay on this Mac.",
             producerID: "official",
             defaultInstalled: true,
             defaultEnabled: true,
-            downloadAssetName: "preset-plugin-builtin.lexicon-review-1.0.0.json",
-            sha256: "ab568efcd1be7a90f6d79b809862877b6e5bff91bae3d421ba8e071490b7775f"
+            downloadAssetName: "preset-plugin-builtin.lexicon-review-1.1.0.json",
+            sha256: "ef6dc1aeb5a578105150fe8727954cc87d60f02df3f348169a773f4eb541970a"
         ),
         PresetBufferPluginCatalogEntry(
             id: "builtin.mailbox.chat",

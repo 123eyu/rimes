@@ -1335,6 +1335,9 @@ if CommandLine.arguments.contains("learned-words-deletion-smoke") {
 if CommandLine.arguments.contains("learned-words-ledger-smoke") {
     exit(runLearnedWordsLedgerSmokeTest() ? 0 : 1)
 }
+if CommandLine.arguments.contains("learned-words-scoring-smoke") {
+    exit(runLearnedWordsScoringSmokeTest() ? 0 : 1)
+}
 if CommandLine.arguments.contains("user-lexicon-bridge-smoke") {
     exit(runRimeUserLexiconBridgeSmokeTest() ? 0 : 1)
 }
