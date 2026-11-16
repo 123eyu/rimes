@@ -150,6 +150,10 @@ platforms/ios/RIMES.xcodeproj/-Xcc/
 /Sources/RimeBuffer/FlyChordLearningSettingsViewController.swift
 /Sources/RimeBuffer/KeyFrequencyStore.swift
 /Sources/RimeBuffer/KeyboardHeatmapView.swift
+/Sources/RimeBuffer/LearnedWordsDeletion.swift
+/Sources/RimeBuffer/LearnedWordsLedger.swift
+/Sources/RimeBuffer/LearnedWordsReviewWindowController.swift
+/Sources/RimeBuffer/LexiconReviewPlugin.swift
 /Sources/RimeBuffer/Mailbox/MailboxModules.swift
 /Sources/RimeBuffer/MorseCode.swift
 /Sources/RimeBuffer/MorseInputBarView.swift

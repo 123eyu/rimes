@@ -13724,7 +13724,7 @@
     "OfficialPlugins\/native\/macos\/FlyChordLearningSettingsViewController.swift" : "b9fc9a4eef4ba1f0ef62d91676edef343165954f327ddd45dcef6fe86a261566",
     "OfficialPlugins\/native\/macos\/NativeChordScheme.swift" : "181076cece56e0e5d0be2f318cd78552a165fc886d988547010c01b71c981b95",
     "rime-data\/my_combo.schema.yaml" : "acb4d3fe7b77bdf58df4da8a2e070d93dbd2971095af51a9133d9b4d5d93c102",
-    "Sources\/RimeBuffer\/BuiltInPlugins.swift" : "a0b606a30220956fd5bff7ec8f82965a4f31855f7cfa7f5ec3b6f063ea743888",
+    "Sources\/RimeBuffer\/BuiltInPlugins.swift" : "bb91721acbdc45b114a64114862200e140398bcb34825c141ef7cede8bdd3ed7",
     "Sources\/RimeBuffer\/ChordLinuxFixtures.swift" : "9e3233100eaabf8ba6d37caf56403d42bf0948d20835df28113bf4a664086aaa",
     "Sources\/RimeBuffer\/YoyoEngineSmoke.swift" : "7d62e3a332a06c16174f84e125640c80d11ed98d4d84148a97d40af968204f71"
   },

@@ -31,7 +31,7 @@
     "native/macos/BufferMusicSession.swift": "3cc3724842619779721a50aed62770cb5f36fc7a7a73ef4d4dc331588a92d7fe",
     "native/macos/BufferMusicTheory.swift": "eff9cc1112ff9685606b52553eba76e59623478abf4fe0203afb89d4fff3437e",
     "native/macos/BufferMusicView.swift": "d25baf82cd809d0ce6f83f18d1f4ac1a35cdd47ba5ffcf2728c8de011b374fa5",
-    "native/macos/BuiltInPlugins.swift": "a0b606a30220956fd5bff7ec8f82965a4f31855f7cfa7f5ec3b6f063ea743888",
+    "native/macos/BuiltInPlugins.swift": "bb91721acbdc45b114a64114862200e140398bcb34825c141ef7cede8bdd3ed7",
     "native/macos/CapsuleModules.swift": "d78809394546e6ea3daa863eed25f29dd0824435cc68311f60ec62ac9661038e",
     "native/macos/ChordController.swift": "d3443ce99dcb26caa8eb3ea8506670f3813c9b7b74dc209e00a7e27cd6ae92fe",
     "native/macos/ChordExtension.swift": "fa732e5fd6fb7f6116dc875d6f255bd4268b8c492ff17f0290b33d9962355732",
@@ -44,6 +44,10 @@
     "native/macos/FlyChordLearningSettingsViewController.swift": "b9fc9a4eef4ba1f0ef62d91676edef343165954f327ddd45dcef6fe86a261566",
     "native/macos/KeyFrequencyStore.swift": "7c78593d70230699954cdab3df55f93cbbff0601bc2289ea610d0072c7b0c724",
     "native/macos/KeyboardHeatmapView.swift": "2184969c9436ce04ef97b9672fe404ce5f1a5cd810adce14b98e94c44f8b4b87",
+    "native/macos/LearnedWordsDeletion.swift": "5a2ec2f6c436275bc1c5d20cb0ebbbf2f8a09bbaf0fb8bb0163338a4e1949a57",
+    "native/macos/LearnedWordsLedger.swift": "028c14e90e3d94a9bce505929ba1fb0e54fd3debfc391498843e4041c5de083f",
+    "native/macos/LearnedWordsReviewWindowController.swift": "81f7d06caeb7728050686648b8414e414e42ce5a07ea089c84e9f81a13806e46",
+    "native/macos/LexiconReviewPlugin.swift": "0e25af15ac145a8f977ba8965f89d34388163c98cc06ed1bbc1a2a374e1a045e",
     "native/macos/Mailbox/MailboxModules.swift": "9d03fa00da11812b5aa31d8dcbcc0aeba13087c348cfc2ebc25d3b54f4b8b77f",
     "native/macos/MorseCode.swift": "3f9ba61f6a9452205c0e88ef47cf6fa61a4e3dab174e411b73065dc3461abf2d",
     "native/macos/MorseInputBarView.swift": "63e73111e99f1b6d3671131cebed603cd59d7a6097e5bf8dd5f41f850ddb90a6",
@@ -108,6 +112,7 @@
     "plugins/codex-cli/plugin.json": "58f6be64bf0977eebbd400b214f18d1b31ff4c8157752f04dbdef43ea5ee6b84",
     "plugins/fly-chord-learning/plugin.json": "356d3ffa4ec9409da5cf4d32a49a7fb674e31bd6619a7e6b66d08d9ec2ed8869",
     "plugins/latex/plugin.json": "8ef6044b827f00dbe876d2c351002804ee5d05603af59d5a8181b99bb69fd8f4",
+    "plugins/lexicon-review/plugin.json": "84cdcea13dedf5ff5bc06b4dc6463288a3ed3f75881aab676b47b7f964c2cd96",
     "plugins/mailbox.chat/plugin.json": "6f3f9391c59d6edb8251494b098638335a68f60a467e7ff843a7bf705217e1e5",
     "plugins/mailbox.inbox/plugin.json": "91801be8a90c5e39657e807b5220c518998e4c8ad774da240857b604582fbd9d",
     "plugins/mailbox.terminal/plugin.json": "21bd7f24002fde11d19972abe74c88fc2f7946a05ac5f22ed7e9f4db3a909088",
@@ -120,9 +125,9 @@
     "plugins/statistics/plugin.json": "fd0a6abeb4628bbaa2b6c66ad8e99c1c428e4013394e29ead20ac5219572757a",
     "plugins/stream-input/plugin.json": "b0fb6462ad6323345de726d0d3e9525bac08fe5aa88ad71bc3e5d2b2afaae5fc",
     "plugins/typing-speed/plugin.json": "cd28899b92f385c1e5ba296d164ab8b129c27efd580af51492ab365df7ef2594",
-    "source-map.json": "55c05b279cf11a7808481faf5cc5f88041981dbc612b0760f08219eee83707a5"
+    "source-map.json": "0f91d76f94a5a6ebeda0b8b6f172a09075c81b65ac48e433c78a091b9e447507"
   },
   "repository": "https://github.com/scholay-xsime/xsime-plugins",
-  "revision": "b8b79be7ea8e0b90dbb53c82a60163d27790c8c1",
+  "revision": "8a8a493560965d60b17ae2f9c54f86fcd483e1de",
   "schemaVersion": 1
 }

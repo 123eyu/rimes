@@ -124,6 +124,9 @@ public struct OfficialPluginPackage: Codable, Equatable {
         case "input.chord.v1":
             expectedKind = "extension"; expectedCapabilities = ["input.chord"]
             optionKeys = ["schema", "keymap"]
+        case "lexicon.review.v1":
+            expectedKind = "extension"; expectedCapabilities = ["lexicon.learning"]
+            optionKeys = ["dictionaries", "storage"]
         default: throw PluginPackageError.unsupported
         }
         guard kind == expectedKind, capabilities == expectedCapabilities,

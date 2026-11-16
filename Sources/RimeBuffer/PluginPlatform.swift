@@ -46,6 +46,7 @@ enum PluginCapability: String, Codable, CaseIterable, Hashable {
     case keyMetrics
     case commitMetrics
     case chordLearning
+    case lexiconLearning
     case localStorage
     case connector
     case capsuleModule
@@ -59,6 +60,7 @@ enum PluginCapability: String, Codable, CaseIterable, Hashable {
         case .keyMetrics: return "按键统计"
         case .commitMetrics: return "输入速度"
         case .chordLearning: return "并击学习"
+        case .lexiconLearning: return "词库学习"
         case .localStorage: return "本地数据"
         case .connector: return "连接器"
         case .capsuleModule: return "Capsule 模块"

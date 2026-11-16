@@ -112,6 +112,7 @@ def extract():
              "stream-input": "waveform", "music": "waveform", "morse": "dot.radiowaves.left.and.right",
              "polisher": "rimes.brand.scholay", "latex": "rimes.brand.scholay", "scholay": "rimes.brand.scholay",
              "statistics": "chart.bar.xaxis", "typing-speed": "speedometer", "fly-chord-learning": "hands.sparkles",
+             "lexicon-review": "book.closed",
              "capsule.temporary": "clock.arrow.circlepath", "capsule.capture": "camera.viewfinder",
              "capsule.notes": "note.text", "capsule.resources": "books.vertical", "capsule.passwords": "lock",
              "mailbox.terminal": "terminal", "mailbox.chat": "bubble.left", "mailbox.inbox": "tray"}

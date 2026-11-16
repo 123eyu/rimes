@@ -85,6 +85,7 @@
 | ChatGPT | `builtin.codex-cli` | 1.2.0 | 设置中按需下载 | 禁用 |
 | 并击 | `builtin.fly-chord-learning` | 2.1.0 | 随 XSIME 预装 | 禁用 |
 | LaTeX | `builtin.latex` | 1.1.0 | 设置中按需下载 | 禁用 |
+| 词库学习 | `builtin.lexicon-review` | 1.0.0 | 随 XSIME 预装 | 启用 |
 | 对话 | `builtin.mailbox.chat` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 收件 | `builtin.mailbox.inbox` | 1.1.0 | 随 XSIME 预装 | 启用 |
 | 终端 | `builtin.mailbox.terminal` | 1.1.0 | 随 XSIME 预装 | 启用 |

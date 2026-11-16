@@ -16,12 +16,12 @@ final class OfficialPluginStoreTests: XCTestCase {
 
     func testEveryDeclaredAdapterValidatesAndMobileIdentityIsPreserved() throws {
         let catalog = try OfficialPluginCatalog.bundled()
-        XCTAssertEqual(catalog.plugins.count, 24)
+        XCTAssertEqual(catalog.plugins.count, 25)
         for entry in catalog.plugins {
             let data = try OfficialPluginCatalog.bundledData(entry)
             for platform in entry.platforms.keys {
                 let package = try OfficialPluginPackage.validated(data, expectedID: entry.id, expectedVersion: entry.version,
-                                                                  platform: platform, hostVersion: "1.1.0")
+                                                                  platform: platform, hostVersion: "1.2.0")
                 XCTAssertEqual(package.id, entry.id)
             }
         }

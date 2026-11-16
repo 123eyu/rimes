@@ -1,6 +1,6 @@
 import AppKit
 
-private final class LearnedWordsFakeEngine: UserLexiconEngine {
+final class LearnedWordsFakeEngine: UserLexiconEngine {
     var isHealthy = true
     var dictionaries: Set<String> = ["rime_ice"]
     var rows: [String: String] = [:]
@@ -16,9 +16,56 @@ private final class LearnedWordsFakeEngine: UserLexiconEngine {
         return text.split(separator: "\n").filter { !$0.hasPrefix("#") }.count
     }
 
+    var rejectsImports = false
+    /// Rows the next import should silently skip, to simulate a partial import.
+    var ignoredOnImport: Set<String> = []
+
+    /// Follows librime's UserDbImporter: a positive count keeps the larger of
+    /// the two, a negative one becomes a tombstone that keeps the old size.
+    /// Exports hide tombstones, as librime's exporter does.
     func importUserDictionary(named name: String, from fileURL: URL) -> Int {
         imports += 1
-        return -1
+        guard !rejectsImports,
+              let text = try? String(contentsOf: fileURL, encoding: .utf8) else { return -1 }
+        var order: [String] = []
+        var values: [String: (word: String, code: String, count: Int)] = [:]
+        for line in (rows[name] ?? "").split(separator: "\n") where !line.hasPrefix("#") {
+            let f = line.split(separator: "\t", omittingEmptySubsequences: false)
+            guard f.count >= 3, let count = Int(f[2]) else { continue }
+            let key = "\(f[0])\t\(f[1].trimmingCharacters(in: .whitespaces))"
+            if values[key] == nil { order.append(key) }
+            values[key] = (String(f[0]), f[1].trimmingCharacters(in: .whitespaces), count)
+        }
+        var imported = 0
+        for line in text.split(separator: "\n") where !line.hasPrefix("#") {
+            let f = line.split(separator: "\t", omittingEmptySubsequences: false)
+            guard f.count >= 3, let incoming = Int(f[2]) else { continue }
+            let code = f[1].trimmingCharacters(in: .whitespaces)
+            let key = "\(f[0])\t\(code)"
+            guard !ignoredOnImport.contains(String(f[0])) else { continue }
+            let old = values[key]?.count ?? 0
+            let updated = incoming > 0 ? max(old, incoming)
+                : (incoming < 0 ? min(incoming, -abs(old)) : old)
+            if values[key] == nil { order.append(key) }
+            values[key] = (String(f[0]), code, updated)
+            imported += 1
+        }
+        rows[name] = order.compactMap { values[$0] }
+            .map { "\($0.word)\t\($0.code)\t\($0.count)" }
+            .joined(separator: "\n") + "\n"
+        return imported
+    }
+
+    /// librime's revive rule when a deleted word is typed again.
+    func type(_ word: String, code: String, in name: String) {
+        var lines = (rows[name] ?? "").split(separator: "\n").map(String.init)
+        if let index = lines.firstIndex(where: { $0.hasPrefix("\(word)\t\(code)\t") }),
+           let count = Int(lines[index].split(separator: "\t")[2]) {
+            lines[index] = "\(word)\t\(code)\t\(abs(count) + 1)"
+        } else {
+            lines.append("\(word)\t\(code)\t1")
+        }
+        rows[name] = lines.joined(separator: "\n") + "\n"
     }
 
     func restoreUserDictionarySnapshot(from fileURL: URL) -> Bool {
@@ -224,6 +271,28 @@ func runLearnedWordsLedgerEngineSmokeTest() -> Bool {
             print("learned-words-ledger-engine-smoke: FAIL unchanged capture \(again)")
             return false
         }
+        // Delete two real once-used words and undo, through real librime.
+        let picked = ledger.currentEntries(for: .chinese)
+            .filter { $0.count == 1 }
+            .sorted { ($0.word, $0.code) < ($1.word, $1.code) }
+            .prefix(2)
+        guard picked.count == 2 else {
+            print("learned-words-ledger-engine-smoke: FAIL need two once-used words")
+            return false
+        }
+        let deletion = try ledger.delete(picked.map(\.key), from: .chinese)
+        let afterDelete = LearnedWordsLedger.parseExport(try ledger.exportText(.chinese))
+        guard deletion.round.words.count == 2, picked.allSatisfy({ afterDelete[$0.key] == nil }),
+              afterDelete.count == count - 2 else {
+            print("learned-words-ledger-engine-smoke: FAIL real delete \(deletion)")
+            return false
+        }
+        _ = try ledger.undo(roundID: deletion.round.id, for: .chinese)
+        let afterUndo = LearnedWordsLedger.parseExport(try ledger.exportText(.chinese))
+        guard picked.allSatisfy({ afterUndo[$0.key] == $0.count }), afterUndo.count == count else {
+            print("learned-words-ledger-engine-smoke: FAIL real undo")
+            return false
+        }
         // Optional visual check: `learned-words-ledger-engine-smoke out.png`.
         if let index = CommandLine.arguments.firstIndex(of: "learned-words-ledger-engine-smoke"),
            CommandLine.arguments.indices.contains(index + 1) {
@@ -242,7 +311,7 @@ func runLearnedWordsLedgerEngineSmokeTest() -> Bool {
             view.cacheDisplay(in: view.bounds, to: bitmap)
             try bitmap.representation(using: .png, properties: [:])?.write(to: output)
         }
-        print("learned-words-ledger-engine-smoke: PASS baseline \(count) words, unchanged recapture records nothing")
+        print("learned-words-ledger-engine-smoke: PASS baseline \(count) words, unchanged recapture records nothing, real delete and undo of 2 words")
         return true
     } catch {
         print("learned-words-ledger-engine-smoke: FAIL \(error.localizedDescription)")

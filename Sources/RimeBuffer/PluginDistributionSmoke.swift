@@ -93,7 +93,8 @@ func runPluginDistributionSmokeTest() -> Bool {
     guard checkDevelopmentHostCompatibility() else { return false }
     let fileManager = FileManager.default
     let expectedDefaultIDs = Set([BuiltInPluginID.appleTranslation, BuiltInPluginID.streamInput,
-        BuiltInPluginID.statistics, BuiltInPluginID.typingSpeed, BuiltInPluginID.flyChordLearning])
+        BuiltInPluginID.statistics, BuiltInPluginID.typingSpeed, BuiltInPluginID.flyChordLearning,
+        BuiltInPluginID.lexiconReview])
         .union(CapsuleModuleID.allCases.map(BuiltInPluginID.capsule))
         .union(MailboxModuleID.allCases.map { $0.pluginKey.rawID })
     let expectedEnabledIDs = expectedDefaultIDs.subtracting([BuiltInPluginID.flyChordLearning])
@@ -116,7 +117,7 @@ func runPluginDistributionSmokeTest() -> Bool {
         BuiltInPluginID.appleTranslation: "2.3.0", BuiltInPluginID.streamInput: "1.4.0",
         BuiltInPluginID.music: "0.2.3", BuiltInPluginID.morse: "0.1.0",
         BuiltInPluginID.statistics: "2.1.0", BuiltInPluginID.typingSpeed: "2.1.0",
-        BuiltInPluginID.flyChordLearning: "2.1.0",
+        BuiltInPluginID.flyChordLearning: "2.1.0", BuiltInPluginID.lexiconReview: "1.0.0",
     ].merging(Dictionary(uniqueKeysWithValues: CapsuleModuleID.allCases.map { (BuiltInPluginID.capsule($0), "1.1.0") }), uniquingKeysWith: { first, _ in first })
      .merging(Dictionary(uniqueKeysWithValues: MailboxModuleID.allCases.map { ($0.pluginKey.rawID, "1.1.0") }), uniquingKeysWith: { first, _ in first })
 

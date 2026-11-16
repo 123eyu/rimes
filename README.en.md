@@ -71,6 +71,7 @@ This table is generated from [`Catalog/buffer-plugins.json`](Catalog/buffer-plug
 | ChatGPT | `builtin.codex-cli` | 1.2.0 | On demand in Settings | Disabled |
 | Chord input | `builtin.fly-chord-learning` | 2.1.0 | Bundled with XSIME | Disabled |
 | LaTeX | `builtin.latex` | 1.1.0 | On demand in Settings | Disabled |
+| Lexicon learning | `builtin.lexicon-review` | 1.0.0 | Bundled with XSIME | Enabled |
 | Chat | `builtin.mailbox.chat` | 1.1.0 | Bundled with XSIME | Enabled |
 | Inbox | `builtin.mailbox.inbox` | 1.1.0 | Bundled with XSIME | Enabled |
 | Terminal | `builtin.mailbox.terminal` | 1.1.0 | Bundled with XSIME | Enabled |
