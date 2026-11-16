@@ -132,6 +132,19 @@
       "sha256": "f6daa0386c48b72f8793c971ea4d6c79ca7ad31b9f39603d03b35cc10f369c2a"
     },
     {
+      "id": "builtin.lexicon-review",
+      "version": "1.0.0",
+      "nameZH": "词库学习",
+      "nameEN": "Lexicon learning",
+      "summaryZH": "词库学习官方插件；学习词由 RIMES 宿主的 Rime 用户词典保存，回顾记录只存本机。",
+      "summaryEN": "Lexicon learning official plugin; learned words stay in the RIMES host's Rime user dictionaries and review records stay on this Mac.",
+      "producerID": "official",
+      "defaultInstalled": true,
+      "defaultEnabled": true,
+      "downloadAssetName": "preset-plugin-builtin.lexicon-review-1.0.0.json",
+      "sha256": "ab568efcd1be7a90f6d79b809862877b6e5bff91bae3d421ba8e071490b7775f"
+    },
+    {
       "id": "builtin.mailbox.chat",
       "version": "1.1.0",
       "nameZH": "对话",

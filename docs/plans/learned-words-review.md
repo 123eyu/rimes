@@ -23,7 +23,10 @@
 
 ## 宿主
 
-独立的内置扩展（建议 ID `builtin.lexicon-review`，显示名“词库”），带自己的设置页和开关，不并入“统计”。
+独立的内置扩展 `builtin.lexicon-review`（显示名“词库学习”，避免与“输入法 › 词库”子页同名），带自己的设置页和开关，不并入“统计”。
+
+- 学习状态、导入导出、每日记录、回顾窗口与删除/撤销都属于扩展（源码在 `OfficialPlugins/native/macos/`），“输入法 › 词库”页只列基础词库，并经 `LexiconLearningBridge` 链接到扩展；扩展关闭时页面不含任何学习操作。
+- Rime 启动后由 `LexiconLearningBridge.engineDidStart()` 通知扩展，扩展再安排每日记录；关闭扩展会停止记录，已保存的记录与删除轮次保留在 `~/Library/RIMES/lexicon-review/`。
 
 - 统计扩展只记数量；本扩展保存真实词语并会删除数据，需要单独的授权开关。
 - 不依赖 AI、Mailbox 或网络即可完成“查看”和“删除”，符合[系统架构](../architecture/system.md)对普通输入的要求。
