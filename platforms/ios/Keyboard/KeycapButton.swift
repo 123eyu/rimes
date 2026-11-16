@@ -11,6 +11,41 @@ enum KeycapStyle {
     /// Fitted from the top-edge corner profile: Apple 5.34 pt; ours 3.34 pt at
     /// r = 5 and 4.97 pt at r = 6.75, which puts Apple's continuous radius at ≈ 7.15 pt.
     static let cornerRadius: CGFloat = 7.15
+    /// Third-party keyboards sit in the system's rounded container from iOS 26.
+    /// Measured on the iOS 26.5 simulator (iPhone 17 Pro, 3x): the top corner
+    /// reaches the side edge about 28 pt down, a continuous radius of ≈ 27 pt.
+    static var containerCornerRadius: CGFloat {
+        if #available(iOS 26, *) { return 27 }
+        return 0
+    }
+    /// One corner of a key that sits in a container corner, rounded so its
+    /// edge runs alongside the container's instead of poking into the curve.
+    struct OuterCorner: Equatable {
+        var corner: UIRectCorner
+        var radius: CGFloat
+        /// Concentric with the container: its radius less the key's distance from
+        /// the container's edges. Nil when the ordinary cap already clears it.
+        static func fitting(_ corner: UIRectCorner, keyFrame: CGRect, in container: CGRect, containerRadius: CGFloat = containerCornerRadius) -> OuterCorner? {
+            let horizontal = corner.contains(.topLeft) || corner.contains(.bottomLeft) ? keyFrame.minX - container.minX : container.maxX - keyFrame.maxX
+            let vertical = corner.contains(.topLeft) || corner.contains(.topRight) ? keyFrame.minY - container.minY : container.maxY - keyFrame.maxY
+            let radius = min(containerRadius - max(0, min(horizontal, vertical)), min(keyFrame.width, keyFrame.height) / 2)
+            return radius > KeycapStyle.cornerRadius ? OuterCorner(corner: corner, radius: radius) : nil
+        }
+    }
+    /// The cap outline: the ordinary rounded rect, with `outer` (if any) rounded
+    /// wider. Intersecting with a large rect that shares only that corner keeps
+    /// the other three corners exactly as on every other key.
+    static func capPath(_ rect: CGRect, radius: CGFloat, outer: OuterCorner?) -> UIBezierPath {
+        let cap = UIBezierPath(roundedRect: rect, cornerRadius: radius)
+        guard let outer, outer.radius > radius, rect.width > 0, rect.height > 0 else { return cap }
+        let r = min(outer.radius, min(rect.width, rect.height) / 2)
+        let far = max(rect.width, rect.height) * 4
+        var frame = CGRect(x: rect.minX, y: rect.minY, width: far, height: far)
+        if outer.corner.contains(.topRight) || outer.corner.contains(.bottomRight) { frame.origin.x = rect.maxX - far }
+        if outer.corner.contains(.bottomLeft) || outer.corner.contains(.bottomRight) { frame.origin.y = rect.maxY - far }
+        let wide = UIBezierPath(roundedRect: frame, cornerRadius: r)
+        return UIBezierPath(cgPath: cap.cgPath.intersection(wide.cgPath))
+    }
     /// Apple's caps sit on whole device pixels (adjacent keys alternate 100 and
     /// 101 px at 3x); fractional edges smear by a pixel and read as wider keys.
     static func pixelSnapped(_ rect: CGRect) -> CGRect {
@@ -32,19 +67,19 @@ enum KeycapStyle {
         rect.insetBy(dx: compact ? 0 : 0.5, dy: compact ? 0.75 : 1.5)
     }
     static func draw(in rect: CGRect, pressed: Bool, selected: Bool = false, enabled: Bool = true, compact: Bool = false,
-                     theme: StatusSkin = .rhino, functional: Bool = false, accent: Bool = false, legacy: Bool = false) {
+                     theme: StatusSkin = .rhino, functional: Bool = false, accent: Bool = false, legacy: Bool = false, outer: OuterCorner? = nil) {
         guard let context = UIGraphicsGetCurrentContext() else { return }
         let rect = pixelSnapped(rect)
         let palette = theme.palette
         if theme.keyboardStyle == .system {
-            let cap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5), cornerRadius: cornerRadius)
+            let cap = capPath(rect.insetBy(dx: 0, dy: 0.5), radius: cornerRadius, outer: outer)
             context.saveGState()
             if !enabled { context.setAlpha(0.4) }
             if legacy {
                 // Apple's legacy keyboard: grey function keys, and the cap lifted 1 pt off a dark base.
-                let base = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: 1), cornerRadius: cornerRadius)
+                let base = capPath(rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: 1), radius: cornerRadius, outer: outer)
                 UIColor { $0.userInterfaceStyle == .dark ? UIColor(white: 0, alpha: 0.6) : UIColor(red: 0.54, green: 0.54, blue: 0.56, alpha: 1) }.setFill(); base.fill()
-                let legacyCap = UIBezierPath(roundedRect: rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: -0.5), cornerRadius: cornerRadius)
+                let legacyCap = capPath(rect.insetBy(dx: 0, dy: 0.5).offsetBy(dx: 0, dy: -0.5), radius: cornerRadius, outer: outer)
                 // Only an action Return (selected accent) is tinted; other function keys are grey.
                 let tone: UIColor = accent && (selected || pressed) ? palette.accent : pressed ? (functional ? palette.key : palette.functional)
                     : functional ? palette.functional : palette.key
@@ -59,7 +94,7 @@ enum KeycapStyle {
         }
         context.saveGState()
         if !enabled { context.setAlpha(0.4) }
-        let cap = UIBezierPath(roundedRect: capRect(in: rect, pressed: pressed, compact: compact), cornerRadius: compact ? 3 : cornerRadius)
+        let cap = capPath(capRect(in: rect, pressed: pressed, compact: compact), radius: compact ? 3 : cornerRadius, outer: outer)
         (pressed && selected ? palette.pressedSelected : pressed || selected ? palette.accent : functional ? palette.functional : palette.key).setFill(); cap.fill()
         UIColor.label.withAlphaComponent(pressed || selected ? 0.15 : 0.10).setStroke()
         cap.lineWidth = 0.7; cap.stroke()
@@ -100,6 +135,8 @@ class KeycapButton: UIButton {
     var accentCap = false { didSet { if oldValue != accentCap { updateAppearance() } } }
     var compactCap = false { didSet { if oldValue != compactCap { setNeedsDisplay(); setNeedsLayout() } } }
     var titleHorizontalInset: CGFloat = 6 { didSet { if oldValue != titleHorizontalInset { setNeedsLayout() } } }
+    /// Set on a key that sits in a corner of the keyboard container.
+    var outerCorner: KeycapStyle.OuterCorner? { didSet { if oldValue != outerCorner { setNeedsDisplay() } } }
     override init(frame: CGRect) {
         super.init(frame: frame)
         backgroundColor = .clear; isOpaque = false; contentMode = .redraw
@@ -134,7 +171,7 @@ class KeycapButton: UIButton {
     }
     override func draw(_ rect: CGRect) {
         KeycapStyle.draw(in: bounds, pressed: isHighlighted, selected: isSelected, enabled: isEnabled, compact: compactCap,
-                         theme: theme, functional: functionalCap, accent: accentCap, legacy: legacyKey)
+                         theme: theme, functional: functionalCap, accent: accentCap, legacy: legacyKey, outer: outerCorner)
     }
     override func layoutSubviews() {
         super.layoutSubviews()
@@ -561,7 +598,9 @@ final class StatusLight: UIView {
     }
     required init?(coder: NSCoder) { fatalError() }
     @objc private func tapped() { onCycleSkin?() }
-    override func draw(_ rect: CGRect) { KeycapStyle.draw(in: bounds, pressed: false, theme: skin) }
+    /// Set when the light sits in a corner of the keyboard container.
+    var outerCorner: KeycapStyle.OuterCorner? { didSet { if oldValue != outerCorner { setNeedsDisplay() } } }
+    override func draw(_ rect: CGRect) { KeycapStyle.draw(in: bounds, pressed: false, theme: skin, outer: outerCorner) }
     override func layoutSubviews() {
         super.layoutSubviews()
         let cap = KeycapStyle.capRect(in: bounds, pressed: false), size: CGFloat = 10

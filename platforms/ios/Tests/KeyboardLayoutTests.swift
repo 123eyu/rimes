@@ -747,7 +747,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         }
         snapshot("plugin-shortcuts")
         XCTAssertEqual(bar.buttons.map(\.plugin), [.translate, .ask, .polish, .poem, .art])
-        // Every shortcut keeps its two-square width; when they outgrow the row it scrolls sideways.
+        // Every shortcut is a full-height key sized to its label; when they outgrow the row it scrolls sideways.
         XCTAssertGreaterThanOrEqual(bar.subviews.compactMap { $0 as? UIScrollView }.first?.contentSize.width ?? 0, bar.buttons.last!.button.frame.maxX)
         // Host chrome floating over the keyboard must not blur its rows (iOS 26+ scroll edge effects).
         if #available(iOS 26, *) {
@@ -757,7 +757,10 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
             XCTAssertGreaterThanOrEqual(scrolls.count, 4)
             for scroll in scrolls { XCTAssertTrue(scroll.topEdgeEffect.isHidden && scroll.bottomEdgeEffect.isHidden && scroll.leftEdgeEffect.isHidden && scroll.rightEdgeEffect.isHidden, "\(type(of: scroll))") }
         }
-        for (_, button) in bar.buttons { XCTAssertEqual(button.bounds.width, 2 * bar.bounds.height + 4, accuracy: 0.5) }
+        for (_, button) in bar.buttons {
+            XCTAssertEqual(button.bounds.height, bar.bounds.height, accuracy: 0.5)
+            XCTAssertGreaterThanOrEqual(button.bounds.width, 1.6 * bar.bounds.height - 0.5)
+        }
         controller.developmentContent(preedit: "ni", candidates: ["你"]); window.layoutIfNeeded()
         XCTAssertTrue(bar.isHidden)
         controller.developmentContent(); window.layoutIfNeeded()
@@ -770,10 +773,11 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(controls.run.isHidden); XCTAssertFalse(controls.run.isEnabled) // nothing written yet
         XCTAssertLessThan(controls.settings.frame.maxX, controller.layoutViews.source.frame.minX + 0.5)
         XCTAssertLessThan(controller.layoutViews.source.frame.maxX, controls.run.frame.minX + 0.5)
-        XCTAssertLessThan(controls.run.frame.maxX, controls.plugin.frame.minX + 0.5)
+        // AI plugins put Run in the mode key's slot under Send; there is no chooser menu.
+        XCTAssertEqual(controls.run.frame, controls.plugin.frame); XCTAssertTrue(controls.plugin.isHidden)
         snapshot("plugin-poem-open")
-        // The settings key opens RIMES's own panel over the keys; the plugin key keeps its chooser menu.
-        XCTAssertNotNil(controls.plugin.menu); XCTAssertNil(controller.developmentPanel)
+        // The settings key opens RIMES's own panel over the keys.
+        XCTAssertNil(controls.plugin.menu); XCTAssertNil(controller.developmentPanel)
         // Every plugin's settings key is the same 1U icon key, nothing drawn past its cap.
         XCTAssertNil(controls.settings.title(for: .normal)); XCTAssertNotNil(controls.settings.image(for: .normal))
         XCTAssertEqual(controls.settings.bounds.size, controls.run.bounds.size)
@@ -1193,7 +1197,8 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(controller.developmentAssociations.isEmpty)
         controller.layoutViews.keys.onTypingPress?(); XCTAssertTrue(controller.developmentAssociations.isEmpty)
         controller.developmentType("ni"); XCTAssertFalse(strip.buttons.isEmpty) // composition candidates, not associations
-        XCTAssertTrue(controller.layoutViews.settings.isHidden); XCTAssertTrue(toggle.isHidden)
+        // The menu keeps the left corner while choosing; the expand control takes the switch's corner.
+        XCTAssertFalse(controller.layoutViews.settings.isHidden); XCTAssertTrue(toggle.isHidden)
         controller.developmentEnter()
         // Learned: consecutive commits teach what follows, ahead of the dictionary.
         controller.developmentClearAssociationHistory()
@@ -1437,7 +1442,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
                     controller.developmentContent(preedit: "ni", candidates: ["你", "拟", "这个长候选不应缩小字体"])
                     window.layoutIfNeeded(); controller.view.layoutIfNeeded()
                     XCTAssertEqual(keys.convert(keys.bounds, to: window), before)
-                    XCTAssertEqual(controller.layoutViews.settings.bounds.width, 32)
+                    XCTAssertEqual(controller.layoutViews.settings.bounds.width, controller.view.bounds.width > 600 ? 28 : 30)
                     XCTAssertGreaterThanOrEqual(controller.layoutViews.insert.bounds.width, 24)
                     // drawHierarchy temporarily detaches UIInputViewController's view,
                     // legitimately ending its session. Render layers to keep this session alive.
@@ -1651,7 +1656,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         let v = controller.layoutViews
         func frame(_ view: UIView) -> CGRect { view.convert(view.bounds, to: window) }
         let keyFrame = frame(v.keys), candidateFrame = frame(v.candidates), idleHeight = controller.view.bounds.height
-        XCTAssertFalse(v.candidates.isHidden); XCTAssertGreaterThanOrEqual(candidateFrame.height, 32)
+        XCTAssertFalse(v.candidates.isHidden); XCTAssertGreaterThanOrEqual(candidateFrame.height, 30)
         XCTAssertTrue(v.buffer.isHidden)
         XCTAssertEqual(frame(v.settings).minY, candidateFrame.minY)
         XCTAssertEqual(frame(v.settings).minX, frame(controller.view).minX + 5)
@@ -1667,11 +1672,12 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         controller.developmentContent(preedit: "ni", candidates: ["你", "拟"]); window.layoutIfNeeded()
         XCTAssertEqual(controller.view.bounds.height, idleHeight)
         XCTAssertEqual(frame(v.keys), keyFrame)
-        XCTAssertTrue(v.settings.isHidden); XCTAssertTrue(toggle.isHidden)
+        XCTAssertFalse(v.settings.isHidden); XCTAssertTrue(toggle.isHidden)
         XCTAssertTrue(controller.developmentShortcuts.isHidden)
         XCTAssertEqual(frame(v.candidates).minX, frame(controller.view).minX + 5)
         XCTAssertEqual(frame(v.candidates).maxX, frame(controller.view).maxX - 5)
-        XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.candidates).minX)
+        // Candidates start on the shortcuts' edge, right of the menu key.
+        XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.settings).maxX + 4, accuracy: 0.5)
         XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX)
         XCTAssertEqual(frame(v.candidates).height, candidateFrame.height)
         controller.developmentContent(); controller.developmentBuffer("", plugin: true); window.layoutIfNeeded()
@@ -1716,7 +1722,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertNil(stats.text.range(of: "[\\p{Han}A-Za-z]{2,}", options: .regularExpression), "No words: \(stats.text)")
         XCTAssertEqual(stats.frame.height, v.result.frame.height)
         XCTAssertEqual(stats.frame.midX, v.result.bounds.midX, accuracy: 0.5)
-        XCTAssertEqual(v.buffer.bounds.height, 76)
+        XCTAssertEqual(v.buffer.bounds.height, 64)
         controller.developmentBuffer("原文。", plugin: true, output: "Text."); window.layoutIfNeeded()
         XCTAssertEqual(v.result.text, "Text."); XCTAssertFalse(v.result.isHidden); XCTAssertFalse(v.source.isHidden); XCTAssertTrue(stats.isHidden)
         controller.developmentBuffer(nil); window.layoutIfNeeded()

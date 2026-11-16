@@ -388,7 +388,7 @@ final class KeyboardViewController: UIInputViewController {
         bufferButton.accessibilityHint = L("按住打开 Buffer 设置", "Hold for Buffer settings")
         let bufferHold = UILongPressGestureRecognizer(target: self, action: #selector(bufferHeld(_:))); bufferHold.minimumPressDuration = 0.45
         bufferButton.addGestureRecognizer(bufferHold)
-        configure(aiButton, "") {}; aiButton.showsMenuAsPrimaryAction = true
+        configure(aiButton, "") { [weak self] in self?.runModeAction() }
         configure(moreButton, "") {}; moreButton.symbol("gearshape", label: L("键盘设置", "Keyboard settings")); moreButton.showsMenuAsPrimaryAction = true
         moreButton.addAction(UIAction { [weak self] _ in self?.surface.cancel(); self?.insertButton.cancelPress(); self?.cancelDeletes() }, for: .touchDown)
         insertButton.symbol("paperplane", label: L("插入下一块", "Insert next block"))
@@ -1309,6 +1309,7 @@ final class KeyboardViewController: UIInputViewController {
             }
             for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.legacyKey = legacy; button.theme = theme }
             bufferButton.accentCap = true; insertButton.accentCap = true
+            shortcuts.theme = theme; shortcuts.legacyKey = legacy
         }
         symbolsKey.setTitle(symbolPage ? "123" : "#+=", for: .normal)
         numbers.setTitle(surface.numeric ? (usesNineKeyEngine && !directEnglish ? "拼音" : "ABC") : "123", for: .normal)
@@ -1326,9 +1327,12 @@ final class KeyboardViewController: UIInputViewController {
     private func renderShortcuts() {
         let empty = snapshot.preedit.isEmpty && snapshot.candidates.isEmpty && !showingAssociations && !punctuationOpen && !surface.isChordActive && handPreview.isHidden
         let choosing = handPreview.isHidden && !showingAssociations && (!snapshot.preedit.isEmpty || !snapshot.candidates.isEmpty)
-        if moreButton.isHidden != choosing { moreButton.isHidden = choosing }
+        // The keyboard menu keeps the left corner while choosing, so candidates start on the
+        // same edge as the shortcuts; the expand control takes the Buffer switch's corner.
+        if moreButton.isHidden { moreButton.isHidden = false }
         if bufferButton.isHidden != choosing { bufferButton.isHidden = choosing }
-        candidateStrip.controlInsets = .init(top: 0, left: choosing ? 0 : 36, bottom: 0, right: choosing ? 0 : 36)
+        let side = topUnit + Self.topGap
+        candidateStrip.controlInsets = .init(top: 0, left: side, bottom: 0, right: choosing ? 0 : side)
         // The empty strip stays in place underneath, so the row keeps its reserved slot.
         shortcuts.isHidden = !empty
         shortcuts.selected = bufferEnabled ? selectedPlugin : nil
@@ -1407,7 +1411,8 @@ final class KeyboardViewController: UIInputViewController {
                 if arriving { revealGeneration = nil; if reveal.following { result.setContentOffset(.zero, animated: false) } } else { result.scrollToStart() }
             }
         }
-        aiButton.isHidden = !bufferEnabled
+        aiButton.isHidden = !bufferEnabled || selectedPlugin?.isAI == true
+        refreshModeKey()
         insertionSlot.isHidden = !bufferEnabled
         settingsButton.isHidden = !bufferEnabled
         settingsButton.isSelected = panelOpen
@@ -1446,11 +1451,11 @@ final class KeyboardViewController: UIInputViewController {
         // true in viewWillAppear, after the first height was already requested.
         globe.isHidden = !onscreen || !needsInputModeSwitchKey
         bottom.isHidden = surface.usesManagedLayout && !needsInputModeSwitchKey
-        let bufferHeight: CGFloat = landscape ? 60 : 76
+        let unit: CGFloat = landscape ? 28 : 30, bufferHeight = 2 * unit + Self.topGap
         let customHeight = surface.usesCustomLayout ? surface.customLayout.map { CGFloat($0.geometry(width: Double(max(1, width - 10)), landscape: landscape).height) } : nil
         let standardHeight = surface.usesStandardLayout ? StandardKeyboardGeometry.height(landscape: landscape, percent: landscape ? preferences.landscapeHeight : preferences.portraitHeight) : nil
         return [(bufferPanel, bufferHeight),
-                (candidatePanel, max(32, candidateStrip.fittingHeight(width: max(0, width - 10)))),
+                (candidatePanel, max(unit, candidateStrip.fittingHeight(width: max(0, width - 10)))),
                 (spellingStrip, 34),
                 (surface, customHeight ?? standardHeight ?? KeyboardGeometry.height(layout: surface.chordLayout, chord: surface.chordMode, numeric: surface.numeric, emoji: surface.emojiMode, landscape: landscape, width: max(1, width - 10), profile: surface.profile)), (bottom, landscape ? 34 : 40)].filter { !$0.0.isHidden }
     }
@@ -1529,44 +1534,82 @@ final class KeyboardViewController: UIInputViewController {
         status.frame = CGRect(x: (view.bounds.width - width) / 2, y: surface.frame.midY - promptSize.height / 2, width: width, height: promptSize.height)
         let landscape = view.bounds.width > 600
         if bufferEnabled {
-            let bufferRowHeight: CGFloat = landscape ? 28 : 36
-            let topLine = CGRect(x: 36, y: 0, width: max(0, bufferPanel.bounds.width - 72), height: bufferRowHeight)
+            // One unit for every top row and both side columns: [key] [line] [key].
+            let unit = topUnit, side = unit + Self.topGap, width = bufferPanel.bounds.width
+            let topLine = CGRect(x: side, y: 0, width: max(0, width - 2 * side), height: unit)
             typingStats.fontSize = landscape ? 10 : 10.5
-            insertionSlot.frame = CGRect(x: bufferPanel.bounds.width - 32, y: 0, width: 32, height: bufferRowHeight)
-            // Right column: Send, plugin and the Buffer switch line up above each other;
-            // settings sits alone on the left of the candidate row.
-            aiButton.frame = CGRect(x: bufferPanel.bounds.width - 32, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-            // Input row: [settings] [input line] [Run] [plugin]. Run appears only for AI plugins.
-            // Left column: status light above the settings key, both 1U like the right column.
-            let settingsWidth: CGFloat = settingsButton.isHidden ? 0 : 36, runWidth: CGFloat = runButton.isHidden ? 0 : 36
-            statusLight.frame = CGRect(x: 0, y: 0, width: 32, height: bufferRowHeight)
-            settingsButton.frame = CGRect(x: 0, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-            runButton.frame = CGRect(x: bufferPanel.bounds.width - 68, y: bufferRowHeight + 4, width: 32, height: bufferRowHeight)
-            let bottomLine = CGRect(x: settingsWidth, y: bufferRowHeight + 4, width: max(0, bufferPanel.bounds.width - 36 - runWidth - settingsWidth), height: bufferRowHeight)
+            // Left column: status light above the settings key. Right column: Send above
+            // the mode's own key (clipboard, swap languages, or Run for AI plugins).
+            statusLight.frame = CGRect(x: 0, y: 0, width: unit, height: unit)
+            insertionSlot.frame = CGRect(x: width - unit, y: 0, width: unit, height: unit)
+            settingsButton.frame = CGRect(x: 0, y: side, width: unit, height: unit)
+            aiButton.frame = CGRect(x: width - unit, y: side, width: unit, height: unit)
+            runButton.frame = aiButton.frame
+            let bottomLine = CGRect(x: side, y: side, width: max(0, width - 2 * side), height: unit)
             // Default sends what you type, so the input line sits beside Send and the typing
             // readout drops below it. Plugins send their output, which stays on top.
             if isDefaultBuffer { source.frame = topLine; result.frame = bottomLine } else { result.frame = topLine; source.frame = bottomLine }
-            typingStats.frame = CGRect(x: 8, y: 0, width: max(0, result.bounds.width - 16), height: bufferRowHeight)
+            typingStats.frame = CGRect(x: 8, y: 0, width: max(0, result.bounds.width - 16), height: unit)
             // The hold line lives on the input box alone, clipped to its rounded corners.
             holdBar.frame = source.frame; holdBar.layer.cornerRadius = source.layer.cornerRadius
             holdBar.tintColor = preferences.resolvedTheme.palette.accent; bufferPanel.bringSubviewToFront(holdBar)
             result.font = .systemFont(ofSize: landscape ? 14 : 15)
         }
-        bufferButton.frame = CGRect(x: candidatePanel.bounds.width - 32, y: 0, width: 32, height: 32)
+        let unit = topUnit, side = unit + Self.topGap
+        bufferButton.frame = CGRect(x: candidatePanel.bounds.width - unit, y: 0, width: unit, height: unit)
         candidateStrip.frame = candidatePanel.bounds
         (candidatePanel as? CandidatePanelView)?.expandReachWidth = candidateStrip.expandReachWidth
-        moreButton.frame = CGRect(x: 0, y: 0, width: 32, height: 32)
-        handPreview.frame = CGRect(x: 36, y: 0, width: max(0, candidatePanel.bounds.width - 72), height: 32)
+        moreButton.frame = CGRect(x: 0, y: 0, width: unit, height: unit)
+        handPreview.frame = CGRect(x: side, y: 0, width: max(0, candidatePanel.bounds.width - 2 * side), height: unit)
         shortcuts.frame = handPreview.frame
         handPreview.landscape = landscape
         bottom.layoutIfNeeded()
         insertButton.frame = insertionSlot.bounds; stopButton.frame = insertionSlot.bounds
+        fitCornerKeys(topRow: rows.first?.0)
         // Settings cover the keys only, so the Buffer lines stay visible while choosing.
         panel.frame = (bottom.isHidden ? surface.frame : surface.frame.union(bottom.frame)).insetBy(dx: -5, dy: 0)
         metrics.laidOut(width: view.bounds.width, height: view.bounds.height, requestedHeight: height.constant,
             containerHeight: Double(view.superview?.bounds.height ?? 0), topInset: Double(rows.first?.0.frame.minY ?? 0))
     }
+    /// The keys at either end of the top row sit in the container's rounded corners;
+    /// their outer corner follows the container's so neither pokes into the curve.
+    private func fitCornerKeys(topRow: UIView?) {
+        let container = view.superview.map { view.convert($0.bounds, from: $0) } ?? view.bounds
+        func fit(_ corner: UIRectCorner, _ key: UIView, in row: UIView) -> KeycapStyle.OuterCorner? {
+            guard topRow === row else { return nil }
+            return .fitting(corner, keyFrame: key.convert(key.bounds, to: view), in: container)
+        }
+        moreButton.outerCorner = fit(.topLeft, moreButton, in: candidatePanel)
+        bufferButton.outerCorner = fit(.topRight, bufferButton, in: candidatePanel)
+        statusLight.outerCorner = fit(.topLeft, statusLight, in: bufferPanel)
+        insertButton.outerCorner = fit(.topRight, insertButton, in: bufferPanel)
+        stopButton.outerCorner = fit(.topRight, stopButton, in: bufferPanel)
+    }
     private func cancelDeletes() { deleteButton.cancelPress(); chordDelete.cancelPress() }
+    /// Height of every row above the keys and width of their side keys.
+    private var topUnit: CGFloat { view.bounds.width > 600 ? 28 : 30 }
+    private static let topGap: CGFloat = 4
+    /// The key under Send does what the open mode needs most: the local clipboard
+    /// for the Buffer, swapping languages for Translate. AI plugins show Run there instead.
+    private func refreshModeKey() {
+        if selectedPlugin == .translate {
+            aiButton.symbol("arrow.left.arrow.right", label: L("交换翻译方向", "Swap translation direction"))
+            aiButton.accessibilityHint = nil; aiButton.isSelected = false
+        } else {
+            aiButton.symbol("list.clipboard", label: L("本地剪贴板", "Local clipboard"))
+            aiButton.accessibilityHint = L("打开本地剪贴板历史", "Open local clipboard history")
+            aiButton.isSelected = clipboardPresentation != nil
+        }
+    }
+    private func runModeAction() {
+        if selectedPlugin == .translate { swapLanguages(); return }
+        if clipboardPresentation != nil { closePanel() } else { openClipboard() }
+        refreshModeKey()
+    }
+    private func swapLanguages() {
+        let old = preferences.sourceLanguage
+        preferences.sourceLanguage = preferences.targetLanguage; preferences.targetLanguage = old; languageChanged()
+    }
     private func refreshLanguageSwap() {
         let swapped = compactTypingKeys
         if deleteButton.isHidden != swapped { deleteButton.isHidden = swapped }
@@ -2171,17 +2214,24 @@ final class KeyboardViewController: UIInputViewController {
         allPlugins = KeyboardPlugin.all(in: library)
         shortcuts.setPlugins(KeyboardPlugin.entrance(in: library))
         enabledShortcutPlugins = Set(allPlugins.filter { pluginAuthorization($0.gateID) != nil })
-        let original = UIAction(title: "Buffer", image: UIImage(systemName: "square.stack.3d.up"), state: selectedPlugin == nil ? .on : .off) { [weak self] _ in self?.selectPlugin(nil) }
-        // Each plugin stands alone; choosing one only opens it.
-        let plugins = allPlugins.map { plugin in
-            UIAction(title: plugin.title, image: UIImage(systemName: plugin.symbol), attributes: enabledShortcutPlugins.contains(plugin) ? [] : [.disabled], state: selectedPlugin == plugin ? .on : .off) { [weak self] _ in
-                guard let self else { return }; self.surface.cancel(); self.settle(); self.selectPlugin(plugin)
+        // The shortcut row is the mode switch. Plugins left off the quick entrance stay
+        // reachable from a trailing overflow key of the same size.
+        let entrance = Set(KeyboardPlugin.entrance(in: library))
+        let others = allPlugins.filter { !entrance.contains($0) }
+        if others.isEmpty { shortcuts.overflowMenu = nil } else {
+            var items: [UIMenuElement] = []
+            if let open = selectedPlugin, !entrance.contains(open) {
+                items.append(UIAction(title: "Buffer", image: UIImage(systemName: "square.stack.3d.up")) { [weak self] _ in self?.selectPlugin(nil) })
             }
+            items += others.map { plugin in
+                UIAction(title: plugin.title, image: UIImage(systemName: plugin.symbol), attributes: enabledShortcutPlugins.contains(plugin) ? [] : [.disabled], state: selectedPlugin == plugin ? .on : .off) { [weak self] _ in
+                    guard let self else { return }; self.surface.cancel(); self.settle(); self.openPlugin(plugin)
+                }
+            }
+            shortcuts.overflowMenu = UIMenu(children: items)
         }
-        aiButton.menu = UIMenu(children: [original] + plugins)
-        aiButton.symbol(selectedPlugin?.symbol ?? "square.stack.3d.up", label: selectedPlugin?.title ?? "Buffer")
-        aiButton.accessibilityHint = L("选择插件", "Choose plugin")
-        aiButton.isSelected = selectedPlugin != nil
+        shortcuts.overflowSelected = selectedPlugin.map { !entrance.contains($0) } ?? false
+        refreshModeKey()
         refreshMoreMenu()
     }
     /// Opens a plugin from the candidate-row shortcuts, turning the Buffer on. Tapping
@@ -2421,10 +2471,7 @@ final class KeyboardViewController: UIInputViewController {
             }
         }
         languageRow.swap.addAction(UIAction { [weak self] _ in
-            guard let self else { return }
-            self.surface.feedback.send(.press)
-            let old = self.preferences.sourceLanguage
-            self.preferences.sourceLanguage = self.preferences.targetLanguage; self.preferences.targetLanguage = old; self.languageChanged()
+            self?.surface.feedback.send(.press); self?.swapLanguages()
         }, for: .touchUpInside)
     }
     private func refreshLanguageRows() {

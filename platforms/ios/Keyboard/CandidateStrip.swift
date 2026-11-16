@@ -522,15 +522,28 @@ final class ChordHandPreviewView: UIView {
 final class PluginShortcutBar: UIView {
     private let scroll = UIScrollView()
     private(set) var buttons: [(plugin: KeyboardPlugin, button: UIButton)] = []
+    /// Plugins left off the quick entrance, behind a trailing key of the same size.
+    private let overflow = ShortcutCapButton()
+    var overflowMenu: UIMenu? { didSet { overflow.menu = overflowMenu; overflow.isHidden = overflowMenu == nil; setNeedsLayout() } }
+    var overflowSelected = false { didSet { overflow.isSelected = overflowSelected } }
     var onSelect: ((KeyboardPlugin) -> Void)?
     /// Holding a shortcut opens that plugin's settings.
     var onSettings: ((KeyboardPlugin) -> Void)?
     var onPress: (() -> Void)?
     /// The plugin open in the Buffer, highlighted; nil for Default or Buffer off.
     var selected: KeyboardPlugin? { didSet { if selected != oldValue { refresh() } } }
+    /// Shortcuts are keys: they follow the keyboard skin like every other cap.
+    var theme: StatusSkin = .rhino { didSet { if oldValue != theme { allCaps.forEach { $0.theme = theme } } } }
+    var legacyKey = false { didSet { if oldValue != legacyKey { allCaps.forEach { $0.legacyKey = legacyKey } } } }
+    private var allCaps: [ShortcutCapButton] { buttons.compactMap { $0.button as? ShortcutCapButton } + [overflow] }
     override init(frame: CGRect) {
         super.init(frame: frame)
         scroll.showsHorizontalScrollIndicator = false; addSubview(scroll); scroll.hideEdgeEffects()
+        overflow.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        overflow.accessibilityLabel = L("更多插件", "More plugins"); overflow.accessibilityIdentifier = "keyboard.shortcut.more"
+        overflow.showsMenuAsPrimaryAction = true; overflow.accentCap = true; overflow.isHidden = true
+        overflow.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
+        scroll.addSubview(overflow)
         setPlugins(KeyboardPlugin.builtIn)
     }
     /// Rebuilds the bar when the user's entrance list changes; unchanged lists keep their buttons.
@@ -539,7 +552,10 @@ final class PluginShortcutBar: UIView {
         guard buttons.isEmpty || signature(plugins) != signature(buttons.map(\.plugin)) else { return }
         buttons.forEach { $0.button.removeFromSuperview() }; buttons = []
         for plugin in plugins {
-            let button = UIButton(configuration: .gray())
+            let button = ShortcutCapButton()
+            button.theme = theme; button.legacyKey = legacyKey; button.accentCap = true
+            button.setImage(UIImage(systemName: plugin.symbol), for: .normal)
+            button.setTitle(plugin.shortTitle, for: .normal)
             button.accessibilityIdentifier = "keyboard.shortcut.\(plugin.rawValue)"
             button.accessibilityLabel = plugin.title
             button.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
@@ -551,39 +567,53 @@ final class PluginShortcutBar: UIView {
         refresh(); setNeedsLayout()
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func tintColorDidChange() { super.tintColorDidChange(); refresh() }
     @objc private func hold(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began, let plugin = buttons.first(where: { $0.button === recognizer.view })?.plugin else { return }
         onSettings?(plugin)
     }
     private func refresh() {
         for (plugin, button) in buttons {
-            var config = UIButton.Configuration.gray()
-            config.image = UIImage(systemName: plugin.symbol)
-            config.preferredSymbolConfigurationForImage = .init(pointSize: 12, weight: .medium)
-            config.imagePadding = 3; config.cornerStyle = .medium
-            config.contentInsets = .init(top: 0, leading: 4, bottom: 0, trailing: 4)
-            config.titleLineBreakMode = .byTruncatingTail
-            var title = AttributedString(plugin.shortTitle); title.font = .systemFont(ofSize: plugin.shortTitle.count > 2 ? 12 : 13, weight: .medium)
-            config.attributedTitle = title
             let on = plugin == selected
-            config.baseBackgroundColor = on ? tintColor : .tertiarySystemFill
-            config.baseForegroundColor = on ? KeyboardPalette.contrastingInk(on: tintColor ?? .systemBlue) : .label
-            button.configuration = config
+            button.isSelected = on
             button.accessibilityTraits = on ? [.button, .selected] : [.button]
         }
     }
     override func layoutSubviews() {
         super.layoutSubviews()
         scroll.frame = bounds
-        let unit = bounds.height, gap: CGFloat = 6, width = 2 * unit + 4
-        let total = CGFloat(buttons.count) * width + CGFloat(max(0, buttons.count - 1)) * gap
-        // Centred in the row when they fit; scroll sideways when more plugins arrive.
-        var x = max(0, (bounds.width - total) / 2)
-        for (_, button) in buttons {
-            button.frame = CGRect(x: x, y: 1, width: width, height: max(0, unit - 2)); x += width + gap
+        // Full-height caps on the row's left edge, 4 pt apart like the side keys.
+        let height = bounds.height, gap: CGFloat = 4
+        var x: CGFloat = 0
+        for cap in buttons.compactMap({ $0.button as? ShortcutCapButton }) + (overflow.isHidden ? [] : [overflow]) {
+            let width = max(height * 1.6, cap.fittingWidth)
+            cap.frame = CGRect(x: x, y: 0, width: width, height: height); x += width + gap
         }
-        scroll.contentSize = CGSize(width: max(bounds.width, total), height: bounds.height)
+        scroll.contentSize = CGSize(width: max(bounds.width, x - gap), height: bounds.height)
+    }
+}
+
+/// A shortcut drawn as a key: the plugin's glyph and short name side by side on one cap.
+final class ShortcutCapButton: KeycapButton {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        setPreferredSymbolConfiguration(.init(pointSize: 13, weight: .medium), forImageIn: .normal)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    private var imageSize: CGSize { currentImage == nil ? .zero : (imageView?.intrinsicContentSize ?? .zero) }
+    private var textWidth: CGFloat { ceil(titleLabel?.intrinsicContentSize.width ?? 0) }
+    private var spacing: CGFloat { imageSize.width > 0 && textWidth > 0 ? 4 : 0 }
+    /// Glyph, title and 10 pt either side.
+    var fittingWidth: CGFloat { ceil(imageSize.width + spacing + textWidth) + 20 }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let cap = KeycapStyle.capRect(in: bounds, pressed: isHighlighted)
+        let image = imageSize, total = image.width + spacing + textWidth
+        var x = max(cap.minX + 6, cap.midX - total / 2)
+        imageView?.frame = CGRect(x: x, y: cap.midY - image.height / 2, width: image.width, height: image.height)
+        x += image.width + spacing
+        let textHeight = ceil(titleLabel?.font.lineHeight ?? 0)
+        titleLabel?.frame = CGRect(x: x, y: cap.midY - textHeight / 2, width: max(0, min(textWidth, cap.maxX - 6 - x)), height: textHeight)
     }
 }
 
