@@ -32,5 +32,5 @@
   "sdkVersion": 1,
   "summaryEN": "Lexicon learning official plugin; learned words stay in the RIMES host's Rime user dictionaries and review records stay on this Mac.",
   "summaryZH": "词库学习官方插件；学习词由 RIMES 宿主的 Rime 用户词典保存，回顾记录只存本机。",
-  "version": "1.0.0"
+  "version": "1.1.0"
 }
