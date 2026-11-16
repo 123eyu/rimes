@@ -1310,6 +1310,7 @@ final class KeyboardViewController: UIInputViewController {
             for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.legacyKey = legacy; button.theme = theme }
             bufferButton.accentCap = true; insertButton.accentCap = true
             shortcuts.theme = theme; shortcuts.legacyKey = legacy
+            candidateStrip.expandCap.theme = theme; candidateStrip.expandCap.legacyKey = legacy
         }
         symbolsKey.setTitle(symbolPage ? "123" : "#+=", for: .normal)
         numbers.setTitle(surface.numeric ? (usesNineKeyEngine && !directEnglish ? "拼音" : "ABC") : "123", for: .normal)
@@ -1537,7 +1538,7 @@ final class KeyboardViewController: UIInputViewController {
             // One unit for every top row and both side columns: [key] [line] [key].
             let unit = topUnit, side = unit + Self.topGap, width = bufferPanel.bounds.width
             let topLine = CGRect(x: side, y: 0, width: max(0, width - 2 * side), height: unit)
-            typingStats.fontSize = landscape ? 10 : 10.5
+            typingStats.fontSize = landscape ? 11 : 12
             // Left column: status light above the settings key. Right column: Send above
             // the mode's own key (clipboard, swap languages, or Run for AI plugins).
             statusLight.frame = CGRect(x: 0, y: 0, width: unit, height: unit)
@@ -1575,12 +1576,15 @@ final class KeyboardViewController: UIInputViewController {
     /// their outer corner follows the container's so neither pokes into the curve.
     private func fitCornerKeys(topRow: UIView?) {
         let container = view.superview.map { view.convert($0.bounds, from: $0) } ?? view.bounds
+        // The expand key's frame comes from the strip's own layout; settle it before measuring.
+        candidateStrip.layoutIfNeeded()
         func fit(_ corner: UIRectCorner, _ key: UIView, in row: UIView) -> KeycapStyle.OuterCorner? {
             guard topRow === row else { return nil }
             return .fitting(corner, keyFrame: key.convert(key.bounds, to: view), in: container)
         }
         moreButton.outerCorner = fit(.topLeft, moreButton, in: candidatePanel)
         bufferButton.outerCorner = fit(.topRight, bufferButton, in: candidatePanel)
+        candidateStrip.expandCap.outerCorner = fit(.topRight, candidateStrip.expandCap, in: candidatePanel)
         statusLight.outerCorner = fit(.topLeft, statusLight, in: bufferPanel)
         insertButton.outerCorner = fit(.topRight, insertButton, in: bufferPanel)
         stopButton.outerCorner = fit(.topRight, stopButton, in: bufferPanel)

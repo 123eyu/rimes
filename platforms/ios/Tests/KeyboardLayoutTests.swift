@@ -1679,6 +1679,10 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         // Candidates start on the shortcuts' edge, right of the menu key.
         XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.settings).maxX + 4, accuracy: 0.5)
         XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX)
+        // The expand key is a 1U key in the right corner, where the Buffer switch was.
+        XCTAssertEqual(frame(v.candidates.expandCap).maxX, frame(controller.view).maxX - 5, accuracy: 0.5)
+        XCTAssertEqual(v.candidates.expandCap.bounds.width, v.settings.bounds.width, accuracy: 0.5)
+        XCTAssertNotNil(v.candidates.expandCap.outerCorner)
         XCTAssertEqual(frame(v.candidates).height, candidateFrame.height)
         controller.developmentContent(); controller.developmentBuffer("", plugin: true); window.layoutIfNeeded()
         XCTAssertFalse(v.settings.isHidden); XCTAssertFalse(toggle.isHidden)
@@ -1714,9 +1718,9 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(v.buffer.subviews.contains { String(describing: type(of: $0)).contains("BlockStrip") })
         let stats = try XCTUnwrap(v.result.subviews.first { $0.accessibilityIdentifier == "keyboard.buffer.metrics" } as? TypingStatsView)
         XCTAssertFalse(stats.isHidden)
-        // Small bordered chips, not a line of text.
-        XCTAssertLessThanOrEqual(stats.fontSize, 11)
-        XCTAssertTrue(stats.subviews.allSatisfy { $0.layer.borderWidth > 0 })
+        // Plain readouts in the grey line: no outlined chips of their own.
+        XCTAssertLessThanOrEqual(stats.fontSize, 12)
+        XCTAssertTrue(stats.subviews.allSatisfy { $0.layer.borderWidth == 0 })
         // Icons and numerals, never words, in any language.
         XCTAssertFalse(stats.symbols.isEmpty); XCTAssertTrue(stats.symbols.allSatisfy { UIImage(systemName: $0) != nil })
         XCTAssertNil(stats.text.range(of: "[\\p{Han}A-Za-z]{2,}", options: .regularExpression), "No words: \(stats.text)")
