@@ -30,6 +30,16 @@ void BufferService::SynchronizeResultDelivery() {
             segments.insert(segments.end(), children.begin(), children.end());
         }
     } else segments = model_.SplitSegments(result->text);
+    // Plugin blocks are checked only as a whole, so one may end inside a UTF-8
+    // character. Fold a piece that starts with a continuation byte into the
+    // piece before it: every child the host commits is whole characters.
+    std::vector<std::string> aligned;
+    for (auto& text : segments) {
+        if (text.empty()) continue;
+        if (!aligned.empty() && (static_cast<unsigned char>(text.front()) & 0xc0) == 0x80) aligned.back() += text;
+        else aligned.push_back(std::move(text));
+    }
+    segments = std::move(aligned);
     if (segments.size() > 200) {
         for (std::size_t i = 200; i < segments.size(); ++i) segments[199] += segments[i];
         segments.resize(200);
@@ -87,6 +97,9 @@ bool BufferService::DeliverDerived(bool all) {
             if (!request || request->id != scope || result_pending_.empty()) break;
             const auto child = result_pending_.front();
             const auto result_id = result_pending_id_;
+            // Validate before the native commit: bytes already in the
+            // application cannot be withdrawn if the prefix is refused.
+            if (!derived_.CanConsumePrefix(*request, true, result_id, child.text)) { delivery_conflict_ = true; break; }
             try { target->commitString(child.text); }
             catch (const std::exception&) { delivery_conflict_ = true; break; }
             sent = true;

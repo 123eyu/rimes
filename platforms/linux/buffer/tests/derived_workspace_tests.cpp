@@ -59,6 +59,9 @@ int main() {
     Check(workspace.Update(unicode, true, 0, "中文🙂后续") && workspace.Finish(unicode, true, true), "UTF-8 result fixture");
     const auto id = workspace.SelectedResult()->id;
     const auto original = workspace.CopyText();
+    Check(!workspace.CanConsumePrefix(unicode, true, id, original.substr(0, 2)) && workspace.CanConsumePrefix(unicode, true, id, "中"),
+          "pre-commit check disagreed with UTF-8 boundary rule");
+    Check(workspace.CopyText() == original && workspace.SelectedResult()->id == id, "pre-commit check consumed the result");
     Check(!workspace.ConsumePrefix(unicode, true, id, original.substr(0, 1)) && workspace.CopyText() == original, "partial CJK result consumption corrupted bytes");
     Check(!workspace.ConsumePrefix(unicode, true, id, original.substr(0, 8)) && workspace.CopyText() == original, "partial emoji result consumption corrupted bytes");
     Check(workspace.ConsumePrefix(unicode, true, id, "中文🙂") && workspace.CopyText() == "后续", "whole UTF-8 prefix rejected");
