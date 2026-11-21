@@ -29,7 +29,20 @@ Name=rime
 EOF
     fcitx5 --disable=wayland,kimpanel,notificationitem > "$LOG" 2>&1 &
     FCITX_PID=$!
-    trap 'kill "$FCITX_PID" 2>/dev/null || true' EXIT
+    # Wait for Fcitx5 to exit: the XSIME engine still writes its user data
+    # under $XDG_DATA_HOME/rimes while it shuts down, and the caller deletes
+    # $WORK as soon as this session returns.
+    stop_fcitx() {
+        kill "$FCITX_PID" 2>/dev/null || return 0
+        local _
+        for _ in $(seq 50); do
+            kill -0 "$FCITX_PID" 2>/dev/null || break
+            sleep 0.1
+        done
+        kill -KILL "$FCITX_PID" 2>/dev/null || true
+        wait "$FCITX_PID" 2>/dev/null || true
+    }
+    trap stop_fcitx EXIT
     fail() {
         echo "error: $1" >&2
         echo "---- fcitx5.log ----" >&2
@@ -110,7 +123,10 @@ if dpkg-query -W -f='${db:Status-Status}' fcitx5-rime 2>/dev/null | grep -qx ins
 fi
 WORK=$(mktemp -d)
 cleanup() {
-    rm -rf "$WORK"
+    # Under `set -e` a failed rm in this trap would turn a passing run into
+    # exit 1, so retry once and only warn.
+    rm -rf "$WORK" 2>/dev/null || { sleep 1; rm -rf "$WORK"; } \
+        || echo "warning: could not remove $WORK" >&2
     if (( ! STOCK_WAS_INSTALLED )); then
         sudo apt-get remove -y fcitx5-rime > /dev/null || true
     fi
