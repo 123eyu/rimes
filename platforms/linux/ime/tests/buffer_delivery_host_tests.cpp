@@ -157,6 +157,8 @@ int main() {
                 Check(sent == "你好" && host->derived().Results().empty() && host->model().empty(),
                       "split-block result was cancelled or left source behind");
             }
+            // The scenarios below count commits from zero.
+            client->commits.clear();
 
             prepare();
             host->RegisterDerivedAdapter(translation, "translation.generate", [&](auto, auto, auto stop, auto receive) {
