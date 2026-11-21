@@ -13,7 +13,9 @@ namespace rimes::runtime {
 // A fixed worker pool with a bounded live queue. Cancelled jobs may still be
 // cleaning up a process group; they cannot reject the next live request or
 // cause unbounded replacement threads. An accepted but discarded job invokes
-// its optional cancellation completion exactly once, outside the pool lock.
+// its optional cancellation completion exactly once, outside the pool lock:
+// on a worker if the job reached one, otherwise on the thread that called
+// Run, CancelAll or Shutdown. Callers must not assume a worker thread there.
 class BackgroundJobs {
 public:
     ~BackgroundJobs();

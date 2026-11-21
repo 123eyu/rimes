@@ -11,7 +11,9 @@ public:
     ~LocalTranslationWorker();
     void CancelAll();
     void Shutdown();
-    // Called on the owning event loop. Completion runs on a worker thread.
+    // Called on the owning event loop. Completion of work that ran is on a
+    // worker thread; a request rejected by Run, or discarded by CancelAll or
+    // Shutdown before it ran, completes on the thread that made that call.
     void Run(std::string text, std::string source, std::string target,
              std::shared_ptr<std::atomic<bool>> cancelled, Complete complete);
 private:

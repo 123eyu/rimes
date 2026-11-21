@@ -100,7 +100,8 @@ void CapsuleModel::set_filter(std::string filter) {
 void CapsuleModel::EnableModule(Module module, bool enabled) {
     if (enabled) {
         enabled_modules_.insert(module);
-        if (!ModuleEnabled(module_)) set_module(module);
+        // set_module already applies the filter and touches once.
+        if (!ModuleEnabled(module_)) { set_module(module); return; }
     }
     else {
         enabled_modules_.erase(module);
@@ -108,7 +109,7 @@ void CapsuleModel::EnableModule(Module module, bool enabled) {
         all_.erase(std::remove_if(all_.begin(), all_.end(), [module](const auto& card) { return card.module == module; }), all_.end());
         if (module_ == module) {
             Disarm("module-disabled"); query_.clear(); last_copied_.clear(); filter_ = "all";
-            if (!enabled_modules_.empty()) set_module(*enabled_modules_.begin());
+            if (!enabled_modules_.empty()) { set_module(*enabled_modules_.begin()); return; }
         }
     }
     ApplyFilter(); Touch();
