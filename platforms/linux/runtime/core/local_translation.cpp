@@ -22,6 +22,9 @@ void LocalTranslationWorker::Run(std::string text, std::string source, std::stri
             valid = result.success && response.is_object() && response.size() == 1 && response.contains("text") && response["text"].is_string() && !cancelled->load();
             if (valid) translated = response["text"].get<std::string>();
         } catch (const std::exception&) { valid = false; }
+        // CancelAll() may land after the check above; cancellation must win
+        // over publication, so read the flag again immediately before it.
+        if (cancelled->load()) valid = false;
         complete(valid ? translated : "", valid);
     };
     if (!jobs_.Run(std::move(cancelled), std::move(work), [complete] { complete("", false); })) complete("", false);

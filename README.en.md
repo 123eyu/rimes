@@ -71,6 +71,7 @@ This table is generated from [`Catalog/buffer-plugins.json`](Catalog/buffer-plug
 | ChatGPT | `builtin.codex-cli` | 1.2.0 | On demand in Settings | Disabled |
 | Chord input | `builtin.fly-chord-learning` | 2.1.0 | Bundled with XSIME | Disabled |
 | LaTeX | `builtin.latex` | 1.1.0 | On demand in Settings | Disabled |
+| Lexicon learning | `builtin.lexicon-review` | 1.1.0 | Bundled with XSIME | Enabled |
 | Chat | `builtin.mailbox.chat` | 1.1.0 | Bundled with XSIME | Enabled |
 | Inbox | `builtin.mailbox.inbox` | 1.1.0 | Bundled with XSIME | Enabled |
 | Terminal | `builtin.mailbox.terminal` | 1.1.0 | Bundled with XSIME | Enabled |
@@ -100,10 +101,10 @@ The [1.2.0 release](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0) 
 
 | Platform | Installation |
 |---|---|
-| macOS | [1.2.0 PKG](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg), Apple Silicon and Intel, signed and notarized |
-| Android | [1.2.0 APK](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk), version code 23, signed with the existing long-term key |
-| Windows | [1.2.0 EXE](https://github.com/scholay/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
-| Linux | [1.2.0 DEB](https://github.com/scholay/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb), Ubuntu 24.04 / 26.04 amd64 / Fcitx5 |
+| macOS | [1.2.0 PKG](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-1.2.0.pkg), Apple Silicon and Intel, signed and notarized |
+| Android | [1.2.0 APK](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Android-1.2.0.apk), version code 23, signed with the existing long-term key |
+| Windows | [1.2.0 EXE](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/RIMES-Windows-1.2.0-Setup.exe), x64 Windows with x64/x86 TSF; unsigned EXE |
+| Linux | [1.2.0 DEB](https://github.com/scholay-xsime/xsime/releases/download/v1.2.0/fcitx5-rimes_1.2.0_amd64.deb), Ubuntu 24.04 / 26.04 amd64 / Fcitx5 |
 | iOS | [1.2.0 community IPA and signing notes](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0); [App Store](https://apps.apple.com/us/app/lingxi-ime/id6814620242) / [public TestFlight invitation](https://testflight.apple.com/join/Kdj9RB4q). Apple’s pages show the currently available builds. |
 
 See the [1.2.0 release record](docs/releases/1.2.0.md) for build, import, and installation validation.

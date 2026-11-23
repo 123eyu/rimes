@@ -76,9 +76,9 @@ private final class SettingsThemeDetailsButton: SettingsPointingButton {
     var mode: RimeAppearanceMode = .night
 }
 
-private final class SettingsLexiconButton: SettingsPointingButton {
-    var lexiconKind: UserLexiconKind = .chinese
-}
+/// Opens the lexicon-review extension; the 词库 page itself holds no
+/// learning actions.
+private final class SettingsLexiconLearningLinkButton: SettingsPointingButton {}
 
 private final class SettingsRouteButton: SettingsPointingButton {
     var routeID = SettingsCoreRoute.inputMethod.id
@@ -1469,8 +1469,8 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
             subpageID: SettingsSubpageID(rawValue: "dictionaries")
         )
         window.contentView?.layoutSubtreeIfNeeded()
-        let lexiconButtons = descendants(of: SettingsLexiconButton.self,
-                                         in: contentHost)
+        let lexiconLinks = descendants(of: SettingsLexiconLearningLinkButton.self,
+                                       in: contentHost)
         pointerPolicyOK = pointerPolicyOK
             && descendants(of: NSButton.self, in: contentHost).allSatisfy {
                 $0 is SettingsPointingButton
@@ -1483,16 +1483,13 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         let expectedLexiconTitles: Set<String> = [
             "雾凇拼音", "五笔86", "Easy English",
         ]
-        var lexiconOK = expectedLexiconTitles.isSubset(of: lexiconLabels)
-            && lexiconButtons.count == UserLexiconKind.allCases.count * 2
-        for kind in UserLexiconKind.allCases {
-            let actions = lexiconButtons.filter { $0.lexiconKind == kind }
-            lexiconOK = lexiconOK
-                && actions.count == 2
-                && Set(actions.map(\.title)) == ["导入学习…", "导出学习…"]
-        }
+        // Learning actions belong to the lexicon-review extension; the page
+        // only links to it while the extension is enabled.
+        let learningEnabled = LexiconLearningBridge.shared.provider != nil
+        let lexiconOK = expectedLexiconTitles.isSubset(of: lexiconLabels)
+            && lexiconLinks.count == (learningEnabled ? 1 : 0)
         if !lexiconOK {
-            print("settings lexicon card smoke: missing or misrouted dictionary actions")
+            print("settings lexicon card smoke: missing dictionaries or misplaced learning entry")
         }
         if !pointerPolicyOK {
             print("settings pointing-hand smoke: missing enabled-aware cursor owner")
@@ -2738,6 +2735,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
                             detail: "英文候选、补全、生词兜底与独立学习"),
                 spacer(16),
                 sectionLabel("用户学习"),
+                lexiconLearningEntry(),
                 openDirBtn,
             ])
         default:
@@ -2760,6 +2758,25 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     @objc private func openSchemeManager() { MacRimeSchemeManager.shared.show() }
+
+    /// Learning lives in the built-in lexicon-review extension. The page only
+    /// links to it, or says it is off; it never reviews, imports or exports.
+    private func lexiconLearningEntry() -> NSView {
+        guard LexiconLearningBridge.shared.provider != nil else {
+            return caption("词库学习扩展已关闭；可在插件中启用后回顾、导入或导出各词库的学习记录。")
+        }
+        return SettingsLexiconLearningLinkButton(
+            title: "管理学习词库…",
+            target: self,
+            action: #selector(openLexiconLearning)
+        )
+    }
+
+    @objc private func openLexiconLearning() {
+        guard let routeID = LexiconLearningBridge.shared.provider?.settingsRouteID,
+              navigation.selectRoute(routeID, catalog: routeCatalog) else { return }
+        showCurrentRoute()
+    }
 
     private func inputHabitsView(schema: String) -> NSView {
         let values = rimeEngine.inputHabitsStore.load()
@@ -3152,46 +3169,30 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     private func lexiconCard(kind: UserLexiconKind,
                              title: String,
                              detail: String) -> NSView {
-        let status = UserLexiconService.shared.status(for: kind)
         let name = NSTextField(labelWithString: title)
         name.font = .systemFont(ofSize: 11, weight: .semibold)
         name.textColor = RimeUI.textPrimary
-
-        let statusLabel = NSTextField(labelWithString:
-            status.hasLearningDatabase ? "学习库已建立" : "尚未建立学习库")
-        statusLabel.font = .systemFont(ofSize: 9, weight: .semibold)
-        statusLabel.textColor = status.hasLearningDatabase ? themeStatusColor : RimeUI.textMuted
         name.toolTip = detail
 
-        let importButton = SettingsLexiconButton(title: "导入学习…",
-                                                  target: self,
-                                                  action: #selector(importUserLexicon(_:)))
-        importButton.lexiconKind = kind
-        importButton.controlSize = .small
-
-        let exportButton = SettingsLexiconButton(title: "导出学习…",
-                                                  target: self,
-                                                  action: #selector(exportUserLexicon(_:)))
-        exportButton.lexiconKind = kind
-        exportButton.controlSize = .small
-        exportButton.isEnabled = status.hasLearningDatabase
-
-        let header = NSStackView(views: [name, statusLabel])
+        var headerViews: [NSView] = [name]
+        if let status = LexiconLearningBridge.shared.provider?.status(for: kind) {
+            let statusLabel = NSTextField(labelWithString:
+                status.hasLearningDatabase ? "学习库已建立" : "尚未建立学习库")
+            statusLabel.font = .systemFont(ofSize: 9, weight: .semibold)
+            statusLabel.textColor = status.hasLearningDatabase ? themeStatusColor : RimeUI.textMuted
+            headerViews.append(statusLabel)
+        }
+        let header = NSStackView(views: headerViews)
         header.orientation = .horizontal
         header.alignment = .firstBaseline
         header.spacing = 6
         header.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 
-        let actions = NSStackView(views: [importButton, exportButton])
-        actions.orientation = .horizontal
-        actions.alignment = .centerY
-        actions.spacing = 6
-
         let icon = SettingsIconTileView(
             symbolName: "book.closed",
             accessibilityDescription: title
         )
-        let card = NSStackView(views: [icon, header, flexSpacer(), actions])
+        let card = NSStackView(views: [icon, header, flexSpacer()])
         card.orientation = .horizontal
         card.alignment = .centerY
         card.spacing = 10
@@ -6458,77 +6459,6 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
         refreshStats()
     }
 
-    @objc private func importUserLexicon(_ sender: SettingsLexiconButton) {
-        let kind = sender.lexiconKind
-        let panel = NSOpenPanel()
-        panel.title = "导入\(kind.displayName)"
-        panel.message = "选择由 \(ProductIdentity.displayName) 或 Rime 用户词典管理器导出的 TSV；记录会合并，不会替换现有学习数据。"
-        panel.prompt = "选择并导入"
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.allowsMultipleSelection = false
-        panel.allowedContentTypes = [.tabSeparatedText, .plainText]
-        panel.appearance = RimeUI.appKitAppearance
-        guard panel.runModal() == .OK,
-              RimeInputSourceAuthority.currentSourceIsOwn(),
-              let sourceURL = panel.url else { return }
-
-        let confirmation = NSAlert()
-        confirmation.alertStyle = .informational
-        confirmation.messageText = "合并到\(kind.displayName)？"
-        confirmation.informativeText = "Rime 会短暂收束当前组字并重新建立输入会话；已有词频不会被清空。"
-        confirmation.addButton(withTitle: "导入并合并")
-        confirmation.addButton(withTitle: "取消")
-        confirmation.window.appearance = RimeUI.appKitAppearance
-        guard StandaloneWindowFocusCoordinator.shared
-            .runModalAlertIfRIMESActive(confirmation)
-                == .alertFirstButtonReturn else { return }
-
-        do {
-            let result = try UserLexiconService.shared.importLearningData(kind,
-                                                                          from: sourceURL)
-            info("已向\(kind.displayName)合并 \(result.entryCount) 条学习记录。")
-            showCurrentRoute()
-        } catch {
-            showLexiconError(error, operation: "导入")
-        }
-    }
-
-    @objc private func exportUserLexicon(_ sender: SettingsLexiconButton) {
-        let kind = sender.lexiconKind
-        let panel = NSSavePanel()
-        panel.title = "导出\(kind.displayName)"
-        panel.message = "导出为可再次导入的 UTF-8 TSV，不包含基础词库、输入正文或其他统计。"
-        panel.prompt = "导出"
-        panel.nameFieldStringValue = kind.suggestedFileName
-        panel.canCreateDirectories = true
-        panel.allowedContentTypes = [.tabSeparatedText]
-        panel.appearance = RimeUI.appKitAppearance
-        guard panel.runModal() == .OK,
-              RimeInputSourceAuthority.currentSourceIsOwn(),
-              let destinationURL = panel.url else { return }
-
-        do {
-            let result = try UserLexiconService.shared.exportLearningData(kind,
-                                                                          to: destinationURL)
-            info("已导出 \(result.entryCount) 条\(kind.displayName)记录。")
-            NSWorkspace.shared.activateFileViewerSelecting([destinationURL])
-        } catch {
-            showLexiconError(error, operation: "导出")
-        }
-    }
-
-    private func showLexiconError(_ error: Error, operation: String) {
-        let alert = NSAlert()
-        alert.alertStyle = .warning
-        alert.messageText = "学习词库\(operation)失败"
-        alert.informativeText = (error as? LocalizedError)?.errorDescription
-            ?? error.localizedDescription
-        alert.window.appearance = RimeUI.appKitAppearance
-        _ = StandaloneWindowFocusCoordinator.shared
-            .runModalAlertIfRIMESActive(alert)
-    }
-
     @objc private func openDir() {
         NSWorkspace.shared.open(userDir)
     }
@@ -6538,8 +6468,7 @@ final class SettingsWindowController: NSObject, NSTextFieldDelegate, NSWindowDel
     }
 
     @objc private func openRuntimeLog() {
-        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("rimebuffer.log")
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open(IMELog.url)
     }
 
     @objc private func restartInputMethod() {

@@ -47,6 +47,16 @@ function(rimes_harden target)
         -Werror
         -Wno-missing-field-initializers
     )
+    # GCC 16's new lifetime analysis reports false positives on initializer-list
+    # temporaries that live until the end of the full expression. Keep -Werror
+    # for the remaining diagnostics.
+    if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER_EQUAL 16)
+        target_compile_options(${target} PRIVATE
+            -Wno-error=dangling-pointer
+            -Wno-error=dangling-reference
+            -Wno-error=array-bounds
+        )
+    endif()
 endfunction()
 
 add_library(RimesBufferCore STATIC
@@ -65,7 +75,7 @@ set_target_properties(RimesBufferCore PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_link_libraries(RimesBufferCore PUBLIC RimesPluginCore RimesTranslationUnits)
 rimes_harden(RimesBufferCore)
 
-pkg_check_modules(CapsuleICU REQUIRED IMPORTED_TARGET icu-i18n)
+pkg_check_modules(CapsuleICU REQUIRED IMPORTED_TARGET icu-i18n icu-uc)
 find_package(SQLite3 REQUIRED)
 add_library(RimesCapsuleCore STATIC
     "${RIMES_CAPSULE_ROOT}/core/capsule_hash.cpp"

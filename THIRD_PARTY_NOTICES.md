@@ -218,7 +218,7 @@ The interactive terminal dynamically links the distribution's GTK VTE library (0
 
 ## Linux private engine dependencies
 
-The Linux deb may carry the build distribution's versioned ICU and engine helper libraries under its private `usr/lib/<architecture>/rimes/` directory. They retain their upstream SONAMEs and do not replace system libraries. The exact library names, source package versions and original redistribution notices are shipped in `usr/share/doc/fcitx5-rimes/third-party/runtime-libraries.tsv` and the adjacent `*-copyright` files. GTK, Fcitx, libc, GStreamer and the system C++ runtime remain system dependencies.
+The Linux deb may carry the build distribution's versioned ICU and engine helper libraries under its private `usr/lib/<architecture>/rimes/` directory. They retain their upstream SONAMEs and do not replace system libraries. The exceptions are glog and gflags, shipped unmodified as `librimes-glog` and `librimes-gflags`: only their ELF SONAME and dependency names are rewritten, so a stock `fcitx5-rime` in the same Fcitx5 process keeps its own logging runtime. The exact library names, source package versions and original redistribution notices are shipped in `usr/share/doc/fcitx5-rimes/third-party/runtime-libraries.tsv` and the adjacent `*-copyright` files. GTK, Fcitx, libc, GStreamer and the system C++ runtime remain system dependencies.
 
 ---
 

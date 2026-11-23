@@ -4,6 +4,7 @@
 #include <fcitx/inputcontextmanager.h>
 #include <algorithm>
 #include <filesystem>
+#include <initializer_list>
 #include <iostream>
 #include <mutex>
 #include <stdexcept>
@@ -186,7 +187,25 @@ int main() {
                             Check(host->model().capture_enabled() && host->derived().CopyText() == "Drag result", "same-IC drag return replaced output");
                             client->focusOut(); host->OnDeactivate(client.get(), false);
                             Check(host->derived().Results().empty(), "later non-drag focus loss retained authority");
-                            std::cout << "Buffer delivery host: ready-result Return, commit conflict, held ready prefix, late tail, stopped hold and drag ownership passed\n";
+                            // Return pressed, then focus leaves before the key-up, which
+                            // goes to the new focus. The first tap after focus returns must
+                            // send, for a plain focus change and for an input-method switch.
+                            for (const bool switching_im : {false, true}) {
+                                client->focusIn();
+                                prepare(); Check(host->SelectPlugin(""), "lost key-up default selection");
+                                host->model().append("送出", Origin::Rime);
+                                const auto before = client->commits.size();
+                                key(false);
+                                Check(client->commits.size() == before, "Return press alone delivered");
+                                client->focusOut(); host->OnDeactivate(client.get(), switching_im);
+                                client->focusIn(); host->OnActivate(client.get());
+                                host->ShowAndCapture(client.get());
+                                key(false); key(true);
+                                Check(client->commits.size() == before + 1 && client->commits.back() == "送出",
+                                      switching_im ? "input-method switch left a lost Return key-up armed"
+                                                   : "focus loss left a lost Return key-up armed");
+                            }
+                            std::cout << "Buffer delivery host: ready-result Return, commit conflict, held ready prefix, late tail, stopped hold, drag ownership and lost Return key-up passed\n";
                             instance.exit();
                         });
                     });

@@ -8,6 +8,8 @@ struct InputSourceMenuState {
     let clipboardTitle: String
     let mailboxTitle: String
     var userDictionaryWarning: String? = nil
+    /// Headline and detail shown while system secure input pauses composition.
+    var secureInputNotice: [String]? = nil
 }
 
 /// Builds ETInput's commands for the system input-source menu. The menu items
@@ -44,12 +46,24 @@ final class StatusMenu {
             bufferTitle: bufferTitle,
             clipboardTitle: "Capsule…（\(clipboardShortcut)）",
             mailboxTitle: mailboxTitle,
-            userDictionaryWarning: UserDictionaryHealth.shared.warning
+            userDictionaryWarning: UserDictionaryHealth.shared.warning,
+            secureInputNotice: SecureInputDiagnostics.currentMenuNotice()
         ))
     }
 
     static func makeInputSourceMenu(target: NSObject, state: InputSourceMenuState) -> NSMenu {
         let menu = NSMenu()
+
+        // Secure input makes every key pass through untouched. Say so first,
+        // and name the application holding it, before any other command.
+        if let notice = state.secureInputNotice, !notice.isEmpty {
+            for line in notice {
+                let item = NSMenuItem(title: line, action: nil, keyEquivalent: "")
+                item.isEnabled = false
+                menu.addItem(item)
+            }
+            menu.addItem(.separator())
+        }
 
         if let warning = state.userDictionaryWarning {
             let item = NSMenuItem(title: "⚠️ 学习词库异常 — 打开设置检查",
@@ -130,7 +144,7 @@ final class StatusMenu {
         menu.addItem(checkUpdate)
 
         let log = NSMenuItem(
-            title: "打开日志 (~/rimebuffer.log)",
+            title: "打开日志 (~/Library/Logs/RIMES)",
             action: #selector(RIMESController.openLogFromInputMenu(_:)),
             keyEquivalent: "")
         log.target = target
@@ -239,8 +253,7 @@ final class StatusMenu {
 
     func openLog() {
         IMELog.write("input menu: log requested")
-        let url = URL(fileURLWithPath: NSHomeDirectory()).appendingPathComponent("rimebuffer.log")
-        NSWorkspace.shared.open(url)
+        NSWorkspace.shared.open(IMELog.url)
     }
 
     func deployAndRestart() {

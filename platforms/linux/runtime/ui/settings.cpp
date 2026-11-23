@@ -357,7 +357,7 @@ struct Settings {
       Add(body, Label(std::string("版本 ") + RIMES_PRODUCT_VERSION + " · 学术海 · librime", "caption"));
       for (const auto& link : std::vector<std::pair<const char*, const char*>>{
             {"官网 · xsime.com", "https://xsime.com"}, {"邮箱 · pm@scholay.com", "mailto:pm@scholay.com"},
-            {"开源项目 · scholay / xsime", "https://github.com/scholay-xsime/xsime"},
+            {"开源项目 · scholay-xsime / xsime", "https://github.com/scholay-xsime/xsime"},
             {"README", "https://github.com/scholay-xsime/xsime/blob/main/README.md"},
             {"Apache License 2.0", "https://github.com/scholay-xsime/xsime/blob/main/LICENSE"}})
         Add(body, gtk_link_button_new_with_label(link.second, link.first));
@@ -865,8 +865,10 @@ struct Settings {
       const auto revision = saved.at("revision").get<std::string>();
       const auto directory = UserRoot();
       const auto page = page_revision;
+      const rimes::capsule::ClipboardArchive archive{
+        {{"text/plain;charset=utf-8", value}, {"UTF8_STRING", value}}};
       bool queued = gateway_clipboard && gateway_clipboard->Restore(
-        rimes::capsule::ClipboardArchive{{{"text/plain;charset=utf-8", value}, {"UTF8_STRING", value}}}, true,
+        archive, true,
         [this, life, page](bool success) {
           auto* callback = new std::function<void()>([this, life, page, success] {
             if (life->load() && page_revision == page)

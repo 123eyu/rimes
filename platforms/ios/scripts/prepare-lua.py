@@ -1,11 +1,76 @@
 #!/usr/bin/env python3
 """Fetch pinned Lua sources and apply the reviewable mobile capability boundary."""
-import hashlib, json, pathlib, re, shutil, subprocess, tarfile, urllib.request
+import hashlib, http.client, json, os, pathlib, re, shutil, subprocess, sys, tarfile, time
+import urllib.error, urllib.parse, urllib.request
 
 HERE = pathlib.Path(__file__).resolve().parent
 ROOT = HERE.parents[2]
 WORK = ROOT / 'Vendor/ios-build'
 POLICY = HERE / 'lua-sandbox'
+# The Lua archive comes from the lock's `url`, then its `mirrors`, over HTTPS only.
+# The pinned SHA-256 remains the trust anchor: a mirror is only another transport
+# for the same bytes, and nothing that fails the check is kept or extracted.
+TIMEOUT = 30          # seconds for each connect or read
+DEADLINE = 120        # seconds for one whole attempt, so a trickling server cannot stall
+ATTEMPTS = 3          # per source; each pass tries every source once, in lock order
+BACKOFF = 5           # seconds before the second pass, doubled before each later one
+MAX_BYTES = 16 << 20  # lua-5.4.9.tar.gz is 373,429 bytes
+
+class DownloadError(Exception):
+    pass
+
+class HTTPSOnlyRedirects(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        if urllib.parse.urlsplit(newurl).scheme != 'https':
+            raise urllib.error.HTTPError(newurl, code, f'refused non-HTTPS redirect to {newurl}', headers, fp)
+        return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+def download(opener, url, archive, expected):
+    """One attempt: stream to a side file and move it into place only on a SHA-256 match."""
+    partial = archive.with_name(archive.name + '.download')
+    try:
+        digest, size, deadline = hashlib.sha256(), 0, time.monotonic() + DEADLINE
+        with partial.open('wb') as output, opener.open(url, timeout=TIMEOUT) as response:
+            declared = response.headers.get('Content-Length') or ''
+            while block := response.read(1 << 16):
+                size += len(block)
+                if size > MAX_BYTES: raise DownloadError(f'response is larger than {MAX_BYTES} bytes')
+                if time.monotonic() > deadline: raise DownloadError(f'transfer took longer than {DEADLINE} s')
+                digest.update(block)
+                output.write(block)
+        if digest.hexdigest() != expected:
+            # The hash decides; the declared length only explains a cut-off transfer.
+            if declared.isdigit() and int(declared) != size: raise DownloadError(f'received {size} of {declared} bytes')
+            raise DownloadError(f'SHA-256 {digest.hexdigest()} does not match the lock')
+        os.replace(partial, archive)
+    finally:
+        partial.unlink(missing_ok=True)
+
+def fetch_lua(entry, archive, opener=None, sleep=time.sleep):
+    """Return `archive` holding exactly the locked bytes; a mismatching file is never kept."""
+    sources = [entry['url'], *entry.get('mirrors', [])]
+    for url in sources:
+        parts = urllib.parse.urlsplit(url)
+        if parts.scheme != 'https' or not parts.hostname:
+            raise RuntimeError(f'Lua sources must be HTTPS URLs: {url!r}')
+    if archive.is_file():
+        if hashlib.sha256(archive.read_bytes()).hexdigest() == entry['sha256']: return archive
+        print(f'Discarding {archive}: SHA-256 does not match the lock', file=sys.stderr)
+        archive.unlink()
+    archive.parent.mkdir(parents=True, exist_ok=True)
+    opener = opener or urllib.request.build_opener(HTTPSOnlyRedirects)
+    failures = []
+    for attempt in range(1, ATTEMPTS + 1):
+        if attempt > 1: sleep(BACKOFF * 2 ** (attempt - 2))
+        for url in sources:
+            try:
+                download(opener, url, archive, entry['sha256'])
+                if failures: print(f'Downloaded {archive.name} from {url}', file=sys.stderr)
+                return archive
+            except (OSError, http.client.HTTPException, DownloadError) as error:
+                failures.append(f'{url} (attempt {attempt}/{ATTEMPTS}): {error}')
+                print(f'Lua download failed: {failures[-1]}', file=sys.stderr)
+    raise RuntimeError(f'No source served {archive.name} with the locked SHA-256:\n  ' + '\n  '.join(failures))
 
 def prepare(work=WORK):
     lock = json.loads((POLICY / 'versions.json').read_text())
@@ -17,8 +82,7 @@ def prepare(work=WORK):
     head = subprocess.check_output(['git', '-C', str(plugin), 'rev-parse', 'HEAD'], text=True).strip()
     if head != revision:
         raise RuntimeError(f'librime-lua checkout is {head}, expected pinned {revision}; refusing to overwrite it')
-    archive = work / f'lua-{lock["lua"]["version"]}.tar.gz'
-    if not archive.exists(): urllib.request.urlretrieve(lock['lua']['url'], archive)
+    archive = fetch_lua(lock['lua'], work / f'lua-{lock["lua"]["version"]}.tar.gz')
     if hashlib.sha256(archive.read_bytes()).hexdigest() != lock['lua']['sha256']:
         raise RuntimeError('Lua archive SHA256 mismatch')
     extracted = work / f'lua-{lock["lua"]["version"]}'

@@ -723,6 +723,10 @@ void BufferService::OnDeactivate(InputContext* ic, bool switching_im) {
     FCITX_LOGC(rimes_buffer_log, Info)
         << "deactivate switch_im=" << switching_im << " capturing=" << model_.capture_enabled()
         << " drag=" << dragging_;
+    // Deactivation sends key events elsewhere, so the key-up still owed for a
+    // consumed Return can never reach this IC. Retire that debt on every path,
+    // or the guard would eat the next press as the old release.
+    eat_return_until_release_ = false;
     if (switching_im && ic && ProtectedInput(ic->capabilityFlags())) {
         OnPasswordField(ic, true);
         ClearClientPreedit(ic);
@@ -766,6 +770,9 @@ void BufferService::OnInputContextDestroyed(InputContext* ic) {
     if (!ours) {
         return;
     }
+    // Only a capturing IC arms the Return guard, and a destroyed one can never
+    // deliver the key-up it still owes.
+    eat_return_until_release_ = false;
     if (model_.captures(token) || pending_unfocus_token_ == token) {
         DropCaptureForSwitch("ic-destroyed");
     }

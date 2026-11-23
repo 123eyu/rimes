@@ -51,7 +51,7 @@ int main(int argc, char** argv) {
             },
             [&](auto text) { status = std::move(text); });
         Snapshot snapshot;
-        snapshot.modules.push_back(Module::Temporary);
+        snapshot.modules = {Module::Temporary};
         snapshot.module = "temporary";
         snapshot.clipboard_capture = true;
         controller.Apply(snapshot);

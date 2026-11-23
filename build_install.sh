@@ -504,6 +504,6 @@ the host app. If affected, use another input method and see:
   https://github.com/scholay-xsime/xsime/blob/main/docs/macos/input-source-cache-recovery.md
 App caches were not cleared. Restarting/logging out is not a guaranteed fix (#90).
 
-Watch behaviour:  tail -f ~/rimebuffer.log
+Watch behaviour:  tail -f ~/Library/Logs/RIMES/rimebuffer.log
 Self-contained: librime + Rime data are bundled, no Squirrel needed.
 EOF

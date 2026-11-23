@@ -77,7 +77,7 @@ struct SettingsHomeLink {
 inline constexpr SettingsHomeLink kSettingsHomeLinks[] = {
     {L"xsime.com", L"访问 {brand} 官网，了解产品与项目动态。", L"打开官网", L"https://xsime.com"},
     {L"pm@scholay.com", L"反馈使用体验、问题或合作想法。", L"写邮件", L"mailto:pm@scholay.com"},
-    {L"scholay / xsime", L"查看源码、提交问题或参与改进。", L"查看源码", L"https://github.com/scholay-xsime/xsime"},
+    {L"scholay-xsime / xsime", L"查看源码、提交问题或参与改进。", L"查看源码", L"https://github.com/scholay-xsime/xsime"},
     {L"从这里了解 {brand}", L"输入法、Buffer、Capsule 与 Mailbox 的功能和安装说明。", L"阅读 README", L"https://github.com/scholay-xsime/xsime/blob/main/README.md"},
     {L"Apache License 2.0", L"查看 {brand} 的开源许可原文。", L"查看完整许可", L"https://github.com/scholay-xsime/xsime/blob/main/LICENSE"},
 };

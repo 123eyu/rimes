@@ -193,6 +193,9 @@ install_deb "$DEB"
 mapfile -t FILES < <(dpkg-query -L fcitx5-rimes)
 check_user_data "fresh install"
 verify_installed fresh
+# The installed addon must share a Fcitx5 process with stock fcitx5-rime.
+"$(dirname -- "$(realpath "${BASH_SOURCE[0]}")")/stock_rime_coexistence.sh"
+check_user_data "stock fcitx5-rime coexistence"
 remove_deb
 check_user_data "fresh removal"
 

@@ -24,11 +24,15 @@ int main() {
         source.append("甲乙丙丁");
         const auto id = source.blocks().front().id;
         const auto original = source.staged_text();
-        Expect(!source.consume_source({{id, "乙", 4}}) && source.staged_text() == original, "partial UTF-8 range rejected without mutation");
-        Expect(!source.consume_source({{id, "乙丙", 3}, {id, "丙", 6}}), "overlapping ranges rejected atomically");
-        Expect(!source.consume_source({{id, "乙丙", 3}, {"missing", "值", 0}}) && source.staged_text() == original, "invalid second range cannot partially retire first");
-        Expect(source.consume_source({{id, "乙丙", 3}}) && source.staged_text() == "甲丁" && source.blocks().front().id == id, "exact source consumption preserves surrounding text and identity");
-        Expect(!source.consume_source({{id, "乙丙", 3}}), "source cannot be consumed twice");
+        const std::vector<rimes::buffer::SourceRange> partial{{id, "乙", 4}};
+        Expect(!source.consume_source(partial) && source.staged_text() == original, "partial UTF-8 range rejected without mutation");
+        const std::vector<rimes::buffer::SourceRange> overlapping{{id, "乙丙", 3}, {id, "丙", 6}};
+        Expect(!source.consume_source(overlapping), "overlapping ranges rejected atomically");
+        const std::vector<rimes::buffer::SourceRange> invalid{{id, "乙丙", 3}, {"missing", "值", 0}};
+        Expect(!source.consume_source(invalid) && source.staged_text() == original, "invalid second range cannot partially retire first");
+        const std::vector<rimes::buffer::SourceRange> exact{{id, "乙丙", 3}};
+        Expect(source.consume_source(exact) && source.staged_text() == "甲丁" && source.blocks().front().id == id, "exact source consumption preserves surrounding text and identity");
+        Expect(!source.consume_source(exact), "source cannot be consumed twice");
     }
     for (const auto* program : {"rimes-settings", "/usr/bin/rimes-settings", "org.scholay.rimes.settings", "org.scholay.rimes.settings.desktop", "/usr/libexec/rimes/rimes-buffer", "rimes-schemes"})
         Expect(rimes::buffer::IsCompanionApplication(program), "companion identity must preserve staging");
@@ -100,7 +104,8 @@ int main() {
     BufferModel received;
     received.append("已有的原文", Origin::Rime); received.activate_capture("old-target"); received.select_all();
     Expect(received.stage_mailbox("收件内容。下一句🙂"), "receipt staging failed");
-    Expect(received.staged_text() == "已有的原文收件内容。下一句🙂" && received.blocks().back().origin == Origin::Mailbox,
+    const auto blocks = received.blocks();
+    Expect(received.staged_text() == "已有的原文收件内容。下一句🙂" && blocks.back().origin == Origin::Mailbox,
            "receipt replaced selection, lost content or provenance");
     Expect(!received.capture_enabled() && !received.processing_active() && !received.visible() && received.capture_token().empty(),
            "receipt staging captured or auto-delivered into old target");

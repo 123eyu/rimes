@@ -69,6 +69,8 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: python3 scripts/prepare-official-plugins.py
 
+      - name: Test pinned downloads without network
+        run: python3 -m unittest discover -s platforms/ios/scripts/tests -p 'test_*.py' -v
       - name: Build and test without device credentials
         run: platforms/ios/scripts/build.sh
       - name: Test release configuration and hosted iOS tests

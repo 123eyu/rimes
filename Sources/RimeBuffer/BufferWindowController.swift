@@ -204,6 +204,23 @@ enum BufferDerivedPresentationRules {
         return BufferDerivedRailVisibility(showsSource: false, showsTarget: true)
     }
 
+    /// The output rail shows its own loading indicator whenever it is
+    /// visible during waiting/translating. The toolbar spins only while that
+    /// rail is hidden, so one wait is never shown twice.
+    static func toolbarShowsLoading(
+        style: BufferDerivedPresentationStyle,
+        snapshot: TranslationRailSnapshot,
+        contentProtected: Bool
+    ) -> Bool {
+        guard !contentProtected else { return false }
+        switch snapshot.phase {
+        case .waiting, .translating:
+            return !visibleRails(style: style, snapshot: snapshot).showsTarget
+        default:
+            return false
+        }
+    }
+
     static func layoutMode(
         style: BufferDerivedPresentationStyle,
         snapshot: TranslationRailSnapshot?
@@ -5520,15 +5537,13 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
     private func refreshLanguageControls(workspace: any DerivedBufferWorkspace,
                                          controls: any DerivedLanguagePairControls) {
         pluginSelector.toolTip = "当前插件：\(workspace.workbenchDisplayName)（\(pluginSwitchShortcutTitle) 切换）"
-        let loading: Bool
-        if lastSecureInputState || sessionProtectionActive {
-            loading = false
-        } else {
-            switch workspace.railSnapshot.phase {
-            case .waiting, .translating: loading = true
-            default: loading = false
-            }
-        }
+        let loading = BufferDerivedPresentationRules.toolbarShowsLoading(
+            style: BufferDerivedPresentationRules.style(
+                for: workspace.workspacePluginKey
+            ),
+            snapshot: workspace.railSnapshot,
+            contentProtected: lastSecureInputState || sessionProtectionActive
+        )
         pluginLoadingIndicator.isHidden = !loading
         loading ? pluginLoadingIndicator.startAnimation(nil)
                 : pluginLoadingIndicator.stopAnimation(nil)

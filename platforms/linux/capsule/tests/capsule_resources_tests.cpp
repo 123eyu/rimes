@@ -30,7 +30,7 @@ int main() {
             for (const auto& [key, value] : item.at("headers").items())
                 lines.push_back(key + ": " + value.dump());
             const auto reference = ReadReference(*ParseFrontMatter(lines));
-            Check(reference.kind == item.at("kind"), "reference kind drift");
+            Check(reference.kind == item.at("kind").get<std::string>(), "reference kind drift");
             Check(Json(reference.Missing()) == item.at("missing"),
                   "missing fields differ from native");
             const auto citation =

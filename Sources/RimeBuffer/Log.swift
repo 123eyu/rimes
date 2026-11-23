@@ -1,7 +1,9 @@
 import Foundation
 
-/// Minimal file logger at ~/rimebuffer.log so behaviour can be inspected
-/// without seeing the UI. Cheap; fine to leave on during bring-up.
+/// Minimal file logger at ~/Library/Logs/RIMES/rimebuffer.log so behaviour
+/// can be inspected without seeing the UI. Cheap; fine to leave on during
+/// bring-up. `RIMES` is the compatibility directory name, kept across the
+/// XSIME rename like ~/Library/RIMES/.
 ///
 /// Privacy rule: NEVER log user-entered or committed text. Wrap any such value
 /// in `IMELog.redact(_:)`, which records only its length. CI scans complete
@@ -9,7 +11,11 @@ import Foundation
 /// of text-like values; counts/ids stay visible and content goes through
 /// `redact`.
 enum IMELog {
-    private static let url = URL(fileURLWithPath: NSHomeDirectory())
+    static let directory = URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent("Library/Logs/RIMES", isDirectory: true)
+    static let url = directory.appendingPathComponent("rimebuffer.log")
+    /// 1.2.0 and earlier wrote to the home directory root.
+    private static let legacyURL = URL(fileURLWithPath: NSHomeDirectory())
         .appendingPathComponent("rimebuffer.log")
     /// One process-wide writer keeps overlapping provider/controller queues
     /// from racing through independent seek-to-end operations. Ordinary writes
@@ -20,10 +26,16 @@ enum IMELog {
         qos: .utility
     )
 
-    /// Create the log 0600 (owner-only), and tighten an existing world-readable
-    /// file in place. Runs once, lazily and thread-safely.
+    /// Create the directory 0700 and the log 0600 (owner-only), tighten
+    /// existing entries in place, and remove the legacy home-root log so no
+    /// diagnostics linger outside ~/Library/Logs. Runs once, lazily and
+    /// thread-safely.
     private static let prepared: Bool = {
         let fm = FileManager.default
+        try? fm.createDirectory(at: directory, withIntermediateDirectories: true,
+                                attributes: [.posixPermissions: 0o700])
+        try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+        try? fm.removeItem(at: legacyURL)
         if fm.fileExists(atPath: url.path) {
             try? fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
         } else {
