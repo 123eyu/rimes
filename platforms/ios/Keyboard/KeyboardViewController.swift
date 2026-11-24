@@ -742,6 +742,11 @@ final class KeyboardViewController: UIInputViewController {
         }
         if !hasFullAccess && selectedPlugin?.isAI == true { cancelRequest(); render() }
         refreshBufferImports()
+        // Text the app changes on its own (Paste, Cut, Undo) never passes through render(),
+        // so an auto-enabling Return (Send, Search…) would stay as it was until the next key.
+        // Some hosts update hasText a turn later, so check again then.
+        refreshReturnKey()
+        DispatchQueue.main.async { [weak self] in self?.refreshReturnKey() }
     }
     override func selectionDidChange(_ textInput: UITextInput?) {
         super.selectionDidChange(textInput)

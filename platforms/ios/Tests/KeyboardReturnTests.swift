@@ -411,6 +411,11 @@ import RimesCore
         keyboard.layoutProxy.native.text = "a"
         keyboard.developmentContent(); window.layoutIfNeeded()
         XCTAssertTrue(enter.isEnabled)
+        // The app pasting or cutting text on its own updates Return without another key press.
+        keyboard.layoutProxy.native.text = ""; keyboard.textDidChange(nil)
+        XCTAssertFalse(enter.isEnabled)
+        keyboard.layoutProxy.native.text = "pasted"; keyboard.textDidChange(nil)
+        XCTAssertTrue(enter.isEnabled, "Pasting into an empty Send field enables Return at once")
         keyboard.layoutProxy.native.text = ""; keyboard.layoutProxy.enablesReturnKeyAutomatically = false
         keyboard.developmentContent(); window.layoutIfNeeded()
         XCTAssertTrue(enter.isEnabled, "Fields that do not ask for it keep Return enabled")
