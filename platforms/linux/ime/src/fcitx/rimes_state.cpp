@@ -521,9 +521,12 @@ bool RimesState::HandleCandidateKey(KeyEvent& event) {
     }
     const auto modifiers = ModifierMask(event) & ~rimes::linuxime::kLockMask;
     if (modifiers || navigation_.empty() || !ic_->hasFocus() || ProtectedInput(ic_->capabilityFlags())) return false;
-    // 并击方案把空格作为和弦键（如空明码 b+空格）。这类空格必须先交给 librime
-    // 的 chord_composer 结算，不能被候选窗当作选重键吞掉。
-    if (key == FcitxKey_space && ime_->engine().SchemaSpaceChord(schema_id_)) return false;
+    // Some chord schemas (Kongmingma: b+Space) use Space as a chord key, so it
+    // must reach librime's chord_composer. Only while XSIME's highlight is
+    // still librime's: after an arrow key or in the matrix, Space keeps
+    // selecting the candidate XSIME shows highlighted.
+    if (key == FcitxKey_space && SpaceSelectsEngineHighlight(navigation_) &&
+        ime_->engine().SchemaSpaceChord(schema_id_)) return false;
     const bool expanded = navigation_.expanded();
     const bool arrow = key == FcitxKey_Left || key == FcitxKey_Right || key == FcitxKey_Up || key == FcitxKey_Down;
     // Page keys enter the matrix for imported schemas too. Their ordinary

@@ -543,7 +543,7 @@ private:
         api_->destroy_session(smoke);
         healthy_ = true;
         deploying_ = false;
-        // 部署可能改写方案配置，清空空格和弦判定缓存。
+        // A deployment can rewrite schema configs; drop the cached answers.
         space_chord_schemas_.clear();
         ReleaseBuildHeap();
         return true;

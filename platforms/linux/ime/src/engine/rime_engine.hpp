@@ -67,9 +67,9 @@ public:
     bool ApplyInputOptions(SessionId session, const std::string& schema, const std::map<std::string, bool>& values) noexcept;
     std::map<std::string, bool> InputOptions(SessionId session, const std::string& schema) noexcept;
 
-    // 方案是否把空格纳入 chord_composer 的和弦字母表（如空明码）。
-    // 这类方案中空格可能是和弦键（b+空格 → 被），必须交给 librime 结算，
-    // 不能被候选窗当作普通选重键吞掉。
+    // Whether the schema's chord_composer/alphabet contains Space (Kongmingma,
+    // yoyo). Space can then be part of a chord (b+Space -> 被) and has to
+    // reach librime instead of being taken as the candidate selection key.
     [[nodiscard]] bool SchemaSpaceChord(std::string_view schema_id) noexcept;
     bool SetOption(SessionId session,
                    std::string_view option,

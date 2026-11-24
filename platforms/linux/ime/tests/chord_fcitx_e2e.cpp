@@ -300,6 +300,7 @@ int main(int argc, char** argv) {
                         frontend->call<fcitx::ITestFrontend::pushCommitExpectation>("你");
                         tap(first, "space");
                     });
+                    int space_chord_cases = 0;
                     for (const auto& fixture : ch::Contract().at("nativeTraces")) {
                         const auto profile = ch::Profile::Parse(fixture.at("profile"));
                         status = Call({{"op", "status"}});
@@ -331,6 +332,52 @@ int main(int argc, char** argv) {
                                 tap(first, "Escape");
                             });
                         }
+                        // Space is a chord key in these schemas (as in Kongmingma's
+                        // b+Space). With a candidate showing, the Space of the next
+                        // chord must reach chord_composer, not select that candidate.
+                        // Replay a chord that leaves a candidate pending, then the same
+                        // chord: librime commits the first and keeps a new one pending.
+                        for (const auto& trace : fixture.at("traces")) {
+                            const auto& chords = trace.at("chords");
+                            if (!trace.at("commit").get<std::string>().empty() ||
+                                !trace.contains("firstCandidate") || chords.size() != 1 ||
+                                chords[0].get<std::string>().find(' ') == std::string::npos)
+                                continue;
+                            const auto keys = chords[0].get<std::string>();
+                            const auto pending = trace.at("firstCandidate").get<std::string>();
+                            const auto key_name = [](char c) {
+                                return c == ' ' ? std::string("space") : std::string(1, c);
+                            };
+                            const auto shown = [&] {
+                                const auto list = ic->inputPanel().candidateList();
+                                return list && list->size()
+                                           ? list->candidate(0).text().toStringForCommit()
+                                           : std::string();
+                            };
+                            main([&] {
+                                tap(first, "Escape");
+                                const auto press = [&] {
+                                    for (char c : keys)
+                                        key(first, key_name(c), false);
+                                    for (auto c = keys.rbegin(); c != keys.rend(); ++c)
+                                        key(first, key_name(*c), true);
+                                };
+                                press();
+                                Check(shown() == pending,
+                                      "space chord left no pending candidate: " + profile.SchemaID());
+                                frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(pending);
+                                press();
+                                Check(shown() == pending,
+                                      "a chord's Space selected the shown candidate: " +
+                                          profile.SchemaID());
+                                // A lone Space still selects, now through librime.
+                                frontend->call<fcitx::ITestFrontend::pushCommitExpectation>(pending);
+                                tap(first, "space");
+                                Check(shown().empty(),
+                                      "lone Space did not select the candidate: " + profile.SchemaID());
+                            });
+                            ++space_chord_cases;
+                        }
                         const auto second_key = profile.native_schema == "yoyo-yx" ? "w" : "f";
                         main([&] {
                             key(first, "q", false);
@@ -360,6 +407,7 @@ int main(int argc, char** argv) {
                             tap(first, "q");
                         });
                     }
+                    Check(space_chord_cases >= 2, "native fixtures no longer cover a Space chord over a shown candidate");
                     std::cout << "PASS: actual Fcitx timed batches, cross-batch pairing, focus "
                                  "cancellation, custom deployment, draft isolation, "
                                  "disable/reenable, protected fields, immediate settlement, "

@@ -72,11 +72,18 @@ b+空格  -> preedit "b_="  preview 并
 
 ## 修复（方向 A，已实现）
 
-- [rime_engine.hpp](../../platforms/linux/ime/src/engine/rime_engine.hpp)：新增 `SchemaSpaceChord(schema_id)`。
-- [rime_engine.cpp](../../platforms/linux/ime/src/engine/rime_engine.cpp)：通过 librime `schema_open` 读取 `chord_composer/alphabet`，判断是否含空格；按方案缓存，部署完成后清空缓存。
-- [rimes_state.cpp](../../platforms/linux/ime/src/fcitx/rimes_state.cpp)：`HandleCandidateKey()` 对「空格和弦方案」的空格直接放行，回落给 `ProcessKey`，由 librime 的 `chord_composer` 决定并入和弦还是正常上屏/选重。
+- [rime_engine.hpp](../../../platforms/linux/ime/src/engine/rime_engine.hpp)：新增 `SchemaSpaceChord(schema_id)`。
+- [rime_engine.cpp](../../../platforms/linux/ime/src/engine/rime_engine.cpp)：通过 librime `schema_open` 读取 `chord_composer/alphabet`，判断是否含空格；按方案缓存，部署完成后清空缓存。
+- [rimes_state.cpp](../../../platforms/linux/ime/src/fcitx/rimes_state.cpp)：`HandleCandidateKey()` 对「空格和弦方案」的空格放行，回落给 `ProcessKey`，由 librime 的 `chord_composer` 决定并入和弦还是正常上屏/选重。
+- 放行条件见 [candidate_navigation.hpp](../../../platforms/linux/ime/src/fcitx/candidate_navigation.hpp) 的 `SpaceSelectsEngineHighlight()`：候选矩阵未展开，且 XSIME 的高亮仍等于 librime 的高亮。方向键和候选矩阵只移动 XSIME 自己的高亮，不会同步给 librime；这时空格若交给 librime，上屏的会是 librime 记录的那一项。所以高亮被移动过或矩阵已展开时，空格仍走原来的选重逻辑。
 - 验证：`schema_open("kongmingmas")` 返回 `alphabet=[qazwsxedcrfvtgbyhnujmik,ol.p;/'7890 ]`（含空格）；`rime_ice` 无 `chord_composer`，返回 false。Linux 插件编译通过并安装到 `~/.local/lib/fcitx5/rimes.so`。
 - 生效方式：重启 fcitx5（`fcitx5 -r`）后，用 `plss` + n+空格 验证应输出「平时被」。
+
+## 自动化测试
+
+- [candidate_matrix_tests.cpp](../../../platforms/linux/ime/tests/candidate_matrix_tests.cpp)：`SpaceSelectsEngineHighlight()` 在无候选、→ 移动高亮、← 移回、展开矩阵、收起矩阵、librime 高亮不在第一项等情况下的判定。
+- [chord_fcitx_e2e.cpp](../../../platforms/linux/ime/tests/chord_fcitx_e2e.cpp)：用内置的 `yoyo-yx` 和 `yoyo-yx-hm`（`chord_composer/alphabet` 同样含空格）在真实 Fcitx 里回放。先按一个带空格、只留下候选「鸣」的和弦，再按同一个和弦：期望上屏「鸣」并留下新的「鸣」（未修复时空格被当作选重键吞掉，第二个和弦少了空格；librime 对不带空格的 `qwkn` 给出的是「车库」）；最后单按空格，期望照常选重上屏「鸣」。空明码方案包需要下载，CI 不依赖它，所以用这两个内置方案覆盖同一机制。
+- 「→ 移动高亮后按空格」在 e2e 中没有覆盖：这两个内置方案的候选都只有一项，无法移动高亮，这一点由上面的单元测试覆盖。
 
 ## 验证结果
 
