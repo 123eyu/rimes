@@ -1,8 +1,10 @@
+#include <winsock2.h>
 #include "local_gateway.hpp"
 #include "../peripherals/store.hpp"
 #include <winhttp.h>
 #include <atomic>
 #include <iostream>
+#include <memory>
 using namespace rimes::windows;
 void Check(bool ok, const char* reason) { if (!ok) throw std::runtime_error(reason); }
 struct Reply { DWORD status = 0; core::Json body; };
@@ -25,18 +27,48 @@ Reply Request(unsigned short port, const wchar_t* route, const std::string& body
   WinHttpCloseHandle(request); WinHttpCloseHandle(connection); WinHttpCloseHandle(session);
   return reply;
 }
+// A port the OS just handed out on loopback. A pid-derived port in the
+// 49152-65535 dynamic range can already be held by another process on the
+// runner, which then accepts our health checks and never answers them.
+unsigned short FreeLoopbackPort() {
+  WSADATA data{};
+  Check(WSAStartup(MAKEWORD(2, 2), &data) == 0, "winsock starts");
+  const auto probe = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+  sockaddr_in address{}; address.sin_family = AF_INET; address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+  int size = sizeof(address);
+  const bool bound = probe != INVALID_SOCKET &&
+      !bind(probe, reinterpret_cast<sockaddr*>(&address), sizeof(address)) &&
+      !getsockname(probe, reinterpret_cast<sockaddr*>(&address), &size);
+  if (probe != INVALID_SOCKET) closesocket(probe);
+  WSACleanup();
+  Check(bound, "free loopback port");
+  return ntohs(address.sin_port);
+}
+bool Healthy(unsigned short port) {
+  try {
+    const auto reply = Request(port, L"/v1/health", "");
+    return reply.status == 200 && reply.body.is_object() && reply.body.value("ok", false);
+  } catch (const std::exception&) { return false; }  // something else answered on this port
+}
 int main() {
   const auto root = std::filesystem::temp_directory_path() / (L"rimes-gateway-test-" + std::to_wstring(GetCurrentProcessId()));
   try {
     Check(std::filesystem::create_directory(root), "new isolated fixture directory");
     SetEnvironmentVariableW(L"LOCALAPPDATA", root.c_str());
-    const auto port = static_cast<unsigned short>(49152 + GetCurrentProcessId() % 15000);
+    unsigned short port = 0;
     std::atomic<bool> enabled{true};
     {
-      workbench::LocalGateway server([&] { return enabled.load(); }, port, "synthetic-gateway-token");
-      bool ready = false;
-      for (int i = 0; i < 30 && !ready; ++i) { Sleep(30); ready = Request(port, L"/v1/health", "").status == 200; }
-      Check(ready, "loopback listener starts");
+      std::unique_ptr<workbench::LocalGateway> server;
+      // Another process can still take the port before the gateway binds it;
+      // give each port a bounded wait and move on to a fresh one.
+      for (int attempt = 0; attempt < 3 && !server; ++attempt) {
+        port = FreeLoopbackPort();
+        auto candidate = std::make_unique<workbench::LocalGateway>(
+            [&] { return enabled.load(); }, port, "synthetic-gateway-token");
+        for (const auto deadline = GetTickCount64() + 5000; GetTickCount64() < deadline; Sleep(30))
+          if (Healthy(port)) { server = std::move(candidate); break; }
+      }
+      Check(server != nullptr, "loopback listener starts");
       Check(Request(port, L"/v1/inbound", R"({"text":"do not store"})", L"").status == 401, "unauthenticated mutation rejected");
       Check(Request(port, L"/v1/inbound", R"({"text":"do not store"})",
           L"Authorization: Bearer synthetic-gateway-token\r\nOrigin: https://evil.invalid\r\n").status == 403, "foreign browser origin rejected");
