@@ -936,23 +936,48 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         .constraint(greaterThanOrEqualToConstant: 0)
     private lazy var sourceTrailingClearanceConstraint = translationSourceSpacer.widthAnchor
         .constraint(greaterThanOrEqualToConstant: 0)
-    /// The source document otherwise shrinks to its fitting width, leaving
-    /// no remainder for the composing field to fill.
-    private lazy var composingFieldRowFill: NSLayoutConstraint = {
-        let fill = translationSourceRow.widthAnchor.constraint(
-            greaterThanOrEqualTo: translationSourceScroll.contentView.widthAnchor
-        )
-        fill.priority = NSLayoutConstraint.Priority(999)
-        return fill
-    }()
-    /// Keeps the spacer at its clearance so the remainder goes to the field.
-    /// Below every content hugging priority, so source chips never stretch.
-    private lazy var composingFieldSpacerPreference: NSLayoutConstraint = {
-        let preference = translationSourceSpacer.widthAnchor
-            .constraint(lessThanOrEqualToConstant: 0)
-        preference.priority = NSLayoutConstraint.Priority(240)
-        return preference
-    }()
+
+    /// An editable text field has no intrinsic width and a rail document
+    /// shrinks to its fitting width, so a field in a row gets no more than
+    /// its minimum, however much of the rail is free. While the field shares
+    /// a row, the row spans at least the visible rail and the row's spacer
+    /// keeps only its clearance, which leaves the remainder to the field. Off
+    /// whenever the field is elsewhere, so rails without it lay out exactly
+    /// as before.
+    private struct ComposingFieldRowRules {
+        let row: NSStackView
+        let constraints: [NSLayoutConstraint]
+
+        init(row: NSStackView, scroll: NSScrollView, spacer: NSView) {
+            self.row = row
+            let fill = row.widthAnchor.constraint(
+                greaterThanOrEqualTo: scroll.contentView.widthAnchor
+            )
+            fill.priority = NSLayoutConstraint.Priority(999)
+            // Below every content hugging priority, so blocks never stretch.
+            let spacerPreference = spacer.widthAnchor
+                .constraint(lessThanOrEqualToConstant: 0)
+            spacerPreference.priority = NSLayoutConstraint.Priority(240)
+            constraints = [fill, spacerPreference]
+        }
+
+        var isActive: Bool { constraints.contains(where: \.isActive) }
+
+        func sync(fieldHost: NSView?) {
+            let hosted = fieldHost === row
+            constraints.forEach { $0.isActive = hosted }
+        }
+    }
+    private lazy var sourceRowComposingFieldRules = ComposingFieldRowRules(
+        row: translationSourceRow,
+        scroll: translationSourceScroll,
+        spacer: translationSourceSpacer
+    )
+    private lazy var standardRowComposingFieldRules = ComposingFieldRowRules(
+        row: chipRow,
+        scroll: chipScroll,
+        spacer: leadingSpacer
+    )
     private let caretView = NSView()
     private let preeditView = BufferInlinePreeditView(frame: .zero)
     private let emptyLabel = NSTextField(labelWithString: "等待暂存内容")
@@ -1063,16 +1088,25 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         needsLayout = true
     }
 
-    /// An editable text field has no intrinsic width and the source document
-    /// shrinks to its fitting width, so a field appended there was laid out
-    /// as a sliver. While the field shares the source row, the row spans at
-    /// least the visible rail and the spacer keeps only its clearance, which
-    /// leaves the remainder to the field. Off whenever the field is elsewhere,
-    /// so rails without it lay out exactly as before.
+    /// Lets the field fill whichever row holds it: the translation source
+    /// row, or the Default rail's block row.
     private func syncComposingFieldRowLayout() {
-        let hosted = composingField.superview === translationSourceRow
-        composingFieldRowFill.isActive = hosted
-        composingFieldSpacerPreference.isActive = hosted
+        let host = composingField.superview
+        sourceRowComposingFieldRules.sync(fieldHost: host)
+        standardRowComposingFieldRules.sync(fieldHost: host)
+    }
+
+    /// Moving the field between rails takes it out of the window, which ends
+    /// editing. Taking first responder back selects the whole field, so the
+    /// caret goes back to the end: the next keystroke continues the phrase
+    /// instead of replacing it.
+    private func restoreComposingFieldFocus(ifHeld held: Bool) {
+        guard held, !composingFieldHasFocus,
+              let window, composingField.window === window,
+              window.makeFirstResponder(composingField),
+              let editor = composingField.currentEditor() else { return }
+        let end = (editor.string as NSString).length
+        editor.selectedRange = NSRange(location: end, length: 0)
     }
 
     @discardableResult
@@ -1790,8 +1824,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         if field.superview != nil
             || view.translationSourceEmptyLabel.superview !== row
             || !view.renderedInputPlaceholderVisible
-            || view.composingFieldRowFill.isActive
-            || view.composingFieldSpacerPreference.isActive {
+            || view.sourceRowComposingFieldRules.isActive {
             failures.append("rail without the field changed")
         }
 
@@ -1816,6 +1849,253 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             )
         }
         return failures.isEmpty
+    }
+
+    /// Under another input method with no plug-in selected, the Default rail
+    /// is the only place to type, and it never hosted the composing field:
+    /// focus went to a field that was in no window.
+    static func runComposingFieldDefaultRailProbe() -> Bool {
+        let model = BufferModel.shared
+        let oldEnabled = model.enabled
+        let oldOnChange = model.onChange
+        model.onChange = nil
+        model.discardForPrivacy()
+        // No IMK capture exists under another input method, so the logical
+        // Buffer input is inactive while the field holds the caret.
+        model.enabled = false
+        defer {
+            model.discardForPrivacy()
+            model.enabled = oldEnabled
+            model.onChange = oldOnChange
+        }
+        let local = Origin.localInput(inputSourceID: "com.apple.inputmethod.SCIM")
+
+        // First responder needs a window, not a key or visible one, so this
+        // one is never ordered in.
+        _ = NSApplication.shared
+        let window = NSWindow(
+            contentRect: NSRect(x: 0, y: 0, width: 520, height: 48),
+            styleMask: [.borderless],
+            backing: .buffered,
+            defer: true
+        )
+        let host = NSView(frame: NSRect(x: 0, y: 0, width: 520, height: 48))
+        window.contentView = host
+        let view = BufferInlineView(
+            frame: NSRect(x: 8, y: 8, width: 504, height: 32)
+        )
+        host.addSubview(view)
+        NSLayoutConstraint.activate([
+            view.leadingAnchor.constraint(equalTo: host.leadingAnchor, constant: 8),
+            view.trailingAnchor.constraint(equalTo: host.trailingAnchor, constant: -8),
+            view.topAnchor.constraint(equalTo: host.topAnchor, constant: 8),
+            view.bottomAnchor.constraint(equalTo: host.bottomAnchor, constant: -8),
+        ])
+        host.layoutSubtreeIfNeeded()
+        let field = view.composingField
+        let row = view.chipRow
+        let clip = view.chipScroll.contentView
+        let minimum = BufferInlineMetrics.composingFieldMinimumWidth
+        let safetyGap = BufferInlineMetrics.trailingActionSafetyGap
+        var failures: [String] = []
+        func report() -> Bool {
+            if !failures.isEmpty {
+                print(
+                    "FAILED: composing field must fill the Default rail:",
+                    failures.joined(separator: "; ")
+                )
+            }
+            return failures.isEmpty
+        }
+
+        func settle() {
+            host.layoutSubtreeIfNeeded()
+            view.layoutSubtreeIfNeeded()
+        }
+        func render() {
+            _ = view.renderStandardForPreview()
+            settle()
+        }
+        /// In row coordinates, where clicks are mapped.
+        func blockFrame(_ index: Int) -> NSRect? {
+            view.standardBlockViews[model.blocks[index].id]?.frame
+        }
+        func blockWidths() -> [CGFloat] {
+            model.blocks.indices.compactMap { blockFrame($0)?.width }
+        }
+        func pointInView(_ rowX: CGFloat) -> NSPoint {
+            view.convert(NSPoint(x: rowX, y: row.bounds.midY), from: row)
+        }
+        // The field stands in the gap the next phrase lands in, replaces the
+        // placeholder, is entirely on screen and never below its minimum.
+        // With `trailingGap`, it is the row's last item and ends where the
+        // visible rail does, less the spacing and the overlay clearance.
+        func checkField(_ label: String, gap: Int, trailingGap: CGFloat? = nil) {
+            let arranged = row.arrangedSubviews
+            guard field.superview === row,
+                  arranged.firstIndex(where: { $0 === field }) == gap,
+                  arranged.last === view.leadingSpacer,
+                  view.emptyLabel.superview !== row,
+                  !view.renderedInputPlaceholderVisible,
+                  view.standardRowComposingFieldRules.isActive else {
+                failures.append("\(label): placement")
+                return
+            }
+            let box = row.convert(field.alignmentRect(forFrame: field.frame), to: clip)
+            let visible = clip.bounds.intersection(box).width
+            let measuredGap = clip.bounds.maxX - box.maxX
+            let gapMismatch = trailingGap.map { abs(measuredGap - $0) > 1 } ?? false
+            if box.width < minimum - 0.5 || visible < box.width - 0.5 || gapMismatch {
+                failures.append(
+                    "\(label): width=\(box.width) visible=\(visible) "
+                        + "gap=\(measuredGap) expected=\(trailingGap ?? -1)"
+                )
+            }
+        }
+
+        // RIMES owns the keyboard: the Default rail is unchanged.
+        render()
+        guard field.superview == nil,
+              view.emptyLabel.superview === row,
+              view.renderedInputPlaceholderVisible,
+              !view.standardRowComposingFieldRules.isActive else {
+            failures.append("rail without the field changed")
+            return report()
+        }
+
+        // Switching input method changes nothing else, so this render must
+        // not be skipped as unchanged. The field fills the empty rail.
+        view.setComposingFieldEnabled(true)
+        render()
+        checkField("empty rail", gap: 0, trailingGap: row.spacing)
+        view.setTrailingActionExclusion(width: 28)
+        settle()
+        checkField("empty rail beside the actions", gap: 0,
+                   trailingGap: row.spacing + 28 + safetyGap)
+        view.setTrailingActionExclusion(width: 0)
+
+        // Blocks keep their own widths; the field takes what is left.
+        view.setComposingFieldEnabled(false)
+        model.append("你好", origin: local)
+        model.append("世界", origin: local)
+        render()
+        let plainWidths = blockWidths()
+        view.setComposingFieldEnabled(true)
+        render()
+        checkField("after the blocks", gap: 2, trailingGap: row.spacing)
+        let fieldWidths = blockWidths()
+        if plainWidths.count != 2 || fieldWidths.count != 2
+            || zip(plainWidths, fieldWidths).contains(where: { abs($0 - $1) > 0.5 }) {
+            failures.append("blocks stretched beside the field")
+        }
+
+        // A click between the blocks moves the gap, and the field with it.
+        // Clicks still map by block halves, and a click on the field keeps
+        // its gap.
+        _ = model.setInsertionPoint(1)
+        render()
+        checkField("between the blocks", gap: 1)
+        if let first = blockFrame(0), let second = blockFrame(1) {
+            let lastGap = clip.bounds.maxX - row.convert(second, to: clip).maxX
+            if abs(lastGap - row.spacing) > 1 {
+                failures.append("between the blocks: last block gap=\(lastGap)")
+            }
+            let expectations: [(CGFloat, Int)] = [
+                (first.minX + 1, 0), (first.maxX - 1, 1),
+                (field.frame.midX, 1),
+                (second.minX + 1, 1), (second.maxX - 1, 2),
+            ]
+            let mapped = expectations.map {
+                view.standardInsertionIndex(at: pointInView($0.0))
+            }
+            if mapped != expectations.map(\.1) {
+                failures.append("click mapping \(mapped)")
+            }
+        } else {
+            failures.append("between the blocks: blocks missing")
+        }
+
+        // Blocks wider than the rail scroll; the field keeps its minimum and
+        // stays in view, also when it stands before later blocks.
+        _ = model.setInsertionPoint(model.blocks.count)
+        for index in 0..<14 { model.append("很长的暂存内容\(index)", origin: local) }
+        render()
+        checkField("blocks wider than the rail", gap: model.blocks.count,
+                   trailingGap: row.spacing)
+        if row.frame.width <= clip.bounds.width + 0.5 {
+            failures.append("long blocks did not overflow the rail")
+        }
+        _ = model.setInsertionPoint(3)
+        render()
+        checkField("before later blocks in a scrolled rail", gap: 3)
+
+        // A commit re-renders the rail from inside the field's own Return
+        // handling. The field stays in the window, so it keeps focus, and so
+        // does another input method's composition when a block arrives.
+        guard window.makeFirstResponder(field),
+              let editor = window.firstResponder as? NSTextView,
+              editor.delegate === field else {
+            failures.append("field could not take first responder")
+            return report()
+        }
+        view.onComposingFieldCommit = { text in
+            model.append(text, origin: local)
+            render()
+        }
+        defer { view.onComposingFieldCommit = nil }
+        let noReplacement = NSRange(location: NSNotFound, length: 0)
+        editor.insertText("短句", replacementRange: noReplacement)
+        let countBeforeCommit = model.blocks.count
+        _ = view.control(field, textView: editor,
+                         doCommandBy: #selector(NSResponder.insertNewline(_:)))
+        if model.blocks.count != countBeforeCommit + 1
+            || !field.stringValue.isEmpty
+            || !view.composingFieldHasFocus
+            || window.firstResponder !== editor {
+            failures.append("commit lost the field's focus")
+        }
+        checkField("after a commit", gap: 4)
+        editor.setMarkedText("ni", selectedRange: NSRange(location: 2, length: 0),
+                             replacementRange: noReplacement)
+        model.append("到达的块", origin: local)
+        render()
+        if !view.composingFieldHasFocus || !editor.hasMarkedText() {
+            failures.append("a re-render ended the composition")
+        }
+        editor.unmarkText()
+
+        // Changing rails moves the field to another row, which ends editing;
+        // the caret comes back at the end rather than selecting the phrase.
+        func focusedAtEnd() -> Bool {
+            guard view.composingFieldHasFocus,
+                  let current = field.currentEditor() else { return false }
+            let length = (current.string as NSString).length
+            return length > 0
+                && current.selectedRange == NSRange(location: length, length: 0)
+        }
+        _ = view.refresh(shielded: false, translationSnapshot: TranslationRailSnapshot(
+            sourceText: "", outputBlocks: [], phase: .idle
+        ))
+        if field.superview !== view.translationSourceRow || !focusedAtEnd() {
+            failures.append("switching to the source rail lost focus")
+        }
+        _ = view.refresh(shielded: false, translationSnapshot: nil)
+        if field.superview !== row || !focusedAtEnd() {
+            failures.append("switching back to the Default rail lost focus")
+        }
+
+        // Back to RIMES: no field, no row rules, the placeholder returns.
+        view.setComposingFieldEnabled(false)
+        model.discardForPrivacy()
+        render()
+        if field.superview != nil
+            || view.composingFieldHasFocus
+            || view.emptyLabel.superview !== row
+            || !view.renderedInputPlaceholderVisible
+            || view.standardRowComposingFieldRules.isActive {
+            failures.append("leaving the mode left the field behind")
+        }
+        return report()
     }
 
     override init(frame frameRect: NSRect) {
@@ -1981,6 +2261,14 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             normalRailContainer.bounds,
             to: self
         ).contains(point) else { return }
+        onCaptureRequested?(standardInsertionIndex(at: point))
+    }
+
+    /// The gap a click on the Default rail picks: before the first block
+    /// whose middle lies right of the click, or after the block it lands on.
+    /// Block frames alone decide it, so the composing field, which stands in
+    /// the current gap, keeps that gap when clicked.
+    private func standardInsertionIndex(at point: NSPoint) -> Int {
         let rowPoint = chipRow.convert(point, from: self)
         let orderedIDs = BufferModel.shared.blocks.map(\.id)
         var insertion = orderedIDs.count
@@ -1995,7 +2283,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
                 break
             }
         }
-        onCaptureRequested?(insertion)
+        return insertion
     }
 
     func gestureRecognizer(
@@ -2284,6 +2572,9 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         }
         lastRenderSignature = signature
         renderPassCount += 1
+        // A render can move the field to the other rail, which ends editing.
+        let composingFieldFocused = composingFieldHasFocus
+        defer { restoreComposingFieldFocus(ifHeld: composingFieldFocused) }
 
         if let translation {
             if !wasRenderingTranslation { resetRailContents() }
@@ -2307,7 +2598,14 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             return true
         }
 
-        resetRailContents()
+        // Under another input method the composing field is the Default
+        // rail's input. It stands at the insertion point, where its phrase
+        // will land, and takes the placeholder's place. The row is rebuilt
+        // around it rather than through it: taking it out of the window would
+        // end the other input method's composition and the field's focus on
+        // every re-render, a commit's included.
+        let hostsComposingField = composingFieldEnabled
+        resetRailContents(keepingComposingField: hostsComposingField)
         updatePreeditPresentation(
             text: preeditText,
             cursorPosUTF8: preeditCursorPosUTF8
@@ -2326,6 +2624,9 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             if active {
                 chipRow.addArrangedSubview(caretView)
             }
+            if hostsComposingField {
+                chipRow.addArrangedSubview(composingField)
+            }
             if model.transientLoadingActive {
                 chipRow.addArrangedSubview(loadingIndicator)
                 loadingIndicator.startAnimation(nil)
@@ -2336,7 +2637,8 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             } else if BufferInputPlaceholderRules.shouldShow(
                 contentIsEmpty: true,
                 preeditIsEmpty: true,
-                inputActive: active
+                inputActive: active,
+                composingFieldShown: hostsComposingField
             ) {
                 emptyLabel.stringValue = "等待暂存内容"
                 chipRow.addArrangedSubview(emptyLabel)
@@ -2351,6 +2653,9 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
                     if preeditText.isEmpty, !signature.allContentSelected {
                         chipRow.addArrangedSubview(caretView)
                     }
+                    if hostsComposingField {
+                        chipRow.addArrangedSubview(composingField)
+                    }
                 }
                 if index < model.blocks.count {
                     chipRow.addArrangedSubview(chip(
@@ -2362,11 +2667,17 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             }
         } else {
             for (index, block) in model.blocks.enumerated() {
+                if hostsComposingField, index == insertionIndex {
+                    chipRow.addArrangedSubview(composingField)
+                }
                 chipRow.addArrangedSubview(chip(
                     for: block,
                     index: index,
                     selected: signature.allContentSelected
                 ))
+            }
+            if hostsComposingField, insertionIndex == model.blocks.count {
+                chipRow.addArrangedSubview(composingField)
             }
             if !preeditText.isEmpty {
                 chipRow.addArrangedSubview(preeditView)
@@ -2382,6 +2693,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
             chipRow.addArrangedSubview(messageChip(text: message))
         }
         chipRow.addArrangedSubview(leadingSpacer)
+        syncComposingFieldRowLayout()
         applyTrailingActionExclusion()
 
         active ? startCaretBlinking() : stopCaretBlinking()
@@ -3083,10 +3395,13 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         button.heightAnchor.constraint(equalToConstant: 24).isActive = true
     }
 
-    private func clearArrangedSubviews(of row: NSStackView) {
+    /// A kept view leaves the arrangement but stays in the row, and so in the
+    /// window: arranging it again costs it neither focus nor marked text.
+    private func clearArrangedSubviews(of row: NSStackView,
+                                       keeping kept: NSView? = nil) {
         row.arrangedSubviews.forEach {
             row.removeArrangedSubview($0)
-            $0.removeFromSuperview()
+            if $0 !== kept { $0.removeFromSuperview() }
         }
     }
 
@@ -3099,7 +3414,7 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         preeditView.update(text: text, cursorPosUTF8: cursorPosUTF8)
     }
 
-    private func resetRailContents() {
+    private func resetRailContents(keepingComposingField: Bool = false) {
         renderedInputPlaceholderVisible = false
         renderedIndependentOutputRows = false
         preeditView.scrub()
@@ -3112,7 +3427,10 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
         translationTargetEmptyIcon.toolTip = nil
         translationTargetEmptyIcon.setAccessibilityLabel(nil)
         translationPagerView.scrub()
-        clearArrangedSubviews(of: chipRow)
+        clearArrangedSubviews(
+            of: chipRow,
+            keeping: keepingComposingField ? composingField : nil
+        )
         standardBlockViews.removeAll()
         clearArrangedSubviews(of: translationSourceRow)
         syncComposingFieldRowLayout()
@@ -3242,6 +3560,10 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
     }
 
     private func scrollChipsToInsertionPoint() {
+        // Under another input method the composing field is the insertion
+        // point, and it can stand before later blocks. Whichever offset the
+        // rules below pick, the field the user types into ends up in view.
+        defer { revealComposingFieldInChipRow() }
         let maxX = max(0, chipRow.frame.width - chipScroll.contentSize.width)
         if BufferModel.shared.loadingMessage?.trimmingCharacters(in: .whitespacesAndNewlines)
             .isEmpty == false {
@@ -3265,6 +3587,16 @@ final class BufferInlineView: NSView, NSGestureRecognizerDelegate {
                 .insetBy(dx: -14, dy: 0)
         }
         scroll(rect: caretFrame, row: chipRow, in: chipScroll)
+    }
+
+    /// Leaves the offset alone when the field is already in view.
+    private func revealComposingFieldInChipRow() {
+        guard composingField.superview === chipRow else { return }
+        scroll(
+            rect: composingField.frame.insetBy(dx: -chipRow.spacing, dy: 0),
+            row: chipRow,
+            in: chipScroll
+        )
     }
 
     private func applyAppearance() {
@@ -3335,6 +3667,10 @@ func runBufferInlineComposingFieldSourceRowProbe() -> Bool {
 
 func runBufferInlineLongRailAndLoadingProbe() -> Bool {
     BufferInlineView.runLongRailAndLoadingProbe()
+}
+
+func runBufferInlineComposingFieldDefaultRailProbe() -> Bool {
+    BufferInlineView.runComposingFieldDefaultRailProbe()
 }
 
 /// A button that works on the first click inside a never-key panel.
