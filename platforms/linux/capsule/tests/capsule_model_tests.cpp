@@ -1,4 +1,5 @@
 #include "capsule_model.hpp"
+#include "capsule_protocol.hpp"
 
 #include <iostream>
 
@@ -48,6 +49,42 @@ int main() {
     Expect(model.cards().empty(), "empty temporary module");
     Expect(model.module() == rimes::capsule::Module::Temporary, "legacy tab selects module");
     model.set_tab(rimes::capsule::Tab::Note);
+
+    {
+        // Legacy tab clients must read back the tab they selected (#332).
+        using rimes::capsule::Module;
+        using rimes::capsule::Tab;
+        model.EnableModule(Module::Capture, true);
+        model.EnableModule(Module::Resources, true);
+        struct LegacyTab { Tab tab; Module module; const char* filter; const char* raw; };
+        const LegacyTab legacy[] = {
+            {Tab::Image, Module::Capture, "image", "image"},
+            {Tab::Video, Module::Capture, "video", "video"},
+            {Tab::Captures, Module::Capture, "all", "captures"},
+            {Tab::Skill, Module::Resources, "skills", "skill"},
+            {Tab::Pdf, Module::Resources, "reference", "pdf"},
+            {Tab::Resource, Module::Resources, "all", "resource"},
+            {Tab::Note, Module::Notes, "all", "note"},
+        };
+        for (const auto& item : legacy) {
+            const auto before = model.generation();
+            model.set_tab(item.tab);
+            const auto label = std::string("legacy tab ") + item.raw;
+            Expect(model.tab() == item.tab, (label + " reports itself").c_str());
+            Expect(model.module() == item.module, (label + " selects its module").c_str());
+            Expect(model.filter() == item.filter, (label + " applies its filter").c_str());
+            Expect(rimes::capsule::MakeSnapshot(model).tab == item.raw, (label + " reaches the snapshot").c_str());
+            Expect(model.generation() > before, (label + " bumps the generation").c_str());
+            const auto settled = model.generation();
+            model.set_tab(item.tab);
+            Expect(model.generation() == settled, (label + " is idempotent").c_str());
+        }
+        model.EnableModule(Module::Capture, false);
+        model.set_tab(Tab::Image);
+        Expect(model.tab() == Tab::Note && model.module() == Module::Notes && model.filter() == "all",
+               "legacy tab of a disabled module keeps the current selection");
+        model.EnableModule(Module::Resources, false);
+    }
 
     model.set_visible(true);
     model.set_armed(true);
