@@ -40,6 +40,9 @@ jobs:
         with:
           distribution: temurin
           java-version: '21'
+          # Reuse resolved dependencies; a cold resolve on a shared runner IP
+          # gets 429 Too Many Requests from Maven Central.
+          cache: gradle
       - name: Verify the Gradle wrapper
         run: |
           python3 - <<'PY'

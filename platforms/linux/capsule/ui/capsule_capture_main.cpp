@@ -70,8 +70,16 @@ struct Capture {
                 g_dbus_connection_signal_unsubscribe(protection_bus, id);
             g_object_unref(protection_bus);
         }
-        if (portal)
+        if (portal) {
+            // libportal closes a cancelled request with an asynchronous call on
+            // the shared session bus. Write it out before the process exits, or
+            // the desktop can keep its screenshot dialog open.
+            if (auto* shared = g_bus_get_sync(G_BUS_TYPE_SESSION, nullptr, nullptr)) {
+                g_dbus_connection_flush_sync(shared, nullptr, nullptr);
+                g_object_unref(shared);
+            }
             g_object_unref(portal);
+        }
         g_object_unref(cancellable);
         g_main_loop_unref(loop);
         if (output_fd >= 0)

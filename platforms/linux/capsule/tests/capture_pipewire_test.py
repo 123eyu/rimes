@@ -32,11 +32,15 @@ with tempfile.TemporaryDirectory(prefix='xsime-capture-pipewire-') as raw:
                   GLib.Variant('(su)',('org.freedesktop.portal.Desktop',0)),None,0,-1,None)
     context=GLib.MainContext.default();registrations=[];closed=[];session='';owner='';node={}
     events=[];pending=b'';proc=None
+    class SourceCrashed(Exception):pass
+    source=None
     def spin(predicate,seconds=15):
         global pending
         until=time.monotonic()+seconds
         while time.monotonic()<until:
             while context.pending():context.iteration(False)
+            # The synthetic gst source occasionally segfaults inside pipewiresink.
+            if source is not None and source.poll() is not None:raise SourceCrashed(source.returncode)
             if proc is not None:
                 try: data=os.read(proc.stdout.fileno(),65536)
                 except BlockingIOError:data=b''
@@ -75,17 +79,28 @@ with tempfile.TemporaryDirectory(prefix='xsime-capture-pipewire-') as raw:
     try:
         launch('pipewire',['pipewire']);spin(lambda:(root/'pipewire-0').is_socket())
         launch('wireplumber',['wireplumber'])
-        launch('source',['gst-launch-1.0','-q','videotestsrc','is-live=true','pattern=ball','!',
-            'video/x-raw,format=RGB,width=320,height=240,framerate=30/1','!',
-            'pipewiresink','mode=provide','stream-properties=props,node.name=xsime-capture-fixture,media.class=Video/Source'])
-        def locate():
+        sources=[]
+        def locate(stale):
             global node
             values=json.loads(subprocess.check_output(['pw-dump'],env=env,timeout=3))
-            matches=[item for item in values if item.get('info',{}).get('props',{}).get('node.name')=='xsime-capture-fixture']
+            matches=[item for item in values if item.get('info',{}).get('props',{}).get('node.name')=='xsime-capture-fixture'
+                     and item.get('id') not in stale]
             if matches:node=matches[0]
             return bool(matches)
-        spin(locate)
-        for action in ('stop','cancel','revoke'):
+        def start_source():
+            global source
+            stale={node['id']} if node else set()
+            for attempt in range(3):
+                # --no-fault: a crash exits at once instead of spinning for a debugger.
+                source=launch(f'source{len(sources)}',['gst-launch-1.0','-q','--no-fault','videotestsrc','is-live=true','pattern=ball','!',
+                    'video/x-raw,format=RGB,width=320,height=240,framerate=30/1','!',
+                    'pipewiresink','mode=provide','stream-properties=props,node.name=xsime-capture-fixture,media.class=Video/Source'])
+                sources.append(source)
+                try:spin(lambda:locate(stale));return
+                except SourceCrashed:
+                    if attempt==2:raise
+        def capture(action):
+            global proc,pending
             events.clear();pending=b''
             proc=subprocess.Popen([str(Path(sys.argv[1]).resolve()),'--explicit','video',str(root/(action+'.webm')),'portal'],
                 env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE)
@@ -98,6 +113,19 @@ with tempfile.TemporaryDirectory(prefix='xsime-capture-pipewire-') as raw:
             else:proc.stdin.write((action+'\n').encode());proc.stdin.flush()
             spin(lambda:any(item['event'] in ('finished','error','cancelled') for item in events))
             spin(lambda:proc.poll() is not None)
+        start_source()
+        for action in ('stop','cancel','revoke'):
+            for attempt in range(3):
+                try:
+                    capture(action);break
+                except SourceCrashed as crash:
+                    # Only the fixture failed: discard this attempt and replay it against a fresh source.
+                    if attempt==2:raise AssertionError(('synthetic PipeWire source kept crashing',crash.args))
+                    print(f'{action}: synthetic source exited with {crash.args[0]}; restarting it',file=sys.stderr)
+                    if proc.poll() is None:proc.terminate()
+                    proc.wait(timeout=5);proc=None
+                    (root/(action+'.webm')).unlink(missing_ok=True)
+                    start_source()
             if action=='stop':
                 assert events[-1]['event']=='finished' and events[-1]['width']==320 and events[-1]['height']==240,events
                 subprocess.run(['gst-launch-1.0','-q','filesrc',f'location={root / "stop.webm"}','!',
