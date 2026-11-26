@@ -31,6 +31,21 @@ def profile_allows(patterns, value):
             and value.startswith(pattern[:-1]))) for pattern in patterns)
 
 
+def handwriting_model_sha256():
+    lock = json.loads((Path(__file__).resolve().parents[1] / 'dependencies.lock.json').read_text())
+    expected = lock['handwriting']['shippedSha256']
+    require(isinstance(expected, str) and re.fullmatch(r'[0-9a-f]{64}', expected),
+            'Invalid pinned handwriting model SHA-256')
+    return expected
+
+
+def validate_handwriting_model(keyboard, expected):
+    model = Path(keyboard) / 'Handwriting/handwriting-zh_CN.model'
+    require(model.is_file() and not model.is_symlink(), 'Keyboard handwriting model is missing')
+    require(hashlib.sha256(model.read_bytes()).hexdigest() == expected,
+            'Keyboard handwriting model differs from the pinned source')
+
+
 def validate_metadata(info, signed, profile, identifier, version, build):
     for key, expected in {'CFBundleIdentifier': identifier,
                           'CFBundleShortVersionString': version,
@@ -75,6 +90,7 @@ def validate_unsigned_app(app):
         require(info.get('RIMESKeychainGroup') == KEYCHAIN_GROUP,
                 f'{bundle.name}: wrong Info.plist Keychain group: {info.get("RIMESKeychainGroup")!r}')
         require(info.get('RIMESAppGroup') == APP_GROUP, f'{bundle.name}: wrong Info.plist App Group')
+    validate_handwriting_model(Path(app) / 'PlugIns/RIMESKeyboard.appex', handwriting_model_sha256())
 
 
 def verify_ipa(ipa, version, build):
@@ -88,6 +104,7 @@ def verify_ipa(ipa, version, build):
         app = apps[0]
         extensions = list(app.glob('PlugIns/*.appex'))
         require(len(extensions) == 1, 'Expected exactly one keyboard extension')
+        validate_handwriting_model(extensions[0], handwriting_model_sha256())
         for bundle, identifier in [(app, APP_ID), (extensions[0], KEYBOARD_ID)]:
             info = plistlib.loads((bundle / 'Info.plist').read_bytes())
             subprocess.run(['codesign', '--verify', '--deep', '--strict', str(bundle)], check=True)
@@ -117,12 +134,12 @@ def main():
         if any((args.ipa, args.version, args.build)):
             parser.error('Do not combine unsigned app checks with IPA arguments')
         validate_unsigned_app(args.check_unsigned_app)
-        print('PASS: unsigned app and keyboard contain the complete shared group identifiers')
+        print('PASS: unsigned app and keyboard contain the shared groups and pinned handwriting model')
     else:
         if not all((args.ipa, args.version, args.build)):
             parser.error('Expected IPA, version and build')
         verify_ipa(args.ipa, args.version, args.build)
-        print('PASS: exact IPA versions, App Store profiles, signatures, shared groups and privacy manifests')
+        print('PASS: exact IPA versions, profiles, signatures, shared groups, privacy manifests and handwriting model')
 
 
 if __name__ == '__main__':

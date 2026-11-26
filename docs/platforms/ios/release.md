@@ -20,7 +20,7 @@ python3 platforms/ios/scripts/verify-release-ipa.py --check-unsigned-app <archiv
 python3 platforms/ios/scripts/verify-release-ipa.py <ipa> <version> <build>
 ```
 
-检查同时覆盖签名、App Store profiles、版本、隐私声明及两目标的 App Group/Keychain。既有标识为 `org.scholay.rimes.ios`、`org.scholay.rimes.ios.keyboard`、`group.org.scholay.rimes.ios` 和 `585J2TL9U6.org.scholay.rimes.ios.shared`。运行时 Info.plist 与签名中的共享组必须一致，重新签名不会修复错误的运行时配置。
+检查同时覆盖签名、App Store profiles、版本、隐私声明、键盘内手写模型摘要及两目标的 App Group/Keychain。既有标识为 `org.scholay.rimes.ios`、`org.scholay.rimes.ios.keyboard`、`group.org.scholay.rimes.ios` 和 `585J2TL9U6.org.scholay.rimes.ios.shared`。运行时 Info.plist 与签名中的共享组必须一致，重新签名不会修复错误的运行时配置。
 
 ## 自动签名与 App Store 提交
 
