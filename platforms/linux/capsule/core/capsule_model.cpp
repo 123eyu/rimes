@@ -129,17 +129,30 @@ void CapsuleModel::set_managing(bool value) {
 }
 void CapsuleModel::set_tab(Tab tab) {
     // Older clients keep their type tabs; current UI uses five modules.
+    // Each legacy tab is a module plus a filter. set_module() resets the tab
+    // to the module's default, so the requested tab is recorded last.
+    Module module = Module::Notes;
+    const char* filter = "all";
     switch (tab) {
-    case Tab::Recent: set_module(Module::Temporary); break;
-    case Tab::Captures: set_module(Module::Capture); break;
-    case Tab::Note: set_module(Module::Notes); break;
-    case Tab::Image: set_module(Module::Capture); set_filter("image"); break;
-    case Tab::Video: set_module(Module::Capture); set_filter("video"); break;
-    case Tab::Pdf: set_module(Module::Resources); set_filter("reference"); break;
-    case Tab::Skill: set_module(Module::Resources); set_filter("skills"); break;
-    case Tab::Resource: set_module(Module::Resources); break;
-    case Tab::Password: set_module(Module::Passwords); break;
+    case Tab::Recent: module = Module::Temporary; break;
+    case Tab::Captures: module = Module::Capture; break;
+    case Tab::Note: module = Module::Notes; break;
+    case Tab::Image: module = Module::Capture; filter = "image"; break;
+    case Tab::Video: module = Module::Capture; filter = "video"; break;
+    case Tab::Pdf: module = Module::Resources; filter = "reference"; break;
+    case Tab::Skill: module = Module::Resources; filter = "skills"; break;
+    case Tab::Resource: module = Module::Resources; break;
+    case Tab::Password: module = Module::Passwords; break;
     }
+    const auto before = generation_;
+    set_module(module);
+    // A disabled module keeps the current selection and its tab.
+    if (module_ != module) return;
+    // Also applies when the module was already selected, e.g. Image -> Captures.
+    set_filter(filter);
+    if (tab_ == tab) return;
+    tab_ = tab;
+    if (generation_ == before) Touch();
 }
 
 void CapsuleModel::set_query(std::string query) {
