@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "pending",
+  "status": "ready",
   "assets": [
     {
       "name": "librime",
@@ -79,9 +79,9 @@
       "evidence": "2026-10-04: on Release-optimized build 38 the maintainer confirmed clear feedback while typing slowly and responsive feedback at speed, then explicitly accepted iOS. Build 40 changes only app home branding, localization, contact links and build number; the accepted keyboard code is unchanged. Hosted tests and simulator gestures are documented separately in validation/release-1.1.0/README.md."
     },
     {
-      "name": "Version 1.2.1 physical iPhone input and microphone acceptance",
-      "verified": false,
-      "evidence": "No physical-device acceptance is recorded for this integrated candidate or its experimental handwriting and voice paths."
+      "name": "Publisher-reported iPhone use and decision to proceed",
+      "verified": true,
+      "evidence": "2026-11-26 and 2026-11-27: the publisher reported having used the app on a physical iPhone and requested proceeding without further iPad testing. This records the publisher’s report and release decision; the precise tested build, commit, and individual input, voice, and handwriting outcomes were not supplied and are not independently verified."
     },
     {
       "name": "Experimental voice disclosed for App Review at the publisher’s request",
@@ -91,7 +91,7 @@
   ],
   "releaseAuthorization": {
     "date": "2026-09-22",
-    "scope": "Owner explicitly requested global App Store submission excluding mainland China and supplied the mapping rights representation. Outstanding physical acceptance checks remain accurately unverified; this authorization is not evidence they passed. The documented flyyao publisher declaration is explicitly accepted as the distribution basis; its asset status remains publisher-declared. Physical acceptance was completed separately on 2026-10-04 with evidence linked above. 2026-11-26: the publisher requested that experimental voice be retained as an optional feature in the release submitted to Apple. App Review eligibility remains unverified.",
+    "scope": "Owner explicitly requested global App Store submission excluding mainland China and supplied the mapping rights representation. Outstanding physical acceptance checks remain accurately unverified; this authorization is not evidence they passed. The documented flyyao publisher declaration is explicitly accepted as the distribution basis; its asset status remains publisher-declared. Physical acceptance was completed separately on 2026-10-04 with evidence linked above. 2026-11-26: the publisher requested that experimental voice be retained as an optional feature in the release submitted to Apple. App Review eligibility remains unverified. 2026-11-27: the publisher requested proceeding on the basis of their prior iPhone use without further iPad testing; the precise build and test coverage remain unverified.",
     "reviewSubmissionID": "f5c2e139-3347-416d-9a35-fe4052dd9418",
     "acceptedPublisherDeclarations": [
       "flyyao"
@@ -102,6 +102,11 @@
       "name": "Experimental keyboard microphone eligibility",
       "status": "unverified",
       "evidence": "Apple documents that custom keyboard extensions cannot directly access the microphone. This experimental hidden WKWebView capture approach has not been confirmed as an accepted App Store distribution path; disclose it to App Review and record Apple’s decision. The publisher requested submission with voice retained on 2026-11-26."
+    },
+    {
+      "name": "Physical acceptance of the integrated 1.2.1 candidate",
+      "status": "unverified",
+      "evidence": "The publisher reports prior iPhone use and chose to proceed without an additional iPad test. The exact version and commit used on the iPhone, and specific input, voice, and handwriting results, are not recorded; no independent physical acceptance of the integrated candidate is claimed."
     }
   ]
 }
