@@ -32,7 +32,7 @@ android {
         targetSdk = 37
         testInstrumentationRunner = "org.scholay.rimes.android.EngineInstrumentation"
         ndk { abiFilters += listOf("arm64-v8a", "x86_64") }
-        versionCode = 23
+        versionCode = 24
         if (updateFixtureCode != null) {
             require(updateFixtureCode < versionCode!!) { "Update fixture must be older than the normal package" }
             versionCode = updateFixtureCode

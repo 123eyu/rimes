@@ -1,0 +1,5 @@
+{
+  "en-US": "Refines the keyboard’s compact status and candidate bar, and adds a plugin menu beside the Buffer controls. Improves the Return key when text is pasted or entered by the host app.\n\nAdds optional experimental voice and handwriting input in the app’s settings. Existing input schemes, learned words and settings are retained.",
+  "zh-Hans": "优化键盘状态栏与候选区，并在 Buffer 控件旁增加插件菜单。改进粘贴或由宿主应用输入文字后回车键的状态更新。\n\n在应用设置中加入可选的实验性语音和手写入口。原有输入方案、学习词库和设置会保留。",
+  "zh-Hant": "最佳化鍵盤狀態列與候選區，並在 Buffer 控件旁加入外掛選單。改善貼上或由宿主 App 輸入文字後的返回鍵狀態更新。\n\n在 App 設定中加入可選的實驗性語音與手寫入口。原有輸入方案、學習詞庫和設定會保留。"
+}
