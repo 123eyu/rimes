@@ -467,6 +467,12 @@ enum CandidatePanelGeometry {
         return NSPoint(x: x, y: y)
     }
 
+    /// A caret hugging the screen's left edge is what hosts report before
+    /// their text layout exists; real carets sit inside a window chrome/margin.
+    static func isEdgeGluedAnchor(_ anchor: NSRect, screenFrame: NSRect) -> Bool {
+        anchor.minX <= screenFrame.minX + 12
+    }
+
     static func originIfAvailable(anchor: NSRect,
                                   panelSize: NSSize,
                                   visibleFrame: NSRect,
@@ -993,8 +999,48 @@ final class CandidateWindow {
             preeditLabel.stringValue = projectionPreedit
         }
         preeditPill.isHidden = preeditLabel.stringValue.isEmpty
+        var latencyLap = KeyLatencyProbe.Lap()
         renderCandidates()
+        latencyLap.mark(.panelRender)
+        // Hosts often publish caret geometry a beat after marked text is set,
+        // so the first rect of a composition can still be a stale/default one
+        // glued to the screen's left edge. Do not reveal the panel there; the
+        // controller re-queries shortly and `reanchor` shows it at the settled
+        // position instead of flashing at the wrong place and jumping.
+        if presentation == .caret,
+           !panel.isVisible,
+           lastGoodCaretRect == nil,
+           isUnsettledFirstAnchor(caretRect) {
+            IMELog.write("candidate first anchor held unsettled rect=\(NSStringFromRect(caretRect))")
+            return
+        }
         layoutAndShowAccordingToPresentation()
+    }
+
+    /// True while the panel is on screen for the current composition.
+    var isPanelShowing: Bool { panel.isVisible }
+
+    /// Re-place a host-anchored panel from a freshly queried caret rect.
+    /// `final` forces the panel up with whatever plausible rect we have, so a
+    /// host that never settles still gets candidates.
+    func reanchor(caretRect: NSRect, owner: FocusToken, final: Bool) {
+        guard ownerToken == owner,
+              presentationMode == .caret,
+              InputFocusCoordinator.shared.isCurrent(owner),
+              !currentContext.candidates.isEmpty || !projectionPreedit.isEmpty,
+              isPlausible(caretRect) else { return }
+        if !final, isUnsettledFirstAnchor(caretRect) { return }
+        if panel.isVisible,
+           abs(caretRect.minX - lastCaretRect.minX) < 0.5,
+           abs(caretRect.minY - lastCaretRect.minY) < 0.5 { return }
+        lastCaretRect = caretRect
+        layoutAndShowAccordingToPresentation()
+    }
+
+    private func isUnsettledFirstAnchor(_ rect: NSRect) -> Bool {
+        guard isPlausible(rect) else { return true }
+        guard let frame = screen(containing: rect)?.frame else { return false }
+        return CandidatePanelGeometry.isEdgeGluedAnchor(rect, screenFrame: frame)
     }
 
     func hide(owner: FocusToken) {
@@ -1432,6 +1478,7 @@ final class CandidateWindow {
             return
         }
 
+        var latencyLap = KeyLatencyProbe.Lap()
         if presentationMode == .bufferCaret {
             guard let caret = BufferWindowController.shared
                 .inlineInputCaretScreenRect(owner: ownerToken) else {
@@ -1450,17 +1497,20 @@ final class CandidateWindow {
             lastCaretRect = caret
         }
 
+        latencyLap.mark(.panelAnchor)
         attachContentToPanel()
         guard layoutPanel(caretRect: lastCaretRect, bundleId: lastBundleId) else {
             hidePanel(reason: "layout-unavailable",
                       clearsPresentation: false)
             return
         }
+        latencyLap.mark(.panelLayout)
         panel.level = CandidatePanelLevelRules.level(
             bundleID: interactionTarget.bundleID,
             hostKind: interactionTarget.hostKind
         )
         showPanel(reason: "layout-ready")
+        latencyLap.mark(.panelShow)
     }
 
     /// Candidate presentation changes are centralized here so logical state and
@@ -1468,6 +1518,11 @@ final class CandidateWindow {
     /// strings; logs contain only counts, geometry, and focus tokens — never
     /// candidate, preedit, input, or bundle text.
     private func hidePanel(reason: String, clearsPresentation: Bool) {
+        var latencyLap = KeyLatencyProbe.Lap()
+        let latencyWasVisible = panel.isVisible
+        // Hiding an already hidden panel happens on most updates and is not
+        // the cost being measured.
+        defer { if latencyWasVisible { latencyLap.mark(.panelHide) } }
         let snapshot = panelLogSnapshot()
         panel.level = CandidatePanelLevelRules.standard
         panel.ignoresMouseEvents = true
@@ -2322,6 +2377,21 @@ final class CandidateWindow {
         check(window.compactRowButtons.allSatisfy { button in
             button.constraints.filter { $0.identifier?.hasPrefix("candidate.size.") == true }.count == 2
         }, "reused buttons retain exactly two size constraints")
+        // Every committed character retires the panel, so the first render of
+        // the next composition starts from scrubbed views.
+        var coldTimes: [Double] = []
+        for index in 0..<60 {
+            window.scrubRenderedCandidateViews()
+            context.input = "cold-\(index)"
+            let start = CFAbsoluteTimeGetCurrent()
+            window.currentContext = context
+            window.renderCandidates()
+            _ = window.layoutPanel(caretRect: window.lastCaretRect, bundleId: "smoke")
+            coldTimes.append((CFAbsoluteTimeGetCurrent() - start) * 1_000)
+        }
+        coldTimes.sort()
+        print(String(format: "candidate cold render fixture: p50=%.3fms p95=%.3fms max=%.3fms (first render after retirement)",
+                     coldTimes[coldTimes.count / 2], coldTimes[Int(Double(coldTimes.count - 1) * 0.95)], coldTimes.last!))
         window.hideAll()
         check(window.compactRowButtons.isEmpty && window.measuredWidths.isEmpty
               && window.lastRenderState == nil && window.candidateStack.arrangedSubviews.isEmpty,

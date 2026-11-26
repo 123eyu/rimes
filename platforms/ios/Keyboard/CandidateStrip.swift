@@ -14,9 +14,10 @@ struct CandidateLayout {
     /// hit area, so a tap between two words always lands on one of them.
     static let gap: CGFloat = 0
     static let padding: CGFloat = 16
-    /// Width of the expand/collapse control. Collapsed it sits beside the words; expanded it
-    /// overlays the end of the first row only, so the other rows keep the full width.
-    static let controlWidth: CGFloat = 52
+    /// Width of the expand/collapse control: a 1U key plus the 4 pt gap before it. Collapsed it
+    /// sits beside the words; expanded it overlays the end of the first row only, so the other
+    /// rows keep the full width.
+    static let controlWidth: CGFloat = 34
     static func measure(_ texts: [String], comments: [String] = [], width: CGFloat, expanded: Bool, landscape: Bool, firstRowReserve: CGFloat = 0) -> CandidateLayout {
         let font = UIFont.systemFont(ofSize: landscape ? 18 : 20)
         let rowHeight = rowHeight(landscape: landscape)
@@ -73,12 +74,16 @@ private final class CandidateContentView: UIView {
 }
 
 final class CandidateStrip: UIView, ExpandReach {
-    var expandReachWidth: CGFloat { texts.isEmpty ? 0 : CandidateLayout.controlWidth + 12 }
+    var expandReachWidth: CGFloat { texts.isEmpty || !allowsExpansion ? 0 : CandidateLayout.controlWidth + 12 }
+    /// Without the candidate matrix there is no expand key and the row only scrolls sideways.
+    var allowsExpansion = true { didSet { if allowsExpansion != oldValue { setNeedsLayout() } } }
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         pointInsideOrInExpandReach(point, default: super.point(inside: point, with: event))
     }
     let scroll: UIScrollView = CandidateScrollView()
     let expandButton = CandidateButton()
+    /// The key face behind the expand control, drawn like the side keys.
+    let expandCap = CapFaceView()
     private let content = CandidateContentView()
     private(set) var buttons: [CandidateButton] = []
     private var texts: [String] = []
@@ -96,13 +101,16 @@ final class CandidateStrip: UIView, ExpandReach {
     var controlInsets = UIEdgeInsets.zero { didSet { if controlInsets != oldValue { setNeedsLayout() } } }
     override init(frame: CGRect) {
         super.init(frame: frame)
-        addSubview(scroll); scroll.addSubview(content); addSubview(expandButton)
+        addSubview(scroll); scroll.addSubview(content); addSubview(expandCap); addSubview(expandButton)
         scroll.delaysContentTouches = false
         scroll.showsHorizontalScrollIndicator = false; scroll.showsVerticalScrollIndicator = false; scroll.hideEdgeEffects()
         expandButton.accessibilityIdentifier = "keyboard.candidates.expand"
         // A full key wide plus reach to its left: it sits at the screen edge, where touches are hardest to land.
         expandButton.hitSlop = UIEdgeInsets(top: ExpandReachMetrics.above, left: 12, bottom: ExpandReachMetrics.below, right: 0)
-        expandButton.setPreferredSymbolConfiguration(.init(pointSize: 19, weight: .semibold), forImageIn: .normal)
+        expandButton.setPreferredSymbolConfiguration(.init(pointSize: 16, weight: .medium), forImageIn: .normal)
+        expandButton.showsTouchHighlight = false
+        expandButton.addAction(UIAction { [weak self] _ in self?.expandCap.pressed = true }, for: .touchDown)
+        expandButton.addAction(UIAction { [weak self] _ in self?.expandCap.pressed = false }, for: [.touchUpInside, .touchUpOutside, .touchCancel])
         expandButton.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
         expandButton.addAction(UIAction { [weak self] _ in self?.onExpand?() }, for: .touchUpInside)
     }
@@ -260,7 +268,7 @@ final class CandidateStrip: UIView, ExpandReach {
     }
     private var reservedInsets: UIEdgeInsets {
         // Expanded rows use the full width; only the first row steps aside for the control.
-        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded ? 0 : CandidateLayout.controlWidth))
+        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded || !allowsExpansion ? 0 : CandidateLayout.controlWidth))
     }
     func fittingHeight(width: CGFloat) -> CGFloat {
         // A collapsed strip always has one row; measuring every candidate here
@@ -289,8 +297,13 @@ final class CandidateStrip: UIView, ExpandReach {
         content.frame = CGRect(origin: .zero, size: layout.contentSize)
         scroll.contentSize = layout.contentSize
         let rowHeight = layout.frames.first?.height ?? 32
-        expandButton.isHidden = texts.isEmpty
+        expandButton.isHidden = texts.isEmpty || !allowsExpansion
         expandButton.frame = CGRect(x: bounds.width - controlInsets.right - CandidateLayout.controlWidth, y: 0, width: CandidateLayout.controlWidth, height: rowHeight)
+        // The key is drawn in the slot's right part, square, one row high; the gap before it stays reachable.
+        let key = min(rowHeight, CandidateLayout.controlWidth - 4)
+        expandCap.frame = CGRect(x: expandButton.frame.maxX - key, y: (rowHeight - key) / 2, width: key, height: key)
+        expandCap.isHidden = expandButton.isHidden
+        expandButton.contentShiftX = expandCap.frame.midX - expandButton.frame.midX
         expandButton.symbol(expanded ? "chevron.down" : "chevron.up", label: expanded ? L("收起候选", "Collapse candidates") : L("展开候选", "Expand candidates"))
         for (button, frame) in zip(buttons, layout.frames) {
             button.titleLabel?.font = showsChineseMarks ? .chineseMarks(ofSize: landscape ? 18 : 20) : .systemFont(ofSize: landscape ? 18 : 20)
@@ -393,6 +406,10 @@ final class CandidateButton: UIButton {
     private let highlight = UIView()
     /// Extra reach beyond the visible button, so a thumb that lands near it still counts.
     var hitSlop = UIEdgeInsets.zero
+    /// Moves the glyph off centre, for a control drawn on part of its slot.
+    var contentShiftX: CGFloat = 0 { didSet { if oldValue != contentShiftX { setNeedsLayout() } } }
+    /// Candidates grey on touch; a control drawn as a key shows its own pressed face instead.
+    var showsTouchHighlight = true { didSet { updateHighlight() } }
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         bounds.inset(by: UIEdgeInsets(top: -hitSlop.top, left: -hitSlop.left, bottom: -hitSlop.bottom, right: -hitSlop.right)).contains(point)
     }
@@ -428,7 +445,7 @@ final class CandidateButton: UIButton {
     private func updateHighlight() {
         // A touch only greys the word; the blue flood was jarring while scrolling or on a mis-tap.
         highlight.backgroundColor = isSweepTarget ? (tintColor ?? .systemBlue).withAlphaComponent(0.3) : .tertiarySystemFill
-        highlight.alpha = isHighlighted || isSweepTarget ? 1 : 0
+        highlight.alpha = (isHighlighted && showsTouchHighlight) || isSweepTarget ? 1 : 0
         setTitleColor(.label, for: .normal); setTitleColor(.label, for: .highlighted)
         imageView?.tintColor = .label
         commentLabel.textColor = .secondaryLabel
@@ -452,8 +469,25 @@ final class CandidateButton: UIButton {
             commentLabel.frame = CGRect(x: left + titleWidth + 4, y: 0, width: commentWidth, height: bounds.height)
         }
         if let imageView, let image = imageView.image {
-            imageView.frame = CGRect(x: (bounds.width - image.size.width) / 2, y: (bounds.height - image.size.height) / 2, width: image.size.width, height: image.size.height)
+            imageView.frame = CGRect(x: (bounds.width - image.size.width) / 2 + contentShiftX, y: (bounds.height - image.size.height) / 2, width: image.size.width, height: image.size.height)
         }
+    }
+}
+
+/// A key face with nothing on it, for controls whose glyph and touch handling live elsewhere.
+final class CapFaceView: UIView {
+    var theme: StatusSkin = .rhino { didSet { if oldValue != theme { setNeedsDisplay() } } }
+    var legacyKey = false { didSet { if oldValue != legacyKey { setNeedsDisplay() } } }
+    var pressed = false { didSet { if oldValue != pressed { setNeedsDisplay() } } }
+    var outerCorner: KeycapStyle.OuterCorner? { didSet { if oldValue != outerCorner { setNeedsDisplay() } } }
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        backgroundColor = .clear; isOpaque = false; contentMode = .redraw; isUserInteractionEnabled = false
+        registerForTraitChanges([UITraitUserInterfaceStyle.self]) { (face: CapFaceView, _: UITraitCollection) in face.setNeedsDisplay() }
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    override func draw(_ rect: CGRect) {
+        KeycapStyle.draw(in: bounds, pressed: pressed, theme: theme, legacy: legacyKey, outer: outerCorner)
     }
 }
 
@@ -522,15 +556,28 @@ final class ChordHandPreviewView: UIView {
 final class PluginShortcutBar: UIView {
     private let scroll = UIScrollView()
     private(set) var buttons: [(plugin: KeyboardPlugin, button: UIButton)] = []
+    /// Plugins left off the quick entrance, behind a trailing key of the same size.
+    private let overflow = ShortcutCapButton()
+    var overflowMenu: UIMenu? { didSet { overflow.menu = overflowMenu; overflow.isHidden = overflowMenu == nil; setNeedsLayout() } }
+    var overflowSelected = false { didSet { overflow.isSelected = overflowSelected } }
     var onSelect: ((KeyboardPlugin) -> Void)?
     /// Holding a shortcut opens that plugin's settings.
     var onSettings: ((KeyboardPlugin) -> Void)?
     var onPress: (() -> Void)?
     /// The plugin open in the Buffer, highlighted; nil for Default or Buffer off.
     var selected: KeyboardPlugin? { didSet { if selected != oldValue { refresh() } } }
+    /// Shortcuts are keys: they follow the keyboard skin like every other cap.
+    var theme: StatusSkin = .rhino { didSet { if oldValue != theme { allCaps.forEach { $0.theme = theme } } } }
+    var legacyKey = false { didSet { if oldValue != legacyKey { allCaps.forEach { $0.legacyKey = legacyKey } } } }
+    private var allCaps: [ShortcutCapButton] { buttons.compactMap { $0.button as? ShortcutCapButton } + [overflow] }
     override init(frame: CGRect) {
         super.init(frame: frame)
         scroll.showsHorizontalScrollIndicator = false; addSubview(scroll); scroll.hideEdgeEffects()
+        overflow.setImage(UIImage(systemName: "ellipsis"), for: .normal)
+        overflow.accessibilityLabel = L("更多插件", "More plugins"); overflow.accessibilityIdentifier = "keyboard.shortcut.more"
+        overflow.showsMenuAsPrimaryAction = true; overflow.accentCap = true; overflow.isHidden = true
+        overflow.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
+        scroll.addSubview(overflow)
         setPlugins(KeyboardPlugin.builtIn)
     }
     /// Rebuilds the bar when the user's entrance list changes; unchanged lists keep their buttons.
@@ -539,7 +586,10 @@ final class PluginShortcutBar: UIView {
         guard buttons.isEmpty || signature(plugins) != signature(buttons.map(\.plugin)) else { return }
         buttons.forEach { $0.button.removeFromSuperview() }; buttons = []
         for plugin in plugins {
-            let button = UIButton(configuration: .gray())
+            let button = ShortcutCapButton()
+            button.theme = theme; button.legacyKey = legacyKey; button.accentCap = true
+            button.setImage(UIImage(systemName: plugin.symbol), for: .normal)
+            button.setTitle(plugin.shortTitle, for: .normal)
             button.accessibilityIdentifier = "keyboard.shortcut.\(plugin.rawValue)"
             button.accessibilityLabel = plugin.title
             button.addAction(UIAction { [weak self] _ in self?.onPress?() }, for: .touchDown)
@@ -551,39 +601,53 @@ final class PluginShortcutBar: UIView {
         refresh(); setNeedsLayout()
     }
     required init?(coder: NSCoder) { fatalError() }
-    override func tintColorDidChange() { super.tintColorDidChange(); refresh() }
     @objc private func hold(_ recognizer: UILongPressGestureRecognizer) {
         guard recognizer.state == .began, let plugin = buttons.first(where: { $0.button === recognizer.view })?.plugin else { return }
         onSettings?(plugin)
     }
     private func refresh() {
         for (plugin, button) in buttons {
-            var config = UIButton.Configuration.gray()
-            config.image = UIImage(systemName: plugin.symbol)
-            config.preferredSymbolConfigurationForImage = .init(pointSize: 12, weight: .medium)
-            config.imagePadding = 3; config.cornerStyle = .medium
-            config.contentInsets = .init(top: 0, leading: 4, bottom: 0, trailing: 4)
-            config.titleLineBreakMode = .byTruncatingTail
-            var title = AttributedString(plugin.shortTitle); title.font = .systemFont(ofSize: plugin.shortTitle.count > 2 ? 12 : 13, weight: .medium)
-            config.attributedTitle = title
             let on = plugin == selected
-            config.baseBackgroundColor = on ? tintColor : .tertiarySystemFill
-            config.baseForegroundColor = on ? KeyboardPalette.contrastingInk(on: tintColor ?? .systemBlue) : .label
-            button.configuration = config
+            button.isSelected = on
             button.accessibilityTraits = on ? [.button, .selected] : [.button]
         }
     }
     override func layoutSubviews() {
         super.layoutSubviews()
         scroll.frame = bounds
-        let unit = bounds.height, gap: CGFloat = 6, width = 2 * unit + 4
-        let total = CGFloat(buttons.count) * width + CGFloat(max(0, buttons.count - 1)) * gap
-        // Centred in the row when they fit; scroll sideways when more plugins arrive.
-        var x = max(0, (bounds.width - total) / 2)
-        for (_, button) in buttons {
-            button.frame = CGRect(x: x, y: 1, width: width, height: max(0, unit - 2)); x += width + gap
+        // Full-height caps on the row's left edge, 4 pt apart like the side keys.
+        let height = bounds.height, gap: CGFloat = 4
+        var x: CGFloat = 0
+        for cap in buttons.compactMap({ $0.button as? ShortcutCapButton }) + (overflow.isHidden ? [] : [overflow]) {
+            let width = max(height * 1.6, cap.fittingWidth)
+            cap.frame = CGRect(x: x, y: 0, width: width, height: height); x += width + gap
         }
-        scroll.contentSize = CGSize(width: max(bounds.width, total), height: bounds.height)
+        scroll.contentSize = CGSize(width: max(bounds.width, x - gap), height: bounds.height)
+    }
+}
+
+/// A shortcut drawn as a key: the plugin's glyph and short name side by side on one cap.
+final class ShortcutCapButton: KeycapButton {
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        titleLabel?.font = .systemFont(ofSize: 13, weight: .medium)
+        setPreferredSymbolConfiguration(.init(pointSize: 13, weight: .medium), forImageIn: .normal)
+    }
+    required init?(coder: NSCoder) { fatalError() }
+    private var imageSize: CGSize { currentImage == nil ? .zero : (imageView?.intrinsicContentSize ?? .zero) }
+    private var textWidth: CGFloat { ceil(titleLabel?.intrinsicContentSize.width ?? 0) }
+    private var spacing: CGFloat { imageSize.width > 0 && textWidth > 0 ? 4 : 0 }
+    /// Glyph, title and 10 pt either side.
+    var fittingWidth: CGFloat { ceil(imageSize.width + spacing + textWidth) + 20 }
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        let cap = KeycapStyle.capRect(in: bounds, pressed: isHighlighted)
+        let image = imageSize, total = image.width + spacing + textWidth
+        var x = max(cap.minX + 6, cap.midX - total / 2)
+        imageView?.frame = CGRect(x: x, y: cap.midY - image.height / 2, width: image.width, height: image.height)
+        x += image.width + spacing
+        let textHeight = ceil(titleLabel?.font.lineHeight ?? 0)
+        titleLabel?.frame = CGRect(x: x, y: cap.midY - textHeight / 2, width: max(0, min(textWidth, cap.maxX - 6 - x)), height: textHeight)
     }
 }
 
@@ -1044,19 +1108,15 @@ final class TypingStatsView: UIView {
         }
         setNeedsLayout()
     }
+    /// Plain icon-and-number readouts: the grey line they sit on is already the well.
     private func makeChip() -> UILabel {
-        let chip = BorderedChipLabel()
+        let chip = UILabel()
         chip.font = chipFont; chip.textColor = .secondaryLabel; chip.textAlignment = .center
-        chip.layer.cornerRadius = 5; chip.layer.cornerCurve = .continuous
-        chip.layer.borderWidth = 0.8; chip.layer.borderColor = UIColor.separator.cgColor
         addSubview(chip); return chip
-    }
-    override func traitCollectionDidChange(_ previous: UITraitCollection?) {
-        super.traitCollectionDidChange(previous); chips.forEach { $0.layer.borderColor = UIColor.separator.cgColor }
     }
     override func layoutSubviews() {
         super.layoutSubviews()
-        let gap: CGFloat = 4, height = min(bounds.height, ceil(chipFont.lineHeight) + 8)
+        let gap: CGFloat = 14, height = min(bounds.height, ceil(chipFont.lineHeight) + 8)
         let widths = chips.map { ceil($0.intrinsicContentSize.width) }
         let total = widths.reduce(0, +) + gap * CGFloat(max(0, chips.count - 1))
         // Too many chips for the line: squeeze them before clipping.
@@ -1066,12 +1126,6 @@ final class TypingStatsView: UIView {
             x += width * scale + gap * scale
         }
     }
-}
-private final class BorderedChipLabel: UILabel {
-    private let inset: CGFloat = 6
-    override var intrinsicContentSize: CGSize { let s = super.intrinsicContentSize; return CGSize(width: s.width + 2 * inset, height: s.height) }
-    override func drawText(in rect: CGRect) { super.drawText(in: rect.insetBy(dx: inset, dy: 0)) }
-    override func sizeThatFits(_ size: CGSize) -> CGSize { intrinsicContentSize }
 }
 
 /// The progress of a hold-to-send-all: a thin line along the lower edge of the Buffer's input box fills from left to

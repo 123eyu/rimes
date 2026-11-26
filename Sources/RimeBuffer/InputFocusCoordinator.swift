@@ -841,6 +841,10 @@ final class InputFocusCoordinator {
     )
     private var overlayVisibilitySample: OverlayVisibilitySample?
     var onChange: (() -> Void)?
+    /// Composition start/end fires on nearly every character with chord
+    /// input. When set, it replaces `onChange` for that one transition so the
+    /// host can keep expensive presentation work off the key path.
+    var onCompositionActivityChange: (() -> Void)?
     var onInvalidated: ((FocusToken) -> Void)?
 
     private init() {}
@@ -1856,7 +1860,11 @@ final class InputFocusCoordinator {
         }
         guard owner.compositionActive != active else { return }
         owner.compositionActive = active
-        onChange?()
+        if let onCompositionActivityChange {
+            onCompositionActivityChange()
+        } else {
+            onChange?()
+        }
     }
 
     /// A lifecycle callback that cannot yet be attributed safely must never

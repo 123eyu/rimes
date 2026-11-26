@@ -31,14 +31,12 @@ struct GlobalHotKeyDefinition {
     let keyCode: UInt32
     let modifiers: UInt32
 
-    /// Content-window visibility is a deliberate global command. Register
-    /// Capsule and Mailbox exclusively so another Carbon listener cannot
-    /// observe the same chord; ordinary AppKit editing remains outside here.
+    /// Every RIMES shortcut is a deliberate global command that belongs to
+    /// RIMES, not to the frontmost app. Register all of them exclusively so
+    /// another Carbon listener (WeChat's own Command-Shift chords, for one)
+    /// cannot observe the same chord; ordinary AppKit editing remains outside.
     var registrationOptions: OptionBits {
-        action == .toggleClipboardHistory
-            || action == .openMailbox
-            ? OptionBits(kEventHotKeyExclusive)
-            : OptionBits(kEventHotKeyNoOptions)
+        OptionBits(kEventHotKeyExclusive)
     }
 
     var logDescription: String {

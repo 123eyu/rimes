@@ -451,6 +451,8 @@ final class RimeEngine {
     }
 
     func processKey(_ keycode: Int32, mask: Int32 = 0, session: UInt64) -> Bool {
+        let latencyStart = CFAbsoluteTimeGetCurrent()
+        defer { KeyLatencyProbe.note(.engine, since: latencyStart) }
         applyPendingInputHabits(session: session)
         return BBRimeProcessKey(session, keycode, mask)
     }

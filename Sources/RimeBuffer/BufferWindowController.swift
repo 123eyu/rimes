@@ -364,6 +364,7 @@ enum BufferWindowGeometry {
     static func openingPlacement(currentFrame: NSRect,
                                  targetRect: NSRect?,
                                  boxRect: NSRect? = nil,
+                                 hostDrawsOwnComposer: Bool = false,
                                  visibleFrames: [NSRect],
                                  fallback: NSRect,
                                  forecastHeight: CGFloat = maximumOpeningHeight)
@@ -422,7 +423,15 @@ enum BufferWindowGeometry {
         // takes the nearest limit; one inside it is aligned at both ends. The
         // caret never decides the left edge — without a usable box the panel
         // keeps its width and centres on the caret.
-        var x = alignedBox?.minX ?? (targetRect.midX - width / 2)
+        //
+        // A host that draws its own composer (WeChat) has a box nobody can
+        // read: it starts at the caret of an empty field and runs on below the
+        // caret line and to the right, with the send controls under it. The
+        // caret's left edge is the best stand-in for the box's, and centring
+        // on it would hang the workbench over the conversation list.
+        let boxlessComposer = alignedBox == nil && hostDrawsOwnComposer
+        var x = alignedBox?.minX
+            ?? (boxlessComposer ? targetRect.minX : targetRect.midX - width / 2)
         x = min(max(x, safeTarget.minX), max(safeTarget.minX, safeTarget.maxX - width))
 
         // A short field anchors the workbench to the box, so its top edge sits
@@ -438,7 +447,12 @@ enum BufferWindowGeometry {
         let aboveY = verticalAnchor.maxY + inputAnchorGap
         let side: BufferOpeningSide
         let y: CGFloat
-        if belowRoom >= plannedHeight {
+        // Below the caret of an unreadable composer is the composer itself, so
+        // such a host opens above the caret line whenever that side fits.
+        if boxlessComposer, aboveRoom >= plannedHeight {
+            side = .aboveTarget
+            y = aboveY
+        } else if belowRoom >= plannedHeight {
             side = .belowTarget
             y = belowY
         } else if aboveRoom >= plannedHeight {
@@ -619,7 +633,8 @@ enum BufferLateBoxAlignmentRules {
         sameWorkbenchSession: Bool,
         elapsed: TimeInterval,
         targetInSameHostProcess: Bool?,
-        boxNamed: Bool
+        boxNamed: Bool,
+        hostExposesNoBoxes: Bool = false
     ) -> Decision {
         // A moved, closed or reopened workbench is no longer that opening.
         guard workbenchVisible,
@@ -629,7 +644,9 @@ enum BufferLateBoxAlignmentRules {
               elapsed <= window else { return .abandon }
         guard let targetInSameHostProcess else { return .wait }
         guard targetInSameHostProcess else { return .abandon }
-        return boxNamed ? .align : .wait
+        // An app that exposes no boxes is as definite an answer as a named
+        // box: it moves the opening off its self-drawn composer.
+        return boxNamed || hostExposesNoBoxes ? .align : .wait
     }
 }
 
@@ -2178,6 +2195,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
     private var railActionCenterYConstraint: NSLayoutConstraint?
     private var pendingCaptureRequest: BufferPendingCaptureRequest?
     private var presentationRefreshProbe: (() -> Void)?
+    private var compositionRefreshPending = false
     private var appliedLiveMetricsHeight = false
     private var presentationMode = BufferPresentationMode.integratedRime
     private var railFoldedForFocus = false
@@ -3902,6 +3920,30 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
         }
     }
 
+    /// Composition start/end changes no Buffer content, only state derived
+    /// from the focus lease. A visible, unprotected workbench therefore takes
+    /// its full refresh on the next main-queue turn instead of inside the IMK
+    /// key callback; any full refresh that runs first satisfies the request.
+    /// Protection, pending capture and the hidden workbench keep the
+    /// synchronous `refreshForFocusChange` behaviour.
+    func refreshForCompositionChange() {
+        dispatchPrecondition(condition: .onQueue(.main))
+        guard panel.isVisible,
+              pendingCaptureRequest == nil,
+              !sessionProtectionActive,
+              !IsSecureEventInputEnabled() else {
+            refreshForFocusChange()
+            return
+        }
+        guard !compositionRefreshPending else { return }
+        compositionRefreshPending = true
+        DispatchQueue.main.async { [weak self] in
+            guard let self, self.compositionRefreshPending else { return }
+            self.compositionRefreshPending = false
+            self.refreshForFocusChange()
+        }
+    }
+
     static func hiddenFocusRefreshSmoke() -> Bool {
         let controller = shared
         guard !controller.panel.isVisible, !IsSecureEventInputEnabled(),
@@ -3936,6 +3978,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
             DispatchQueue.main.async { [weak self] in self?.refresh() }
             return
         }
+        compositionRefreshPending = false
         presentationRefreshProbe?()
         let secureInputEnabled = IsSecureEventInputEnabled()
         let rimeOwnsInput = RimeInputSourceAuthority.currentSourceIsOwn()
@@ -7072,7 +7115,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
     }
 
     private func positionForOpening(
-        focusedAnchor: (rect: NSRect, box: NSRect?, token: FocusToken)?
+        focusedAnchor: FocusedInputAnchor?
     ) {
         let screens = NSScreen.screens
         let visibleFrames = screens.map(\.visibleFrame)
@@ -7094,6 +7137,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
             currentFrame: placementFrame,
             targetRect: focusedAnchor?.rect,
             boxRect: focusedAnchor?.box,
+            hostDrawsOwnComposer: focusedAnchor?.hostExposesNoBoxes ?? false,
             visibleFrames: visibleFrames,
             fallback: fallback
         )
@@ -7112,6 +7156,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
         pendingBoxAlignment = nil
         if let focusedAnchor,
            focusedAnchor.box == nil,
+           !focusedAnchor.hostExposesNoBoxes,
            placement.side != .bottomFallback,
            FocusedInputBoxProbe.alignmentEnabled,
            FocusedInputBoxProbe.isPermitted,
@@ -7127,6 +7172,7 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
             "workbench opening side=\(placement.side) "
             + "caret=\(focusedAnchor != nil) "
             + "box=\(focusedAnchor?.box != nil) "
+            + "ownComposer=\(focusedAnchor?.hostExposesNoBoxes ?? false) "
             + "alignPref=\(FocusedInputBoxProbe.alignmentEnabled) "
             + "axGranted=\(FocusedInputBoxProbe.isPermitted) "
             + "heightBefore=\(Int(heightBeforeOpening)) "
@@ -7151,6 +7197,9 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
             },
             boxNamed: lease.map {
                 BufferTargetBoxLock.shared.namesElement(for: $0)
+            } ?? false,
+            hostExposesNoBoxes: lease.map {
+                BufferTargetBoxLock.shared.exposesNoBoxes(for: $0)
             } ?? false
         ) {
         case .wait:
@@ -7166,16 +7215,22 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
         pendingBoxAlignment = nil
         guard let lease,
               let anchor = freshFocusedInputAnchor(expected: lease.token),
-              anchor.box != nil else { return }
+              anchor.box != nil || anchor.hostExposesNoBoxes else { return }
         positionForOpening(focusedAnchor: anchor)
         candidateWindow.syncWorkbenchLayout()
         RIMESController.refreshActiveUI()
-        IMELog.write("workbench opening aligned late to the named input box token=\(lease.token)")
+        let target = anchor.box != nil ? "the named input box" : "the host's own composer"
+        IMELog.write("workbench opening aligned late to \(target) token=\(lease.token)")
     }
+
+    private typealias FocusedInputAnchor = (rect: NSRect,
+                                            box: NSRect?,
+                                            hostExposesNoBoxes: Bool,
+                                            token: FocusToken)
 
     private func freshFocusedInputAnchor(
         expected token: FocusToken? = nil
-    ) -> (rect: NSRect, box: NSRect?, token: FocusToken)? {
+    ) -> FocusedInputAnchor? {
         guard RimeInputSourceAuthority.currentSourceIsOwn(),
               !IsSecureEventInputEnabled(),
               let lease = InputFocusCoordinator.shared.liveTarget(
@@ -7190,7 +7245,10 @@ final class BufferWindowController: NSObject, NSWindowDelegate {
         // a host with no usable Accessibility geometry simply keeps the
         // caret-centred opening instead of losing its anchor.
         let box = controller.workbenchInputBoxRect(expected: lease)
-        return (rect, box, lease.token)
+        // Read from the lock's latest sample, never a fresh main-queue query.
+        let exposesNoBoxes = box == nil
+            && BufferTargetBoxLock.shared.exposesNoBoxes(for: lease)
+        return (rect, box, exposesNoBoxes, lease.token)
     }
 
     private func clampFrameToScreens() {

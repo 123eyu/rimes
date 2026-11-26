@@ -1,8 +1,10 @@
 import importlib.util
+import hashlib
 import plistlib
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 SPEC = importlib.util.spec_from_file_location('ios_archive', Path(__file__).with_name('create-ios-cloud-archive.py'))
 ARCHIVE = importlib.util.module_from_spec(SPEC)
@@ -22,6 +24,18 @@ class CloudArchiveTests(unittest.TestCase):
             (path / 'Info.plist').write_bytes(plistlib.dumps({'CFBundleIdentifier': identifier, 'CFBundleVersion': '62', 'CFBundleShortVersionString': '1.1.6', 'UIDeviceFamily': [1], 'CFBundleExecutable': 'RIMES', 'RIMESKeychainGroup': '585J2TL9U6.org.scholay.rimes.ios.shared', 'RIMESAppGroup': 'group.org.scholay.rimes.ios'}))
             (path / 'RIMES').write_bytes(b'executable fixture')
             (path / 'PrivacyInfo.xcprivacy').write_bytes(plistlib.dumps({}))
+        model = self.extension / 'Handwriting/handwriting-zh_CN.model'
+        model.parent.mkdir()
+        model.write_bytes(b'handwriting model fixture')
+        expected = hashlib.sha256(model.read_bytes()).hexdigest()
+        load_verifier = ARCHIVE.runpy.run_path
+        def fixture_verifier(*args, **kwargs):
+            verifier = load_verifier(*args, **kwargs)
+            verifier['validate_unsigned_app'].__globals__['handwriting_model_sha256'] = lambda: expected
+            return verifier
+        patcher = mock.patch.object(ARCHIVE.runpy, 'run_path', side_effect=fixture_verifier)
+        patcher.start()
+        self.addCleanup(patcher.stop)
 
     def test_complete_unsigned_archive_is_accepted(self):
         ARCHIVE.validate_archive(self.root, '1.1.6', '62')
@@ -45,6 +59,11 @@ class CloudArchiveTests(unittest.TestCase):
     def test_missing_extension_privacy_manifest_is_rejected(self):
         (self.extension / 'PrivacyInfo.xcprivacy').unlink()
         with self.assertRaisesRegex(ValueError, 'privacy manifest'):
+            ARCHIVE.validate_archive(self.root, '1.1.6', '62')
+
+    def test_missing_handwriting_model_is_rejected(self):
+        (self.extension / 'Handwriting/handwriting-zh_CN.model').unlink()
+        with self.assertRaisesRegex(ValueError, 'handwriting model is missing'):
             ARCHIVE.validate_archive(self.root, '1.1.6', '62')
 
     def test_unexpected_extension_is_rejected(self):

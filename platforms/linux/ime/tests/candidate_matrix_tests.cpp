@@ -41,5 +41,25 @@ int main() {
     check(!nav.CollapseToAnchor(replaced) && !nav.expanded(), "collapse cannot reuse a replaced context");
     engine = 0; nav.MoveRow(1, step);
     check(!nav.SelectVisibleIndex(19, replaced) && nav.row() == 0, "selection cannot reuse a replaced context");
+
+    // A space-chord schema hands Space to librime only while librime would
+    // commit the candidate XSIME shows highlighted.
+    using fcitx::SpaceSelectsEngineHighlight;
+    engine = 0; nav.Reset({});
+    check(!SpaceSelectsEngineHighlight(nav), "no candidates: Space is not a selection");
+    nav.Reset(pages[0]);
+    check(SpaceSelectsEngineHighlight(nav), "untouched highlight is librime's");
+    nav.MoveColumn(1);
+    check(!SpaceSelectsEngineHighlight(nav), "Right moved only XSIME's highlight");
+    nav.MoveColumn(-1);
+    check(SpaceSelectsEngineHighlight(nav), "Left back onto librime's highlight");
+    nav.MoveRow(1, step);
+    check(nav.expanded() && !SpaceSelectsEngineHighlight(nav), "expanded matrix keeps Space as selection");
+    check(nav.CollapseToAnchor(step) && SpaceSelectsEngineHighlight(nav), "collapsed matrix hands Space back");
+    auto later = pages[0]; later.highlighted = 2;
+    nav.Reset(later);
+    check(SpaceSelectsEngineHighlight(nav), "follows librime's own highlight");
+    nav.MoveColumn(-2);
+    check(!SpaceSelectsEngineHighlight(nav), "column 0 is not librime's highlight 2");
     std::cout << "candidate matrix navigation OK\n";
 }

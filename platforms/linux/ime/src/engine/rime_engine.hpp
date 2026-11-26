@@ -66,6 +66,11 @@ public:
                       std::string* error = nullptr) noexcept;
     bool ApplyInputOptions(SessionId session, const std::string& schema, const std::map<std::string, bool>& values) noexcept;
     std::map<std::string, bool> InputOptions(SessionId session, const std::string& schema) noexcept;
+
+    // Whether the schema's chord_composer/alphabet contains Space (Kongmingma,
+    // yoyo). Space can then be part of a chord (b+Space -> 被) and has to
+    // reach librime instead of being taken as the candidate selection key.
+    [[nodiscard]] bool SchemaSpaceChord(std::string_view schema_id) noexcept;
     bool SetOption(SessionId session,
                    std::string_view option,
                    bool value,

@@ -129,7 +129,9 @@ else
     echo "==> 下载 $PKG_URL"
     effective_url="$(
         curl --fail --location --show-error --silent \
-            --proto '=https' --tlsv1.2 \
+            --retry 3 --retry-delay 2 --retry-all-errors --retry-max-time 600 \
+            --connect-timeout 10 --max-time 600 \
+            --proto '=https' --proto-redir '=https' --tlsv1.2 \
             --output "$TMP/squirrel.pkg" \
             --write-out '%{url_effective}' \
             "$PKG_URL"

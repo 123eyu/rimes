@@ -1,25 +1,25 @@
-XSIME 1.1.8 (64) is an update of the existing iPhone app, formerly RIMES / Lingxi IME. Bundle IDs, App Group, Keychain group and persistent data locations are unchanged. No app account, subscription, ads or in-app purchases are included.
+XSIME 1.2.1 is an update of the existing iPhone app, formerly RIMES / Lingxi IME. Bundle IDs, App Group, Keychain group and persistent data locations are unchanged. No app account, subscription, ads or in-app purchases are included.
 
 SETUP / FULL ACCESS OFF
-Settings > General > Keyboard > Keyboards > Add New Keyboard > XSIME (or its localized Chinese name). Open the app's Try typing page, focus a field, and select XSIME using the system globe. Keep Full Access OFF to test ordinary offline typing and Buffer editing. Secure fields and apps prohibiting third-party keyboards use the system keyboard.
+In Settings > General > Keyboard > Keyboards, add XSIME (or its localized Chinese name). Open the app's Try typing page, focus a field and select XSIME using the system globe. Ordinary typing and Buffer work offline with Full Access off. Secure fields and apps prohibiting third-party keyboards use the system keyboard.
 
-INPUT / BUFFER
-The keyboard gear menu selects schemes and layouts, including Pinyin, nine-key Pinyin, Ziranma, Wubi 86, XSIME Wubi, English and slide chords. XSIME Wubi supports Wubi/Pinyin mixed input; Wubi 86 supports z-prefixed Pinyin lookup. Wubi four-code unique commit and fifth-code push are separate per-scheme settings. Imported compatible Rime schemes and coded UTF-8 dictionaries are reviewed and deployed locally; no executable plug-ins are downloaded.
+INPUT AND BUFFER
+The keyboard gear menu selects input schemes and layouts. Supported schemes include Pinyin, nine-key Pinyin, Ziranma, Wubi 86, XSIME Wubi, English and slide chords. Compatible Rime schemes and coded UTF-8 dictionaries can be imported and deployed locally.
 
-Tap the layers icon to enable Buffer. Type, select a candidate, then tap the paper plane to insert one block or hold for one second for all remaining blocks. Default automatic insertion is optional and OFF by default. Translation/AI results require explicit insertion. Insertion does not send a message in the host app. Ending the keyboard session clears the draft.
+Tap the layers icon to enable Buffer. Type and select a candidate, then tap the paper plane to insert one block or hold for one second to insert remaining blocks. Default automatic insertion is optional and off by default; translation and AI results require explicit insertion. Insertion does not send a message in the host app. Ending the keyboard session clears the draft.
 
-The local clipboard collects text only after an explicit native Paste-control tap with Full Access. Opening history does not read the system clipboard. Saved entries remain separately in local history and can be deleted/cleared. Local learned associations and typing statistics are not transmitted to a service.
+The local clipboard collects text only after an explicit native Paste-control tap with Full Access. Opening history does not read the system clipboard. Saved entries remain separately in local history and can be deleted or cleared.
 
-APPLE TRANSLATION
-Requires iOS 26+ and supported downloaded language models. Prepare languages in the containing app, select the translation tool and a language pair in Buffer. Missing models or unsupported languages show an unavailable state; there is no automatic external-AI fallback.
+EXPERIMENTAL VOICE AND HANDWRITING
+In the containing app, open Voice & handwriting (experimental) and enable the desired scheme. Handwriting uses the included on-device Tegaki model and does not require Full Access. Voice requires Full Access and explicit microphone and speech-recognition permissions requested from the containing app. Select Voice from the keyboard input-scheme menu and tap the microphone to start or stop. The experimental keyboard path uses a hidden WKWebView for microphone capture and Apple Speech for recognition; audio may be sent to Apple if on-device recognition is unavailable.
 
-OPTIONAL EXTERNAL AI
-Users supply their own HTTPS AI endpoint supporting a general-purpose interface format, model and API key, enable Full Access, and explicitly consent to the displayed recipient. Only explicitly submitted Buffer text is sent. API keys are device-only Keychain items. Requests do not follow redirects. Optional model lookup is a separate explicit action that sends the key to the configured provider. No provider credentials or AI service are bundled; provider charges/policies may apply.
+APPLE TRANSLATION AND OPTIONAL EXTERNAL AI
+Apple translation requires iOS 26 or later and supported, downloaded language models. Prepare languages in the containing app, then select translation in Buffer; there is no automatic external-AI fallback.
 
-PERMISSIONS / PRIVACY
-Full Access is needed for external AI, keyboard clipboard collection and keyboard image export, not ordinary typing or Buffer editing. Explicit Save to Photos requests add-only access. Privacy and third-party licenses are available in the app and on the support site. No keyboard-text telemetry or automatic clipboard monitoring is used.
+External AI uses the user's HTTPS endpoint, model and API key. Full Access and explicit consent to the displayed recipient are required; only text the user submits is sent. No provider credentials or AI subscription are bundled. Requests do not follow redirects.
+
+PERMISSIONS AND PRIVACY
+Full Access is needed for experimental voice input, external AI, keyboard clipboard collection and keyboard image export. An explicit Save to Photos action requests add-only Photos access. Privacy and third-party licenses are available in the app and on the support site. No keyboard-text telemetry or automatic clipboard monitoring is used.
 
 THIS UPDATE
-Version 1.1.8 refines the ordinary 26-key and nine-key keyboard layout, key appearance, and system container background. Ordinary Shift supports one-letter capitals, double-tap Caps Lock and press-and-hold locking; chord layouts retain their existing persistent Shift toggle. Per-scheme input preferences, optional swipe-up numbers/punctuation, independent portrait/landscape heights and a numeric keypad are available in keyboard settings. Existing schemes, learned words, settings and credentials are retained.
-
-To review, open the containing app keyboard settings, choose an ordinary layout and test typing with Full Access OFF. Try Shift once, twice and press-and-hold. Optional swipe-up input can be enabled in settings. Select a compatible scheme in Input Preferences and verify that its available switches are shown; Wubi automatic commit options are independently configurable. Third-party schemes remain locally imported data, not downloaded executable plugins.
+Version 1.2.1 refines the keyboard status and candidate bars, adds a persistent Buffer plugin menu, and updates the host Return key after externally entered text. It also includes optional experimental voice and handwriting schemes. To review, try normal typing and Buffer with Full Access off, then enable the optional experimental schemes in the containing app.

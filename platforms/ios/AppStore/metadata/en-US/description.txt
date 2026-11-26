@@ -11,6 +11,9 @@ Explicitly import readable text from the current input field, or collect clipboa
 OPTIONAL APPLE TRANSLATION
 On iOS 26 or later, Apple translation uses downloaded on-device language models. Prepare the required languages in the XSIME app, then choose a language pair in Buffer. Availability depends on supported languages and downloaded models. No external AI fallback is used when local translation is unavailable.
 
+EXPERIMENTAL VOICE AND HANDWRITING
+Enable these optional input schemes in the app. Voice input requires Full Access, microphone and speech-recognition permissions, and an explicit tap to start. Recognition runs on-device when supported; otherwise audio is sent to Apple for recognition. Handwriting recognition runs on-device without Full Access.
+
 YOUR CHOICE OF EXTERNAL AI
 For optional AI polishing, rewriting and other writing tools, configure your own HTTPS AI service that supports a general-purpose interface format, along with your model and API key. The recipient is shown before you grant permission. Only Buffer text you explicitly submit is sent to the configured, consented service. Your provider's data policy applies and its service may require a separate account or payment. XSIME does not include an AI subscription, provider credentials or a hosted AI service.
 

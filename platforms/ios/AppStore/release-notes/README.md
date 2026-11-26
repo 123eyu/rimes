@@ -9,5 +9,6 @@ Add `<version>.json` before pushing its release tag, for example `0.1.1.json`:
 ```
 
 Each locale must contain nonempty text, at most 4000 characters. Do not tag a
-placeholder change log. The pipeline changes update notes only; it preserves
-existing screenshots, privacy disclosures, price, territories and review contact.
+placeholder change log. The pipeline also uploads the three localized descriptions
+and review notes from `AppStore/`; it preserves existing screenshots, App Privacy
+answers, price, territories and review contact. Review those answers separately.

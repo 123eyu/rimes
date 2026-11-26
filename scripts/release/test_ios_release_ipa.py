@@ -1,4 +1,5 @@
 import copy
+import hashlib
 import importlib.util
 import json
 import plistlib
@@ -12,6 +13,8 @@ SCRIPT = Path(__file__).resolve().parents[2] / 'platforms/ios/scripts/verify-rel
 SPEC = importlib.util.spec_from_file_location('ios_release_ipa', SCRIPT)
 VERIFY = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(VERIFY)
+MODEL = b'test handwriting model'
+MODEL_SHA = hashlib.sha256(MODEL).hexdigest()
 
 
 def metadata(identifier=VERIFY.APP_ID):
@@ -98,14 +101,31 @@ class ReleaseIPATests(unittest.TestCase):
             for bundle in bundles:
                 bundle.mkdir(parents=True, exist_ok=True)
                 (bundle / 'Info.plist').write_bytes(plistlib.dumps(metadata()[0]))
-            VERIFY.validate_unsigned_app(app)
-            for bundle in bundles:
-                info = metadata()[0]
-                info['RIMESKeychainGroup'] = 'org.scholay.rimes.ios.shared'
-                (bundle / 'Info.plist').write_bytes(plistlib.dumps(info))
-                with self.subTest(bundle=bundle.name), self.assertRaisesRegex(ValueError, 'Keychain group'):
-                    VERIFY.validate_unsigned_app(app)
-                (bundle / 'Info.plist').write_bytes(plistlib.dumps(metadata()[0]))
+            model = bundles[1] / 'Handwriting/handwriting-zh_CN.model'
+            model.parent.mkdir()
+            model.write_bytes(MODEL)
+            with mock.patch.object(VERIFY, 'handwriting_model_sha256', return_value=MODEL_SHA):
+                VERIFY.validate_unsigned_app(app)
+                for bundle in bundles:
+                    info = metadata()[0]
+                    info['RIMESKeychainGroup'] = 'org.scholay.rimes.ios.shared'
+                    (bundle / 'Info.plist').write_bytes(plistlib.dumps(info))
+                    with self.subTest(bundle=bundle.name), self.assertRaisesRegex(ValueError, 'Keychain group'):
+                        VERIFY.validate_unsigned_app(app)
+                    (bundle / 'Info.plist').write_bytes(plistlib.dumps(metadata()[0]))
+
+    def test_handwriting_model_must_be_present_and_match_the_lock(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            keyboard = Path(tmp) / 'keyboard.appex'
+            model = keyboard / 'Handwriting/handwriting-zh_CN.model'
+            with self.assertRaisesRegex(ValueError, 'missing'):
+                VERIFY.validate_handwriting_model(keyboard, MODEL_SHA)
+            model.parent.mkdir(parents=True)
+            model.write_bytes(b'wrong model')
+            with self.assertRaisesRegex(ValueError, 'differs'):
+                VERIFY.validate_handwriting_model(keyboard, MODEL_SHA)
+            model.write_bytes(MODEL)
+            VERIFY.validate_handwriting_model(keyboard, MODEL_SHA)
 
     def test_ipa_receipt_records_actual_groups_and_requests_xml_from_codesign(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -115,6 +135,7 @@ class ReleaseIPATests(unittest.TestCase):
                                            ('Payload/RIMES.app/PlugIns/RIMESKeyboard.appex', VERIFY.KEYBOARD_ID)]:
                     archive.writestr(folder + '/Info.plist', plistlib.dumps(metadata(identifier)[0]))
                     archive.writestr(folder + '/PrivacyInfo.xcprivacy', plistlib.dumps({}))
+                archive.writestr('Payload/RIMES.app/PlugIns/RIMESKeyboard.appex/Handwriting/handwriting-zh_CN.model', MODEL)
             def read_signing(command, **kwargs):
                 identifier = VERIFY.KEYBOARD_ID if 'RIMESKeyboard.appex' in command[-1] else VERIFY.APP_ID
                 values = metadata(identifier)
@@ -122,7 +143,8 @@ class ReleaseIPATests(unittest.TestCase):
                     self.assertIn('--xml', command)
                     return plistlib.dumps(values[1])
                 return plistlib.dumps(values[2])
-            with mock.patch.object(VERIFY.subprocess, 'run'), mock.patch.object(VERIFY.subprocess, 'check_output', side_effect=read_signing):
+            with mock.patch.object(VERIFY.subprocess, 'run'), mock.patch.object(VERIFY.subprocess, 'check_output', side_effect=read_signing), \
+                 mock.patch.object(VERIFY, 'handwriting_model_sha256', return_value=MODEL_SHA):
                 receipt = VERIFY.verify_ipa(ipa, '1.1.8', '64')
             self.assertEqual({b['bundle_id'] for b in receipt['bundles']}, {VERIFY.APP_ID, VERIFY.KEYBOARD_ID})
             self.assertEqual(json.loads(ipa.with_suffix('.verification.json').read_text()), receipt)

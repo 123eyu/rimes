@@ -36,4 +36,19 @@ module RimesRelease
     raise 'Supply nonempty release notes in en-US, zh-Hans and zh-Hant' unless %w[en-US zh-Hans zh-Hant].all? { |l| notes[l].is_a?(String) && !notes[l].strip.empty? && notes[l].length <= 4000 }
     notes
   end
+
+  def self.store_descriptions(root)
+    %w[en-US zh-Hans zh-Hant].to_h do |locale|
+      path = File.join(root, 'AppStore', 'metadata', locale, 'description.txt')
+      description = File.read(path, encoding: 'UTF-8').strip
+      raise "Invalid App Store description for #{locale}" if description.empty? || description.length > 4000
+      [locale, description]
+    end
+  end
+
+  def self.review_notes(root)
+    notes = File.read(File.join(root, 'AppStore', 'review-notes.txt'), encoding: 'UTF-8').strip
+    raise 'Invalid App Store review notes' if notes.empty? || notes.length > 4000
+    notes
+  end
 end

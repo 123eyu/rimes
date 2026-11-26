@@ -21,6 +21,10 @@ contact information. Do not include credentials or private typing in public issu
 联想学习记录保存在键盘私有目录，不共享给主 App，也不参与备份。可在主 App 的“数据管理”
 中确认清除，下次打开 RIMES 键盘时生效；只删除联想学习记录，保留输入方案、词库和键位配置。
 
+实验性语音输入需要在 App 中启用、授予麦克风和语音识别权限，并在键盘中主动点击麦克风。
+它需要完全访问；支持本机识别时使用设备端识别，否则音频会发送给 Apple 进行语音识别，
+并受 Apple 的数据处理政策约束。XSIME 不保存录音文件。手写识别在设备上运行，无需完全访问。
+
 AI 功能可选。你配置自己的 HTTPS 服务地址、模型和 API Key，并在明确同意接收方后
 主动提交当前 Buffer 文本。请求包含这段文本、所选操作的指令、模型 ID 和用于向该
 服务认证的 Key。不会自动发送宿主文档全文、剪贴板或后台打字记录。服务方会处理
@@ -54,6 +58,12 @@ save requests add-only Photos authorization; existing photos are never read. The
 keeps the latest explicitly saved PNG, excluded from backup and deletable on its card
 page. Photos copies are managed in Photos. Keyboard image export needs Full Access;
 images are never automatically sent to a chat.
+
+Experimental voice input must be enabled in the app, with microphone and speech
+recognition permission, and started explicitly from the keyboard. It requires Full
+Access. Recognition runs on-device when supported; otherwise audio is sent to Apple
+for speech recognition and is subject to Apple's data practices. XSIME does not
+save recordings as files. Handwriting recognition runs on-device without Full Access.
 
 AI is optional. You configure an HTTPS provider, model and API key. After consenting
 to the recipient, you explicitly submit the current Buffer text. The request includes

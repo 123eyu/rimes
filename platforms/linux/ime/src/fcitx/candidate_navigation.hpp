@@ -8,4 +8,12 @@ struct CandidatePageTraits {
     static std::uint32_t pageId(const rimes::linuxime::EngineSnapshot& page) { return page.page_no * page.page_size; }
 };
 using CandidateNavigation = rimes::candidates::Navigation<rimes::linuxime::EngineSnapshot, CandidatePageTraits>;
+
+// Space-chord schemas need Space in librime's chord_composer, which then
+// commits librime's own highlight. The arrow keys and the matrix move only
+// XSIME's selection, so Space may go to librime only while the two agree.
+inline bool SpaceSelectsEngineHighlight(const CandidateNavigation& navigation) {
+    return !navigation.empty() && !navigation.expanded() &&
+           navigation.column() == CandidatePageTraits::highlighted(navigation.page(navigation.row()));
+}
 }

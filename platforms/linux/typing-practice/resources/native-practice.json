@@ -233770,20 +233770,20 @@
   "purpose" : "public-typing-practice-contract",
   "schemaVersion" : 1,
   "sources" : {
-    "OfficialPlugins\/native\/macos\/TypingSpeedSettingsViewController.swift" : "6108b60a6ed7571c1b036d4328bc6f88412c1e3613b90e2d78a935b525e1e386",
+    "OfficialPlugins\/native\/macos\/TypingSpeedSettingsViewController.swift" : "ca0fdcbbf1d7f8b683b3f09143c9f8cce16c1406294aa92bfb06a66211f60963",
     "OfficialPlugins\/native\/macos\/TypingTestArticles.swift" : "ce9a9418cae25d6c77952595ba7467ee0dab8964e3c77f3fd3ded355b7ffcf9c",
     "OfficialPlugins\/native\/macos\/TypingTestHistoryStore.swift" : "b1381a010bee67b368dfcf08dd43a3b088ea722f3b9969291ffb87e3ba1a37d5",
-    "OfficialPlugins\/native\/macos\/TypingTestLibrary.swift" : "53fb7184cf03c8fb9eaeb901613dcab43faccf0ec36d251db3e64014e4733f17",
+    "OfficialPlugins\/native\/macos\/TypingTestLibrary.swift" : "17027b6dab5f7dd4054aebf03863f23e9127478cfa6fdc95e39adfae0136276f",
     "OfficialPlugins\/native\/macos\/TypingTestMaterialColumn.swift" : "cf7afcc9cf81b608604aac32dd13351da12f9f04f1f163ba66dde242eeb1e305",
     "OfficialPlugins\/native\/macos\/TypingTestSession.swift" : "3330dbaaf2d4bda45b29b7fe3ee1b056744b5be371ddd47d6ec9c7b7b1466ca8",
     "OfficialPlugins\/native\/macos\/TypingTestTextView.swift" : "51a46b991bad9558cfb0309f2c8e69ced7e731c4d270c27b352221b88628ae47",
-    "OfficialPlugins\/native\/macos\/TypingTestTrackView.swift" : "f927385908edebb968504908f4cc3c533d50100d271ff830b3b4f355e7384a2a",
+    "OfficialPlugins\/native\/macos\/TypingTestTrackView.swift" : "e7035c58534ef80d45575fe5aacad5364fdee92a063d2f33d3c97cf3ecf3ed4f",
     "Sources\/RimeBuffer\/MetricsChartViews.swift" : "9128efde9f8e933335fd9b63d586636e2da9a80344f13f78a773190036f9c1e1",
     "Sources\/RimeBuffer\/RimeUI.swift" : "80a1a1046687fd469c8627489f4e9f93ec348a4ff35e4e8228e896464a9b1516",
     "Sources\/RimeBuffer\/TypingPracticeLinuxFixtures.swift" : "1c7671871371ca6edb1915e59a0e60d130fa5b7fa4448566fd09d4e137e88a17",
     "Sources\/RimeBuffer\/TypingPracticeLinuxUISmoke.swift" : "00f46292bc409b8d7c0cfc756f5817fbb9d3b7cade7070f4724c34bb61617345",
     "Sources\/RimeBuffer\/TypingPracticeTelemetry.swift" : "b16035d4505d3f19a7f54bef8b986785f3f08ef1bc944ca944517ed3555d095e",
-    "Sources\/RimeBuffer\/TypingTestUISmoke.swift" : "3293bff3c00b8443ed75298a1ccbf0718e214b7ac8af771ca601d9d369f77b15"
+    "Sources\/RimeBuffer\/TypingTestUISmoke.swift" : "9d9d26c7fa9ecb1d12a14c7d34d58aa53f1911c0bb79a7d30028d812d638f81e"
   },
   "validation" : [
     {

@@ -19,7 +19,7 @@ import RimesCore
             keyboard.viewWillAppear(false)
             keyboard.updateViewConstraints()
             let expected = KeyboardGeometry.height(layout: .orthogonal, chord: true, numeric: false,
-                emoji: false, landscape: width > 600, width: width - 10) + 10 + 32 + (width > 600 ? 34 : 40) + 8 - 3
+                emoji: false, landscape: width > 600, width: width - 10) + 10 + (width > 600 ? 28 : 30) + (width > 600 ? 34 : 40) + 8 - 3
             for proposedHeight: CGFloat in [0, 600, 900] {
                 let fitted = input.systemLayoutSizeFitting(CGSize(width: width, height: proposedHeight),
                     withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel)
@@ -45,7 +45,8 @@ import RimesCore
                     input.bounds = .zero
                     keyboard.updateViewConstraints()
                     let keyHeight = layout.geometry(width: Double(width - 10), landscape: width > 600).height
-                    let expected = keyHeight + 32 + 10 + 4 + (buffering ? (width > 600 ? 64 : 80) : 0)
+                    let unit: CGFloat = width > 600 ? 28 : 30
+                    let expected = keyHeight + unit + 10 + 4 + (buffering ? 2 * unit + 8 : 0)
                     let fitted = input.systemLayoutSizeFitting(CGSize(width: width, height: 900),
                         withHorizontalFittingPriority: .required, verticalFittingPriority: .fittingSizeLevel)
                     XCTAssertEqual(fitted.width, width, accuracy: 0.5)
@@ -103,14 +104,14 @@ import RimesCore
         let idleHeight = keyboard.view.bounds.height
         keyboard.developmentBuffer("展开检查")
         try await Task.sleep(nanoseconds: 300_000_000)
-        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 80, accuracy: 0.5)
+        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 68, accuracy: 0.5)
         keyboard.developmentContent(preedit: "ni", candidates: Array(repeating: "候选词", count: 60))
         keyboard.layoutViews.candidates.onExpand?()
         try await Task.sleep(nanoseconds: 300_000_000)
-        XCTAssertGreaterThan(keyboard.view.bounds.height, idleHeight + 80)
+        XCTAssertGreaterThan(keyboard.view.bounds.height, idleHeight + 68)
         keyboard.layoutViews.candidates.onExpand?()
         try await Task.sleep(nanoseconds: 300_000_000)
-        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 80, accuracy: 0.5)
+        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 68, accuracy: 0.5)
         keyboard.developmentBuffer(nil); keyboard.developmentContent()
         try await Task.sleep(nanoseconds: 300_000_000)
         XCTAssertEqual(keyboard.view.bounds.height, idleHeight, accuracy: 0.5)
@@ -177,10 +178,10 @@ import RimesCore
         for height in [874, 444, idleHeight] { check(container: height, content: idleHeight) }
         // Buffer grows and shrinks the content before the container follows.
         keyboard.developmentBuffer("底边检查")
-        check(container: idleHeight, content: idleHeight + 80)
-        check(container: idleHeight + 80, content: idleHeight + 80)
+        check(container: idleHeight, content: idleHeight + 68)
+        check(container: idleHeight + 68, content: idleHeight + 68)
         keyboard.developmentBuffer(nil)
-        check(container: idleHeight + 80, content: idleHeight)
+        check(container: idleHeight + 68, content: idleHeight)
         check(container: idleHeight, content: idleHeight)
     }
 
@@ -231,12 +232,12 @@ import RimesCore
         settle(container: idleHeight)
         XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
         XCTAssertEqual(keyboard.view.frame.maxY, idleHeight, accuracy: 0.5)
-        XCTAssertEqual(keyboard.view.frame.height, idleHeight + 80, accuracy: 0.5)
-        // Buffer closing while the container lags leaves an 80-point gap, then none.
-        settle(container: idleHeight + 80)
+        XCTAssertEqual(keyboard.view.frame.height, idleHeight + 68, accuracy: 0.5)
+        // Buffer closing while the container lags leaves an 68-point gap, then none.
+        settle(container: idleHeight + 68)
         keyboard.developmentBuffer(nil)
-        settle(container: idleHeight + 80)
-        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        settle(container: idleHeight + 68)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 68, accuracy: 0.5)
         settle(container: idleHeight)
         XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
     }
@@ -291,7 +292,7 @@ import RimesCore
         settle(container: idleHeight + 1)
         XCTAssertEqual(keyboard.view.frame.height, idleHeight, accuracy: 0.01)
         settle(container: idleHeight)
-        settle(container: idleHeight + 80)
+        settle(container: idleHeight + 68)
         container.setNeedsLayout(); container.layoutIfNeeded()
         XCTAssertEqual(keyboard.view.frame.height, idleHeight, accuracy: 0.01)
     }
@@ -345,14 +346,14 @@ import RimesCore
         let (keyboard, container, idleHeight, window) = try gapFixture()
         defer { window.isHidden = true }
         keyboard.developmentBuffer("关闭时检查高度")
-        container.frame.size.height = idleHeight + 80
+        container.frame.size.height = idleHeight + 68
         container.setNeedsLayout(); container.layoutIfNeeded()
         XCTAssertEqual(keyboard.developmentHeightGap.height, 0, accuracy: 0.5)
         XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
         keyboard.beginAppearanceTransition(false, animated: false); keyboard.endAppearanceTransition()
         container.setNeedsLayout(); container.layoutIfNeeded()
         XCTAssertTrue(keyboard.layoutViews.buffer.isHidden)
-        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 68, accuracy: 0.5)
         XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
         try await Task.sleep(nanoseconds: 600_000_000)
         XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
@@ -365,7 +366,8 @@ import RimesCore
         keyboard.developmentBuffer("暂时失去焦点")
         container.frame.size.height = idleHeight + 160
         container.setNeedsLayout(); container.layoutIfNeeded()
-        XCTAssertEqual(keyboard.developmentHeightGap.height, 80, accuracy: 0.5)
+        // 160 of container over 68 of Buffer content.
+        XCTAssertEqual(keyboard.developmentHeightGap.height, 92, accuracy: 0.5)
         XCTAssertTrue(keyboard.developmentHeightGap.recoveryScheduled)
         NotificationCenter.default.post(name: .NSExtensionHostWillResignActive, object: nil)
         XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
@@ -373,7 +375,7 @@ import RimesCore
         // creates another gap callback, which must not restart height requests.
         container.frame.size.height += 40
         container.setNeedsLayout(); container.layoutIfNeeded()
-        XCTAssertGreaterThan(keyboard.developmentHeightGap.height, 80)
+        XCTAssertGreaterThan(keyboard.developmentHeightGap.height, 68)
         XCTAssertFalse(keyboard.developmentHeightGap.recoveryScheduled)
         try await Task.sleep(nanoseconds: 600_000_000)
         XCTAssertEqual(keyboard.developmentHeightGap.recoveryAttempts, 0)
@@ -438,7 +440,7 @@ import RimesCore
             keyboard.view.bottomAnchor.constraint(equalTo: parent.view.bottomAnchor)
         ])
         keyboard.didMove(toParent: parent)
-        keyboard.developmentResetPreferences(); keyboard.developmentChoose(.chord)
+        keyboard.developmentResetPreferences(); keyboard.developmentSetCandidateMatrix(true); keyboard.developmentChoose(.chord)
         keyboard.developmentContent(); keyboard.developmentBuffer(nil)
         parent.view.layoutIfNeeded()
         let idleHeight = keyboard.view.bounds.height
@@ -466,11 +468,11 @@ import RimesCore
 
         keyboard.developmentBuffer("测试高度。")
         try checkContentFits()
-        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 80, accuracy: 0.5)
+        XCTAssertEqual(keyboard.view.bounds.height, idleHeight + 68, accuracy: 0.5)
         keyboard.developmentContent(preedit: "ni", candidates: Array(repeating: "这是一个很长的候选词", count: 8))
         keyboard.layoutViews.candidates.onExpand?()
         try checkContentFits()
-        XCTAssertGreaterThan(keyboard.view.bounds.height, idleHeight + 80)
+        XCTAssertGreaterThan(keyboard.view.bounds.height, idleHeight + 68)
 
         // Width changes must use the landscape row heights in the first layout pass.
         width.constant = 852
@@ -479,7 +481,7 @@ import RimesCore
         XCTAssertEqual(keyboard.layoutViews.bottom.bounds.height, 34)
         width.constant = 393
         try checkContentFits()
-        XCTAssertEqual(keyboard.layoutViews.buffer.bounds.height, 76)
+        XCTAssertEqual(keyboard.layoutViews.buffer.bounds.height, 64)
 
         keyboard.layoutViews.candidates.onExpand?()
         keyboard.developmentBuffer(nil); keyboard.developmentContent()

@@ -1,2 +1,4 @@
 "CFBundleDisplayName" = "犀术IME";
 "CFBundleName" = "犀术IME";
+"NSMicrophoneUsageDescription" = "实验性语音输入只在你于 XSIME 键盘上打开麦克风键时录音，把你说的话转成 Buffer 文字。";
+"NSSpeechRecognitionUsageDescription" = "实验性语音输入使用 Apple 语音识别把你说的话转成 Buffer 文字，设备支持时在本机完成。";

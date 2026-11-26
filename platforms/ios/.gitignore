@@ -16,3 +16,5 @@ Resources/EngineData/wubi86.dict.yaml
 vendor/bundle/
 fastlane/report.xml
 fastlane/README.md
+Resources/Handwriting/handwriting-zh_CN.model
+Resources/HandwritingOCR/

@@ -41,6 +41,9 @@ jobs:
         working-directory: ${{ github.workspace }}
         run: python3 scripts/prepare-official-plugins.py
 
+      - name: Check microphone cancellation races
+        run: node platforms/ios/scripts/tests/keyboard-dictation-race.test.cjs
+
       - uses: ruby/setup-ruby@e8944e80fb94b20106697132f8c20c665fab29e9
         with:
           ruby-version: '3.3'
