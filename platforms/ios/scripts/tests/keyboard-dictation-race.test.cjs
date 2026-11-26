@@ -57,7 +57,9 @@ async function main() {
     const h = harness({ suspended: true }), m = media();
     const pending = h.run('startCapture()');
     h.requests[0].resolve(m.stream);
-    await Promise.resolve();
+    // The capture script runs in a separate VM realm; let its queued promise
+    // reactions reach the suspended audio context before requesting stop.
+    await new Promise(resolve => setImmediate(resolve));
     assert.equal(h.contexts.length, 1);
     h.run('stopCapture()');
     h.contexts[0].resumeDone();
