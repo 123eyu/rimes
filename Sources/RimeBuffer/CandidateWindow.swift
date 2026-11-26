@@ -999,7 +999,9 @@ final class CandidateWindow {
             preeditLabel.stringValue = projectionPreedit
         }
         preeditPill.isHidden = preeditLabel.stringValue.isEmpty
+        var latencyLap = KeyLatencyProbe.Lap()
         renderCandidates()
+        latencyLap.mark(.panelRender)
         // Hosts often publish caret geometry a beat after marked text is set,
         // so the first rect of a composition can still be a stale/default one
         // glued to the screen's left edge. Do not reveal the panel there; the
@@ -1476,6 +1478,7 @@ final class CandidateWindow {
             return
         }
 
+        var latencyLap = KeyLatencyProbe.Lap()
         if presentationMode == .bufferCaret {
             guard let caret = BufferWindowController.shared
                 .inlineInputCaretScreenRect(owner: ownerToken) else {
@@ -1494,17 +1497,20 @@ final class CandidateWindow {
             lastCaretRect = caret
         }
 
+        latencyLap.mark(.panelAnchor)
         attachContentToPanel()
         guard layoutPanel(caretRect: lastCaretRect, bundleId: lastBundleId) else {
             hidePanel(reason: "layout-unavailable",
                       clearsPresentation: false)
             return
         }
+        latencyLap.mark(.panelLayout)
         panel.level = CandidatePanelLevelRules.level(
             bundleID: interactionTarget.bundleID,
             hostKind: interactionTarget.hostKind
         )
         showPanel(reason: "layout-ready")
+        latencyLap.mark(.panelShow)
     }
 
     /// Candidate presentation changes are centralized here so logical state and
@@ -1512,6 +1518,11 @@ final class CandidateWindow {
     /// strings; logs contain only counts, geometry, and focus tokens — never
     /// candidate, preedit, input, or bundle text.
     private func hidePanel(reason: String, clearsPresentation: Bool) {
+        var latencyLap = KeyLatencyProbe.Lap()
+        let latencyWasVisible = panel.isVisible
+        // Hiding an already hidden panel happens on most updates and is not
+        // the cost being measured.
+        defer { if latencyWasVisible { latencyLap.mark(.panelHide) } }
         let snapshot = panelLogSnapshot()
         panel.level = CandidatePanelLevelRules.standard
         panel.ignoresMouseEvents = true
@@ -2366,6 +2377,21 @@ final class CandidateWindow {
         check(window.compactRowButtons.allSatisfy { button in
             button.constraints.filter { $0.identifier?.hasPrefix("candidate.size.") == true }.count == 2
         }, "reused buttons retain exactly two size constraints")
+        // Every committed character retires the panel, so the first render of
+        // the next composition starts from scrubbed views.
+        var coldTimes: [Double] = []
+        for index in 0..<60 {
+            window.scrubRenderedCandidateViews()
+            context.input = "cold-\(index)"
+            let start = CFAbsoluteTimeGetCurrent()
+            window.currentContext = context
+            window.renderCandidates()
+            _ = window.layoutPanel(caretRect: window.lastCaretRect, bundleId: "smoke")
+            coldTimes.append((CFAbsoluteTimeGetCurrent() - start) * 1_000)
+        }
+        coldTimes.sort()
+        print(String(format: "candidate cold render fixture: p50=%.3fms p95=%.3fms max=%.3fms (first render after retirement)",
+                     coldTimes[coldTimes.count / 2], coldTimes[Int(Double(coldTimes.count - 1) * 0.95)], coldTimes.last!))
         window.hideAll()
         check(window.compactRowButtons.isEmpty && window.measuredWidths.isEmpty
               && window.lastRenderState == nil && window.candidateStack.arrangedSubviews.isEmpty,

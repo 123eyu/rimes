@@ -2242,6 +2242,8 @@ final class RIMESController: IMKInputController {
     private func adoptEventFocus(client: IMKTextInput,
                                  eventTimestamp: TimeInterval,
                                  eventType: NSEvent.EventType) -> Bool {
+        let latencyStart = CFAbsoluteTimeGetCurrent()
+        defer { KeyLatencyProbe.note(.focus, since: latencyStart) }
         guard currentControllerClientMatches(client) else {
             if RimeInputSourceAuthority.currentSourceIsOwn() {
                 suspendGlobalFocusLeaseIfPresent(
@@ -3024,6 +3026,8 @@ final class RIMESController: IMKInputController {
 
     override func handle(_ event: NSEvent!, client sender: Any!) -> Bool {
         guard let event, let client = sender as? IMKTextInput else { return false }
+        let latencySpan = KeyLatencyProbe.begin(event)
+        defer { latencySpan.map(KeyLatencyProbe.end) }
         guard !rejectProtectedInput(client: client) else { return false }
         guard callbackHasCurrentInputSourceAuthority(
             operation: "handle"
@@ -7152,6 +7156,9 @@ final class RIMESController: IMKInputController {
     }
 
     private func updateUI(client: IMKTextInput) {
+        let latencyStart = CFAbsoluteTimeGetCurrent()
+        defer { KeyLatencyProbe.note(.ui, since: latencyStart) }
+        var latencyLap = KeyLatencyProbe.Lap()
         guard RimeInputSourceAuthority.currentSourceIsOwn() else {
             chordClientRoutingGate.withIsolatedClientRouting {
                 chord.flush()
@@ -7256,10 +7263,12 @@ final class RIMESController: IMKInputController {
             return
         }
 
+        latencyLap.mark(.uiPrep)
         let t0 = CFAbsoluteTimeGetCurrent()
         let status = rimeEngine.getStatus(session: session)
         let ctx = rimeEngine.getContext(session: session)
         watchdog("getContext", since: t0)
+        latencyLap.mark(.context)
 
         // A schema switch made INSIDE Rime (F4 switcher) must feel as global
         // as a menu switch: persist it so other controllers adopt it on focus.
@@ -7300,7 +7309,10 @@ final class RIMESController: IMKInputController {
         // not query the IMK proxy again after librime work may have allowed an
         // input-source transition to occur.
         let bid = lease.bundleID
-        let mode = CompositionSession.mode(for: bid)
+        // The typing test grid reserves one cell per character: keep composition out of it and
+        // show the preedit in the candidate panel instead.
+        let mode: CompositionSession.Mode = TypingPracticeTelemetry.isPracticeInputFocused
+            ? .placeholder : CompositionSession.mode(for: bid)
         let rimeContextActive = ctx.active || !ctx.input.isEmpty || !ctx.preedit.isEmpty
         let compositionActive = chord.hasPending || rimeContextActive
         let stagedChordGuardActive = chord.hasPending && !rimeContextActive
@@ -7322,6 +7334,7 @@ final class RIMESController: IMKInputController {
             IMELog.write("updateUI presentation blocked before host write token=\(focusToken)")
             return
         }
+        latencyLap.mark(.uiState)
         switch presentation {
         case .none:
             clearCompositionPresentation(client: client)
@@ -7335,6 +7348,7 @@ final class RIMESController: IMKInputController {
                                           client: client)
             guardActive = true
         }
+        latencyLap.mark(.marked)
         // IMK host proxy calls above may synchronously re-enter focus handling.
         // Never publish the old context or anchor its candidates under a newly
         // activated field/token.
@@ -7353,6 +7367,7 @@ final class RIMESController: IMKInputController {
         // field-change detection (would drop chord/F4 keys — press-twice bug).
         publishCompositionActive(compositionActive,
             markedRangeReliable: !guardActive)
+        latencyLap.mark(.publish)
         guard uiTransactionStillCurrent(
             lease: lease,
             client: client,
@@ -7417,6 +7432,8 @@ final class RIMESController: IMKInputController {
                 cursorPosUTF8: ctx.cursorPos,
                 owner: focusToken
             )
+            latencyLap.mark(.inline)
+            defer { latencyLap.mark(.panel) }
             guard uiTransactionStillCurrent(
                 lease: lease,
                 client: client,
@@ -7458,7 +7475,10 @@ final class RIMESController: IMKInputController {
                 IMELog.write("candidate caret blocked before host query token=\(focusToken)")
                 return
             }
+            latencyLap.mark(.inline)
             let anchor = caretRect(for: client)
+            latencyLap.mark(.caret)
+            defer { latencyLap.mark(.panel) }
             guard uiTransactionStillCurrent(
                 lease: lease,
                 client: client,
@@ -7480,7 +7500,9 @@ final class RIMESController: IMKInputController {
                 scheduleCaretSettle(lease: lease, client: client, owner: focusToken)
             }
         } else {
+            latencyLap.mark(.inline)
             candidateWindow.hide(owner: focusToken)
+            latencyLap.mark(.panel)
         }
     }
 

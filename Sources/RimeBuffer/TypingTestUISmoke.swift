@@ -139,6 +139,7 @@ func runTypingTestUISmokeTest(outputDirectory: URL? = nil) -> Bool {
             }
         }
         if let problem = typingTestTrackSmoke() { return fail(problem) }
+        if let problem = typingTestSteadinessSmoke() { return fail(problem) }
         if let outputDirectory { try FileManager.default.createDirectory(at: outputDirectory, withIntermediateDirectories: true) }
         // Content areas the settings window can give a plugin page: the default
         // 980x680 window, its 860x600 minimum, and a large display.
@@ -362,5 +363,91 @@ private func typingTestTrackSmoke() -> String? {
     for (index, pair) in zip(tops, rowTops).enumerated() where abs(pair.0 - pair.1) > 1.5 {
         return "track: typed line \(index) at \(pair.0), its source row expects \(pair.1)"
     }
+    // Latin text, CJK punctuation runs and mixed text must still sit one character per cell.
+    let mixed = TypingTestTrackTextView(frame: NSRect(x: 0, y: 0, width: 700, height: 400), textContainer: nil)
+    mixed.acceptsTestInput = true
+    mixed.isEditable = true
+    let sample = "The quick brown fox AV fi 他说：“今天，好。”然后（注意！）好，，。。！？”“ Mixed中文English混排，ok。(a) 'b' 1,234.5"
+    mixed.setSource(sample, states: [], typedCorrectness: [])
+    for character in sample { mixed.insertText(String(character), replacementRange: NSRange(location: NSNotFound, length: 0)) }
+    guard mixed.smokeWorstCellDrift < 0.05 else { return "track: typed cells drift \(mixed.smokeWorstCellDrift) cell from the source grid" }
+    return nil
+}
+
+/// Typing through the real page: per keystroke at most one forward page scroll,
+/// the candidate anchor exactly on the cell the next character goes into (also
+/// at row ends), and nothing on the page moving while the live readings refresh.
+private func typingTestSteadinessSmoke() -> String? {
+    let temporary = FileManager.default.temporaryDirectory
+    let controller = TypingSpeedSettingsViewController(
+        subpageID: "overview",
+        historyStore: TypingTestHistoryStore(storageRoot: temporary.appendingPathComponent("tt-steady-\(UUID())")),
+        library: TypingTestLibraryStore(storageRoot: temporary.appendingPathComponent("tt-steady-lib-\(UUID())")),
+        contextProvider: { TypingTestContext(schemaID: "steady") }, telemetryEnabled: false)
+    let size = NSSize(width: 900, height: 520)
+    let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
+    window.isReleasedWhenClosed = false
+    defer { window.close() }
+    let backdrop = TypingTestSmokeBackdrop(frame: NSRect(origin: .zero, size: size))
+    window.contentView = backdrop
+    let pane = controller.view
+    backdrop.addSubview(pane)
+    pane.frame = backdrop.bounds
+    pane.autoresizingMask = [.width, .height]
+    let article = TypingTestArticles.all[0]
+    controller.prepareForSmoke(articleID: article.id)
+    pane.layoutSubtreeIfNeeded()
+    controller.smokeStartByButton()
+    guard let scroll = controller.smokePageScroll else { return "steady: page scroll missing" }
+    let editor = controller.smokeTrack
+    var scrolls: [CGFloat] = []
+    scroll.contentView.postsBoundsChangedNotifications = true
+    let token = NotificationCenter.default.addObserver(forName: NSView.boundsDidChangeNotification, object: scroll.contentView, queue: nil) { _ in
+        scrolls.append(scroll.contentView.bounds.minY)
+    }
+    defer { NotificationCenter.default.removeObserver(token) }
+    func pump(_ seconds: TimeInterval = 0.002) { RunLoop.current.run(until: Date().addingTimeInterval(seconds)) }
+    func frames() -> [ObjectIdentifier: NSRect] {
+        var out: [ObjectIdentifier: NSRect] = [:]
+        func walk(_ view: NSView) { out[ObjectIdentifier(view)] = view.convert(view.bounds, to: nil); view.subviews.forEach(walk) }
+        walk(pane)
+        return out
+    }
+    let none = NSRange(location: NSNotFound, length: 0)
+    // Enough text for several row ends, a paragraph end and page scrolls.
+    for (index, character) in TypingTestSession.normalized(article.text).prefix(130).enumerated() {
+        scrolls = []
+        let before = scroll.contentView.bounds.minY
+        editor.setMarkedText("　", selectedRange: NSRange(location: 0, length: 0), replacementRange: none); pump()
+        var actual = NSRange()
+        let anchor = editor.firstRect(forCharacterRange: editor.markedRange(), actualRange: &actual)
+        guard let cell = editor.smokeCursorCell else { return "steady: no cursor cell at \(index)" }
+        let expected = window.convertToScreen(editor.convert(cell, to: nil))
+        guard abs(anchor.minX - expected.minX) < 0.5, abs(anchor.minY - expected.minY) < 0.5, anchor.width >= 1 else {
+            return "steady: candidate anchor \(anchor) is not the cursor cell \(expected) at character \(index)"
+        }
+        editor.insertText(String(character), replacementRange: none); pump()
+        guard scrolls.count <= 1, scrolls.allSatisfy({ $0 >= before }) else {
+            return "steady: page scrolled \(scrolls) from \(before) for character \(index)"
+        }
+    }
+    // A reading changing width (— → 99.5 → 123 → 1234) must not slide its unit.
+    let tile = TypingTestStatTile(title: "有效速度", symbolName: "speedometer")
+    let host = NSView(frame: NSRect(x: 0, y: 0, width: 160, height: TypingTestStatTile.height))
+    host.addSubview(tile)
+    NSLayoutConstraint.activate([tile.leadingAnchor.constraint(equalTo: host.leadingAnchor), tile.widthAnchor.constraint(equalToConstant: 152),
+                                 tile.topAnchor.constraint(equalTo: host.topAnchor)])
+    window.contentView?.addSubview(host)
+    let unitXs = ["—", "99.5", "123", "1234"].map { value -> CGFloat in tile.update(value: value, unit: "字/分"); return tile.smokeUnitX }
+    host.removeFromSuperview()
+    guard unitXs.allSatisfy({ abs($0 - unitXs[0]) < 0.5 }) else { return "steady: stat unit slides with the reading: \(unitXs)" }
+    // While composing and idle, the 0.25 s refresh changes readings but must move nothing.
+    editor.setMarkedText("　", selectedRange: NSRange(location: 0, length: 0), replacementRange: none)
+    pane.layoutSubtreeIfNeeded()
+    let idle = frames()
+    pump(0.6)
+    pane.layoutSubtreeIfNeeded()
+    let now = frames(); let moved = now.keys.filter { key in idle[key].map { $0 != now[key] } ?? false }.count
+    guard moved == 0 else { return "steady: \(moved) views moved during the live refresh" }
     return nil
 }

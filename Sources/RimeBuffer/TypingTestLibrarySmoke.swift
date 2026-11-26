@@ -50,7 +50,7 @@ func typingTestSmokeFixture() -> TypingTestSmokeFixture {
 
     let chinese = (1...40).map { "第\($0)段：清晨的街道很安静，<em>老板</em>把热气腾腾的豆浆放在柜台上。赶早班的人快步走来！" }
     let chapterOne = "<h1>第一章 清晨</h1>" + chinese.map { "<p>\n  \($0)\n</p>" }.joined()
-        + "<script>var secret = 'SCRIPTTEXT';</script><!-- hidden comment --><p>汉<ruby>字<rt>han</rt></ruby>&amp;&#x4E00;&nbsp;&mdash;结束。</p>"
+        + "<script>var secret = 'SCRIPTTEXT';</script><!-- hidden comment --><p>汉<ruby>字<rt>han</rt></ruby>&amp;&#x4E00;&nbsp;&mdash;结束了这一章的全部内容。</p>"
         + "<p>★ ※ 请参阅附录[12]，详见 http://example.com/x 或写信 mail@example.com ，，，。。。 </p><p>* * * ---- 12</p>"
     let english = (1...30).map { "<p>Sentence number \($0) walks quietly past the bakery. Dr. Smith waved at the baker, who smiled &amp; nodded.</p>" }.joined()
     let container = "<?xml version=\"1.0\"?><container version=\"1.0\" xmlns=\"urn:oasis:names:tc:opendocument:xmlns:container\"><rootfiles><rootfile full-path=\"OEBPS/content.opf\" media-type=\"application/oebps-package+xml\"/></rootfiles></container>"
@@ -113,7 +113,7 @@ func runTypingTestLibrarySmokeTest(probing files: [URL] = []) -> Bool {
         let first = book.chapters[0].passages.joined().replacingOccurrences(of: "\n", with: "")
         guard first.hasPrefix("第1段：清晨的街道很安静，老板把热气腾腾的豆浆放在柜台上。"), !first.contains("SCRIPTTEXT"),
               !first.contains("hidden comment"), !first.contains("han"), !first.contains("ignored head"), !first.contains("\n"),
-              first.contains("汉字&一 —结束。") else { return fail("markup clean-up: prefix=\(first.hasPrefix("第1段：清晨的街道很安静，老板把热气腾腾的豆浆放在柜台上。")) script=\(first.contains("SCRIPTTEXT")) comment=\(first.contains("hidden comment")) han=\(first.contains("han")) head=\(first.contains("ignored head")) nl=\(first.contains("\n")) tail=\(Array(first.suffix(9).unicodeScalars.map { String($0.value, radix: 16) }))") }
+              first.contains("汉字&一—结束了这一章的全部内容。") else { return fail("markup clean-up: prefix=\(first.hasPrefix("第1段：清晨的街道很安静，老板把热气腾腾的豆浆放在柜台上。")) script=\(first.contains("SCRIPTTEXT")) comment=\(first.contains("hidden comment")) han=\(first.contains("han")) head=\(first.contains("ignored head")) nl=\(first.contains("\n")) tail=\(Array(first.suffix(9).unicodeScalars.map { String($0.value, radix: 16) }))") }
         guard !first.contains("★"), !first.contains("※"), !first.contains("[12]"), !first.contains("http"), !first.contains("@"),
               !first.contains("，，"), !first.contains("。。"), !first.contains("----"), first.contains("请参阅附录") else {
             return fail("practice text must drop symbols, footnotes, links and repeated punctuation")
@@ -175,6 +175,21 @@ func runTypingTestLibrarySmokeTest(probing files: [URL] = []) -> Bool {
             tampered.replaceSubrange((directory + 24)..<(directory + 28), with: le(1 << 30, 4))
         }
         do { _ = try TypingTestEPUBImporter.parse(data: Data(tampered)); return fail("oversized declared entry must be rejected") } catch {}
+
+        // Practice text: dot leaders, loose points and never-typed spaces go; prose punctuation stays.
+        let cleaning: [(String, String)] = [
+            ("第 5 章为什么有人屡屡戒不了烟 ..............................45下一节", "第5章为什么有人屡屡戒不了烟下一节"),
+            ("他说： “好的 ”，然后走了。", "他说：“好的”，然后走了。"),
+            ("丧失了乐趣。 2、不要等着。 3、好。", "丧失了乐趣。2、不要等着。3、好。"),
+            ("当你分发 STRAND 时，你会 ( 被骗 ) 。", "当你分发STRAND时，你会(被骗)。"),
+            ("等一等...... 然后继续", "等一等...... 然后继续"),
+            ("苹果 . 香蕉 · 橘子", "苹果香蕉橘子"),
+            ("“Hi,” she said. “Bye.” ", "“Hi,” she said. “Bye.”"),
+        ]
+        for (raw, expected) in cleaning where TypingTestPassageSplitter.practiceText(raw) != expected {
+            return fail("practice text \(raw.debugDescription) became \(TypingTestPassageSplitter.practiceText(raw).debugDescription), expected \(expected.debugDescription)")
+        }
+        guard TypingTestPassageSplitter.leaderCount("甲 .......... 3 乙 .......... 9 丙 .......... 12") == 3 else { return fail("catalogue leaders must be counted") }
 
         // Splitter limits for one huge unbroken sentence.
         let huge = TypingTestPassageSplitter.passages(from: [String(repeating: "字", count: 5_000)])

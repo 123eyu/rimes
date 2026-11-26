@@ -1787,6 +1787,12 @@ InputFocusCoordinator.shared.onChange = {
     BufferWindowController.shared.refreshForFocusChange()
     ClipboardHistoryWindowController.shared.focusDidChange()
 }
+InputFocusCoordinator.shared.onCompositionActivityChange = {
+    ActionPluginHost.shared.focusDidChange()
+    StreamInputWorkspace.shared.focusDidChange()
+    BufferWindowController.shared.refreshForCompositionChange()
+    ClipboardHistoryWindowController.shared.focusDidChange()
+}
 InputFocusCoordinator.shared.onInvalidated = { owner in
     BufferModel.shared.clearAllContentSelection()
     candidateWindow.hide(owner: owner)
@@ -9104,7 +9110,8 @@ func runBufferWindowSmokeTest() -> Bool {
         sameSession: Bool = true,
         elapsed: TimeInterval = 0.4,
         sameHost: Bool? = true,
-        boxNamed: Bool = true
+        boxNamed: Bool = true,
+        noBoxes: Bool = false
     ) -> BufferLateBoxAlignmentRules.Decision {
         BufferLateBoxAlignmentRules.decision(
             workbenchVisible: visible,
@@ -9112,11 +9119,17 @@ func runBufferWindowSmokeTest() -> Bool {
             sameWorkbenchSession: sameSession,
             elapsed: elapsed,
             targetInSameHostProcess: sameHost,
-            boxNamed: boxNamed
+            boxNamed: boxNamed,
+            hostExposesNoBoxes: noBoxes
         )
     }
     guard lateBoxAlignment() == .align,
           lateBoxAlignment(boxNamed: false) == .wait,
+          // WeChat answers that it exposes no boxes: that moves the opening
+          // off its self-drawn composer just as a named box would.
+          lateBoxAlignment(boxNamed: false, noBoxes: true) == .align,
+          lateBoxAlignment(sameHost: false, boxNamed: false, noBoxes: true)
+            == .abandon,
           // The lease is briefly absent while an input-source switch
           // re-activates the same field under a new token.
           lateBoxAlignment(sameHost: nil) == .wait,
@@ -11688,6 +11701,33 @@ func runBufferWindowSmokeTest() -> Bool {
         visibleFrames: [primary],
         fallback: primary
     )
+    // A self-drawn composer (WeChat) names no box: the workbench starts at the
+    // caret and opens above the caret line, off the composer below it. It
+    // still drops below when the caret is too close to the top, and a real
+    // box always wins over the hint.
+    let ownComposerOpening = BufferWindowGeometry.openingPlacement(
+        currentFrame: openingFrame,
+        targetRect: chatCaret,
+        hostDrawsOwnComposer: true,
+        visibleFrames: [primary],
+        fallback: primary
+    )
+    let topComposerCaret = NSRect(x: 420, y: 860, width: 0, height: 22)
+    let topComposerOpening = BufferWindowGeometry.openingPlacement(
+        currentFrame: openingFrame,
+        targetRect: topComposerCaret,
+        hostDrawsOwnComposer: true,
+        visibleFrames: [primary],
+        fallback: primary
+    )
+    let composerWithBoxOpening = BufferWindowGeometry.openingPlacement(
+        currentFrame: openingFrame,
+        targetRect: chatCaret,
+        boxRect: chatBox,
+        hostDrawsOwnComposer: true,
+        visibleFrames: [primary],
+        fallback: primary
+    )
     // A box near the bottom has no room below, so it flips above while keeping
     // its left edge and width.
     let bottomBox = NSRect(x: 360, y: 30, width: 700, height: 40)
@@ -11720,6 +11760,13 @@ func runBufferWindowSmokeTest() -> Bool {
           // Without a box the caret no longer fixes the left edge; the panel
           // centres on it at its current width.
           caretOnlyOpening.frame.midX == chatCaret.midX,
+          ownComposerOpening.side == .aboveTarget,
+          ownComposerOpening.frame.minX == chatCaret.minX,
+          ownComposerOpening.frame.minY
+            == chatCaret.maxY + BufferWindowGeometry.inputAnchorGap,
+          topComposerOpening.side == .belowTarget,
+          topComposerOpening.frame.minX == topComposerCaret.minX,
+          composerWithBoxOpening == boxAlignedOpening,
           flippedBoxOpening.side == .aboveTarget,
           flippedBoxOpening.frame.minX == bottomBox.minX,
           flippedBoxOpening.frame.width == bottomBox.width,
