@@ -49,6 +49,7 @@ jobs:
           ruby platforms/ios/scripts/tests/release-config-test.rb
           platforms/ios/scripts/build.sh
           platforms/ios/scripts/test-simulator.sh
+          python3 platforms/ios/scripts/verify.py --distribution
       - uses: ruby/setup-ruby@e8944e80fb94b20106697132f8c20c665fab29e9
         with:
           ruby-version: '3.3'

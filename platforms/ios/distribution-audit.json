@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "status": "ready",
+  "status": "pending",
   "assets": [
     {
       "name": "librime",
@@ -36,6 +36,20 @@
       "license": "CC-BY-4.0",
       "status": "verified",
       "evidence": "2026-09-29: the official site's FAQ states 'Animated Noto Emoji is licensed under CC BY 4.0' and permits commercial use in apps. 12 files downscaled to 96 px animated PNG; attribution, license link and changes in Resources/THIRD_PARTY.txt and the keyboard settings panel. Source SHA-256 values in dependencies.lock.json."
+    },
+    {
+      "name": "zinnia",
+      "source": "https://github.com/taku910/zinnia/tree/581faa8f6f15e4a7b21964be3a5ec36265c80e5b/zinnia",
+      "license": "BSD-3-Clause",
+      "status": "verified",
+      "evidence": "2026-11-26: vendored source, generated config.h, AUTHORS and COPYING match the pinned upstream commit byte for byte; license included in the app notices."
+    },
+    {
+      "name": "tegaki-zinnia-simplified-chinese-light",
+      "source": "https://github.com/tegaki/tegaki/releases/tag/v0.3",
+      "license": "LGPL-2.1",
+      "status": "verified",
+      "evidence": "2026-11-26: official release archive and model match dependencies.lock.json SHA-256; archive COPYING matches bundled license, and archive includes the XML training data and model."
     }
   ],
   "releasePrerequisites": [
@@ -63,6 +77,16 @@
       "name": "Physical haptic regression acceptance for build 38",
       "verified": true,
       "evidence": "2026-10-04: on Release-optimized build 38 the maintainer confirmed clear feedback while typing slowly and responsive feedback at speed, then explicitly accepted iOS. Build 40 changes only app home branding, localization, contact links and build number; the accepted keyboard code is unchanged. Hosted tests and simulator gestures are documented separately in validation/release-1.1.0/README.md."
+    },
+    {
+      "name": "Version 1.2.1 physical iPhone input and microphone acceptance",
+      "verified": false,
+      "evidence": "No physical-device acceptance is recorded for this integrated candidate or its experimental handwriting and voice paths."
+    },
+    {
+      "name": "Keyboard microphone distribution eligibility",
+      "verified": false,
+      "evidence": "Apple documents microphone restrictions for custom keyboard extensions; the experimental WebKit capture approach has not been confirmed as an accepted distribution path."
     }
   ],
   "releaseAuthorization": {
