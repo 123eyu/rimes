@@ -67,15 +67,15 @@
     "native/macos/StreamInputPlugin.swift": "a6f1035e43b92d8db21599525fa6d4e2d022432f4d598f6dc5060f8198c73872",
     "native/macos/Translation/AppleTranslationAvailabilityGate.swift": "6d97c9a17082fb885e8fa862d606b0aaee02cfc5d7e94fed4e1f785187820de8",
     "native/macos/Translation/AppleTranslationSessionBridge.swift": "a8bec450633056e880f7756807c7f5b8083dd157bbf53746fa0f2ed83a994eb6",
-    "native/macos/TypingSpeedSettingsViewController.swift": "6108b60a6ed7571c1b036d4328bc6f88412c1e3613b90e2d78a935b525e1e386",
+    "native/macos/TypingSpeedSettingsViewController.swift": "ca0fdcbbf1d7f8b683b3f09143c9f8cce16c1406294aa92bfb06a66211f60963",
     "native/macos/TypingSpeedStore.swift": "df84c25cfbb82c9e0fcd58ebcafa78939dc69913e073ab3de70d668a1679359b",
     "native/macos/TypingTestArticles.swift": "ce9a9418cae25d6c77952595ba7467ee0dab8964e3c77f3fd3ded355b7ffcf9c",
     "native/macos/TypingTestHistoryStore.swift": "b1381a010bee67b368dfcf08dd43a3b088ea722f3b9969291ffb87e3ba1a37d5",
-    "native/macos/TypingTestLibrary.swift": "53fb7184cf03c8fb9eaeb901613dcab43faccf0ec36d251db3e64014e4733f17",
+    "native/macos/TypingTestLibrary.swift": "17027b6dab5f7dd4054aebf03863f23e9127478cfa6fdc95e39adfae0136276f",
     "native/macos/TypingTestMaterialColumn.swift": "cf7afcc9cf81b608604aac32dd13351da12f9f04f1f163ba66dde242eeb1e305",
     "native/macos/TypingTestSession.swift": "3330dbaaf2d4bda45b29b7fe3ee1b056744b5be371ddd47d6ec9c7b7b1466ca8",
     "native/macos/TypingTestTextView.swift": "51a46b991bad9558cfb0309f2c8e69ced7e731c4d270c27b352221b88628ae47",
-    "native/macos/TypingTestTrackView.swift": "f927385908edebb968504908f4cc3c533d50100d271ff830b3b4f355e7384a2a",
+    "native/macos/TypingTestTrackView.swift": "e7035c58534ef80d45575fe5aacad5364fdee92a063d2f33d3c97cf3ecf3ed4f",
     "native/macos/YearHistoryHeatmapView.swift": "516de52a2376cec08dc532f7834b6c72de9411b049ff2107038ebb816558a1f0",
     "native/shared-python/local_translation.py": "72abf5331509b6019c28d4af8f41a8583a9aa8560477836026d85858fe8b7c56",
     "native/shared/AIPoem.swift": "741697805c71a0163104a391969711485417c2d86881fff2b6fb220773a70309",
@@ -129,6 +129,6 @@
     "source-map.json": "6dcf116604f17b3aa689f23a05ea504f8df09b435a7775ed0a2671d97bd7b2dc"
   },
   "repository": "https://github.com/scholay-xsime/xsime-plugins",
-  "revision": "cea969cc49a589b69301a35d8e8474e9f6055f35",
+  "revision": "c3243b47d9cf0ca53925fb61e4da2079c351b161",
   "schemaVersion": 1
 }
