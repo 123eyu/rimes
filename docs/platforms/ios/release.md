@@ -6,7 +6,9 @@
 
 [`ios.yml`](../../../.github/workflows/ios.yml) 在匹配的 PR、main 推送或手动运行时检查发布配置、构建模拟器与设备目标，并运行 Shared 和 hosted iOS 测试。产品构建与自动测试在远端 CI 执行。
 
-需要交给 Xcode 云签名的归档时，在 main 手动运行该工作流，设置 `archive=true` 和未使用的 `build_number`。工作流校验分发资源、按 iOS 版本生成未签名设备归档，保留 `ios-cloud-archive-<commit>-<build>` 产物及 `archive-provenance.json`。该路径不上传 Apple，也不生成可直接安装的发行包。
+需要交给 Xcode 云签名的归档时，在 main 手动运行该工作流，设置 `archive=true` 和未使用的 `build_number`。默认 `archive_purpose=app-store`，工作流校验分发审计并保留 `ios-cloud-archive-<commit>-<build>` 及 `archive-provenance.json`。该路径不上传 Apple，也不生成可直接安装的发行包。
+
+仅为完成实体设备验收而需要归档时，可选择 `archive_purpose=device-qa`。它仍执行资源校验和归档完整性检查，但不要求尚待验收的分发审计先通过；产物名为 `ios-device-qa-archive-<commit>-<build>`，回执也标记为 `device-qa`。这是未签名的内部测试输入，不代表可以上架；正式上传和提交仍须通过分发审计及签名验证。
 
 下载后核对源码、版本、构建号与 ZIP SHA-256，保留原归档。签名前从仓库根目录检查：
 

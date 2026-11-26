@@ -1,5 +1,6 @@
 import importlib.util
 import hashlib
+import json
 import plistlib
 import tempfile
 import unittest
@@ -75,3 +76,34 @@ class CloudArchiveTests(unittest.TestCase):
         for build in ('', '0', '10000', '1.100', '1.1.1.1', '62-preview', '62\n'):
             with self.subTest(build=build), self.assertRaises(ValueError):
                 ARCHIVE.check_build(build)
+
+    def test_archive_purpose_is_explicit_and_closed(self):
+        for purpose in ('app-store', 'device-qa'):
+            ARCHIVE.check_purpose(purpose)
+        for purpose in ('', 'release', 'device-qa\n'):
+            with self.subTest(purpose=purpose), self.assertRaises(ValueError):
+                ARCHIVE.check_purpose(purpose)
+
+    def test_invalid_archive_purpose_is_rejected_before_packaging(self):
+        with mock.patch.object(ARCHIVE, 'validate_archive') as validate:
+            with self.assertRaisesRegex(ValueError, 'archive purpose'):
+                ARCHIVE.main([str(self.root), '1.1.6', '62', 'a' * 40,
+                              str(self.root / 'output'), 'unexpected'])
+            validate.assert_not_called()
+
+    def test_packaged_receipt_identifies_device_qa_and_default_store_purpose(self):
+        def fake_ditto(command, **_kwargs):
+            Path(command[-1]).write_bytes(b'archive fixture')
+
+        with mock.patch.object(ARCHIVE.subprocess, 'run', side_effect=fake_ditto):
+            for purpose in ('app-store', 'device-qa'):
+                output = self.root / purpose
+                args = [str(self.root), '1.1.6', '62', 'a' * 40, str(output)]
+                if purpose == 'device-qa':
+                    args.append(purpose)
+                ARCHIVE.main(args)
+                receipt = json.loads((output / 'archive-provenance.json').read_text())
+                self.assertEqual(receipt['purpose'], purpose)
+                self.assertEqual(receipt['sha256'], hashlib.sha256(b'archive fixture').hexdigest())
+                if purpose == 'device-qa':
+                    self.assertIn('device QA only', receipt['signing'])
