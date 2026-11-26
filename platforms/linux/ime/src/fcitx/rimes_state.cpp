@@ -521,6 +521,12 @@ bool RimesState::HandleCandidateKey(KeyEvent& event) {
     }
     const auto modifiers = ModifierMask(event) & ~rimes::linuxime::kLockMask;
     if (modifiers || navigation_.empty() || !ic_->hasFocus() || ProtectedInput(ic_->capabilityFlags())) return false;
+    // Some chord schemas (Kongmingma: b+Space) use Space as a chord key, so it
+    // must reach librime's chord_composer. Only while XSIME's highlight is
+    // still librime's: after an arrow key or in the matrix, Space keeps
+    // selecting the candidate XSIME shows highlighted.
+    if (key == FcitxKey_space && SpaceSelectsEngineHighlight(navigation_) &&
+        ime_->engine().SchemaSpaceChord(schema_id_)) return false;
     const bool expanded = navigation_.expanded();
     const bool arrow = key == FcitxKey_Left || key == FcitxKey_Right || key == FcitxKey_Up || key == FcitxKey_Down;
     // Page keys enter the matrix for imported schemas too. Their ordinary
