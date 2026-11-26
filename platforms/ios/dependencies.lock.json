@@ -142,5 +142,13 @@
       "shipped": "platforms/ios/Resources/Pets/noto-1f98a.png",
       "shippedSha256": "d9a4e2d027721a7c7aeb4e7f988cdab58ec2674d6d025b6e02e0b732daad7247"
     }
-  ]
+  ],
+  "handwriting": {
+    "url": "https://github.com/tegaki/tegaki/releases/download/v0.3/tegaki-zinnia-simplified-chinese-light-0.3.zip",
+    "sha256": "598787133a4d59fcf3a2fbc5654c68eaf35a8e422274efcea2035cc081f3446c",
+    "member": "tegaki-zinnia-simplified-chinese-light-0.3/handwriting-zh_CN.model",
+    "shipped": "platforms/ios/Resources/Handwriting/handwriting-zh_CN.model",
+    "shippedSha256": "c652150e428ab1d7e64ba2a16eeb706349c34f0586ef034c564cee0c2c432cd9",
+    "license": "LGPL-2.1 (Tegaki models; COPYING in the archive)"
+  }
 }

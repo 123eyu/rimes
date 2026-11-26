@@ -28,8 +28,12 @@
 	<string>$(CURRENT_PROJECT_VERSION)</string>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Experimental voice input records only between your taps on the microphone key in the XSIME keyboard, to turn your speech into Buffer text.</string>
 	<key>NSPhotoLibraryAddUsageDescription</key>
 	<string>Save the typing statistics image you choose to your photo library. XSIME does not read your photos.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Experimental voice input uses Apple speech recognition to turn what you say into Buffer text, on the device when it is supported.</string>
 	<key>RIMESAppGroup</key>
 	<string>$(RIMES_APP_GROUP)</string>
 	<key>RIMESKeychainGroup</key>

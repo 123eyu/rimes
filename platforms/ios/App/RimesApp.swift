@@ -58,6 +58,7 @@ struct HomeView: View {
                     NavigationLink { KeyboardAppearanceView() } label: { Label(L("键盘布局与换肤", "Keyboard layout & skins"), systemImage: "keyboard") }
                     NavigationLink { RimeSchemesView() } label: { Label(L("Rime 方案包与导入", "Rime schemes & import"), systemImage: "shippingbox") }
                     NavigationLink { TranslationSetupView() } label: { Label(L("Apple 本地翻译语言包", "Apple translation languages"), systemImage: "translate") }
+                    NavigationLink { ExtraSchemesSetupView() } label: { Label(L("语音与手写（实验）", "Voice & handwriting (experimental)"), systemImage: "hand.draw") }
                     NavigationLink { OfficialPluginsView() } label: { Label(L("官方插件", "Official plugins"), systemImage: "puzzlepiece.extension") }
                     NavigationLink { ProvidersView() } label: { Label(L("AI 服务", "AI services"), systemImage: "sparkles") }
                     NavigationLink { AssistantView() } label: { Label(L("AI 助手与快捷入口", "AI assistant & quick entrance"), systemImage: "wand.and.stars") }

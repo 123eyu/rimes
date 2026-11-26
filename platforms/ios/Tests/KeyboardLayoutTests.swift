@@ -222,8 +222,30 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         keys.shifted = true
         XCTAssertEqual(keys.developmentOrdinaryKey(at: CGPoint(x: t.maxX + 0.25, y: t.midY)), "t")
     }
+    func testTypingCandidatesTakeTheWholeRowAndAssociationsKeepTheCornerKeys() {
+        let (window, controller) = host(); defer { window.isHidden = true }
+        func find(_ view: UIView) -> UIView? { view.accessibilityIdentifier == "keyboard.buffer" ? view : view.subviews.lazy.compactMap(find).first }
+        let buffer = try! XCTUnwrap(find(controller.view)), strip = controller.layoutViews.candidates, menu = controller.layoutViews.settings
+        for matrix in [false, true] {
+            controller.developmentSetCandidateMatrix(matrix)
+            // Typing candidates: both corner keys hide, with or without the matrix.
+            controller.developmentType("nihao"); controller.view.layoutIfNeeded()
+            XCTAssertFalse(strip.buttons.isEmpty)
+            XCTAssertTrue(menu.isHidden, "matrix \(matrix)"); XCTAssertTrue(buffer.isHidden, "matrix \(matrix)")
+            XCTAssertEqual(strip.expandButton.isHidden, !matrix)
+            let scroll = try! XCTUnwrap(strip.buttons.first?.superview?.superview as? UIScrollView)
+            XCTAssertEqual(scroll.frame.minX, 0, accuracy: 0.5, "candidates start at the row's left edge")
+            // Associations after a commit: both corner keys come back.
+            controller.developmentSpace(); controller.view.layoutIfNeeded()
+            XCTAssertFalse(controller.developmentAssociations.isEmpty)
+            XCTAssertFalse(menu.isHidden, "matrix \(matrix)"); XCTAssertFalse(buffer.isHidden, "matrix \(matrix)")
+            controller.layoutViews.keys.onTypingPress?(); controller.developmentEnter()
+        }
+    }
+
     func testExpandedCandidatesCollapseAfterSelectionOrTypingAndStayCollapsed() {
         let (window, controller) = host(); defer { window.isHidden = true }
+        controller.developmentSetCandidateMatrix(true)
         let strip = controller.layoutViews.candidates
         func expand() { strip.expandButton.sendActions(for: .touchUpInside); controller.view.layoutIfNeeded(); XCTAssertTrue(strip.expanded) }
         controller.developmentType("nihao"); XCTAssertFalse(strip.buttons.isEmpty)
@@ -1198,8 +1220,8 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(controller.developmentAssociations.isEmpty)
         controller.layoutViews.keys.onTypingPress?(); XCTAssertTrue(controller.developmentAssociations.isEmpty)
         controller.developmentType("ni"); XCTAssertFalse(strip.buttons.isEmpty) // composition candidates, not associations
-        // The menu keeps the left corner while choosing; the expand control takes the switch's corner.
-        XCTAssertFalse(controller.layoutViews.settings.isHidden); XCTAssertTrue(toggle.isHidden)
+        // Typing candidates take the whole row: both corner keys hide while choosing.
+        XCTAssertTrue(controller.layoutViews.settings.isHidden); XCTAssertTrue(toggle.isHidden)
         controller.developmentEnter()
         // Learned: consecutive commits teach what follows, ahead of the dictionary.
         controller.developmentClearAssociationHistory()
@@ -1653,6 +1675,7 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
     }
     func testReservedCandidateRowAndBufferRowOrder() throws {
         let (window, controller) = host(); defer { window.isHidden = true }
+        controller.developmentSetCandidateMatrix(true)
         controller.developmentChoose(.chord); window.layoutIfNeeded()
         let v = controller.layoutViews
         func frame(_ view: UIView) -> CGRect { view.convert(view.bounds, to: window) }
@@ -1673,16 +1696,16 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         controller.developmentContent(preedit: "ni", candidates: ["你", "拟"]); window.layoutIfNeeded()
         XCTAssertEqual(controller.view.bounds.height, idleHeight)
         XCTAssertEqual(frame(v.keys), keyFrame)
-        XCTAssertFalse(v.settings.isHidden); XCTAssertTrue(toggle.isHidden)
+        XCTAssertTrue(v.settings.isHidden); XCTAssertTrue(toggle.isHidden)
         XCTAssertTrue(controller.developmentShortcuts.isHidden)
         XCTAssertEqual(frame(v.candidates).minX, frame(controller.view).minX + 5)
         XCTAssertEqual(frame(v.candidates).maxX, frame(controller.view).maxX - 5)
-        // Candidates start on the shortcuts' edge, right of the menu key.
-        XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.settings).maxX + 4, accuracy: 0.5)
+        // Both corner keys hide while choosing, so candidates start at the row's left edge.
+        XCTAssertEqual(frame(v.candidates.scroll).minX, frame(v.candidates).minX, accuracy: 0.5)
         XCTAssertEqual(frame(v.candidates.scroll).maxX, frame(v.candidates.expandButton).minX)
         // The expand key is a 1U key in the right corner, where the Buffer switch was.
         XCTAssertEqual(frame(v.candidates.expandCap).maxX, frame(controller.view).maxX - 5, accuracy: 0.5)
-        XCTAssertEqual(v.candidates.expandCap.bounds.width, v.settings.bounds.width, accuracy: 0.5)
+        XCTAssertEqual(v.candidates.expandCap.bounds.width, toggle.bounds.width, accuracy: 0.5)
         XCTAssertNotNil(v.candidates.expandCap.outerCorner)
         XCTAssertEqual(frame(v.candidates).height, candidateFrame.height)
         controller.developmentContent(); controller.developmentBuffer("", plugin: true); window.layoutIfNeeded()

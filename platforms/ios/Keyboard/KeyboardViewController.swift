@@ -82,6 +82,28 @@ final class KeyboardViewController: UIInputViewController {
     private let insertButton = InsertKeycapButton(), stopButton = KeycapButton()
     /// AI plugins never run on their own: Run is the only trigger.
     private let runButton = KeycapButton()
+    /// Experimental schemes that replace the keys (each opted into in the app; voice also needs Full Access).
+    private let voicePanel = VoiceInputPanel(), handwritingPanel = HandwritingInputPanel()
+    private var extraPanels: [ExtraSchemePanel] { [voicePanel, handwritingPanel] }
+    private let dictation = KeyboardDictation()
+    private let handwriting = HandwritingRecognizer()
+    private var lastMarkedExtra: ExtraScheme?? = .none
+    /// The voice/handwriting composition ("走带"); never saved.
+    private var tape = InputTape()
+    /// Space/Return was pressed while cells were still recognizing: send once they are filled.
+    private var tapeCommitRequested = false
+    /// The live voice utterance whose words are still being replaced on the tape.
+    private var voiceGroup: UUID?
+    /// The voice problem currently shown in the prompt, so only it gets cleared.
+    private var voiceError: String?
+    private var selectedExtra = UserDefaults.standard.string(forKey: "extraScheme.selected").flatMap(ExtraScheme.init(rawValue:)) {
+        didSet { UserDefaults.standard.set(selectedExtra?.rawValue, forKey: "extraScheme.selected") }
+    }
+    /// The extra scheme in use, if the app still enables it and this keyboard may run it.
+    private var activeExtra: ExtraScheme? {
+        guard let selectedExtra, selectedExtra.isEnabled else { return nil }
+        return selectedExtra == .voice && !hasFullAccess ? nil : selectedExtra
+    }
     private struct PendingPaste {
         let id = UUID()
         var text: String?
@@ -294,6 +316,8 @@ final class KeyboardViewController: UIInputViewController {
     private var chordPreview = ""
     private var hasComposition: Bool { !snapshot.preedit.isEmpty || surface.isChordActive }
     private var compositionText: String {
+        // The tape is the voice/handwriting composition: shown in the field like a preedit.
+        if activeExtra != nil { return tape.text }
         var preedit = snapshot.preedit
         if usesNineKey, !preedit.isEmpty, let reading = engine.candidateReadings.first,
            !reading.isEmpty, reading.utf8.allSatisfy({ (97...122).contains($0) || $0 == 32 || $0 == 39 }),
@@ -356,7 +380,8 @@ final class KeyboardViewController: UIInputViewController {
         inputView?.allowsSelfSizing = true
         height = view.heightAnchor.constraint(equalToConstant: 0)
         height.identifier = "RIMES.keyboard.contentHeight"
-        for item in [bufferPanel, candidatePanel, spellingStrip, surface, bottom, status, panel] { view.addSubview(item) }
+        for item in [bufferPanel, candidatePanel, spellingStrip, surface, bottom, voicePanel, handwritingPanel, status, panel] { view.addSubview(item) }
+        configureExtraSchemes()
         spellingStrip.isHidden = true
         spellingStrip.onSelect = { [weak self] spelling in self?.selectNineKeySpelling(spelling) }
         panel.isHidden = true
@@ -416,7 +441,8 @@ final class KeyboardViewController: UIInputViewController {
         candidateStrip.onSelect = { [weak self] index in
             guard let self else { return }; self.collapseCandidates(); self.surface.cancel()
             self.surface.feedback.send(.selection, combination: UUID().uuidString)
-            if self.punctuationOpen { self.choosePunctuation(index) }
+            if self.activeExtra != nil { self.tape.choose(index); self.tapeChanged() }
+            else if self.punctuationOpen { self.choosePunctuation(index) }
             else if self.showingAssociations { self.chooseAssociation(index) } else { self.receive(self.engine.candidate(index)) }
         }
         candidateStrip.onPress = { [weak self] in self?.surface.feedback.send(.press) }
@@ -722,7 +748,7 @@ final class KeyboardViewController: UIInputViewController {
         returnKey.cancelTracking(with: nil); pressedReturn = nil
         cancelDeletes(); shiftState = .off; punctuationOpen = false
         metrics.sampleMemory(); metrics.save()
-        consentThisSession.removeAll(); speaker.stop(); session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
+        consentThisSession.removeAll(); speaker.stop(); dictation.cancel(); voiceGroup = nil; handwriting.cancel(); handwritingPanel.reset(); tape.clear(); tapeCommitRequested = false; session.reset(); statsTimer?.invalidate(); statsTimer = nil; surface.retire(); cancelRequest(); engine.suspend(); snapshot = .init(); buffer = .init(); bufferEnabled = false; selectedPlugin = nil; panelOpen = false; status.text = ""; refreshPluginMenu(); render()
     }
     override func viewWillTransition(to size: CGSize, with coordinator: UIViewControllerTransitionCoordinator) { cancelDeletes(); insertButton.cancelPress(); surface.retire(); super.viewWillTransition(to: size, with: coordinator); coordinator.animate(alongsideTransition: { _ in self.resize() }) }
     override func textDidChange(_ textInput: UITextInput?) {
@@ -1064,6 +1090,128 @@ final class KeyboardViewController: UIInputViewController {
         if !engine.rawInput.isEmpty { commitRawInput() }
         breakAssociationChain(); insert(text); render()
     }
+    private func configureExtraSchemes() {
+        for extra in extraPanels {
+            extra.isHidden = true
+            extra.onPress = { [weak self] in self?.surface.feedback.send(.press) }
+            extra.onExit = { [weak self] in self?.selectExtra(nil) }
+            extra.globe.addTarget(self, action: #selector(handleInputModeList(from:with:)), for: .allTouchEvents)
+            // Handwriting's last row is the writing page; its candidates are the newest cell's.
+            extra.onPage = { [weak self] row in guard let self else { return }; self.tape.setHead(min(row, self.tape.cells.count - 1)); self.tapeChanged() }
+            extra.ribbon.onCycle = { [weak self] delta in
+                guard let self, self.tape.cycle(delta) else { return }
+                self.surface.feedback.send(.selection, combination: UUID().uuidString); self.tapeChanged()
+            }
+            // Space and Return send the whole tape; with nothing on it they act as usual.
+            extra.onSpace = { [weak self] in guard let self else { return }; self.prepareTapeCommit(); if self.tape.isEmpty { self.space() } else { self.commitTape() } }
+            extra.onReturn = { [weak self] in guard let self else { return }; self.prepareTapeCommit(); if self.tape.isEmpty { self.enter() } else { self.commitTape() } }
+        }
+        voicePanel.onMic = { [weak self] in self?.toggleDictation() }
+        // Delete: while listening, drops this utterance; then the cell under the read head; then the field.
+        voicePanel.onDelete = { [weak self] in
+            guard let self else { return }
+            if self.dictation.state != .idle { self.dictation.cancel(); if let group = self.voiceGroup { self.tape.removeGroup(group) }; self.voiceGroup = nil; self.tapeChanged() }
+            else if !self.tape.isEmpty { self.tape.removeHead(); self.tapeChanged() }
+            else { self.backspace() }
+        }
+        dictation.onState = { [weak self] state in
+            guard let self else { return }
+            if state != .idle, let shown = self.voiceError, self.status.text == shown { self.status.text = ""; self.voiceError = nil }
+            if state == .idle { self.voicePanel.level = 0 }
+            self.metrics.mark("voice.\(state)")
+            self.voicePanel.phase = switch state { case .idle: .idle; case .starting: .starting; case .listening: .listening }
+        }
+        dictation.onWords = { [weak self] words, isFinal in self?.dictated(words, isFinal: isFinal) }
+        dictation.onLevel = { [weak self] level in self?.voicePanel.level = level }
+        dictation.onError = { [weak self] message in
+            guard let self else { return }
+            if let group = self.voiceGroup { self.tape.removeGroup(group); self.voiceGroup = nil }
+            // Shown in the keyboard's prompt, like other keyboard problems; the panel stays clean.
+            self.status.text = message; self.voiceError = message; self.tapeChanged()
+        }
+        handwritingPanel.onCharacter = { [weak self] ink, size in self?.wroteCharacter(ink, size: size) }
+        handwritingPanel.onRewrite = { [weak self] id, ink, size in self?.rewroteCharacter(id, ink: ink, size: size) }
+
+        handwriting.onMeasured = { [weak self] bytes in self?.metrics.mark("handwriting.afterRecognition", footprintBytes: bytes) }
+        handwritingPanel.onDelete = { [weak self] in
+            guard let self else { return }
+            if self.handwritingPanel.undoStroke() { return }
+            if !self.tape.isEmpty { self.tape.removeHead(); self.tapeChanged() } else { self.backspace() }
+        }
+    }
+    /// Shows the active extra scheme's panel over the keys, which stay laid out underneath.
+    private func applyExtraScheme() {
+        let active = activeExtra
+        if active != lastMarkedExtra { lastMarkedExtra = active; metrics.mark("scheme.\(active?.rawValue ?? "keys")") }
+        voicePanel.isHidden = active != .voice; handwritingPanel.isHidden = active != .handwriting
+        for keys in [surface, bottom] as [UIView] { keys.alpha = active == nil ? 1 : 0; keys.isUserInteractionEnabled = active == nil }
+        if active != .voice && dictation.state != .idle { dictation.cancel(); voiceGroup = nil }
+    }
+    /// Leaving a scheme sends what is already recognized on its tape, like settling a composition.
+    private func selectExtra(_ extra: ExtraScheme?) {
+        settle()
+        if extra != selectedExtra { prepareTapeCommit(); if !tape.isEmpty { commitTape(waiting: false) } }
+        if extra != .voice { dictation.cancel(); voiceGroup = nil; if let shown = voiceError, status.text == shown { status.text = "" }; voiceError = nil }
+        if extra != .handwriting { handwriting.cancel(); handwritingPanel.reset() }
+        selectedExtra = extra
+        refreshMoreMenu(); applyExtraScheme(); render(); view.setNeedsLayout()
+    }
+    /// Ink still on the pad and a live utterance belong on the tape before it is sent.
+    private func prepareTapeCommit() {
+        if activeExtra == .handwriting { handwritingPanel.flush() }
+        if dictation.state != .idle { dictation.finish() }
+    }
+    /// Sends the tape's text. Cells still being recognized are waited for in the background
+    /// (`waiting`), so the user never has to; leaving the scheme sends only what is ready.
+    private func commitTape(waiting: Bool = true) {
+        if waiting && (tape.hasPending || voiceGroup != nil) { tapeCommitRequested = true; render(); return }
+        let text = tape.text
+        tape.clear(); tapeCommitRequested = false; voiceGroup = nil; handwriting.cancel()
+        if !text.isEmpty { breakAssociationChain(); insert(text) }
+        render()
+    }
+    private func tapeChanged() {
+        if tapeCommitRequested && !tape.hasPending && voiceGroup == nil { commitTape(); return }
+        render()
+    }
+    private func wroteCharacter(_ ink: [InkTrace], size: CGSize) {
+        guard onscreen, activeExtra == .handwriting else { return }
+        let cell = TapeCell(pending: true, ink: ink)
+        let context = tape.text
+        tape.append(cell); tapeChanged()
+        recognize(cell.id, ink: ink, size: size, context: context)
+    }
+    /// An earlier character written over: recognized again in place, with the text before it.
+    private func rewroteCharacter(_ id: UUID, ink: [InkTrace], size: CGSize) {
+        guard onscreen, activeExtra == .handwriting else { return }
+        if ink.isEmpty { tape.fill(id, with: []); tapeChanged(); return }
+        tape.reopen(id, ink: ink); tapeChanged()
+        recognize(id, ink: ink, size: size, context: tape.text(before: id))
+    }
+    private func recognize(_ id: UUID, ink: [InkTrace], size: CGSize, context: String) {
+        metrics.mark("handwriting.before")
+        handwriting.recognize(ink, in: size, preContext: context) { [weak self] results in
+            guard let self else { return }
+            self.metrics.mark("handwriting.filled")
+            self.tape.fill(id, with: results); self.tapeChanged()
+        }
+    }
+    private func toggleDictation() {
+        guard dictation.state == .idle else { dictation.finish(); return }
+        guard onscreen, activeExtra == .voice else { return }
+        if let shown = voiceError, status.text == shown { status.text = "" }; voiceError = nil
+        voiceGroup = UUID()
+        metrics.mark("voice.beforeAttach")
+        dictation.attach(to: view); metrics.mark("voice.webViewAttached"); dictation.start()
+    }
+    /// Each result replaces the live utterance's words on the tape; the final one freezes them.
+    private func dictated(_ words: [KeyboardDictation.Word], isFinal: Bool) {
+        guard onscreen, activeExtra == .voice, let group = voiceGroup else { return }
+        metrics.mark(isFinal ? "voice.final" : "voice.partial")
+        tape.replaceGroup(group, with: words.map { TapeCell(candidates: [$0.text] + $0.alternatives, group: group) })
+        if isFinal { voiceGroup = nil }
+        tapeChanged()
+    }
     private func settle() {
         guard !snapshot.preedit.isEmpty else { return }
         if !snapshot.candidates.isEmpty { receive(engine.candidate(0)) }
@@ -1173,6 +1321,7 @@ final class KeyboardViewController: UIInputViewController {
         returnKey.setImage(nil, for: .normal); returnKey.setTitle(title, for: .normal)
         returnKey.accessibilityLabel = title; returnKey.accessibilityHint = hint
         returnKey.isSelected = selected; returnKey.isEnabled = enabled
+        for extra in extraPanels { extra.returnTitle = tape.isEmpty ? title : L("上屏", "Insert") }
         // A one-second hold on Insert sends everything; on a host's own Return (Send, Search...) it does nothing special.
         returnHold.isEnabled = returnAction == .insertBuffer && enabled
         if returnAction != .insertBuffer { holdBar.cancel() }
@@ -1214,6 +1363,13 @@ final class KeyboardViewController: UIInputViewController {
         candidateStrip.update(punctuationOpen ? PunctuationLayout.strip : showingAssociations ? associations : snapshot.candidates,
                               comments: punctuationOpen || showingAssociations || usesNineKey ? [] : engine.candidateReadings,
                               context: punctuationOpen ? "punctuation" : showingAssociations ? "associations" : "composition:\(snapshot.preedit)")
+        if activeExtra != nil {
+            // The candidate row shows the cell under the tape's read head.
+            let cell = tape.headCell
+            candidateStrip.update(cell.map { $0.pending ? [] : $0.candidates } ?? [], context: "tape:\(cell?.id.uuidString ?? "")")
+            candidateStrip.setHighlight(cell.map { $0.pending ? nil : $0.choice } ?? nil)
+            for extra in extraPanels where !extra.isHidden { extra.sync(tape) }
+        }
         renderHandPreview(); renderShortcuts(); refreshLanguageSwap(); refreshKeyboardSkin(); renderBuffer(); resize()
     }
     private func syncCustomLayout() {
@@ -1313,6 +1469,7 @@ final class KeyboardViewController: UIInputViewController {
                 button.titleLabel?.minimumScaleFactor = 0.7
             }
             for button in [moreButton, bufferButton, aiButton, settingsButton, insertButton, stopButton, runButton, globe, chordDelete] { button.legacyKey = legacy; button.theme = theme }
+            for extra in extraPanels { extra.legacyKey = legacy; extra.theme = theme }
             bufferButton.accentCap = true; insertButton.accentCap = true
             shortcuts.theme = theme; shortcuts.legacyKey = legacy
             candidateStrip.expandCap.theme = theme; candidateStrip.expandCap.legacyKey = legacy
@@ -1331,14 +1488,16 @@ final class KeyboardViewController: UIInputViewController {
     }
     /// An empty candidate row offers the plugins instead.
     private func renderShortcuts() {
-        let empty = snapshot.preedit.isEmpty && snapshot.candidates.isEmpty && !showingAssociations && !punctuationOpen && !surface.isChordActive && handPreview.isHidden
-        let choosing = handPreview.isHidden && !showingAssociations && (!snapshot.preedit.isEmpty || !snapshot.candidates.isEmpty)
-        // The keyboard menu keeps the left corner while choosing, so candidates start on the
-        // same edge as the shortcuts; the expand control takes the Buffer switch's corner.
-        if moreButton.isHidden { moreButton.isHidden = false }
+        let tapeChoosing = activeExtra != nil && !(tape.headCell?.candidates.isEmpty ?? true)
+        let empty = snapshot.preedit.isEmpty && snapshot.candidates.isEmpty && !showingAssociations && !punctuationOpen && !surface.isChordActive && handPreview.isHidden && !tapeChoosing
+        let choosing = handPreview.isHidden && !showingAssociations && (!snapshot.preedit.isEmpty || !snapshot.candidates.isEmpty || tapeChoosing)
+        // Typing candidates get the whole row: both corner keys (the keyboard menu and the Buffer
+        // switch) hide while choosing, with or without the candidate matrix. Associations and the
+        // empty row keep both.
+        if moreButton.isHidden != choosing { moreButton.isHidden = choosing }
         if bufferButton.isHidden != choosing { bufferButton.isHidden = choosing }
         let side = topUnit + Self.topGap
-        candidateStrip.controlInsets = .init(top: 0, left: side, bottom: 0, right: choosing ? 0 : side)
+        candidateStrip.controlInsets = choosing ? .zero : .init(top: 0, left: side, bottom: 0, right: side)
         // The empty strip stays in place underneath, so the row keeps its reserved slot.
         shortcuts.isHidden = !empty
         shortcuts.selected = bufferEnabled ? selectedPlugin : nil
@@ -1451,18 +1610,23 @@ final class KeyboardViewController: UIInputViewController {
         } else {
             for constraint in bottomKeyWidths { constraint.constant = -5 * bottom.spacing / 7.5 }
         }
+        if expanded && !preferences.candidateMatrix { expanded = false }
+        candidateStrip.allowsExpansion = preferences.candidateMatrix
         candidateStrip.expanded = expanded; candidateStrip.landscape = landscape
         // The height must not depend on presentation state: `onscreen` only turns
         // true in viewWillAppear, after the first height was already requested.
         globe.isHidden = !onscreen || !needsInputModeSwitchKey
+        for extra in extraPanels { extra.showsGlobe = !globe.isHidden }
         bottom.isHidden = surface.usesManagedLayout && !needsInputModeSwitchKey
         let unit: CGFloat = landscape ? 28 : 30, bufferHeight = 2 * unit + Self.topGap
         let customHeight = surface.usesCustomLayout ? surface.customLayout.map { CGFloat($0.geometry(width: Double(max(1, width - 10)), landscape: landscape).height) } : nil
         let standardHeight = surface.usesStandardLayout ? StandardKeyboardGeometry.height(landscape: landscape, percent: landscape ? preferences.landscapeHeight : preferences.portraitHeight) : nil
+        // Handwriting needs room to write: its pad over the keys is taller than the keys themselves.
+        let writingRoom: CGFloat = activeExtra == .handwriting ? (landscape ? 30 : 110) : 0
         return [(bufferPanel, bufferHeight),
                 (candidatePanel, max(unit, candidateStrip.fittingHeight(width: max(0, width - 10)))),
                 (spellingStrip, 34),
-                (surface, customHeight ?? standardHeight ?? KeyboardGeometry.height(layout: surface.chordLayout, chord: surface.chordMode, numeric: surface.numeric, emoji: surface.emojiMode, landscape: landscape, width: max(1, width - 10), profile: surface.profile)), (bottom, landscape ? 34 : 40)].filter { !$0.0.isHidden }
+                (surface, writingRoom + (customHeight ?? standardHeight ?? KeyboardGeometry.height(layout: surface.chordLayout, chord: surface.chordMode, numeric: surface.numeric, emoji: surface.emojiMode, landscape: landscape, width: max(1, width - 10), profile: surface.profile))), (bottom, landscape ? 34 : 40)].filter { !$0.0.isHidden }
     }
     private func resize() {
         updateHeight()
@@ -1574,6 +1738,8 @@ final class KeyboardViewController: UIInputViewController {
         fitCornerKeys(topRow: rows.first?.0)
         // Settings cover the keys only, so the Buffer lines stay visible while choosing.
         panel.frame = (bottom.isHidden ? surface.frame : surface.frame.union(bottom.frame)).insetBy(dx: -5, dy: 0)
+        for extra in extraPanels { extra.frame = bottom.isHidden ? surface.frame : surface.frame.union(bottom.frame) }
+        applyExtraScheme()
         metrics.laidOut(width: view.bounds.width, height: view.bounds.height, requestedHeight: height.constant,
             containerHeight: Double(view.superview?.bounds.height ?? 0), topInset: Double(rows.first?.0.frame.minY ?? 0))
     }
@@ -1816,8 +1982,9 @@ final class KeyboardViewController: UIInputViewController {
             }
         })
         var schemeActions: [UIMenuElement] = InputScheme.allCases.filter { $0 != .chord || chordPluginOn }.map { value in
-            UIAction(title: value.title, state: importedSchemeSelection == nil && (value == .chord ? chordSchemeOn : value == scheme && !chordSchemeOn) ? .on : .off) { [weak self] _ in
+            UIAction(title: value.title, state: activeExtra == nil && importedSchemeSelection == nil && (value == .chord ? chordSchemeOn : value == scheme && !chordSchemeOn) ? .on : .off) { [weak self] _ in
                 guard let self else { return }
+                self.selectExtra(nil)
                 self.settle(); self.importedSchemeSelection = nil; self.saveImportedSchemeChoice()
                 self.pick(value); self.render()
             }
@@ -1825,14 +1992,20 @@ final class KeyboardViewController: UIInputViewController {
         for package in importedSchemeLibrary.packages {
             for imported in package.schemas {
                 let selection = RimeSchemeSelection(packageID: package.id, schemaID: imported.id)
-                schemeActions.append(UIAction(title: imported.name, state: selection == importedSchemeSelection ? .on : .off) { [weak self] _ in
+                schemeActions.append(UIAction(title: imported.name, state: activeExtra == nil && selection == importedSchemeSelection ? .on : .off) { [weak self] _ in
                     guard let self else { return }
+                    self.selectExtra(nil)
                     self.settle(); self.importedSchemeSelection = selection; self.saveImportedSchemeChoice()
                     self.importedSchemeEnglish = false; self.saveImportedSchemeChoice()
                     self.preferNativeImportedLayout(selection)
                     self.choose(self.preferences.scheme); self.render()
                 })
             }
+        }
+        for extra in ExtraScheme.allCases where extra.isEnabled {
+            let blocked = extra == .voice && !hasFullAccess
+            schemeActions.append(UIAction(title: extra.title, subtitle: blocked ? L("需要完全访问", "Needs Full Access") : nil, image: UIImage(systemName: extra.symbol),
+                                          attributes: blocked ? .disabled : [], state: activeExtra == extra ? .on : .off) { [weak self] _ in self?.selectExtra(extra) })
         }
         let schemes = UIMenu(title: L("输入方案", "Input scheme"), image: UIImage(systemName: "keyboard"), children: schemeActions)
         let keySounds = UIAction(title: L("按键音效", "Key sounds"), image: UIImage(systemName: "speaker.wave.2"), state: preferences.keySounds ? .on : .off) { [weak self] _ in
@@ -1841,7 +2014,13 @@ final class KeyboardViewController: UIInputViewController {
             self.surface.feedback.soundEnabled = self.preferences.keySounds
             self.refreshMoreMenu()
         }
-        var items: [UIMenuElement] = [schemes, keySounds, UIAction(title: L("繁体输出", "Traditional Chinese output"), image: UIImage(systemName: "character.book.closed"), state: preferences.traditional ? .on : .off) { [weak self] _ in self?.toggleScript() }]
+        let matrix = UIAction(title: L("候选矩阵（展开按钮）", "Candidate matrix (expand key)"), image: UIImage(systemName: "square.grid.2x2"), state: preferences.candidateMatrix ? .on : .off) { [weak self] _ in
+            guard let self else { return }
+            self.preferences.candidateMatrix.toggle(); self.preferencesStore.save(self.preferences)
+            if !self.preferences.candidateMatrix { self.expanded = false }
+            self.refreshMoreMenu(); self.render()
+        }
+        var items: [UIMenuElement] = [schemes, keySounds, matrix, UIAction(title: L("繁体输出", "Traditional Chinese output"), image: UIImage(systemName: "character.book.closed"), state: preferences.traditional ? .on : .off) { [weak self] _ in self?.toggleScript() }]
         items.insert(UIMenu(title: L("宠物与配色", "Pet & colors"), image: UIImage(systemName: "paintpalette"), children: StatusSkin.themes.map { theme in
             UIAction(title: theme.title, image: theme.usesDot ? UIImage(systemName: "circle.fill") : nil,
                      state: preferences.resolvedTheme == theme ? .on : .off) { [weak self] _ in self?.selectKeyboardTheme(theme) }
@@ -2742,6 +2921,8 @@ final class KeyboardViewController: UIInputViewController {
     var developmentDelete: RepeatKeycapButton { deleteButton }
     var developmentRaw: String { engine.rawInput }
     func developmentSetLayout(_ value: ChordLayout) { changeLayout(value) }
+    /// The candidate matrix is off by default; tests of the expand key turn it on.
+    func developmentSetCandidateMatrix(_ on: Bool) { preferences.candidateMatrix = on; if !on { expanded = false }; render(); view.setNeedsLayout() }
     func developmentBufferCursor(_ cursor: Int) { buffer.moveCursor(cursor - buffer.cursor); render() }
     var developmentBufferSource: (text: String, revision: UUID) { (buffer.source, buffer.sourceRevision) }
     func developmentContent(preedit: String = "", candidates: [String] = []) {

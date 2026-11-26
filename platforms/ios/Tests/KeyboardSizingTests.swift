@@ -440,7 +440,7 @@ import RimesCore
             keyboard.view.bottomAnchor.constraint(equalTo: parent.view.bottomAnchor)
         ])
         keyboard.didMove(toParent: parent)
-        keyboard.developmentResetPreferences(); keyboard.developmentChoose(.chord)
+        keyboard.developmentResetPreferences(); keyboard.developmentSetCandidateMatrix(true); keyboard.developmentChoose(.chord)
         keyboard.developmentContent(); keyboard.developmentBuffer(nil)
         parent.view.layoutIfNeeded()
         let idleHeight = keyboard.view.bounds.height

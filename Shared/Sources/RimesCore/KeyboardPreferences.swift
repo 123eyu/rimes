@@ -22,6 +22,9 @@ public struct KeyboardPreferences: Codable {
     public var initialized = false
     public var haptics = true
     public var keySounds = true
+    /// Candidate matrix: an expand key on the candidate row opens a grid of more candidates.
+    /// Off by default; the row then only scrolls sideways.
+    public var candidateMatrix = false
     public var hapticStrength: HapticStrength = .light
     public var traditional = false
     public var chordLayout: ChordLayout = .orthogonal
@@ -62,7 +65,7 @@ public struct KeyboardPreferences: Codable {
         case chordLayout, hapticStrength, lastChineseScheme, englishInput, poem, speakTranslation, statusSkin, art, statusSkinRotation, appliedSkinRevision, thinking
         case ordinaryLayout, longPressSwipeSymbols, appliedLongPressSwipeSymbolsRevision, keyboardSkin, appliedKeyboardAppearanceRevision, overriddenCustomLayoutRevision
         case directSwipeSymbols, portraitHeight, landscapeHeight, numericNineGrid, appliedLayoutOptionsRevision, keyStyle, appliedKeyStyleRevision
-        case appliedKeyboardThemeRevision, keyboardThemeMigrationVersion
+        case appliedKeyboardThemeRevision, keyboardThemeMigrationVersion, candidateMatrix
     }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
@@ -71,6 +74,7 @@ public struct KeyboardPreferences: Codable {
         initialized = try values.decodeIfPresent(Bool.self, forKey: .initialized) ?? false
         haptics = try values.decodeIfPresent(Bool.self, forKey: .haptics) ?? true
         keySounds = try values.decodeIfPresent(Bool.self, forKey: .keySounds) ?? true
+        candidateMatrix = (try? values.decodeIfPresent(Bool.self, forKey: .candidateMatrix)) ?? false
         traditional = try values.decodeIfPresent(Bool.self, forKey: .traditional) ?? false
         chordLayout = (try? values.decode(ChordLayout.self, forKey: .chordLayout)) ?? .orthogonal
         ordinaryLayout = (try? values.decode(OrdinaryKeyboardLayout.self, forKey: .ordinaryLayout)) ?? .qwerty

@@ -74,7 +74,9 @@ private final class CandidateContentView: UIView {
 }
 
 final class CandidateStrip: UIView, ExpandReach {
-    var expandReachWidth: CGFloat { texts.isEmpty ? 0 : CandidateLayout.controlWidth + 12 }
+    var expandReachWidth: CGFloat { texts.isEmpty || !allowsExpansion ? 0 : CandidateLayout.controlWidth + 12 }
+    /// Without the candidate matrix there is no expand key and the row only scrolls sideways.
+    var allowsExpansion = true { didSet { if allowsExpansion != oldValue { setNeedsLayout() } } }
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
         pointInsideOrInExpandReach(point, default: super.point(inside: point, with: event))
     }
@@ -266,7 +268,7 @@ final class CandidateStrip: UIView, ExpandReach {
     }
     private var reservedInsets: UIEdgeInsets {
         // Expanded rows use the full width; only the first row steps aside for the control.
-        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded ? 0 : CandidateLayout.controlWidth))
+        .init(top: 0, left: controlInsets.left, bottom: 0, right: controlInsets.right + (texts.isEmpty || expanded || !allowsExpansion ? 0 : CandidateLayout.controlWidth))
     }
     func fittingHeight(width: CGFloat) -> CGFloat {
         // A collapsed strip always has one row; measuring every candidate here
@@ -295,7 +297,7 @@ final class CandidateStrip: UIView, ExpandReach {
         content.frame = CGRect(origin: .zero, size: layout.contentSize)
         scroll.contentSize = layout.contentSize
         let rowHeight = layout.frames.first?.height ?? 32
-        expandButton.isHidden = texts.isEmpty
+        expandButton.isHidden = texts.isEmpty || !allowsExpansion
         expandButton.frame = CGRect(x: bounds.width - controlInsets.right - CandidateLayout.controlWidth, y: 0, width: CandidateLayout.controlWidth, height: rowHeight)
         // The key is drawn in the slot's right part, square, one row high; the gap before it stays reachable.
         let key = min(rowHeight, CandidateLayout.controlWidth - 4)

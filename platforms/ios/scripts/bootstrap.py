@@ -37,5 +37,12 @@ def main():
         (WORK/'xcodegen/bin/xcodegen').chmod(0o755)
     for item in LOCK['data']:
         path=ROOT/item['path'];path.parent.mkdir(parents=True,exist_ok=True);download(item,path)
+    # Handwriting model for the keyboard's experimental handwriting scheme (zinnia, LGPL-2.1 data).
+    hw=LOCK['handwriting'];archive=WORK/'handwriting-zh_CN.zip';download(hw,archive)
+    shipped=ROOT/hw['shipped']
+    if not shipped.is_file() or PINNED.sha256(shipped)!=hw['shippedSha256']:
+        shipped.parent.mkdir(parents=True,exist_ok=True)
+        with zipfile.ZipFile(archive) as z:shipped.write_bytes(z.read(hw['member']))
+        if PINNED.sha256(shipped)!=hw['shippedSha256']:shipped.unlink();raise RuntimeError('Unexpected handwriting model')
     print('Source and tool inputs verified')
 if __name__=='__main__':main()

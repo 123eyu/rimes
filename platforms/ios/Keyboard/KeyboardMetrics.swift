@@ -8,7 +8,30 @@ import Darwin
     private var samples = [Double]()
     private var peakBytes: UInt64 = 0
     private var layoutSamples = [[String: Double]]()
+    private var memoryMarks = [[String: Any]]()
     #endif
+    /// Development-only memory checkpoint for the experimental schemes: footprint now, plus what
+    /// the system says is left before this extension is killed (their sum is the limit).
+    func mark(_ label: String, footprintBytes: UInt64? = nil) {
+        #if DEBUG
+        let now = footprintBytes ?? Self.footprint()
+        memoryMarks.append(["label": label, "uptime": ProcessInfo.processInfo.systemUptime,
+                            "footprintMB": Double(now) / 1_048_576, "availableMB": Double(os_proc_available_memory()) / 1_048_576])
+        if memoryMarks.count > 300 { memoryMarks.removeFirst(memoryMarks.count - 300) }
+        peakBytes = max(peakBytes, now)
+        let root = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+        try? FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try? JSONSerialization.data(withJSONObject: memoryMarks, options: [.prettyPrinted]).write(to: root.appendingPathComponent("extra-scheme-memory.json"), options: [.atomic])
+        #endif
+    }
+    nonisolated static func footprint() -> UInt64 {
+        var info = task_vm_info_data_t()
+        var count = mach_msg_type_number_t(MemoryLayout<task_vm_info_data_t>.size / MemoryLayout<integer_t>.size)
+        let status = withUnsafeMutablePointer(to: &info) { pointer in
+            pointer.withMemoryRebound(to: integer_t.self, capacity: Int(count)) { task_info(mach_task_self_, task_flavor_t(TASK_VM_INFO), $0, &count) }
+        }
+        return status == KERN_SUCCESS ? info.phys_footprint : 0
+    }
     func presented(since start: TimeInterval) {
         #if DEBUG
         if presentationMilliseconds == nil { presentationMilliseconds = (ProcessInfo.processInfo.systemUptime - start) * 1000 }

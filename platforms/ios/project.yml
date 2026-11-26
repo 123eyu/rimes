@@ -66,6 +66,8 @@ targets:
         CFBundleDisplayName: XSIME
         CFBundleDevelopmentRegion: en
         NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. XSIME does not read your photos.
+        NSMicrophoneUsageDescription: Experimental voice input records only between your taps on the microphone key in the XSIME keyboard, to turn your speech into Buffer text.
+        NSSpeechRecognitionUsageDescription: Experimental voice input uses Apple speech recognition to turn what you say into Buffer text, on the device when it is supported.
         CFBundleShortVersionString: $(MARKETING_VERSION)
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleLocalizations: [en, zh-Hans, zh-Hant]
@@ -93,6 +95,13 @@ targets:
       - path: Resources/Pets
         type: folder
         buildPhase: resources
+      # Handwriting scheme: zinnia engine (BSD) and its Tegaki model (LGPL-2.1), keyboard only.
+      - path: ThirdParty/zinnia
+        compilerFlags: [-DHAVE_CONFIG_H, -std=gnu++11, -w]
+        excludes: ['*.md', COPYING, AUTHORS]
+      - path: Resources/Handwriting
+        type: folder
+        buildPhase: resources
       - path: Resources/PrivacyInfo.xcprivacy
         buildPhase: resources
     dependencies:
@@ -111,6 +120,8 @@ targets:
         CFBundleDisplayName: XSIME
         CFBundleShortVersionString: $(MARKETING_VERSION)
         NSPhotoLibraryAddUsageDescription: Save the typing statistics image you choose to your photo library. XSIME does not read your photos.
+        NSMicrophoneUsageDescription: Experimental voice input records only between your taps on the microphone key in the XSIME keyboard, to turn your speech into Buffer text.
+        NSSpeechRecognitionUsageDescription: Experimental voice input uses Apple speech recognition to turn what you say into Buffer text, on the device when it is supported.
         CFBundleVersion: $(CURRENT_PROJECT_VERSION)
         CFBundleLocalizations: [en, zh-Hans, zh-Hant]
         RIMESAppGroup: $(RIMES_APP_GROUP)
@@ -131,7 +142,10 @@ targets:
   RIMESTests:
     type: bundle.unit-test
     platform: iOS
-    sources: [Tests, Keyboard]
+    sources:
+      - Tests
+      - path: Keyboard
+        excludes: [ZinniaBridge.mm]
     dependencies:
       - target: RIMES
       - package: RimesCore
