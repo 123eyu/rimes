@@ -182,15 +182,22 @@ def manifest_value(entry: dict[str, Any]) -> dict[str, Any]:
 
 
 def sync_optional_manifests(
-    entries: list[dict[str, Any]], *, check: bool
+    entries: list[dict[str, Any]],
+    manifests: dict[str, tuple[bytes, str]],
+    *,
+    check: bool,
 ) -> None:
+    """Check or write each optional manifest.
+
+    ``manifests`` maps a plugin id to its canonical manifest bytes and their
+    SHA-256, computed once by ``run`` while it projects the catalog entry.
+    """
     expected_directories = set()
     for entry in entries:
         plugin_id = entry["id"]
         expected_directories.add(plugin_id)
         path = PLUGIN_MANIFEST_ROOT / plugin_id / "manifest.json"
-        expected = canonical_json_bytes(manifest_value(entry))
-        digest = hashlib.sha256(expected).hexdigest()
+        expected, digest = manifests[plugin_id]
         if check:
             try:
                 actual = path.read_bytes()
@@ -444,6 +451,7 @@ def sync_release_assets(
 def run(*, check: bool) -> None:
     catalog = read_catalog()
     projected = []
+    manifests: dict[str, tuple[bytes, str]] = {}
     for package in MACOS_PACKAGES:
         entry = {key: package[key] for key in MANIFEST_KEYS if key != "schemaVersion"}
         entry["producerID"] = {"builtin.codex-cli": "openai", "builtin.claude-code-cli": "anthropic",
@@ -451,13 +459,15 @@ def run(*, check: bool) -> None:
         entry["defaultInstalled"] = package["id"] in DEFAULT_INSTALLED_IDS
         entry["defaultEnabled"] = package["id"] in DEFAULT_ENABLED_IDS
         entry["downloadAssetName"] = f"{RELEASE_ASSET_PREFIX}{package['id']}-{package['version']}.json"
-        entry["sha256"] = hashlib.sha256(canonical_json_bytes(manifest_value(entry))).hexdigest()
+        manifest = canonical_json_bytes(manifest_value(entry))
+        entry["sha256"] = hashlib.sha256(manifest).hexdigest()
+        manifests[entry["id"]] = (manifest, entry["sha256"])
         projected.append(entry)
     catalog["plugins"] = projected
     if check and read_catalog()["plugins"] != projected:
         raise CatalogError("host catalog projection differs from pinned official packages")
     entries = validate_catalog(catalog)
-    sync_optional_manifests(entries, check=check)
+    sync_optional_manifests(entries, manifests, check=check)
 
     canonical_catalog = canonical_json_bytes(catalog)
     check_or_write(CATALOG_PATH, canonical_catalog, check=check)

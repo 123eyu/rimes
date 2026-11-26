@@ -18,6 +18,22 @@ class BufferPluginCatalogTests(unittest.TestCase):
     def test_catalog_matches_pinned_packages_and_manifest_bytes(self):
         catalog.run(check=True)
 
+    def test_each_manifest_is_projected_once_per_run(self):
+        calls = {}
+        original = catalog.manifest_value
+
+        def counting(entry):
+            calls[entry["id"]] = calls.get(entry["id"], 0) + 1
+            return original(entry)
+
+        catalog.manifest_value = counting
+        try:
+            catalog.run(check=True)
+        finally:
+            catalog.manifest_value = original
+        self.assertEqual(set(calls), {p["id"] for p in catalog.MACOS_PACKAGES})
+        self.assertEqual(set(calls.values()), {1})
+
     def test_generated_files_keep_lf_with_windows_autocrlf(self):
         files = (
             "Catalog/buffer-plugins.json",

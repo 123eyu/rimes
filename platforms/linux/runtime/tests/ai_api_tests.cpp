@@ -72,6 +72,12 @@ int main(int argc, char** argv) {
             });
             worker.CancelAll();
             Check(cancelled_queued==1 && queued_error==AIError::Cancelled, "queued AI cancellation lost its terminal callback");
+            unsigned precancelled = 0;
+            AIError precancelled_error = AIError::None;
+            worker.Run("queued", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(true), [&](AIUpdate update) {
+                ++precancelled; if (update.finished) precancelled_error = update.error;
+            });
+            Check(precancelled==1 && precancelled_error==AIError::Cancelled, "request cancelled before submission was reported as Busy");
             worker.Run("原文🙂", configuration("/fragmented"), std::make_shared<std::atomic<bool>>(false), [&](AIUpdate update) {
                 if (update.finished) {
                     std::lock_guard lock(mutex);

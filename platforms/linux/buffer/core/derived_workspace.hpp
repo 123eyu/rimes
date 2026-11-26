@@ -55,6 +55,10 @@ public:
   // the result identity so an older copy command cannot copy a changed value.
   bool ConsumePrefix(const DerivedRequest& request, bool grant_valid,
                      std::string_view result_id, std::string_view text);
+  // The same checks without consuming: a caller must ask before it hands the
+  // prefix to an application, because a rejected commit cannot be taken back.
+  bool CanConsumePrefix(const DerivedRequest& request, bool grant_valid,
+                        std::string_view result_id, std::string_view text) const;
   DerivedPhase Phase() const { return phase_; }
   const std::vector<DerivedResult> &Results() const { return results_; }
   const std::string &Plugin() const { return plugin_; }

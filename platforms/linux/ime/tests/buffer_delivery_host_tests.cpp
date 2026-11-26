@@ -136,6 +136,30 @@ int main() {
                   host->model().staged_text() == "原文", "conflicted Return replaced result/source");
             client->reject_commit = false;
 
+            // A plugin whose logical blocks split one character ("你" as
+            // e4 bd | a0) must still commit whole characters only.
+            prepare();
+            fcitx::BufferService::ResultFn split_reply;
+            host->RegisterDerivedAdapter(ai, "ai.generate", [&](auto, auto, auto, auto receive) { split_reply = receive; });
+            Check(host->SelectPlugin(ai), "split-block AI selection");
+            host->model().append("原文", Origin::Rime);
+            Check(host->Generate(), "split-block generation");
+            split_reply({0, "你好", true, true, "", {"\xE4\xBD", "\xA0\xE5\xA5\xBD"}}); drain();
+            {
+                const auto before = client->commits.size();
+                Check(host->SendAll(), "split-block result was not delivered");
+                std::string sent;
+                for (auto i = before; i < client->commits.size(); ++i) {
+                    const auto& text = client->commits[i];
+                    Check(text == "你" || text == "好" || text == "你好", "a commit split a UTF-8 character");
+                    sent += text;
+                }
+                Check(sent == "你好" && host->derived().Results().empty() && host->model().empty(),
+                      "split-block result was cancelled or left source behind");
+            }
+            // The scenarios below count commits from zero.
+            client->commits.clear();
+
             prepare();
             host->RegisterDerivedAdapter(translation, "translation.generate", [&](auto, auto, auto stop, auto receive) {
                 replies.push_back(receive); cancelled.push_back(stop);
@@ -205,7 +229,7 @@ int main() {
                                       switching_im ? "input-method switch left a lost Return key-up armed"
                                                    : "focus loss left a lost Return key-up armed");
                             }
-                            std::cout << "Buffer delivery host: ready-result Return, commit conflict, held ready prefix, late tail, stopped hold, drag ownership and lost Return key-up passed\n";
+                            std::cout << "Buffer delivery host: ready-result Return, commit conflict, split UTF-8 blocks, held ready prefix, late tail, stopped hold, drag ownership and lost Return key-up passed\n";
                             instance.exit();
                         });
                     });

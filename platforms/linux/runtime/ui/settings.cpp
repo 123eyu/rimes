@@ -105,10 +105,17 @@ struct Settings {
     g_cancellable_cancel(cancel);
     g_object_unref(cancel);
   }
+  // The label ellipsizes, so its tooltip carries the full message; both are
+  // written together so the tooltip never shows an older message.
+  static void SetFeedbackTooltip(GtkWidget *label, const std::string &text) {
+    gtk_widget_set_tooltip_text(label, text.empty() ? nullptr : text.c_str());
+  }
   void Message(const std::string &text) {
     message = text;
-    if (feedback)
+    if (feedback) {
       gtk_label_set_text(GTK_LABEL(feedback), text.c_str());
+      SetFeedbackTooltip(feedback, text);
+    }
   }
   template <class F> void Try(F action) {
     try {
@@ -285,7 +292,7 @@ struct Settings {
     gtk_label_set_xalign(GTK_LABEL(feedback), 1);
     // A long validation message must not change the native window geometry.
     gtk_label_set_ellipsize(GTK_LABEL(feedback), PANGO_ELLIPSIZE_END);
-    gtk_widget_set_tooltip_text(feedback, message.c_str());
+    SetFeedbackTooltip(feedback, message);
     gtk_widget_set_margin_start(feedback, 16);
     gtk_widget_set_margin_end(feedback, 24);
     Add(tabs, feedback, true);
@@ -1757,6 +1764,19 @@ int SettingsSmoke() {
     }
     phase = "layout";
     app.Select("core.appearance", "theme");
+    {
+      const std::string first = "第一条反馈消息", later = "随后一条较长的反馈消息，用来确认提示文字跟随更新";
+      app.Message(first); app.Message(later);
+      gchar *tooltip = gtk_widget_get_tooltip_text(app.feedback);
+      const bool follows = tooltip && later == tooltip &&
+                           later == gtk_label_get_text(GTK_LABEL(app.feedback));
+      g_free(tooltip);
+      check(follows);
+      app.Message("");
+      tooltip = gtk_widget_get_tooltip_text(app.feedback);
+      check(tooltip == nullptr);
+      g_free(tooltip);
+    }
     gtk_window_resize(GTK_WINDOW(app.window), Settings::Metric("settingsWidth"),
                       Settings::Metric("settingsHeight"));
     SettleLayout();

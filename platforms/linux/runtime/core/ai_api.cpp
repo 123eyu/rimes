@@ -169,6 +169,9 @@ void AIWorker::Run(std::string text, RequestConfiguration configuration,
         try { RunAIRequest(text, configuration, *cancelled, receive); }
         catch (...) { try { receive({"", true, AIError::Network, {}}); } catch (...) {} }
     };
+    // A request cancelled before submission is Cancelled, not Busy; Busy is
+    // kept for a full queue or a stopped worker.
+    if (cancelled && cancelled->load()) { receive({"", true, AIError::Cancelled, {}}); return; }
     if (!jobs_.Run(std::move(cancelled), std::move(work), [receive] { receive({"", true, AIError::Cancelled, {}}); }))
         receive({"", true, AIError::Busy, {}});
 }

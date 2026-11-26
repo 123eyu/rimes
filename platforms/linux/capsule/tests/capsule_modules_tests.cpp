@@ -23,9 +23,17 @@ int main() {
         {
             CapsuleModel reenabled;
             for(auto module:kModules) reenabled.EnableModule(module,false);
+            auto generation=reenabled.generation();
             reenabled.EnableModule(Module::Resources,true);
             Check(reenabled.module()==Module::Resources && reenabled.ModuleEnabled(reenabled.module()),
                   "enabling first available module kept disabled selection");
+            Check(reenabled.generation()==generation+1,"enabling a module into an empty selection bumped the generation twice");
+            reenabled.EnableModule(Module::Notes,true);
+            generation=reenabled.generation();
+            reenabled.EnableModule(Module::Resources,false);
+            Check(reenabled.module()==Module::Notes && reenabled.generation()==generation+1,
+                  "disabling the selected module bumped the generation twice");
+            reenabled.EnableModule(Module::Notes,false);
             reenabled.EnableModule(Module::Resources,false);
             reenabled.EnableModule(Module::Resources,true);
             Check(reenabled.module()==Module::Resources && !reenabled.armed(),
