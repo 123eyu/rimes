@@ -773,11 +773,12 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         XCTAssertFalse(controls.run.isHidden); XCTAssertFalse(controls.run.isEnabled) // nothing written yet
         XCTAssertLessThan(controls.settings.frame.maxX, controller.layoutViews.source.frame.minX + 0.5)
         XCTAssertLessThan(controller.layoutViews.source.frame.maxX, controls.run.frame.minX + 0.5)
-        // AI plugins put Run in the mode key's slot under Send; there is no chooser menu.
-        XCTAssertEqual(controls.run.frame, controls.plugin.frame); XCTAssertTrue(controls.plugin.isHidden)
+        // AI plugins put Run beside the plugin key, which keeps its menu.
+        XCTAssertLessThan(controls.run.frame.maxX, controls.plugin.frame.minX + 0.5); XCTAssertFalse(controls.plugin.isHidden)
+        XCTAssertEqual(controls.run.frame.minY, controls.plugin.frame.minY)
         snapshot("plugin-poem-open")
         // The settings key opens RIMES's own panel over the keys.
-        XCTAssertNil(controls.plugin.menu); XCTAssertNil(controller.developmentPanel)
+        XCTAssertNotNil(controls.plugin.menu); XCTAssertNil(controller.developmentPanel)
         // Every plugin's settings key is the same 1U icon key, nothing drawn past its cap.
         XCTAssertNil(controls.settings.title(for: .normal)); XCTAssertNotNil(controls.settings.image(for: .normal))
         XCTAssertEqual(controls.settings.bounds.size, controls.run.bounds.size)

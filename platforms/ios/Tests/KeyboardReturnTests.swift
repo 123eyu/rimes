@@ -365,10 +365,11 @@ import RimesCore
         for title in [L("繁体输出", "Traditional Chinese output"), L("按键震动", "Key haptics")] {
             XCTAssertNotNil(try XCTUnwrap(entries.first { $0.title == title }).image)
         }
-        // The key under Send is the mode's own action, never a chooser: the shortcut row switches modes.
+        // The key under Send opens the plugin menu, Buffer first.
         let pluginButton = keyboard.developmentPluginControls.plugin
-        XCTAssertNil(pluginButton.menu)
-        XCTAssertEqual(pluginButton.accessibilityLabel, L("本地剪贴板", "Local clipboard")); XCTAssertNotNil(pluginButton.image(for: .normal))
+        let buffer = try XCTUnwrap(pluginButton.menu?.children.first as? UIAction)
+        XCTAssertEqual(buffer.title, "Buffer"); XCTAssertNotNil(buffer.image)
+        XCTAssertEqual(pluginButton.accessibilityLabel, "Buffer"); XCTAssertNotNil(pluginButton.image(for: .normal))
         keyboard.developmentOpenSettings()
         let chip = try XCTUnwrap(keyboard.developmentPanel?.chips.first { $0.item.id == "default" })
         XCTAssertEqual(chip.accessibilityLabel, "Buffer"); XCTAssertNotNil(chip.icon.image)
