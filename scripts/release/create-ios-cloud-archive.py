@@ -15,6 +15,11 @@ def check_build(build):
         raise ValueError('Expected an Apple build number, e.g. 62 or 101.1.0')
 
 
+def check_purpose(purpose):
+    if purpose not in ('app-store', 'device-qa'):
+        raise ValueError('Expected app-store or device-qa archive purpose')
+
+
 def validate_archive(archive, version, build):
     check_build(build)
     if not re.fullmatch(r'(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)', version):
@@ -48,7 +53,14 @@ def main(args):
     if len(args) == 2 and args[0] == '--check-build':
         check_build(args[1])
         return
-    archive, version, build, commit, destination = args
+    if len(args) == 2 and args[0] == '--check-purpose':
+        check_purpose(args[1])
+        return
+    if len(args) not in (5, 6):
+        raise ValueError('Expected archive, version, build, commit, destination and optional purpose')
+    archive, version, build, commit, destination = args[:5]
+    purpose = args[5] if len(args) == 6 else 'app-store'
+    check_purpose(purpose)
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
         raise ValueError('Expected the full source commit')
     validate_archive(archive, version, build)
@@ -62,9 +74,10 @@ def main(args):
     with package.open('rb') as stream:
         for chunk in iter(lambda: stream.read(1024 * 1024), b''):
             digest.update(chunk)
-    receipt = {'version': version, 'build': build, 'commit': commit, 'file': package.name,
+    receipt = {'version': version, 'build': build, 'commit': commit, 'purpose': purpose, 'file': package.name,
                'bytes': package.stat().st_size, 'sha256': digest.hexdigest(),
-               'signing': 'unsigned; requires Apple cloud signing before upload'}
+               'signing': 'unsigned; device QA only' if purpose == 'device-qa' else
+                          'unsigned; requires Apple cloud signing before upload'}
     (destination / 'archive-provenance.json').write_text(json.dumps(receipt, indent=2) + '\n')
     print(json.dumps(receipt, indent=2))
 
