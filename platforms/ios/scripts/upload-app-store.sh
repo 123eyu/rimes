@@ -93,6 +93,8 @@ if [ "$SUBMIT" -eq 1 ]; then
   ruby -e 'exit(Gem::Version.new(RUBY_VERSION) >= Gem::Version.new("3.0") ? 0 : 1)' \
     || fail "--submit needs Ruby >= 3.0 for Fastlane (for example: brew install ruby, then put it first on PATH)"
   command -v bundle >/dev/null 2>&1 || fail "--submit needs Bundler"
+  ruby -r "$IOS/scripts/release-config.rb" -e 'RimesRelease.store_descriptions(ARGV.fetch(0)); RimesRelease.review_notes(ARGV.fetch(0))' "$IOS" \
+    || fail "--submit needs valid localized descriptions and review notes"
 fi
 
 # Asset licensing and release prerequisites recorded for distribution.

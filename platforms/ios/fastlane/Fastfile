@@ -36,7 +36,7 @@ end
 # Review with automatic release, and write a receipt without credentials.
 def submit_processed_build(api:, app:, version:, build:, notes:, work_dir:, receipt_path:, commit:)
   FileUtils.mkdir_p(File.join(work_dir, 'empty-metadata'))
-  upload_to_app_store(api_key: api, app_identifier: BUNDLE, app_version: version, build_number: build, skip_binary_upload: true, skip_screenshots: true, skip_metadata: false, metadata_path: File.join(work_dir, 'empty-metadata'), release_notes: notes, submit_for_review: true, automatic_release: true, force: true, reject_if_possible: false, run_precheck_before_submit: false, submission_information: { export_compliance_uses_encryption: false, content_rights_contains_third_party_content: true, content_rights_has_rights: true })
+  upload_to_app_store(api_key: api, app_identifier: BUNDLE, app_version: version, build_number: build, skip_binary_upload: true, skip_screenshots: true, skip_metadata: false, metadata_path: File.join(work_dir, 'empty-metadata'), release_notes: notes, description: RimesRelease.store_descriptions(ROOT), app_review_information: { notes: RimesRelease.review_notes(ROOT) }, submit_for_review: true, automatic_release: true, force: true, reject_if_possible: false, run_precheck_before_submit: false, submission_information: { export_compliance_uses_encryption: false, content_rights_contains_third_party_content: true, content_rights_has_rights: true })
   submitted = app.get_app_store_versions(filter: { versionString: version, platform: 'IOS' }).first
   receipt = { version: version, build: build, commit: commit, app_store_state: submitted && version_state(submitted), app_store_version_id: submitted&.id }
   FileUtils.mkdir_p(File.dirname(receipt_path))
@@ -52,6 +52,8 @@ platform :ios do
     RimesRelease.require_ios_target(version, ROOT)
     build = ENV.fetch('IOS_BUILD_NUMBER')
     notes = RimesRelease.notes(ROOT, version)
+    RimesRelease.store_descriptions(ROOT)
+    RimesRelease.review_notes(ROOT)
     missing = RimesRelease::SECRETS.select { |key| ENV[key].to_s.empty? }
     UI.user_error!("Missing GitHub Secrets: #{missing.join(', ')}") unless missing.empty?
     api = app_store_connect_api_key(key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'), key_content: ENV.fetch('ASC_PRIVATE_KEY_BASE64'), is_key_content_base64: true, in_house: false)
@@ -93,6 +95,8 @@ platform :ios do
     RimesRelease.require_ios_target(version, ROOT)
     build = ENV.fetch('RIMES_IOS_BUILD')
     notes = RimesRelease.notes(ROOT, version)
+    RimesRelease.store_descriptions(ROOT)
+    RimesRelease.review_notes(ROOT)
     api = app_store_connect_api_key(key_id: ENV.fetch('ASC_KEY_ID'), issuer_id: ENV.fetch('ASC_ISSUER_ID'), key_filepath: ENV.fetch('ASC_KEY_PATH'), in_house: false)
     app = require_submittable_app(version)
     Dir.mktmpdir('rimes-submit-') do |dir|

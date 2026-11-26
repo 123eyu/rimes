@@ -49,4 +49,25 @@ class ReleaseConfigTest < Minitest::Test
       assert_equal notes,RimesRelease.notes(root,'1.0.0')
     end
   end
+
+  def test_store_descriptions_and_review_notes_are_required_before_submission
+    Dir.mktmpdir do |root|
+      %w[en-US zh-Hans zh-Hant].each do |locale|
+        dir = File.join(root, 'AppStore/metadata', locale)
+        FileUtils.mkdir_p(dir)
+        File.write(File.join(dir, 'description.txt'), "Description #{locale}\n")
+      end
+      review = File.join(root, 'AppStore/review-notes.txt')
+      File.write(review, "Review instructions\n")
+      assert_equal 'Description zh-Hans', RimesRelease.store_descriptions(root)['zh-Hans']
+      assert_equal 'Review instructions', RimesRelease.review_notes(root)
+      description = File.join(root, 'AppStore/metadata/en-US/description.txt')
+      File.write(description, " \n")
+      assert_raises(RuntimeError) { RimesRelease.store_descriptions(root) }
+      File.write(description, 'x' * 4001)
+      assert_raises(RuntimeError) { RimesRelease.store_descriptions(root) }
+      File.write(review, " \n")
+      assert_raises(RuntimeError) { RimesRelease.review_notes(root) }
+    end
+  end
 end

@@ -37,7 +37,7 @@ python3 platforms/ios/scripts/verify-release-ipa.py <ipa> <version> <build>
 
 Profiles 必须匹配代码中的团队、bundle 与共享组，并在有效期内。凭据只通过发布环境配置，不写入仓库或日志；本指南不声明账号当前已配齐这些凭据。
 
-工作流完成构建和测试后调用 [`fastlane/Fastfile`](../../../platforms/ios/fastlane/Fastfile)：使用临时 keychain 签名，验证 IPA，上传并等待 Apple 处理，再提交 App Review，设置审核通过后自动发布。它不发起外部 TestFlight 审核、不分发外部测试者，也不替换正在审核的版本或其他版本草稿。提交回执写入 `platforms/ios/build/ci-release/submission.json` 并进入 CI summary。
+工作流完成构建和测试并检查分发审计后调用 [`fastlane/Fastfile`](../../../platforms/ios/fastlane/Fastfile)：使用临时 keychain 签名，验证 IPA，上传并等待 Apple 处理，再提交 App Review，设置审核通过后自动发布。提交时同时上传仓库中三语商店描述、三语更新说明和审核说明；截图、价格、地区、审核联系人与 App Privacy 问卷保留已有值，提交前需单独核对。它不发起外部 TestFlight 审核、不分发外部测试者，也不替换正在审核的版本或其他版本草稿。提交回执写入 `platforms/ios/build/ci-release/submission.json` 并进入 CI summary。
 
 上传、Apple 处理、外部 TestFlight 审核、App Review 和商店可用是独立状态。处理超时后先读回 Apple 状态；重跑会产生新的构建号。清理签名材料的工作流仅用于一次性 GitHub 托管 runner。
 
