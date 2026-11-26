@@ -84,17 +84,24 @@
       "evidence": "No physical-device acceptance is recorded for this integrated candidate or its experimental handwriting and voice paths."
     },
     {
-      "name": "Keyboard microphone distribution eligibility",
-      "verified": false,
-      "evidence": "Apple documents microphone restrictions for custom keyboard extensions; the experimental WebKit capture approach has not been confirmed as an accepted distribution path."
+      "name": "Experimental voice disclosed for App Review at the publisher’s request",
+      "verified": true,
+      "evidence": "2026-11-26: the publisher explicitly requested retaining experimental voice in 1.2.1 and proceeding to App Review. AppStore/review-notes.txt describes the hidden WKWebView capture path, Apple Speech, Full Access and permissions; the hosted privacy policy describes audio handling. This disclosure and request do not establish Apple acceptance."
     }
   ],
   "releaseAuthorization": {
     "date": "2026-09-22",
-    "scope": "Owner explicitly requested global App Store submission excluding mainland China and supplied the mapping rights representation. Outstanding physical acceptance checks remain accurately unverified; this authorization is not evidence they passed. The documented flyyao publisher declaration is explicitly accepted as the distribution basis; its asset status remains publisher-declared. Physical acceptance was completed separately on 2026-10-04 with evidence linked above.",
+    "scope": "Owner explicitly requested global App Store submission excluding mainland China and supplied the mapping rights representation. Outstanding physical acceptance checks remain accurately unverified; this authorization is not evidence they passed. The documented flyyao publisher declaration is explicitly accepted as the distribution basis; its asset status remains publisher-declared. Physical acceptance was completed separately on 2026-10-04 with evidence linked above. 2026-11-26: the publisher requested that experimental voice be retained as an optional feature in the release submitted to Apple. App Review eligibility remains unverified.",
     "reviewSubmissionID": "f5c2e139-3347-416d-9a35-fe4052dd9418",
     "acceptedPublisherDeclarations": [
       "flyyao"
     ]
-  }
+  },
+  "submissionRisks": [
+    {
+      "name": "Experimental keyboard microphone eligibility",
+      "status": "unverified",
+      "evidence": "Apple documents that custom keyboard extensions cannot directly access the microphone. This experimental hidden WKWebView capture approach has not been confirmed as an accepted App Store distribution path; disclose it to App Review and record Apple’s decision. The publisher requested submission with voice retained on 2026-11-26."
+    }
+  ]
 }
