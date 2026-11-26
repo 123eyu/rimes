@@ -45,6 +45,7 @@ jobs:
           ruby -r ./platforms/ios/scripts/release-config.rb -e 'missing=RimesRelease::SECRETS.select { |k| ENV[k].to_s.empty? }; abort("Missing GitHub Secrets: #{missing.join(", ")}") unless missing.empty?'
       - name: Build and test before signing
         run: |
+          node platforms/ios/scripts/tests/keyboard-dictation-race.test.cjs
           ruby platforms/ios/scripts/tests/release-config-test.rb
           platforms/ios/scripts/build.sh
           platforms/ios/scripts/test-simulator.sh

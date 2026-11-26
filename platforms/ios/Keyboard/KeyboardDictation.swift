@@ -220,7 +220,7 @@ import WebKit
     private static let page = """
     <!doctype html><html><head><meta charset="utf-8"></head><body><script>
     const post = m => window.webkit.messageHandlers.capture.postMessage(m);
-    let stream = null, context = null, node = null, source = null;
+    let stream = null, context = null, node = null, source = null, generation = 0;
     function toBase64(floats) {
       const bytes = new Uint8Array(floats.buffer); let s = "";
       for (let i = 0; i < bytes.length; i += 0x8000) s += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
@@ -228,11 +228,17 @@ import WebKit
     }
     async function startCapture() {
       if (stream) { post({type: "started"}); return; }
+      // Invalidate pending getUserMedia/resume callbacks when the user stops or
+      // a new recording begins. A late stream must never keep the mic open.
+      const request = ++generation;
       try {
         if (navigator.audioSession) navigator.audioSession.type = "play-and-record";
-        stream = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1}});
+        const incoming = await navigator.mediaDevices.getUserMedia({audio: {echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1}});
+        if (request !== generation) { incoming.getTracks().forEach(t => t.stop()); return; }
+        stream = incoming;
         context = new AudioContext();
         if (context.state !== "running") await context.resume();
+        if (request !== generation) return;
         source = context.createMediaStreamSource(stream);
         node = context.createScriptProcessor(2048, 1, 1);
         const ratio = context.sampleRate / 16000; let carry = 0;
@@ -250,11 +256,18 @@ import WebKit
           if (out.length) post({type: "audio", data: toBase64(out)});
         };
         source.connect(node); node.connect(context.destination);
-        stream.getAudioTracks().forEach(t => t.onended = () => { stopCapture(); post({type: "error", message: "track ended"}); });
+        stream.getAudioTracks().forEach(t => t.onended = () => {
+          if (request !== generation) return;
+          stopCapture(); post({type: "error", message: "track ended"});
+        });
         post({type: "started"});
-      } catch (e) { stopCapture(); post({type: "error", message: String(e && (e.name + ": " + e.message) || e)}); }
+      } catch (e) {
+        if (request !== generation) return;
+        stopCapture(); post({type: "error", message: String(e && (e.name + ": " + e.message) || e)});
+      }
     }
     function stopCapture() {
+      ++generation;
       if (node) { node.onaudioprocess = null; node.disconnect(); node = null; }
       if (source) { source.disconnect(); source = null; }
       if (stream) { stream.getTracks().forEach(t => t.stop()); stream = null; }
