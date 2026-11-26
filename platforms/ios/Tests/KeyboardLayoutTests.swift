@@ -131,7 +131,9 @@ func L(_ zh: String, _ en: String) -> String { RIMES.L(zh, en) }
         return contextLimit.map { String(text.prefix($0)) } ?? text
     }
     var documentInputMode: UITextInputMode? { nil }
-    var hasText: Bool { native.hasText }
+    /// Some hosts never report `hasText` for text the system wrote; nil follows the field.
+    var reportedHasText: Bool?
+    var hasText: Bool { reportedHasText ?? native.hasText }
     func insertText(_ text: String) { insertions.append(text); native.insertText(text); onProxyWrite?() }
     func deleteBackward() {
         guard !ignoresDeletion else { return }

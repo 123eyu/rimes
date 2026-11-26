@@ -402,6 +402,45 @@ import RimesCore
         return (window, keyboard)
     }
 
+    func testReturnEnablesForTextThatDidNotComeFromTheseKeys() {
+        let (window, keyboard) = host(.qwerty); defer { window.isHidden = true }
+        let proxy = keyboard.layoutProxy
+        proxy.returnKeyType = .send; proxy.enablesReturnKeyAutomatically = true
+        proxy.native.text = ""
+        keyboard.textDidChange(nil) // settle the document identity: later changes keep the same field
+        keyboard.developmentContent(); window.layoutIfNeeded()
+        let enter = keyboard.developmentStandardFunctions[.enter] as! KeycapButton
+        XCTAssertFalse(enter.isEnabled)
+        // Dictation or a paste writes straight into the field; the keyboard hears only textDidChange.
+        keyboard.textWillChange(nil); proxy.native.text = "语音输入的文字"; keyboard.textDidChange(nil)
+        XCTAssertTrue(enter.isEnabled, "Send must follow the document, not the keys this keyboard typed")
+        XCTAssertTrue(proxy.insertions.isEmpty)
+        // Clearing the field from the host disables it again.
+        keyboard.textWillChange(nil); proxy.native.text = ""; keyboard.textDidChange(nil)
+        XCTAssertFalse(enter.isEnabled)
+        // A paste that only reports through the selection still counts.
+        proxy.native.text = "pasted"; proxy.native.selectedRange = NSRange(location: 6, length: 0)
+        keyboard.selectionDidChange(nil)
+        XCTAssertTrue(enter.isEnabled)
+        // A host whose hasText never catches up: visible context before or after the caret is enough.
+        proxy.reportedHasText = false
+        keyboard.textDidChange(nil); XCTAssertTrue(enter.isEnabled)
+        proxy.native.selectedRange = NSRange(location: 0, length: 0); keyboard.selectionDidChange(nil)
+        XCTAssertTrue(enter.isEnabled, "Text after the caret counts as well")
+        proxy.native.text = ""; keyboard.textDidChange(nil)
+        XCTAssertFalse(enter.isEnabled)
+    }
+
+    func testHostReturnEnabledRule() {
+        typealias K = KeyboardViewController
+        XCTAssertTrue(K.hostReturnEnabled(enablesAutomatically: false, hasText: false, before: nil, after: nil, composing: false))
+        XCTAssertFalse(K.hostReturnEnabled(enablesAutomatically: true, hasText: false, before: nil, after: "", composing: false))
+        XCTAssertTrue(K.hostReturnEnabled(enablesAutomatically: true, hasText: true, before: nil, after: nil, composing: false))
+        XCTAssertTrue(K.hostReturnEnabled(enablesAutomatically: true, hasText: false, before: "dictated", after: nil, composing: false))
+        XCTAssertTrue(K.hostReturnEnabled(enablesAutomatically: true, hasText: false, before: "", after: "pasted", composing: false))
+        XCTAssertTrue(K.hostReturnEnabled(enablesAutomatically: true, hasText: false, before: nil, after: nil, composing: true))
+    }
+
     func testReturnStaysDisabledInAnEmptyFieldThatAsksForItAndSpaceShowsTheInputMode() {
         let (window, keyboard) = host(.qwerty); defer { window.isHidden = true }
         keyboard.layoutProxy.returnKeyType = .search; keyboard.layoutProxy.enablesReturnKeyAutomatically = true
