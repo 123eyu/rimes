@@ -1,0 +1,25 @@
+# Stage 0 characterization of the standalone Shift tap (Chinese/English toggle).
+# Derived by reading the code at d8988b9c; no row has been executed on any platform.
+# Columns: case, events, macos, windows, note. Events are type:arg@milliseconds.
+# D=Shift down, U=Shift up, R=auto-repeat Shift down, K=other key down, M=command modifier down,
+# F=focus/context change, S=schema change, H=global hotkey using Shift. Outcomes: toggle:L|R, none, n/a, unknown.
+case	events	macos	windows	note
+tap-left	D:L@0 U:L@120	toggle:L	toggle:L	-
+tap-right	D:R@0 U:R@120	toggle:R	toggle:R	-
+tap-two-in-a-row	D:L@0 U:L@100 D:L@200 U:L@300	toggle:L toggle:L	toggle:L toggle:L	-
+tap-499	D:L@0 U:L@499	toggle:L	toggle:L	Windows only if no auto-repeat arrived first; see hold-repeat
+tap-500	D:L@0 U:L@500	none	none	both use elapsed < 500
+hold-repeat	D:L@0 R:L@260 U:L@300	n/a	none	DIVERGENCE 1: macOS has no modifier repeat and would toggle at 300
+other-key	D:L@0 K@40 U:L@120	none	none	-
+both-shifts	D:L@0 D:R@30 U:R@80 U:L@120	none	none	-
+began-with-ctrl	M:ctrl@0 D:L@20 U:L@100	none	none	-
+ctrl-during	D:L@0 M:ctrl@40 U:L@120	none	none	-
+capslock-during	D:L@0 K:caps@40 U:L@120	none	none	-
+focus-change	D:L@0 F@60 U:L@120	none	none	-
+schema-change	D:L@0 S@60 U:L@120	none	unknown	DIVERGENCE 2: macOS compares schema and session at release; no equivalent check found in the Windows TSF layer
+global-hotkey	D:L@0 H@50 U:L@120	none	none	macOS tombstone; Windows preserved key
+release-only	U:L@120	none	none	press never observed
+late-callback	D:L@0 U:L@120 handled@620	toggle:L	none	DIVERGENCE 3: macOS measures event timestamps; Windows reads the clock when the callback runs
+transport-down	D:L@0 U:L@120 broker-unavailable-at-down	n/a	none	DIVERGENCE 4: Windows loses the tap during reconnect or a 2 ms lock miss; macOS is single-process
+buffer-paused	D:L@0 U:L@120 buffer-input-paused	unknown	none	DIVERGENCE 5: Windows Broker refuses the tap while Buffer input is paused; macOS not determined
+redelivered-flags	D:L@0 D:L@5:redelivered U:L@120	toggle:L	n/a	macOS-only event; must not void the gesture
