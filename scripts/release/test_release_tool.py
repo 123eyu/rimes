@@ -327,7 +327,7 @@ class PlistTests(unittest.TestCase):
             self.assertIn("0.4.2", tool.check_plist(path))
 
 
-class EnvironmentApprovalTests(unittest.TestCase):
+class EnvironmentPolicyTests(unittest.TestCase):
     """Exercise the actual passive checks in both protected workflow jobs."""
 
     @classmethod
@@ -346,11 +346,7 @@ class EnvironmentApprovalTests(unittest.TestCase):
         return {
             "name": "macos-release",
             "can_admins_bypass": False,
-            "protection_rules": [{
-                "type": "required_reviewers",
-                "reviewers": [{"type": "User", "reviewer": {"login": "scholay"}}],
-                "prevent_self_review": False,
-            }],
+            "protection_rules": [{"type": "branch_policy"}],
             "deployment_branch_policy": {
                 "custom_branch_policies": True, "protected_branches": False,
             },
@@ -367,19 +363,18 @@ class EnvironmentApprovalTests(unittest.TestCase):
                 mock.patch("builtins.open", side_effect=lambda path, **kwargs: io.StringIO(documents[path])):
             exec(check, {})
 
-    def test_allows_explicit_review_by_the_initiator_or_an_independent_reviewer(self):
+    def test_allows_automatic_deployment_without_reviewers(self):
         for check in self.checks:
-            for prevent_self_review in (False, True):
-                with self.subTest(check=check, prevent_self_review=prevent_self_review):
+            for rules in ([], [{"type": "branch_policy"}], [{"type": "required_reviewers", "reviewers": []}]):
+                with self.subTest(check=check, rules=rules):
                     environment = self.fixture()
-                    environment["protection_rules"][0]["prevent_self_review"] = prevent_self_review
+                    environment["protection_rules"] = rules
                     self.validate(check, environment)
 
-    def test_still_requires_reviewers_no_admin_bypass_and_selected_deployments(self):
+    def test_rejects_reviewers_admin_bypass_and_unrestricted_deployments(self):
         for check in self.checks:
             for field, value in (
-                ("protection_rules", []),
-                ("protection_rules", [{"type": "required_reviewers", "reviewers": []}]),
+                ("protection_rules", [{"type": "required_reviewers", "reviewers": [{"id": 1}]}]),
                 ("can_admins_bypass", True),
                 ("can_admins_bypass", None),
                 ("deployment_branch_policy", None),
@@ -394,8 +389,9 @@ class EnvironmentApprovalTests(unittest.TestCase):
 
     def test_still_requires_the_release_tag_pattern(self):
         for check in self.checks:
-            with self.assertRaises(SystemExit):
-                self.validate(check, self.fixture(), {"branch_policies": [{"name": "main"}]})
+            for policy in ({"name": "main", "type": "branch"}, {"name": "v*", "type": "branch"}):
+                with self.subTest(policy=policy), self.assertRaises(SystemExit):
+                    self.validate(check, self.fixture(), {"branch_policies": [policy]})
 
 
 class FormalPackageOnlyWorkflowTests(unittest.TestCase):

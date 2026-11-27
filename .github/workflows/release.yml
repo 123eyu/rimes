@@ -1259,11 +1259,9 @@ jobs:
       needs.build_and_smoke.outputs.is_release == 'true' &&
       github.repository == 'scholay-xsime/xsime'
     runs-on: macos-15
-    # Only this fresh runner reaches the protected environment. Configure it
-    # with required reviewers, no admin bypass, and a v* deployment rule.
-    # A maintainer may approve their own run through the explicit review gate.
-    # The first step below rechecks those server-side controls before
-    # any protected signing material can be imported.
+    # Only this fresh runner reaches the signing environment. Release is
+    # authorized when requested; the tag policy and automated gates remain.
+    # Recheck server-side controls before importing signing material.
     environment: macos-release
     permissions:
       contents: read
@@ -1306,9 +1304,9 @@ jobs:
               and isinstance(rule.get("reviewers"), list)
               and rule["reviewers"]
           ]
-          if not reviewer_rules:
+          if reviewer_rules:
               raise SystemExit(
-                  f"{name} must have a populated required_reviewers rule"
+                  f"{name} must not require deployment reviewers"
               )
           if environment.get("can_admins_bypass") is not False:
               raise SystemExit(f"{name} must disallow administrator bypass")
@@ -1321,7 +1319,7 @@ jobs:
           names = {
               policy.get("name")
               for policy in policies.get("branch_policies", [])
-              if isinstance(policy, dict) and isinstance(policy.get("name"), str)
+              if isinstance(policy, dict) and isinstance(policy.get("name"), str) and policy.get("type") == "tag"
           }
           if "v*" not in names:
               raise SystemExit(f"{name} must allow the formal tag pattern v*")
@@ -2014,9 +2012,8 @@ jobs:
       cancel-in-progress: false
     runs-on: macos-15
     # This separate environment holds no signing or notarization credentials.
-    # Required reviewers inspect the signed-stage rehearsal evidence. The
-    # 1.1.6 maintainer-authorized run uses a disposable hosted Mac. This job also
-    # refuses a missing or weakened server-side environment configuration.
+    # The signed-stage installation is checked on a disposable hosted Mac.
+    # This job also rechecks its server-side environment configuration.
     environment: macos-publish
     permissions:
       contents: write
@@ -2053,9 +2050,9 @@ jobs:
               and isinstance(rule.get("reviewers"), list)
               and rule["reviewers"]
           ]
-          if not reviewer_rules:
+          if reviewer_rules:
               raise SystemExit(
-                  f"{name} must have a populated required_reviewers rule"
+                  f"{name} must not require deployment reviewers"
               )
           if environment.get("can_admins_bypass") is not False:
               raise SystemExit(f"{name} must disallow administrator bypass")
@@ -2068,7 +2065,7 @@ jobs:
           names = {
               policy.get("name")
               for policy in policies.get("branch_policies", [])
-              if isinstance(policy, dict) and isinstance(policy.get("name"), str)
+              if isinstance(policy, dict) and isinstance(policy.get("name"), str) and policy.get("type") == "tag"
           }
           if "v*" not in names:
               raise SystemExit(f"{name} must allow the formal tag pattern v*")

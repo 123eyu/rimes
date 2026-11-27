@@ -1,7 +1,7 @@
 name: Complete approved release assets
 
-# Reuses the original verified artifacts. A new protected publication approval
-# covers a missing/partial draft or readback failure after completed publication.
+# Reuses the original verified artifacts for a missing/partial draft or a
+# readback failure after completed publication.
 # Dispatch at the original stable tag; macos-publish intentionally permits tags only.
 on:
   workflow_dispatch:
@@ -40,7 +40,7 @@ jobs:
           persist-credentials: false
       - name: Require the protected publication environment
         run: python3 scripts/release/release_guard.py environment --name macos-publish
-      - name: Authenticate original source, producer approvals and immutable artifacts
+      - name: Authenticate original source, producers and immutable artifacts
         id: source
         env:
           SOURCE_RUN: ${{ inputs.source_run }}

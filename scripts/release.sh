@@ -19,7 +19,7 @@
 #
 # 选项：
 #   -n, --dry-run   只做校验并展示计划与发布说明；任何分支都可运行，不创建或推送 tag
-#   -y, --yes       跳过交互确认（用于受控自动化）
+#   -y, --yes       兼容旧调用；发布命令不再要求额外交互确认
 #   -h, --help      显示本说明
 #
 # 正式版需要 Developer ID signing Environment 和独立的 publish Environment；
@@ -84,12 +84,11 @@ gate() {
 }
 
 DRY_RUN=false
-ASSUME_YES=false
 POSITIONAL=()
 while (( $# > 0 )); do
     case "$1" in
         -n|--dry-run) DRY_RUN=true ;;
-        -y|--yes) ASSUME_YES=true ;;
+        -y|--yes) : ;;
         -h|--help) usage; exit 0 ;;
         --)
             shift
@@ -208,8 +207,8 @@ if [[ "$KIND" == "stable" ]]; then
             || gate "正式版需要受保护的 $formal_environment Environment；当前仓库尚未完整配置。"
         reviewer_rules="$(gh api "repos/$EXPECTED_REPO/environments/$formal_environment" \
             --jq '[.protection_rules[]? | select(.type == "required_reviewers" and ((.reviewers // []) | length > 0))] | length' 2>/dev/null || true)"
-        [[ "$reviewer_rules" =~ ^[1-9][0-9]*$ ]] \
-            || gate "正式版要求 $formal_environment 至少配置一条有 reviewer 的人工审批保护规则。"
+        [[ "$reviewer_rules" == 0 ]] \
+            || gate "正式版要求 $formal_environment 不再配置人工部署审批；请检查 Environment 配置。"
         can_admins_bypass="$(gh api "repos/$EXPECTED_REPO/environments/$formal_environment" \
             --jq '.can_admins_bypass' 2>/dev/null || true)"
         [[ "$can_admins_bypass" == false ]] \
@@ -219,7 +218,7 @@ if [[ "$KIND" == "stable" ]]; then
         [[ "$custom_branch_policies" == true ]] \
             || gate "正式版要求 $formal_environment 使用 selected branch/tag deployment policies。"
         formal_tag_policy="$(gh api "repos/$EXPECTED_REPO/environments/$formal_environment/deployment-branch-policies?per_page=100" \
-            --jq '[.branch_policies[]?.name] | index("v*") != null' 2>/dev/null || true)"
+            --jq '[.branch_policies[]? | select(.type == "tag" and .name == "v*")] | length > 0' 2>/dev/null || true)"
         [[ "$formal_tag_policy" == true ]] \
             || gate "正式版要求 $formal_environment 允许 formal tag 模式 v*。"
     done
@@ -281,17 +280,9 @@ if [[ "$DRY_RUN" == true ]]; then
     exit 0
 fi
 
-if [[ "$ASSUME_YES" != true ]]; then
-    [[ -t 0 ]] || die "非交互环境必须显式传入 --yes。"
-    echo ""
-    read -r -p "确认发布 $TAG 到 ${EXPECTED_REPO}？(y/n) " -n 1 reply
-    echo
-    [[ "$reply" =~ ^[Yy]$ ]] || { warn "已取消"; exit 0; }
-fi
-
-# Re-check after confirmation to narrow the window for a concurrent merge or tag.
-[[ "$(remote_main_sha)" == "$fetch_main" ]] || die "确认期间 origin/main 已变化；请重新运行。"
-remote_tag_exists "$TAG" && die "确认期间远端出现了 ${TAG}；已中止且不会覆盖。"
+# Re-check just before the push to narrow the window for a concurrent merge or tag.
+[[ "$(remote_main_sha)" == "$fetch_main" ]] || die "发布前 origin/main 已变化；请重新运行。"
+remote_tag_exists "$TAG" && die "发布前远端出现了 ${TAG}；已中止且不会覆盖。"
 
 git tag "$TAG" "$fetch_main"
 info "推送 $TAG 到 $EXPECTED_REPO..."

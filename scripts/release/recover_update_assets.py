@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Recover immutable producer artifacts for a newly approved publication attempt.
+"""Recover immutable producer artifacts for a publication attempt.
 
-The recovery workflow independently requires macos-publish approval. Producers,
-including signing and exact-package installation, must already have succeeded.
+Producers, including signing and exact-package installation, must already have
+succeeded; the macos-publish environment retains its tag restrictions.
 This module never signs, executes packages, modifies a Release or moves Latest.
 """
 import argparse

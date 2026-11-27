@@ -2,10 +2,25 @@ import copy
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
-from publish_update_assets import publish
+from publish_update_assets import ReleaseGitHub, publish
 
 SHA = "a" * 40
+
+
+class ReleaseLookupTests(unittest.TestCase):
+    def test_finds_draft_from_authenticated_release_listing(self):
+        draft = {"tag_name": "v1.2.1", "draft": True, "id": 7}
+        github = ReleaseGitHub()
+        with mock.patch.object(github, "pages", return_value=[{"tag_name": "v1.2.0"}, draft]):
+            self.assertEqual(github.release("v1.2.1"), draft)
+
+    def test_rejects_ambiguous_release_identities(self):
+        github = ReleaseGitHub()
+        with mock.patch.object(github, "pages", return_value=[{"tag_name": "v1.2.1"}] * 2):
+            with self.assertRaisesRegex(ValueError, "Multiple releases"):
+                github.release("v1.2.1")
 
 
 class FakeReleaseGitHub:

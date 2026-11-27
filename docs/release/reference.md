@@ -31,7 +31,7 @@ macOS 构建与封存：
 5. 再次核对 tag 和版本单调性，然后一次将 draft 公开并设为 Latest。若服务端已公开但响应丢失，重试只读回完整资产，不重新发布或把旧版本设回 Latest。
 
 恢复入口 [complete-release-assets.yml](../../.github/workflows/complete-release-assets.yml) 必须使用 `--ref vX.Y.Z` 从原稳定 tag dispatch，
-调用者的 repository、tag、commit 与原 source run 必须匹配；检出的 helper 来自该冻结 tag。它需要新的 `macos-publish` 批准并使用同一个互斥组，不放宽环境的 `v*` tag 限制。
+调用者的 repository、tag、commit 与原 source run 必须匹配；检出的 helper 来自该冻结 tag。它使用同一个互斥组，不放宽环境的 `v*` tag 限制。历史 tag 冻结的工作流若依赖旧审批配置，须按其实际约束恢复，不可移动 tag。
 原构建、签名、清单签名及同包安装任务必须全部成功；不再要求此前发布 job 成功，因此可恢复“尚未创建/部分 draft/公开后读回失败”。
 恢复仅消费未过期、身份唯一的原 Artifact；无法证明来源、发现不同字节、签名过期或已有更新版本时拒绝，不用新构建或新签名偷偷替换旧 draft。
 
@@ -51,20 +51,15 @@ macOS 构建与封存：
 
 先创建两个受保护的 GitHub Environment：
 
-- `macos-release`：签名/公证门，必须配置至少一位 required reviewer、**禁止
-  administrator bypass**，并以 selected branch/tag policy 允许 `v*`；这里才保存下表八项 Secrets。
-- `macos-publish`：公开发布门，也必须配置上述 reviewer / admin-bypass / `v*` policy，且
-  **不要配置任何 Developer ID 或 notary Secret**。GitHub 的 required-reviewer 规则只要求名单中的一人批准；
-  两个 Environment 可以使用同一个 reviewer，由其分别批准签名和发布，不要求两位独立审核者。
+- `macos-release`：签名/公证环境，不配置人工 deployment reviewers，**禁止 administrator bypass**，
+  并以 selected branch/tag policy 允许 `v*` 标签；这里才保存下表八项 Secrets。
+- `macos-publish`：公开发布环境，使用相同的 reviewer、admin-bypass 与标签策略，且
+  **不要配置任何 Developer ID 或 notary Secret**。
 
-当前采用单维护者流程：两个 Environment 的 required reviewer 都配置为 `scholay`，
-`prevent_self_review=false`，允许该账号发起发布并分别批准签名与公开。两次人工审批和禁止 administrator
-bypass 仍然保留，公开审批前仍必须完成同一签名安装包的真机验收。这不是两个人的独立复核；若团队以后需要
-独立复核，再启用 prevent self-review，并配置不同的人或不重叠的 reviewer team。
-
-正式工作流在导入凭据和公开 Release 前，会通过 GitHub API 重新断言以上 Environment 控制；缺失、允许
-admin bypass、没有 reviewer 或没有 `v*` policy 都会 fail-closed。工作流不要求两个阶段使用不同的
-reviewer；若另行采用团队独立复核策略，成员分离由仓库管理员配置。
+用户要求发版即授权完成签名和公开；这些 job 不再等待独立人工批准。远端同包安装/升级、签名、
+公证、制品身份和资产读回仍为自动门禁，真实设备验收应按实际覆盖分别记录。
+正式工作流在导入凭据和公开 Release 前，通过 GitHub API 重新断言 Environment 控制；配置缺失、
+要求人工 reviewer、允许 admin bypass 或没有 `v*` tag policy 都会 fail-closed。
 
 独立的 `release tag creation` ruleset 覆盖 `refs/tags/v*` 的 **creation**，只给发布账号 `scholay` bypass；
 原有 `release tags` ruleset 无 bypass，继续禁止所有人删除或移动已有 tag。两类规则分开配置，避免创建权限
@@ -215,7 +210,7 @@ macOS 会把这些 id 写入受保护的 TIS 偏好，因此后续不要随意�
 中下载的精确 `RIMES-X.Y.Z.pkg` 与 `SHA256SUMS`，由 Installer 安装到 `/Library/Input Methods`。
 同一用户或正式包测试机一次只能选择一条通道；不要让开发安装覆盖正式包。
 
-在第二道批准前，维护者可从 signed-stage 下载同一份 pkg，依次运行：
+维护者可在授权的测试设备上从 signed-stage 下载同一份 pkg，依次运行：
 
 ```bash
 scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg
@@ -224,8 +219,8 @@ scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg --install-g
 
 默认命令只做签名、公证、Gatekeeper、payload 与架构检查；`--install-gui` 才会打开与用户相同的 Installer，
 并在安装后验证固定路径、回执和真实输入源。它会退休当前 GUI 用户的开发 app / agent，因此必须使用测试账号
-或可恢复测试 Mac。记录 tag、stage asset SHA-256、macOS 版本和测试设备；reviewer 审阅这些证据后才批准
-`macos-publish`。发布 job 执行确切 tag 的已审核发布 helper 和系统校验工具，仅被动检查交接包；它先认证完整 draft，随后公开并读回，不能用开发 build/smoke 或普通演练 Artifact 替代。
+或可恢复测试 Mac。记录 tag、stage asset SHA-256、macOS 版本和测试设备。发布 job 执行确切 tag 的已审核
+发布 helper 和系统校验工具，仅被动检查交接包；它先读回完整 draft，随后公开，不能用开发 build/smoke 或普通演练 Artifact 替代。
 
 ## 七、应用内自动更新（[`UpdateManager.swift`](../../Sources/RimeBuffer/UpdateManager.swift)）
 
@@ -243,7 +238,7 @@ scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg --install-g
 
 受保护的 `macos-release` 环境增加 `RIMES_UPDATE_SIGNING_KEY_PEM_BASE64`，内容为更新专用
 P-256 PEM 私钥的 Base64。私钥只在独立清单签名步骤可见，以 0600 临时文件使用并在结束时清理；
-该 runner 不执行下载的安装包。签名清单、应用签名和公开发布各自经过环境批准，不把 GitHub
+该 runner 不执行下载的安装包。签名清单、应用签名和公开发布各自在独立权限范围内自动执行，不把 GitHub
 公开资产上的 SHA-256 当成独立的发布者身份认证。
 
 清单最长有效 90 天，允许 5 分钟时钟偏差。新客户端会在检查、下载和安装前复验有效期，并保存
