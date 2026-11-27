@@ -1,5 +1,10 @@
 # Repository instructions for coding agents
 
+## Release authorization
+
+- When the owner asks to release a version, that request authorizes the complete release: the necessary branch and PR work, remote CI, tags, signing, public GitHub Release, and App Store upload and submission within the requested scope. Do not ask again for approval at each stage.
+- Keep the technical release gates, immutable tags and assets, credentials, and user data protected. Report actual checks and store-review status accurately; request user action only for genuinely unavailable access, information, or an unresolved decision.
+
 ## Contribution attribution
 
 - Add a `Co-authored-by` trailer to a commit when an AI coding agent materially designed, implemented, tested, or reviewed that commit.

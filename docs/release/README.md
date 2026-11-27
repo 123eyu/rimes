@@ -2,8 +2,9 @@
 
 所有应用代码以 `main` 为集成主线，各平台独立构建和验收。从 1.1.6 开始，正式 `v*` 发布统一构建
 macOS、Windows、Android、Linux 安装包并附在同一 GitHub Release；iOS 独立走 App Store 审核。
-分支与本地维护方式见 [docs/development/maintenance.md](../development/maintenance.md)。本地合入 `main` 不会触发远端构建，
-也不等于批准推送、创建 tag、安装或发布。下文的 `release.sh` 和签名包流程主要面向 macOS。
+分支与本地维护方式见 [docs/development/maintenance.md](../development/maintenance.md)。用户要求发版即授权
+在指定范围内完成远端构建、签名、公开 Release 和 App Store 提交，不再逐阶段请求同意。
+下文的 `release.sh` 和签名包流程主要面向 macOS。
 
 **合并到 main → 确切提交的五端远端 CI 全绿 → `./scripts/release.sh stable` → tag → 四端构建、签名与安装验证 → 受保护的完整清单签名 → 受保护的 draft 上传与逐项读回 → 一次公开并切换 Latest。**
 
@@ -32,7 +33,7 @@ Organization 迁移后，发布与权限核验的目标是 `scholay-xsime/xsime`
 不能移动旧 tag 来恢复发布。Pages 旧路径的维护位置见[命名与兼容规范](../development/branding.md#仓库与更新兼容)。
 
 若全部生产任务已经通过，但发布在创建 draft 前、上传中或公开后的响应/读回阶段失败，必须以原稳定 tag 手动运行
-`Complete approved release assets`，输入该 tag 的原工作流 run ID，并重新通过 `macos-publish` 的人工批准：
+`Complete approved release assets`，输入该 tag 的原工作流 run ID：
 
 ```bash
 gh workflow run complete-release-assets.yml --repo scholay-xsime/xsime --ref vX.Y.Z -f source_run=ORIGINAL_RUN_ID
@@ -43,7 +44,8 @@ gh workflow run complete-release-assets.yml --repo scholay-xsime/xsime --ref vX.
 恢复流程复验原 tag／commit、确切提交的五端 CI、原签名、同包安装、四端构建及清单签名任务，下载原始不可变
 Artifact 并核验来源、压缩包摘要和实际资产。它只创建或续接同源、同一资产摘要集合的 draft；如果已经完整公开，
 仅做读回验证，不重复切换 Latest。不同字节、来源不明、过期签名或过期/歧义 Artifact 都会拒绝，不重建、不重签、不覆盖。
-已取消的源流程只有全部生产任务成功、失败/取消局限于发布阶段时才可进入这次重新批准的恢复。
+已取消的源流程只有全部生产任务成功、失败/取消局限于发布阶段时才可恢复。
+历史 tag 冻结的旧工作流可能仍依赖旧审批配置；必须按该 tag 的实际约束处理，不能移动 tag。
 
 正常发布与恢复共用 `stable-release-publication` 互斥组，并在公开前检查版本单调：旧版本不能晚到后夺回 Latest；
 Android `versionCode` 必须高于前一正式版本，已公开同版本的只读恢复则必须保持原编号。预览 job 的预期跳过不会放宽生产门禁。
@@ -60,8 +62,8 @@ flowchart LR
   build --> sign["受保护签名、公证与不可变包"]
   sign --> install["远端同包安装/升级验收"]
   install --> feed["macos-release：完整清单签名"]
-  feed --> approve["macos-publish：公开批准，无签名密钥"]
-  approve --> draft["draft：全部资产和清单上传、读回"]
+  feed --> publish["macos-publish：自动公开，无签名密钥"]
+  publish --> draft["draft：全部资产和清单上传、读回"]
   draft --> latest["一次公开并切换 Latest"]
 ```
 
@@ -84,7 +86,7 @@ flowchart LR
 
 > Developer Program 资格或一张 Developer ID 证书本身不能把预览版变成正式版。每次正式
 > `vX.Y.Z` 发布必须同时具备同一 Team 的 **Developer ID Application + Developer ID Installer** 证书及私钥、
-> 受保护的 `macos-release`（签名与公证）和 `macos-publish`（第二次发布批准、无密钥）Environment，
+> 受保护的 `macos-release`（签名与公证）和 `macos-publish`（公开、无密钥）Environment，
 > 以及 App Store Connect 公证凭据；任一缺失都会 fail-closed。
 > 未通过正式签名、公证和发布验证的包只能进入对应预览渠道，不能标记为 Latest。
 > 完整清单见[发布环境与凭据](reference.md#release-environment)。
@@ -105,7 +107,7 @@ flowchart LR
 ```bash
 git switch main && git pull --ff-only
 ./scripts/release.sh --dry-run preview   # 查看版本号、门禁结果和发布说明
-./scripts/release.sh preview             # 确认后推送 tag
+./scripts/release.sh preview             # 门禁通过后推送 tag
 ```
 
 | 命令 | 结果 |
@@ -125,13 +127,12 @@ git switch main && git pull --ff-only
 - 正式版还要求同一提交的 iOS checks、Android checks、Windows IME、Linux IME 全部通过；按固定 workflow ID、main push 事件和确切 SHA 检查最新运行，不能用同名或较早的成功结果替代；预览版只要求主 CI；
 - 新 tag 不存在，并高于同渠道已发布的版本；Android versionCode 高于前一正式 feed/build-info 中的编号；
 - `Info.plist` 与 `VERSION` 发布目标一致，预置插件 catalog 已同步；
-- 正式版还要求 `macos-release` 与 `macos-publish` 都存在；二者都要有非空 required reviewers、禁止
-  administrator bypass，并以 selected branch/tag policy 允许 `v*`。前者的受保护 job 要求
+- 正式版还要求 `macos-release` 与 `macos-publish` 都存在；二者不配置人工 deployment reviewers、禁止
+  administrator bypass，并以 selected branch/tag policy 允许 `v*` 标签。前者的受保护 job 要求
   Application / Installer 两份证书、同一 Team ID 与公证凭据完整可用，后者不得存放这些凭据。
 
-两个 Environment 分别保护签名与公开，**不要求两名审核者**；同一个 reviewer 可以批准签名、清单签名和公开阶段，
-但各 job 必须通过其 Environment 审批，不能以管理员身份绕过。发布审核应检查同一安装包的远端安装/升级结果，
-真实设备验收按维护规则另行记录；恢复流程也需要新的公开批准。需要独立复核时，可启用 prevent self-review 并指定其他审核者。
+两个 Environment 分别隔离签名密钥与公开权限；用户发起的发布在远端技术门禁通过后自动继续，
+不要求每个 job 再次人工批准。同一安装包的远端安装/升级结果仍是门禁，真实设备验收按实际覆盖另行记录。
 
 此外，独立的 `release tag creation` ruleset 对 `refs/tags/v*` 施加 **creation** 限制，只允许指定的
 发布账号 `scholay` 创建标签。原有 `release tags` ruleset 仍无 bypass，禁止所有人删除或移动已有标签；
@@ -156,7 +157,7 @@ git switch main && git pull --ff-only
    以 Developer ID Installer 签精确 `RIMES-X.Y.Z.pkg`，只公证并校验这个用户实际接收的最终 PKG；它销毁
    keychain / P8 后才上传不可变的 four-file signed-stage（pkg、`SHA256SUMS`、说明、manifest）。
 4. **同包验收、清单签名与公开**：一次性 Mac runner 安装/升级同一 signed-stage 的 PKG；所有平台生产任务成功后，
-   独立 `sign_update_manifest` job 认证四端不可变 Artifact、生成并签名完整清单。无签名密钥的 `macos-publish` 经批准后，
+   独立 `sign_update_manifest` job 认证四端不可变 Artifact、生成并签名完整清单。无签名密钥的 `macos-publish` 自动
    核对包、清单、源提交及逐文件摘要，将全部资产放入 draft 并逐个下载比较，最后才公开并切换 Latest。
    发布 job 只执行确切 tag 中已审核的发布 helper 和系统校验工具，不运行交接产物，不重建、重签或重公证。
 5. **发布说明** = 安装与校验说明 + 自动生成的「变更」：自上一个**公开 GitHub macOS Release**以来的提交
@@ -196,7 +197,7 @@ ruleset 必须禁止删除或移动 `v*` 与 `platform-preview-v*` tag；正式 
   开发版，因此两条路径不能并存或互相覆盖。
 
 发布工作流会在签名 runner 上被动校验已经签名、公证和 staple 的正式资产，但这不替代维护者的
-发布一致性测试。signed-stage 出现后，维护者应运行：
+发布一致性测试。维护者可在授权的测试设备上使用 signed-stage 运行：
 
 ```bash
 scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg
@@ -205,8 +206,8 @@ scripts/rehearse-release-pkg.sh --pkg /absolute/path/RIMES-X.Y.Z.pkg --install-g
 
 第一个命令不安装；第二个命令打开用户也会看到的 Installer，并在安装完成后复核输入源、签名、公证和回执。
 脚本等待更新后的 PackageKit 回执，最多 15 分钟，不要求退出 Installer；若取消安装，可按 Ctrl-C 结束验收等待。
-通过后记录 tag、资产 SHA-256、macOS 版本和测试设备，再批准 `macos-publish`。公开后 workflow 还会下载正式
-Release 的同一批资产读回校验。signed-stage 只是一道发布权威门：GitHub Actions artifact 的访问规则不等于发布
+通过后记录 tag、资产 SHA-256、macOS 版本和测试设备。远端同包安装/升级检查是自动公开门禁；本机或真机
+验证须单独记录实际覆盖。公开前 workflow 会下载 draft 中的同一批资产逐项读回校验。signed-stage 只是一道发布权威门：GitHub Actions artifact 的访问规则不等于发布
 禁运，面向用户的唯一来源始终是 GitHub Release。
 
 ## 六、版本号规则

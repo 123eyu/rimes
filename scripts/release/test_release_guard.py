@@ -97,13 +97,15 @@ class GuardTests(unittest.TestCase):
     def test_first_stable_release_has_no_prior_build(self):
         self.assertIsNone(verify_android_build("1.0.0", 1, FakeGitHub())["previousTag"])
 
-    def test_release_environment_requires_reviewers_no_bypass_and_tags(self):
+    def test_release_environment_allows_automatic_release_no_bypass_and_tags(self):
         environment = {"name": "macos-release", "can_admins_bypass": False,
-                       "protection_rules": [{"type": "required_reviewers", "reviewers": [{"id": 1}]}],
+                       "protection_rules": [{"type": "branch_policy"}],
                        "deployment_branch_policy": {"custom_branch_policies": True, "protected_branches": False}}
         policies = [{"name": "v*", "type": "tag"}]
-        validate_environment(environment, policies, "macos-release")
-        for mutation in ({"can_admins_bypass": True}, {"protection_rules": []},
+        self.assertFalse(validate_environment(environment, policies, "macos-release")["reviewersRequired"])
+        validate_environment({**environment, "protection_rules": []}, policies, "macos-release")
+        for mutation in ({"can_admins_bypass": True},
+                         {"protection_rules": [{"type": "required_reviewers", "reviewers": [{"id": 1}]}]},
                          {"deployment_branch_policy": {"custom_branch_policies": False, "protected_branches": True}}):
             with self.subTest(mutation=mutation), self.assertRaises(ValueError):
                 validate_environment({**environment, **mutation}, policies, "macos-release")

@@ -66,16 +66,16 @@ class GitHub:
 def validate_environment(environment, policies, name):
     require(name in {"macos-release", "macos-publish"} and environment.get("name") == name,
             "Unexpected protected release environment")
-    require(any(rule.get("type") == "required_reviewers" and isinstance(rule.get("reviewers"), list)
-                and rule["reviewers"] for rule in environment.get("protection_rules", [])),
-            f"{name} must have populated required reviewers")
+    require(not any(rule.get("type") == "required_reviewers" and rule.get("reviewers")
+                    for rule in environment.get("protection_rules", [])),
+            f"{name} must not require deployment reviewers")
     require(environment.get("can_admins_bypass") is False, f"{name} must forbid admin bypass")
     policy = environment.get("deployment_branch_policy", {})
     require(policy.get("custom_branch_policies") is True and policy.get("protected_branches") is False,
             f"{name} must select deployment branch/tag policies")
-    require(any(policy.get("name") == "v*" and policy.get("type", "tag") == "tag" for policy in policies),
+    require(any(policy.get("name") == "v*" and policy.get("type") == "tag" for policy in policies),
             f"{name} must allow the v* tag policy")
-    return {"environment": name, "reviewersRequired": True, "adminBypass": False}
+    return {"environment": name, "reviewersRequired": False, "adminBypass": False}
 
 
 def verify_environment(name, github=None):

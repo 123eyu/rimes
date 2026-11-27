@@ -136,7 +136,12 @@ def prepare_assets(root, version, commit, run_id, verify_feed=None):
 
 class ReleaseGitHub(GitHub):
     def release(self, tag):
-        return self.json(f"repos/{REPO}/releases/tags/{tag}", missing_ok=True)
+        # The tag endpoint does not return draft releases. List authenticated
+        # releases so a draft can be verified and resumed after every upload.
+        matches = [release for release in self.pages(f"repos/{REPO}/releases?per_page=100")
+                   if release.get("tag_name") == tag]
+        require(len(matches) <= 1, "Multiple releases identify the same tag")
+        return matches[0] if matches else None
 
     def create_draft(self, tag, commit, body):
         return self.json(f"repos/{REPO}/releases", method="POST", data={
