@@ -2,9 +2,131 @@
 
 本文件由 `python3 scripts/release/release_tool.py changelog --write` 根据公开 GitHub Release 与
 [Conventional Commits](https://www.conventionalcommits.org/zh-hans/v1.0.0/) 生成，请勿手工编辑。
-每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay/xsime/releases)。
+每个版本的安装方式与校验和见 [GitHub Releases](https://github.com/scholay-xsime/xsime/releases)。
 
-## [v1.2.0](https://github.com/scholay/xsime/releases/tag/v1.2.0) — 2026-10-27
+## [v1.2.1](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.1) — 2026-11-26
+
+### 合并的 PR
+
+- #338
+- #337
+- #336
+- #335
+- #331
+- #330
+- #321
+- #328
+- #327
+- #325
+- #326
+- #309
+- #315
+- #311
+- #297
+- #317
+- #316
+- #314
+- #312
+- #310
+- #318
+- #319
+- #307
+- #293
+- #284
+- #295
+- #287
+- #282
+
+### 新功能
+
+- **ios:** add experimental voice and handwriting input (79f514f9)
+- **ios:** add a persistent plugin selector (6980df88)
+- **macos:** optional ChatGPT scoring for learned words (4c65315d)
+- **macos:** move lexicon learning into a built-in extension (5652ef79)
+- **macos:** delete learned words with backup and per-round undo (d16ea2a4)
+- **ios:** plain stats line and expand key in the candidate corner (be419e9a)
+- **ios:** compact top bar on one 30 pt unit, keycap shortcuts, no mode dropdown (e5cda414)
+- **ios:** upload to App Store Connect from a Mac with an API key (744edac0)
+- **macos:** record learned words per day and review them read-only (e3f4d85d)
+
+### 修复
+
+- **linux:** refresh native typing practice contract (5be2647c)
+- **ios:** verify the packaged handwriting model (959f131f)
+- **ios:** include reviewed metadata in store submission (3f615d61)
+- **ios:** cancel delayed keyboard microphone capture (223ce58f)
+- **macos:** refine window focus and typing practice (abc754e7)
+- **linux:** pass Space to chord_composer only while highlights agree (6f0ef511)
+- **ci:** remove the causes of intermittent CI failures (a6b75622)
+- **ios:** re-enable Send after the app pastes into an empty field (c4cc178c)
+- **linux:** report the legacy Capsule tab a client selected (d748592b)
+- **linux:** let space reach librime chord_composer for space-chord schemas (39523882)
+- **linux:** batch of runtime, Capsule, settings and catalog fixes (ff79274f)
+- **linux:** never commit half a UTF-8 character from split plugin blocks (11bea464)
+- **linux:** refresh chord pin and review the lexicon-review icon (da8e850d)
+- **ios:** enable Send for dictated or pasted text (1f45f42a)
+- **macos:** keep Return hold send-all working while translation streams (f5362587)
+- **macos:** one left-flowing wait indicator and scrollable long rails (cb90c02f)
+- **macos:** keep Return hold send-all working while translation streams (03d12397)
+- **linux:** don't let a lost Return key-up swallow the next press (d1961fc0)
+- **linux:** give the deb a private glog so stock fcitx5-rime can load (49aa0dd0)
+- **macos:** keep composing while a background app holds secure input (67b3ee3e)
+- **macos:** host the composing field on the Default Buffer rail (91ed6cab)
+- **macos:** compose in floating panels of menu-bar apps (e9886689)
+- **macos:** let the composing field fill the translation source rail (254e7587)
+- **macos:** recognise the macOS 27 Spotlight host as a trusted overlay (8b20ee34)
+- **macos:** deliver Edit shortcuts to Settings text fields (80f57433)
+- **macos:** name the app holding secure input when composition is paused (286dac8d)
+- **linux:** GCC 16 diagnostics, VTE 0.84 title API and Lua 5.5 search (5d7f3c15)
+- **macos:** move the diagnostic log to ~/Library/Logs/RIMES (b43844dd)
+- **linux:** let cancellation win over a finished local translation (8ff591ba)
+- **ci:** upload the user lexicon test for scheduled Windows typing runs (e3d6b987)
+- **macos:** stop candidate and workbench placement from jumping on first show (d8988b9c)
+- accept canonical organization URLs in macOS updater (d6d52e93)
+- preserve original notice bytes in generated plugin packages (a6457a8f)
+- **ci:** correct upgrade components and verified-cache replacement (a6cafee6)
+- **ci:** bound dependency downloads and synchronize cancellation tests (209fcd0b)
+- **android:** enforce installed-version floors and verify real upgrades (e7fed666)
+- **release:** publish signed updates atomically and harden installation (9ccb08cf)
+- **linux:** build with GCC 16, nlohmann-json 3.12 and split ICU (d062c2d4)
+
+### 文档
+
+- **ios:** prepare release review details (ef33cab2)
+- **ios:** prepare voice privacy and distribution review (5902fd5c)
+- characterize shared key gesture behavior (b460e28a)
+- point download links and source labels at scholay-xsime (8020037a)
+- **release:** record verified five-platform 1.2.0 delivery (a5eee74b)
+
+### 维护
+
+- **ios:** produce unsigned archives for device QA (0c6d1b5f)
+- **ios:** cover handwriting in archive validation (2f08de23)
+- **ios:** synchronize microphone race fixture (9657bebd)
+- **release:** prepare version 1.2.1 (432339cb)
+- update updater branding compatibility checks (372c52c2)
+- pin typing practice plugin changes (f067f647)
+- retry transient download failures for release assets (fc52b057)
+- **linux:** reset commits after the split-block delivery case (86fc85d5)
+- pin OfficialPlugins to the merged lexicon scoring change (694b1362)
+- pin OfficialPlugins to the merged lexicon-review extension (e447caec)
+- expect the lexicon-review settings page in the render smoke (39dc08d9)
+- **shared:** count the lexicon-review package in the plugin catalog (a82f1459)
+- **linux:** wait for Fcitx5 to exit before deleting the coexistence workdir (85b65fcb)
+- refresh Linux settings contracts for the lexicon review button (49d4b723)
+- refresh Linux settings contracts for the moved log path (3427d404)
+- **ios,android:** retry pinned downloads and keep only locked bytes (a58eb32d)
+- **lua:** retry the pinned Lua download and fall back to the PUC-Rio mirror (3054f384)
+- **macos:** bundle official librime 1.17.0 instead of Squirrel's 1.16.0 (c4635f4d)
+- refresh Linux settings contracts from native CI exports (f4c11acd)
+- pin plugin fixture compatible with current CI compiler (5027ef66)
+- migrate XSIME repositories and release authority to organization (1fb0f563)
+- **updates:** fix workflow literals and upgrade-host visibility (7737d4ec)
+- **ci:** validate exact-source publication helpers (24ac8650)
+- **release:** enforce tag-scoped recovery deployment (fc2a1742)
+- **repo:** clean tracked artifacts and prune obsolete documentation (44966216)
+
+## [v1.2.0](https://github.com/scholay-xsime/xsime/releases/tag/v1.2.0) — 2026-10-27
 
 ### 合并的 PR
 
@@ -107,7 +229,7 @@
 - export current desktop contracts from the remote macOS build (c5cf581e)
 - **windows:** bound and diagnose the native settings suite (7f540461)
 
-## [v1.1.8](https://github.com/scholay/xsime/releases/tag/v1.1.8) — 2026-10-22
+## [v1.1.8](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.8) — 2026-10-22
 
 ### 合并的 PR
 
@@ -173,7 +295,7 @@
 - **windows:** trace slow broker key phases in isolated CI (319f26b5)
 - **android:** exercise service delivery and editor policy on the emulator (948d123b)
 
-## [v1.1.7](https://github.com/scholay/xsime/releases/tag/v1.1.7) — 2026-10-19
+## [v1.1.7](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.7) — 2026-10-19
 
 ### 合并的 PR
 
@@ -203,7 +325,7 @@
 - **ios:** archive on GitHub for existing Apple cloud signing (adac6a6a)
 - **linux:** wait for terminal keyboard focus before injecting keys (99be601b)
 
-## [v1.1.6](https://github.com/scholay/xsime/releases/tag/v1.1.6) — 2026-10-19
+## [v1.1.6](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.6) — 2026-10-19
 
 ### 合并的 PR
 
@@ -352,7 +474,7 @@
 
 - Add Linux Mailbox AI conversations with frozen routes and final-only history (fadafb5d)
 
-## [v1.1.5](https://github.com/scholay/xsime/releases/tag/v1.1.5) — 2026-10-16
+## [v1.1.5](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.5) — 2026-10-16
 
 ### 合并的 PR
 
@@ -401,7 +523,7 @@
 - **release:** prepare XSIME 1.1.5 desktop and Android packages (f0e24193)
 - **ios:** archive submitted XSIME 1.1.5 release packet (f86503ee)
 
-## [v1.1.4](https://github.com/scholay/xsime/releases/tag/v1.1.4) — 2026-10-14
+## [v1.1.4](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.4) — 2026-10-14
 
 ### 合并的 PR
 
@@ -430,7 +552,7 @@
 - update scheme count and isolate synthetic Windows host timing (f3a68c2d)
 - **windows:** reopen settings after saving scheme selection (64c1db43)
 
-## [v1.1.3](https://github.com/scholay/xsime/releases/tag/v1.1.3) — 2026-10-13
+## [v1.1.3](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.3) — 2026-10-13
 
 ### 合并的 PR
 
@@ -525,7 +647,7 @@
 
 - **windows:** prepare 1.1.1 community fixes (ca004245)
 
-## [v1.1.1](https://github.com/scholay/xsime/releases/tag/v1.1.1) — 2026-10-07
+## [v1.1.1](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.1) — 2026-10-07
 
 ### 合并的 PR
 
@@ -650,7 +772,7 @@
 - align integration checks and release readiness records (b4641168)
 - remove retired iOS promotional project (26374a60)
 
-## [v1.1.0](https://github.com/scholay/xsime/releases/tag/v1.1.0) — 2026-10-04
+## [v1.1.0](https://github.com/scholay-xsime/xsime/releases/tag/v1.1.0) — 2026-10-04
 
 ### 新功能
 
@@ -767,7 +889,7 @@
 - **macos:** preserve local Buffer and Capsule development (d460f2a2)
 - **core:** preserve local shared models and plugin catalog (ef74b977)
 
-## [v1.0.0](https://github.com/scholay/xsime/releases/tag/v1.0.0) — 2026-10-03
+## [v1.0.0](https://github.com/scholay-xsime/xsime/releases/tag/v1.0.0) — 2026-10-03
 
 ### 合并的 PR
 
@@ -861,7 +983,7 @@
 - **capture:** check in the capture module as delivered (df5a9018)
 - **release:** align CI with explicit maintainer approvals (f22c77cf)
 
-## [v0.5.0-preview.3](https://github.com/scholay/xsime/releases/tag/v0.5.0-preview.3) — 2026-09-15
+## [v0.5.0-preview.3](https://github.com/scholay-xsime/xsime/releases/tag/v0.5.0-preview.3) — 2026-09-15
 
 ### 合并的 PR
 
@@ -881,7 +1003,7 @@
 
 - run the chord and 呦呦音形 smokes in CI and on the assembled app (a805ad97)
 
-## [v0.5.0-preview.2](https://github.com/scholay/xsime/releases/tag/v0.5.0-preview.2) — 2026-09-15
+## [v0.5.0-preview.2](https://github.com/scholay-xsime/xsime/releases/tag/v0.5.0-preview.2) — 2026-09-15
 
 ### 合并的 PR
 
@@ -985,7 +1107,7 @@
 - Keep capture across the session the toolbar click itself destroys (ba32b62f)
 - Shrink the panel to a toolbar strip when the rails fold (9670ce25)
 
-## [v0.5.0-preview.1](https://github.com/scholay/xsime/releases/tag/v0.5.0-preview.1) — 2026-08-22
+## [v0.5.0-preview.1](https://github.com/scholay-xsime/xsime/releases/tag/v0.5.0-preview.1) — 2026-08-22
 
 ### 新功能
 
@@ -1022,13 +1144,13 @@
 
 - enable controlled unsigned previews (08917f7e)
 
-## [v0.4.3](https://github.com/scholay/xsime/releases/tag/v0.4.3) — 2026-08-15
+## [v0.4.3](https://github.com/scholay-xsime/xsime/releases/tag/v0.4.3) — 2026-08-15
 
 ### 修复
 
 - harden RIMES installation, updater, and release (ce636924)
 
-## [v0.4.2](https://github.com/scholay/xsime/releases/tag/v0.4.2) — 2026-08-10
+## [v0.4.2](https://github.com/scholay-xsime/xsime/releases/tag/v0.4.2) — 2026-08-10
 
 ### 新功能
 
