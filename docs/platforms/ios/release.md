@@ -43,6 +43,8 @@ Profiles 必须匹配代码中的团队、bundle 与共享组，并在有效期�
 
 上传、Apple 处理、外部 TestFlight 审核、App Review 和商店可用是独立状态。处理超时后先读回 Apple 状态；重跑会产生新的构建号。清理签名材料的工作流仅用于一次性 GitHub 托管 runner。
 
+如果 **Add for Review** 提示开发者名称与 ICP 备案主体不匹配，打开 **App Information**，在 **Provider Name Not Recognized by MIIT** 提示中点击 **Confirm Information**。该链接会在 **App Compliance** 打开备案归属确认窗口。核对现有备案号和主体关系并确认后，回版本页继续 **Add for Review → Submit for Review**。
+
 ## 本机 API key 上传
 
 没有配齐 `ios-app-store` Secrets 时，维护者可在本机用 App Store Connect API key 上传，不经浏览器或 Xcode Organizer：
